@@ -6,6 +6,7 @@ import (
 
 	"fifam/apps/service-realtime/internal/broadcaster"
 	"fifam/apps/service-realtime/internal/hub"
+	"fifam/apps/service-realtime/internal/rooms"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -17,6 +18,23 @@ type updateTacticsRequest struct {
 	PassRatio float64 `json:"passRatio"`
 	ShotRatio float64 `json:"shotRatio"`
 	Pressure  float64 `json:"pressure"`
+	Mode      string  `json:"mode"`
+	Gameplay  struct {
+		PassSpeedScale     float64 `json:"passSpeedScale"`
+		InterceptionRadius float64 `json:"interceptionRadius"`
+		GKBuildUpBias      float64 `json:"gkBuildUpBias"`
+		TempoScale         float64 `json:"tempoScale"`
+	} `json:"gameplay"`
+	Players []struct {
+		CardID    uint64 `json:"cardId"`
+		Pace      int    `json:"pace"`
+		Passing   int    `json:"passing"`
+		LongPass  int    `json:"longPass"`
+		Vision    int    `json:"vision"`
+		Shooting  int    `json:"shooting"`
+		Defending int    `json:"defending"`
+		Mental    int    `json:"mental"`
+	} `json:"players"`
 }
 
 type Handler struct {
@@ -108,6 +126,14 @@ func (h *Handler) UpdateTactics(c *gin.Context) {
 		PassRatio: req.PassRatio,
 		ShotRatio: req.ShotRatio,
 		Pressure:  req.Pressure,
+		Mode:      req.Mode,
+		Gameplay: broadcaster.GameplayTuningInput{
+			PassSpeedScale:     req.Gameplay.PassSpeedScale,
+			InterceptionRadius: req.Gameplay.InterceptionRadius,
+			GKBuildUpBias:      req.Gameplay.GKBuildUpBias,
+			TempoScale:         req.Gameplay.TempoScale,
+		},
+		Players: mapPlayers(req.Players),
 	})
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -115,4 +141,35 @@ func (h *Handler) UpdateTactics(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "tactics accepted"})
+}
+
+func mapPlayers(input []struct {
+	CardID    uint64 `json:"cardId"`
+	Pace      int    `json:"pace"`
+	Passing   int    `json:"passing"`
+	LongPass  int    `json:"longPass"`
+	Vision    int    `json:"vision"`
+	Shooting  int    `json:"shooting"`
+	Defending int    `json:"defending"`
+	Mental    int    `json:"mental"`
+}) []rooms.PlayerStatsInput {
+	if len(input) == 0 {
+		return nil
+	}
+
+	out := make([]rooms.PlayerStatsInput, 0, len(input))
+	for _, p := range input {
+		out = append(out, rooms.PlayerStatsInput{
+			CardID:    p.CardID,
+			Pace:      p.Pace,
+			Passing:   p.Passing,
+			LongPass:  p.LongPass,
+			Vision:    p.Vision,
+			Shooting:  p.Shooting,
+			Defending: p.Defending,
+			Mental:    p.Mental,
+		})
+	}
+
+	return out
 }

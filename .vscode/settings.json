@@ -11,6 +11,9 @@
         "/^npm --version$/": {
             "approve": true,
             "matchCommandLine": true
-        }
+        },
+        "Push-Location": true,
+        "Pop-Location": true,
+        "Set-Content": true
     }
 }

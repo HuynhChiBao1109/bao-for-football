@@ -1,0 +1,62 @@
+[
+  {
+    "name": "Vietnam",
+    "code": "VN",
+    "flag": "https://media.api-sports.io/flags/vn.svg"
+  },
+  {
+    "name": "Brazil",
+    "code": "BR",
+    "flag": "https://media.api-sports.io/flags/br.svg"
+  },
+  {
+    "name": "Argentina",
+    "code": "AR",
+    "flag": "https://media.api-sports.io/flags/ar.svg"
+  },
+  {
+    "name": "Spain",
+    "code": "ES",
+    "flag": "https://media.api-sports.io/flags/es.svg"
+  },
+  {
+    "name": "France",
+    "code": "FR",
+    "flag": "https://media.api-sports.io/flags/fr.svg"
+  },
+  {
+    "name": "Germany",
+    "code": "DE",
+    "flag": "https://media.api-sports.io/flags/de.svg"
+  },
+  {
+    "name": "Portugal",
+    "code": "PT",
+    "flag": "https://media.api-sports.io/flags/pt.svg"
+  },
+  {
+    "name": "England",
+    "code": "GB-ENG",
+    "flag": "https://media.api-sports.io/flags/gb-eng.svg"
+  },
+  {
+    "name": "Italy",
+    "code": "IT",
+    "flag": "https://media.api-sports.io/flags/it.svg"
+  },
+  {
+    "name": "Netherlands",
+    "code": "NL",
+    "flag": "https://media.api-sports.io/flags/nl.svg"
+  },
+  {
+    "name": "Japan",
+    "code": "JP",
+    "flag": "https://media.api-sports.io/flags/jp.svg"
+  },
+  {
+    "name": "South-Korea",
+    "code": "KR",
+    "flag": "https://media.api-sports.io/flags/kr.svg"
+  }
+]

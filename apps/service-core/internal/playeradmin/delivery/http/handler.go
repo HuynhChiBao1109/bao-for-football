@@ -2,6 +2,7 @@ package http
 
 import (
 	"net/http"
+	"strconv"
 
 	"fifam/apps/service-core/internal/playeradmin/domain"
 	playeradminusecase "fifam/apps/service-core/internal/playeradmin/usecase"
@@ -19,17 +20,29 @@ func NewHandler(uc *playeradminusecase.PlayerAdminUseCase) *Handler {
 
 type createPlayerRequest struct {
 	Name         string `json:"name"`
-	Nationality  string `json:"nationality"`
+	CountryID    int64  `json:"countryId"`
 	BaseClub     string `json:"baseClub"`
 	Season       string `json:"season"`
 	SourceType   string `json:"sourceType"`
 	SpecialSkill string `json:"specialSkill"`
 	Shooting     int    `json:"shooting"`
 	Passing      int    `json:"passing"`
+	LongPass     int    `json:"longPass"`
+	Vision       int    `json:"vision"`
 	Pace         int    `json:"pace"`
 	Physical     int    `json:"physical"`
 	Defending    int    `json:"defending"`
 	Dribbling    int    `json:"dribbling"`
+}
+
+func (h *Handler) ListCountries(c *gin.Context) {
+	countries, err := h.uc.ListCountries(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": countries})
 }
 
 func (h *Handler) List(c *gin.Context) {
@@ -42,6 +55,22 @@ func (h *Handler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": players})
 }
 
+func (h *Handler) Detail(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	player, err := h.uc.GetByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": player})
+}
+
 func (h *Handler) Create(c *gin.Context) {
 	var req createPlayerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -51,13 +80,15 @@ func (h *Handler) Create(c *gin.Context) {
 
 	created, err := h.uc.Create(c.Request.Context(), domain.Player{
 		Name:         req.Name,
-		Nationality:  req.Nationality,
+		CountryID:    req.CountryID,
 		BaseClub:     req.BaseClub,
 		Season:       req.Season,
 		SourceType:   req.SourceType,
 		SpecialSkill: req.SpecialSkill,
 		Shooting:     req.Shooting,
 		Passing:      req.Passing,
+		LongPass:     req.LongPass,
+		Vision:       req.Vision,
 		Pace:         req.Pace,
 		Physical:     req.Physical,
 		Defending:    req.Defending,

@@ -70,6 +70,8 @@ type PlayerTemplate struct {
 	ImageURL      string    `gorm:"type:varchar(500);column:image_url"`
 	BaseShooting  int       `gorm:"not null;default:1;column:base_shooting"`
 	BasePassing   int       `gorm:"not null;default:1;column:base_passing"`
+	BaseLongPass  int       `gorm:"not null;default:1;column:base_long_pass"`
+	BaseVision    int       `gorm:"not null;default:1;column:base_vision"`
 	BasePace      int       `gorm:"not null;default:1;column:base_pace"`
 	BasePhysical  int       `gorm:"not null;default:1;column:base_physical"`
 	BaseDefending int       `gorm:"not null;default:1;column:base_defending"`

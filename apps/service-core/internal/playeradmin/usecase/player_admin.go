@@ -10,6 +10,8 @@ import (
 
 type repository interface {
 	List(ctx context.Context) ([]domain.Player, error)
+	GetByID(ctx context.Context, id int64) (domain.Player, error)
+	ListCountries(ctx context.Context) ([]domain.Country, error)
 	Create(ctx context.Context, input domain.Player) (domain.Player, error)
 }
 
@@ -25,9 +27,20 @@ func (u *PlayerAdminUseCase) List(ctx context.Context) ([]domain.Player, error) 
 	return u.repo.List(ctx)
 }
 
+func (u *PlayerAdminUseCase) GetByID(ctx context.Context, id int64) (domain.Player, error) {
+	if id <= 0 {
+		return domain.Player{}, errors.New("id is invalid")
+	}
+
+	return u.repo.GetByID(ctx, id)
+}
+
+func (u *PlayerAdminUseCase) ListCountries(ctx context.Context) ([]domain.Country, error) {
+	return u.repo.ListCountries(ctx)
+}
+
 func (u *PlayerAdminUseCase) Create(ctx context.Context, input domain.Player) (domain.Player, error) {
 	input.Name = strings.TrimSpace(input.Name)
-	input.Nationality = strings.TrimSpace(input.Nationality)
 	input.BaseClub = strings.TrimSpace(input.BaseClub)
 	input.SpecialSkill = strings.TrimSpace(input.SpecialSkill)
 	input.Season = strings.TrimSpace(input.Season)
@@ -36,8 +49,8 @@ func (u *PlayerAdminUseCase) Create(ctx context.Context, input domain.Player) (d
 	if input.Name == "" {
 		return domain.Player{}, errors.New("name is required")
 	}
-	if input.Nationality == "" {
-		return domain.Player{}, errors.New("nationality is required")
+	if input.CountryID <= 0 {
+		return domain.Player{}, errors.New("countryId is required")
 	}
 	if input.BaseClub == "" {
 		return domain.Player{}, errors.New("baseClub is required")
@@ -49,12 +62,21 @@ func (u *PlayerAdminUseCase) Create(ctx context.Context, input domain.Player) (d
 		return domain.Player{}, errors.New("sourceType must be normal or gacha")
 	}
 
+	if input.LongPass == 0 {
+		input.LongPass = input.Passing
+	}
+	if input.Vision == 0 {
+		input.Vision = input.Passing
+	}
+
 	for _, stat := range []struct {
 		name  string
 		value int
 	}{
 		{"shooting", input.Shooting},
 		{"passing", input.Passing},
+		{"longPass", input.LongPass},
+		{"vision", input.Vision},
 		{"pace", input.Pace},
 		{"physical", input.Physical},
 		{"defending", input.Defending},

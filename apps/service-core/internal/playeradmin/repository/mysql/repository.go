@@ -3,6 +3,7 @@ package mysql
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"sync"
 	"time"
 
@@ -36,10 +37,17 @@ func (r *Repository) List(ctx context.Context) ([]domain.Player, error) {
 	}
 
 	rows, err := r.db.QueryContext(ctx, `
-SELECT id, name, nationality, base_club, season, source_type, special_skill,
-       shooting, passing, pace, physical, defending, dribbling, created_at
-FROM admin_players
-ORDER BY id DESC`)
+SELECT ap.id, ap.name, ap.country_id,
+	COALESCE(c.id, 0) AS country_row_id,
+	COALESCE(c.name, ''),
+	COALESCE(c.code, ''),
+	COALESCE(c.flag, ''),
+	COALESCE(c.name, ap.nationality) AS nationality,
+	ap.base_club, ap.season, ap.source_type, ap.special_skill,
+	ap.shooting, ap.passing, ap.long_pass, ap.vision, ap.pace, ap.physical, ap.defending, ap.dribbling, ap.created_at
+FROM admin_players ap
+LEFT JOIN countries c ON c.id = ap.country_id
+ORDER BY ap.id DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -48,9 +56,15 @@ ORDER BY id DESC`)
 	players := make([]domain.Player, 0, 32)
 	for rows.Next() {
 		var p domain.Player
+		var countryRowID int64
 		if err := rows.Scan(
 			&p.ID,
 			&p.Name,
+			&p.CountryID,
+			&countryRowID,
+			&p.Country.Name,
+			&p.Country.Code,
+			&p.Country.Flag,
 			&p.Nationality,
 			&p.BaseClub,
 			&p.Season,
@@ -58,6 +72,8 @@ ORDER BY id DESC`)
 			&p.SpecialSkill,
 			&p.Shooting,
 			&p.Passing,
+			&p.LongPass,
+			&p.Vision,
 			&p.Pace,
 			&p.Physical,
 			&p.Defending,
@@ -66,10 +82,107 @@ ORDER BY id DESC`)
 		); err != nil {
 			return nil, err
 		}
+		if countryRowID > 0 {
+			p.Country.ID = countryRowID
+		}
 		players = append(players, p)
 	}
 
 	return players, rows.Err()
+}
+
+func (r *Repository) GetByID(ctx context.Context, id int64) (domain.Player, error) {
+	if r.db == nil {
+		r.memMu.Lock()
+		defer r.memMu.Unlock()
+		for _, item := range r.memData {
+			if item.ID == id {
+				return item, nil
+			}
+		}
+		return domain.Player{}, errors.New("player not found")
+	}
+
+	if err := r.ensureTable(ctx); err != nil {
+		return domain.Player{}, err
+	}
+
+	row := r.db.QueryRowContext(ctx, `
+SELECT ap.id, ap.name, ap.country_id,
+	COALESCE(c.id, 0) AS country_row_id,
+	COALESCE(c.name, ''),
+	COALESCE(c.code, ''),
+	COALESCE(c.flag, ''),
+	COALESCE(c.name, ap.nationality) AS nationality,
+	ap.base_club, ap.season, ap.source_type, ap.special_skill,
+	ap.shooting, ap.passing, ap.long_pass, ap.vision, ap.pace, ap.physical, ap.defending, ap.dribbling, ap.created_at
+FROM admin_players ap
+LEFT JOIN countries c ON c.id = ap.country_id
+WHERE ap.id = ?
+LIMIT 1`, id)
+
+	var p domain.Player
+	var countryRowID int64
+	if err := row.Scan(
+		&p.ID,
+		&p.Name,
+		&p.CountryID,
+		&countryRowID,
+		&p.Country.Name,
+		&p.Country.Code,
+		&p.Country.Flag,
+		&p.Nationality,
+		&p.BaseClub,
+		&p.Season,
+		&p.SourceType,
+		&p.SpecialSkill,
+		&p.Shooting,
+		&p.Passing,
+		&p.LongPass,
+		&p.Vision,
+		&p.Pace,
+		&p.Physical,
+		&p.Defending,
+		&p.Dribbling,
+		&p.CreatedAt,
+	); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.Player{}, errors.New("player not found")
+		}
+		return domain.Player{}, err
+	}
+
+	if countryRowID > 0 {
+		p.Country.ID = countryRowID
+	}
+
+	return p, nil
+}
+
+func (r *Repository) ListCountries(ctx context.Context) ([]domain.Country, error) {
+	if r.db == nil {
+		return []domain.Country{}, nil
+	}
+
+	rows, err := r.db.QueryContext(ctx, `
+SELECT id, name, COALESCE(code, ''), COALESCE(flag, '')
+FROM countries
+ORDER BY name ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make([]domain.Country, 0, 64)
+	for rows.Next() {
+		var item domain.Country
+		if err := rows.Scan(&item.ID, &item.Name, &item.Code, &item.Flag); err != nil {
+			return nil, err
+		}
+		out = append(out, item)
+	}
+
+	return out, rows.Err()
 }
 
 func (r *Repository) Create(ctx context.Context, input domain.Player) (domain.Player, error) {
@@ -80,6 +193,7 @@ func (r *Repository) Create(ctx context.Context, input domain.Player) (domain.Pl
 		defer r.memMu.Unlock()
 		input.ID = r.nextID
 		r.nextID++
+		input.Nationality = input.Country.Name
 		r.memData = append([]domain.Player{input}, r.memData...)
 		return input, nil
 	}
@@ -88,12 +202,28 @@ func (r *Repository) Create(ctx context.Context, input domain.Player) (domain.Pl
 		return domain.Player{}, err
 	}
 
+	if input.CountryID > 0 {
+		countryRow := r.db.QueryRowContext(ctx, `
+SELECT id, name, COALESCE(code, ''), COALESCE(flag, '')
+FROM countries
+WHERE id = ?
+LIMIT 1`, input.CountryID)
+		if err := countryRow.Scan(&input.Country.ID, &input.Country.Name, &input.Country.Code, &input.Country.Flag); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return domain.Player{}, errors.New("country not found")
+			}
+			return domain.Player{}, err
+		}
+		input.Nationality = input.Country.Name
+	}
+
 	result, err := r.db.ExecContext(ctx, `
 INSERT INTO admin_players (
-  name, nationality, base_club, season, source_type, special_skill,
-  shooting, passing, pace, physical, defending, dribbling
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  name, country_id, nationality, base_club, season, source_type, special_skill,
+  shooting, passing, long_pass, vision, pace, physical, defending, dribbling
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		input.Name,
+		input.CountryID,
 		input.Nationality,
 		input.BaseClub,
 		input.Season,
@@ -101,6 +231,8 @@ INSERT INTO admin_players (
 		input.SpecialSkill,
 		input.Shooting,
 		input.Passing,
+		input.LongPass,
+		input.Vision,
 		input.Pace,
 		input.Physical,
 		input.Defending,

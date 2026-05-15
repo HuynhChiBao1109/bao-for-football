@@ -3,6 +3,9 @@ package mysql
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -25,15 +28,15 @@ func NewRepository(db *sql.DB) *Repository {
 }
 
 func (r *Repository) FindByTeamID(ctx context.Context, teamID string) (*domain.Config, error) {
-	if r.db == nil {
-		r.memMu.Lock()
-		defer r.memMu.Unlock()
+	r.memMu.Lock()
+	memo, hasMemo := r.memStore[teamID]
+	r.memMu.Unlock()
 
-		cfg, ok := r.memStore[teamID]
-		if !ok {
+	if r.db == nil {
+		if !hasMemo {
 			return nil, nil
 		}
-		copyCfg := cfg
+		copyCfg := memo
 		return &copyCfg, nil
 	}
 
@@ -56,9 +59,19 @@ LIMIT 1`, teamID).Scan(
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, nil
+			if !hasMemo {
+				return nil, nil
+			}
+			copyCfg := memo
+			return &copyCfg, nil
 		}
 		return nil, err
+	}
+
+	if hasMemo {
+		cfg.Mode = memo.Mode
+		cfg.Gameplay = memo.Gameplay
+		cfg.Players = memo.Players
 	}
 
 	return &cfg, nil
@@ -99,9 +112,132 @@ updated_at = CURRENT_TIMESTAMP`
 		return domain.Config{}, err
 	}
 
+	r.memMu.Lock()
+	r.memStore[cfg.TeamID] = cfg
+	r.memMu.Unlock()
+
 	return cfg, nil
+}
+
+func (r *Repository) LoadRealtimePlayers(ctx context.Context, teamID string) ([]domain.Player, error) {
+	if r.db == nil {
+		return nil, nil
+	}
+
+	userID, err := parseUserIDFromTeamID(teamID)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := r.db.QueryContext(ctx, `
+SELECT
+  up.id,
+  LEAST(99, GREATEST(1, pt.base_pace + up.bonus_pace)) AS pace,
+  LEAST(99, GREATEST(1, pt.base_passing + up.bonus_passing)) AS passing,
+  LEAST(99, GREATEST(1, pt.base_long_pass)) AS long_pass,
+  LEAST(99, GREATEST(1, pt.base_vision)) AS vision,
+  LEAST(99, GREATEST(1, pt.base_shooting + up.bonus_shooting)) AS shooting,
+  LEAST(99, GREATEST(1, pt.base_defending + up.bonus_defending)) AS defending,
+  LEAST(99, GREATEST(1, ROUND((
+    (pt.base_physical + up.bonus_physical) +
+    (pt.base_dribbling + up.bonus_dribbling) +
+    (pt.base_passing + up.bonus_passing)
+  ) / 3, 0))) AS mental
+FROM user_players up
+INNER JOIN player_templates pt ON pt.id = up.player_template_id
+WHERE up.user_id = ?
+ORDER BY up.id ASC
+LIMIT 11`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	players := make([]domain.Player, 0, 11)
+	for rows.Next() {
+		var p domain.Player
+		if err := rows.Scan(
+			&p.CardID,
+			&p.Pace,
+			&p.Passing,
+			&p.LongPass,
+			&p.Vision,
+			&p.Shooting,
+			&p.Defending,
+			&p.Mental,
+		); err != nil {
+			return nil, err
+		}
+		players = append(players, p)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	if len(players) > 0 {
+		return players, nil
+	}
+
+	fallbackRows, err := r.db.QueryContext(ctx, `
+SELECT
+  ap.id,
+  LEAST(99, GREATEST(1, ap.pace)) AS pace,
+  LEAST(99, GREATEST(1, ap.passing)) AS passing,
+  LEAST(99, GREATEST(1, ap.long_pass)) AS long_pass,
+  LEAST(99, GREATEST(1, ap.vision)) AS vision,
+  LEAST(99, GREATEST(1, ap.shooting)) AS shooting,
+  LEAST(99, GREATEST(1, ap.defending)) AS defending,
+  LEAST(99, GREATEST(1, ROUND((ap.physical + ap.dribbling + ap.passing) / 3, 0))) AS mental
+FROM teams t
+INNER JOIN admin_players ap ON ap.base_club = t.club_name
+WHERE t.user_id = ?
+ORDER BY ap.id ASC
+LIMIT 11`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer fallbackRows.Close()
+
+	for fallbackRows.Next() {
+		var p domain.Player
+		if err := fallbackRows.Scan(
+			&p.CardID,
+			&p.Pace,
+			&p.Passing,
+			&p.LongPass,
+			&p.Vision,
+			&p.Shooting,
+			&p.Defending,
+			&p.Mental,
+		); err != nil {
+			return nil, err
+		}
+		players = append(players, p)
+	}
+
+	if err := fallbackRows.Err(); err != nil {
+		return nil, err
+	}
+
+	return players, nil
 }
 
 func (r *Repository) ensureTable(ctx context.Context) error {
 	return nil
+}
+
+func parseUserIDFromTeamID(teamID string) (uint64, error) {
+	normalized := strings.ToLower(strings.TrimSpace(teamID))
+	parts := strings.Split(normalized, "-")
+	if len(parts) != 2 || parts[0] != "user" {
+		return 0, fmt.Errorf("teamId %q cannot map to user", teamID)
+	}
+
+	userID, err := strconv.ParseUint(parts[1], 10, 64)
+	if err != nil || userID == 0 {
+		return 0, fmt.Errorf("teamId %q has invalid user id", teamID)
+	}
+
+	return userID, nil
 }

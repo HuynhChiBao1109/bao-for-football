@@ -17,7 +17,35 @@ import (
 const (
 	tickInterval = 100 * time.Millisecond
 	matchLength  = 2 * time.Minute
+	gkHomeMinX   = 2.0
+	gkHomeMaxX   = 15.0
+	gkAwayMinX   = 85.0
+	gkAwayMaxX   = 98.0
 )
+
+type gameplayRuntime struct {
+	Mode               string
+	PassSpeedScale     float64
+	InterceptionRadius float64
+	GKBuildUpBias      float64
+	TempoScale         float64
+}
+
+type GameplayTuningInput struct {
+	PassSpeedScale     float64
+	InterceptionRadius float64
+	GKBuildUpBias      float64
+	TempoScale         float64
+}
+
+type passDecision struct {
+	target       *rooms.Player
+	isLob        bool
+	success      float64
+	targetX      float64
+	targetY      float64
+	initialSpeed float64
+}
 
 type MatchEngine struct {
 	hub      *hub.Hub
@@ -27,6 +55,7 @@ type MatchEngine struct {
 	state    *rooms.MatchState
 	pending  map[string]UpdateTacticsInput
 	bindings map[string]string
+	runtime  gameplayRuntime
 }
 
 type UpdateTacticsInput struct {
@@ -35,6 +64,9 @@ type UpdateTacticsInput struct {
 	PassRatio float64
 	ShotRatio float64
 	Pressure  float64
+	Mode      string
+	Gameplay  GameplayTuningInput
+	Players   []rooms.PlayerStatsInput
 }
 
 func NewMatchEngine(h *hub.Hub) *MatchEngine {
@@ -43,6 +75,7 @@ func NewMatchEngine(h *hub.Hub) *MatchEngine {
 		rand:     rand.New(rand.NewSource(time.Now().UnixNano())),
 		pending:  make(map[string]UpdateTacticsInput),
 		bindings: make(map[string]string),
+		runtime:  runtimeFromInput("casual", GameplayTuningInput{}),
 	}
 }
 
@@ -127,6 +160,18 @@ func (e *MatchEngine) UpdateTeamTactics(input UpdateTacticsInput) error {
 	if input.Pressure < 0 || input.Pressure > 1 {
 		return fmt.Errorf("pressure must be between 0 and 1")
 	}
+	if input.Gameplay.PassSpeedScale != 0 && (input.Gameplay.PassSpeedScale < 0.65 || input.Gameplay.PassSpeedScale > 1.45) {
+		return fmt.Errorf("gameplay.passSpeedScale must be between 0.65 and 1.45")
+	}
+	if input.Gameplay.InterceptionRadius != 0 && (input.Gameplay.InterceptionRadius < 0.55 || input.Gameplay.InterceptionRadius > 1.6) {
+		return fmt.Errorf("gameplay.interceptionRadius must be between 0.55 and 1.6")
+	}
+	if input.Gameplay.GKBuildUpBias != 0 && (input.Gameplay.GKBuildUpBias < 0.5 || input.Gameplay.GKBuildUpBias > 2.0) {
+		return fmt.Errorf("gameplay.gkBuildUpBias must be between 0.5 and 2.0")
+	}
+	if input.Gameplay.TempoScale != 0 && (input.Gameplay.TempoScale < 0.75 || input.Gameplay.TempoScale > 1.4) {
+		return fmt.Errorf("gameplay.tempoScale must be between 0.75 and 1.4")
+	}
 
 	internalTeamID, err := e.resolveInternalTeamIDLocked(input.TeamID)
 	if err != nil {
@@ -156,6 +201,51 @@ func (e *MatchEngine) applyTacticsLocked(input UpdateTacticsInput, internalTeamI
 	team.Tactics.Pressing = team.Tactics.Pressure
 	team.Tactics.Mental = clamp(0.45+team.Tactics.ShotRatio*0.2+team.Tactics.PassRatio*0.2, 0.45, 0.9)
 	rooms.ApplyFormation(team, input.Formation)
+	rooms.ApplyPlayerStats(team, input.Players)
+	e.runtime = runtimeFromInput(input.Mode, input.Gameplay)
+}
+
+func runtimeFromInput(mode string, tuning GameplayTuningInput) gameplayRuntime {
+	normalizedMode := strings.ToLower(strings.TrimSpace(mode))
+	if normalizedMode == "" {
+		normalizedMode = "casual"
+	}
+
+	base := gameplayRuntime{
+		Mode:               normalizedMode,
+		PassSpeedScale:     1.05,
+		InterceptionRadius: 1.02,
+		GKBuildUpBias:      1.0,
+		TempoScale:         1.05,
+	}
+
+	switch normalizedMode {
+	case "ranked":
+		base.PassSpeedScale = 0.96
+		base.InterceptionRadius = 0.92
+		base.GKBuildUpBias = 1.2
+		base.TempoScale = 0.98
+	case "ai_campaign":
+		base.PassSpeedScale = 0.92
+		base.InterceptionRadius = 1.12
+		base.GKBuildUpBias = 1.1
+		base.TempoScale = 0.94
+	}
+
+	if tuning.PassSpeedScale != 0 {
+		base.PassSpeedScale = tuning.PassSpeedScale
+	}
+	if tuning.InterceptionRadius != 0 {
+		base.InterceptionRadius = tuning.InterceptionRadius
+	}
+	if tuning.GKBuildUpBias != 0 {
+		base.GKBuildUpBias = tuning.GKBuildUpBias
+	}
+	if tuning.TempoScale != 0 {
+		base.TempoScale = tuning.TempoScale
+	}
+
+	return base
 }
 
 func (e *MatchEngine) resolveInternalTeamIDLocked(externalTeamID string) (string, error) {
@@ -215,7 +305,7 @@ func (e *MatchEngine) updateState(state *rooms.MatchState) []events.MatchEvent {
 		isNearestChaser := (homeNearest != nil && p.ID == homeNearest.ID) || (awayNearest != nil && p.ID == awayNearest.ID)
 		isPressingChaser := !sameTeamAsOwner && ownerID != 0 && distance(p.X, p.Y, state.Ball.X, state.Ball.Y) < (11.0+team.Tactics.Pressure*12.0)
 
-		sideShift := 0.14 + team.Tactics.PassRatio*0.2
+		sideShift := 0.12 + team.Tactics.PassRatio*0.16
 		if isNearestChaser || isPressingChaser {
 			target = rooms.Vec2{X: state.Ball.X, Y: state.Ball.Y}
 		} else if sameTeamAsOwner {
@@ -226,39 +316,74 @@ func (e *MatchEngine) updateState(state *rooms.MatchState) []events.MatchEvent {
 		}
 
 		if isPossessor {
-			goalX := 0.0
-			if p.TeamID == state.HomeTeam.ID {
-				goalX = state.FieldW
+			if p.Role == "GK" {
+				target = rooms.Vec2{X: p.HomeX, Y: clamp(state.FieldH/2+(state.Ball.Y-state.FieldH/2)*0.18, 10, state.FieldH-10)}
+			} else {
+				goalX := 0.0
+				if p.TeamID == state.HomeTeam.ID {
+					goalX = state.FieldW
+				}
+				target = rooms.Vec2{X: goalX, Y: state.FieldH / 2}
 			}
-			target = rooms.Vec2{X: goalX, Y: state.FieldH / 2}
 		}
 
-		step := paceStep(p.Pace)
+		if p.Role == "GK" && !isPossessor {
+			target = rooms.Vec2{
+				X: p.HomeX,
+				Y: clamp(state.FieldH/2+(state.Ball.Y-state.FieldH/2)*0.28, 10, state.FieldH-10),
+			}
+		}
+
+		step := e.paceStep(p.Pace)
 		p.X, p.Y = moveTowards(p.X, p.Y, target.X, target.Y, step)
+		if p.Role == "GK" {
+			p.X, p.Y = clampGoalkeeperPosition(p, state)
+		}
 	}
 
 	if state.Ball.OwnerID == 0 {
+		e.updateBall(state)
 		e.resolveLooseBall(state, &tickEvents)
 	} else {
 		e.resolvePossessionPlay(state, &tickEvents)
+		e.updateBall(state)
 	}
-
-	e.updateBall(state)
 
 	return tickEvents
 }
 
+func clampGoalkeeperPosition(p *rooms.Player, state *rooms.MatchState) (float64, float64) {
+	if p.TeamID == state.HomeTeam.ID {
+		return clamp(p.X, gkHomeMinX, gkHomeMaxX), clamp(p.Y, 8, state.FieldH-8)
+	}
+	return clamp(p.X, gkAwayMinX, gkAwayMaxX), clamp(p.Y, 8, state.FieldH-8)
+}
+
 func (e *MatchEngine) resolveLooseBall(state *rooms.MatchState, tickEvents *[]events.MatchEvent) {
+	if state.Ball.InFlight {
+		if e.tryResolveFlightContact(state, tickEvents) {
+			return
+		}
+
+		if state.Ball.FlightLeft > 0.45 {
+			return
+		}
+
+		state.Ball.InFlight = false
+		state.Ball.IsLob = false
+		state.Ball.Height = 0
+		state.Ball.VX *= 0.35
+		state.Ball.VY *= 0.35
+	}
+
 	allPlayers := state.AllPlayers()
 	nearest := nearestToBall(allPlayers, state.Ball.X, state.Ball.Y)
 	if nearest == nil {
 		return
 	}
 
-	if distance(nearest.X, nearest.Y, state.Ball.X, state.Ball.Y) < 1.3 {
-		state.Ball.OwnerID = nearest.ID
-		state.Ball.OwnerTeamID = nearest.TeamID
-		nearest.HasBall = true
+	if distance(nearest.X, nearest.Y, state.Ball.X, state.Ball.Y) < 1.15 {
+		e.giveBallToPlayer(state, nearest)
 		*tickEvents = append(*tickEvents, events.MatchEvent{
 			Kind:     "possession_change",
 			TeamID:   nearest.TeamID,
@@ -313,35 +438,44 @@ func (e *MatchEngine) resolvePossessionPlay(state *rooms.MatchState, tickEvents 
 }
 
 func (e *MatchEngine) handlePass(state *rooms.MatchState, owner *rooms.Player, team *rooms.Team, opponent *rooms.Team, tickEvents *[]events.MatchEvent) {
-	target := bestPassTarget(owner, team.Players)
-	if target == nil {
+	decision := e.bestPassDecision(state, owner, team, opponent)
+	if decision == nil || decision.target == nil {
 		return
 	}
 
-	passSuccess := clamp(0.45+float64(owner.Passing)/180.0+team.Tactics.Mental*0.08-opponent.Tactics.Pressing*0.06, 0.25, 0.94)
-	passSuccess = clamp(passSuccess+team.Tactics.PassRatio*0.08-opponent.Tactics.Pressure*0.06, 0.2, 0.97)
-	*tickEvents = append(*tickEvents, events.MatchEvent{Kind: "pass", TeamID: owner.TeamID, PlayerID: owner.ID, Message: "Attempted pass"})
+	passType := "ground"
+	if decision.isLob {
+		passType = "lob"
+	}
+	successPct := int(math.Round(decision.success * 100))
+	*tickEvents = append(*tickEvents, events.MatchEvent{
+		Kind:       "pass",
+		TeamID:     owner.TeamID,
+		PlayerID:   owner.ID,
+		ReceiverID: decision.target.ID,
+		PassType:   passType,
+		SuccessPct: successPct,
+		Message:    "Attempted pass",
+	})
 
-	if e.rand.Float64() <= passSuccess {
-		owner.HasBall = false
-		target.HasBall = true
-		state.Ball.OwnerID = target.ID
-		state.Ball.OwnerTeamID = target.TeamID
-		state.Ball.X = target.X
-		state.Ball.Y = target.Y
-		*tickEvents = append(*tickEvents, events.MatchEvent{Kind: "possession_change", TeamID: target.TeamID, PlayerID: target.ID, Message: "Successful pass"})
-		return
+	isAccurate := e.rand.Float64() <= decision.success
+	noiseBase := (1.0 - decision.success) * 2.2
+	if !isAccurate {
+		noiseBase += 3.8
 	}
 
-	owner.HasBall = false
-	state.Ball.OwnerID = 0
-	state.Ball.OwnerTeamID = ""
-	state.Ball.VX = (target.X - owner.X) * 0.22
-	state.Ball.VY = (target.Y - owner.Y) * 0.22
+	targetX := clamp(decision.targetX+(e.rand.Float64()-0.5)*noiseBase, 0, state.FieldW)
+	targetY := clamp(decision.targetY+(e.rand.Float64()-0.5)*noiseBase*0.6, 0, state.FieldH)
+	targetID := decision.target.ID
+	if !isAccurate {
+		targetID = 0
+	}
+
+	e.startPassFlight(state, owner, team.ID, targetID, targetX, targetY, decision.initialSpeed, decision.isLob)
 }
 
 func (e *MatchEngine) handleShot(state *rooms.MatchState, owner *rooms.Player, opponent *rooms.Team, tickEvents *[]events.MatchEvent) {
-	*tickEvents = append(*tickEvents, events.MatchEvent{Kind: "shot", TeamID: owner.TeamID, PlayerID: owner.ID, Message: "Shot attempt"})
+	shotPower := clamp(1.45+float64(owner.Shooting)/72.0+e.rand.Float64()*0.55, 1.5, 3.0)
 
 	distGoal := distanceToGoal(owner, state)
 	defenseBlock := teamDefendingAverage(opponent.Players) / 200.0
@@ -349,12 +483,39 @@ func (e *MatchEngine) handleShot(state *rooms.MatchState, owner *rooms.Player, o
 	xg = clamp(xg+ownerTeam(owner.TeamID, state).Tactics.ShotRatio*0.1-opponent.Tactics.Pressure*0.06, 0.02, 0.78)
 
 	isGoal := e.rand.Float64() < xg
+	shotOnTarget := isGoal
+	if !shotOnTarget {
+		onTargetProb := clamp(0.22+float64(owner.Shooting)/260.0-distGoal/210.0-opponent.Tactics.Pressure*0.05, 0.12, 0.66)
+		shotOnTarget = e.rand.Float64() < onTargetProb
+	}
+
+	*tickEvents = append(*tickEvents, events.MatchEvent{
+		Kind:         "shot",
+		TeamID:       owner.TeamID,
+		PlayerID:     owner.ID,
+		ShotPower:    round2(shotPower),
+		ShotOnTarget: shotOnTarget,
+		Message:      "Shot attempt",
+	})
+
 	if !isGoal {
 		owner.HasBall = false
 		state.Ball.OwnerID = 0
 		state.Ball.OwnerTeamID = ""
-		state.Ball.VX = ownerGoalDirection(owner.TeamID, state) * 1.2
-		state.Ball.VY = (e.rand.Float64() - 0.5) * 0.8
+		state.Ball.PassTeamID = ""
+		state.Ball.TargetID = 0
+		state.Ball.InFlight = true
+		state.Ball.IsLob = false
+		state.Ball.TargetX = clamp(owner.X+ownerGoalDirection(owner.TeamID, state)*(16+e.rand.Float64()*18), 0, state.FieldW)
+		state.Ball.TargetY = clamp(state.FieldH/2+(e.rand.Float64()-0.5)*16, 0, state.FieldH)
+		state.Ball.FlightTotal = distance(owner.X, owner.Y, state.Ball.TargetX, state.Ball.TargetY)
+		state.Ball.FlightLeft = state.Ball.FlightTotal
+		dx := state.Ball.TargetX - owner.X
+		dy := state.Ball.TargetY - owner.Y
+		d := math.Max(math.Sqrt(dx*dx+dy*dy), 0.01)
+		state.Ball.VX = dx / d * clamp(shotPower*1.1, 1.7, 3.2)
+		state.Ball.VY = dy / d * clamp(shotPower*1.1, 1.7, 3.2)
+		state.Ball.Height = 0.35
 		return
 	}
 
@@ -418,6 +579,15 @@ func (e *MatchEngine) resetKickoff(state *rooms.MatchState, kickoffTeamID string
 	state.Ball.Y = state.FieldH / 2
 	state.Ball.VX = 0
 	state.Ball.VY = 0
+	state.Ball.Height = 0
+	state.Ball.InFlight = false
+	state.Ball.IsLob = false
+	state.Ball.PassTeamID = ""
+	state.Ball.TargetID = 0
+	state.Ball.TargetX = state.Ball.X
+	state.Ball.TargetY = state.Ball.Y
+	state.Ball.FlightLeft = 0
+	state.Ball.FlightTotal = 0
 	state.Ball.OwnerTeamID = kickoffTeamID
 
 	kickoffPlayer := state.HomeTeam.Players[9]
@@ -435,12 +605,43 @@ func (e *MatchEngine) updateBall(state *rooms.MatchState) {
 			state.Ball.Y = clamp(p.Y, 0, state.FieldH)
 			state.Ball.VX = 0
 			state.Ball.VY = 0
+			state.Ball.Height = 0
+			state.Ball.InFlight = false
+			state.Ball.IsLob = false
+			state.Ball.PassTeamID = ""
+			state.Ball.TargetID = 0
+			state.Ball.FlightTotal = 0
+			state.Ball.FlightLeft = 0
 			return
 		}
 	}
 
+	prevX := state.Ball.X
+	prevY := state.Ball.Y
 	state.Ball.X = clamp(state.Ball.X+state.Ball.VX, 0, state.FieldW)
 	state.Ball.Y = clamp(state.Ball.Y+state.Ball.VY, 0, state.FieldH)
+	moved := distance(prevX, prevY, state.Ball.X, state.Ball.Y)
+
+	if state.Ball.InFlight {
+		state.Ball.FlightLeft = math.Max(0, state.Ball.FlightLeft-moved)
+		if state.Ball.IsLob && state.Ball.FlightTotal > 0 {
+			progress := clamp(1.0-state.Ball.FlightLeft/state.Ball.FlightTotal, 0, 1)
+			state.Ball.Height = 5.2 * 4.0 * progress * (1.0 - progress)
+		} else {
+			state.Ball.Height = 0
+		}
+
+		if state.Ball.FlightLeft <= 0.05 {
+			state.Ball.X = state.Ball.TargetX
+			state.Ball.Y = state.Ball.TargetY
+		}
+
+		state.Ball.VX *= 0.992
+		state.Ball.VY *= 0.992
+		return
+	}
+
+	state.Ball.Height = math.Max(0, state.Ball.Height*0.75)
 	state.Ball.VX *= 0.9
 	state.Ball.VY *= 0.9
 }
@@ -470,11 +671,16 @@ func (e *MatchEngine) broadcastTick(state *rooms.MatchState, tick int, tickEvent
 		Ball: events.BallSnapshot{
 			X:           round2(state.Ball.X),
 			Y:           round2(state.Ball.Y),
+			VX:          round2(state.Ball.VX),
+			VY:          round2(state.Ball.VY),
+			Height:      round2(state.Ball.Height),
+			InFlight:    state.Ball.InFlight,
 			OwnerTeamID: state.Ball.OwnerTeamID,
 			OwnerID:     state.Ball.OwnerID,
 		},
 		Players: players,
 		Events:  tickEvents,
+		Debug:   e.buildDebugSnapshot(state),
 	}
 
 	bytes, err := json.Marshal(payload)
@@ -482,6 +688,98 @@ func (e *MatchEngine) broadcastTick(state *rooms.MatchState, tick int, tickEvent
 		return
 	}
 	e.hub.Publish(bytes)
+}
+
+func (e *MatchEngine) buildDebugSnapshot(state *rooms.MatchState) events.DebugSnapshot {
+	debug := events.DebugSnapshot{
+		Gameplay: events.GameplayDebugSnapshot{
+			Mode:               e.runtime.Mode,
+			PassSpeedScale:     round2(e.runtime.PassSpeedScale),
+			InterceptionRadius: round2(e.runtime.InterceptionRadius),
+			GKBuildUpBias:      round2(e.runtime.GKBuildUpBias),
+			TempoScale:         round2(e.runtime.TempoScale),
+		},
+	}
+
+	if state.Ball.OwnerID == 0 {
+		return debug
+	}
+
+	owner := findPlayerByID(state.AllPlayers(), state.Ball.OwnerID)
+	if owner == nil {
+		return debug
+	}
+
+	team := state.HomeTeam
+	opponent := state.AwayTeam
+	if owner.TeamID == state.AwayTeam.ID {
+		team = state.AwayTeam
+		opponent = state.HomeTeam
+	}
+
+	decision := e.bestPassDecision(state, owner, team, opponent)
+	if decision == nil || decision.target == nil {
+		return debug
+	}
+
+	preview := &events.PassPreviewSnapshot{
+		FromX:      round2(owner.X),
+		FromY:      round2(owner.Y),
+		ToX:        round2(decision.targetX),
+		ToY:        round2(decision.targetY),
+		SuccessPct: int(math.Round(decision.success * 100)),
+		ReceiverID: decision.target.ID,
+	}
+	if decision.isLob {
+		preview.PassType = "lob"
+	} else {
+		preview.PassType = "ground"
+	}
+
+	ix, iy, ok := e.estimateLaneInterceptionPoint(owner, decision.target, opponent.Players)
+	if ok {
+		preview.HasLaneRisk = true
+		preview.LaneRiskX = round2(ix)
+		preview.LaneRiskY = round2(iy)
+	}
+
+	debug.PassPreview = preview
+	return debug
+}
+
+func (e *MatchEngine) estimateLaneInterceptionPoint(owner *rooms.Player, target *rooms.Player, opponents []*rooms.Player) (float64, float64, bool) {
+	segLen := distance(owner.X, owner.Y, target.X, target.Y)
+	if segLen < 0.1 {
+		return 0, 0, false
+	}
+
+	bestScore := -1.0
+	bestX := 0.0
+	bestY := 0.0
+	reach := 1.1 * e.runtime.InterceptionRadius
+
+	for _, o := range opponents {
+		along, perp := projectionDistance(owner.X, owner.Y, target.X, target.Y, o.X, o.Y)
+		if along < 0 || along > segLen || perp > reach {
+			continue
+		}
+
+		score := (1.0 - perp/reach) * (0.5 + float64(o.Defending)/220.0)
+		if score <= bestScore {
+			continue
+		}
+
+		ux := (target.X - owner.X) / segLen
+		uy := (target.Y - owner.Y) / segLen
+		bestX = owner.X + ux*along
+		bestY = owner.Y + uy*along
+		bestScore = score
+	}
+
+	if bestScore < 0 {
+		return 0, 0, false
+	}
+	return bestX, bestY, true
 }
 
 func findPlayerByID(players []*rooms.Player, id int) *rooms.Player {
@@ -525,20 +823,300 @@ func nearestOpponent(owner *rooms.Player, opponents []*rooms.Player) *rooms.Play
 	return nearest
 }
 
-func bestPassTarget(owner *rooms.Player, teammates []*rooms.Player) *rooms.Player {
-	var best *rooms.Player
-	bestScore := -9999.0
-	for _, p := range teammates {
-		if p.ID == owner.ID {
-			continue
-		}
-		score := math.Abs(p.X-owner.X)*0.6 - math.Abs(p.Y-owner.Y)*0.15 + float64(p.Mental)*0.01
-		if score > bestScore {
-			bestScore = score
-			best = p
+func nearestOpponentDistance(player *rooms.Player, opponents []*rooms.Player) float64 {
+	if len(opponents) == 0 {
+		return 99
+	}
+	best := distance(player.X, player.Y, opponents[0].X, opponents[0].Y)
+	for _, o := range opponents[1:] {
+		d := distance(player.X, player.Y, o.X, o.Y)
+		if d < best {
+			best = d
 		}
 	}
 	return best
+}
+
+func passingLaneRisk(owner *rooms.Player, target *rooms.Player, opponents []*rooms.Player) float64 {
+	segLen := distance(owner.X, owner.Y, target.X, target.Y)
+	if segLen < 0.1 {
+		return 0
+	}
+
+	risk := 0.0
+	for _, o := range opponents {
+		along, perp := projectionDistance(owner.X, owner.Y, target.X, target.Y, o.X, o.Y)
+		if along < 0 || along > segLen {
+			continue
+		}
+		if perp > 4.4 {
+			continue
+		}
+
+		lineThreat := (1.0 - perp/4.4) * (0.58 + float64(o.Defending)/220.0)
+		risk += lineThreat
+	}
+
+	return clamp(risk, 0, 3.8)
+}
+
+func projectionDistance(x1 float64, y1 float64, x2 float64, y2 float64, px float64, py float64) (float64, float64) {
+	vx := x2 - x1
+	vy := y2 - y1
+	seg := math.Sqrt(vx*vx + vy*vy)
+	if seg == 0 {
+		return 0, distance(x1, y1, px, py)
+	}
+	ux := vx / seg
+	uy := vy / seg
+	proj := (px-x1)*ux + (py-y1)*uy
+	closestX := x1 + proj*ux
+	closestY := y1 + proj*uy
+	perp := distance(px, py, closestX, closestY)
+	return proj, perp
+}
+
+func forwardProgress(owner *rooms.Player, target *rooms.Player, state *rooms.MatchState) float64 {
+	dir := ownerGoalDirection(owner.TeamID, state)
+	return (target.X - owner.X) * dir
+}
+
+func (e *MatchEngine) bestPassDecision(state *rooms.MatchState, owner *rooms.Player, team *rooms.Team, opponent *rooms.Team) *passDecision {
+	nearestDef := nearestOpponent(owner, opponent.Players)
+	pressure := 0.0
+	if nearestDef != nil {
+		pressure = clamp((10.0-distance(owner.X, owner.Y, nearestDef.X, nearestDef.Y))/10.0, 0, 1)
+	}
+
+	var best *passDecision
+	bestScore := -9999.0
+
+	for _, mate := range team.Players {
+		if mate.ID == owner.ID {
+			continue
+		}
+
+		dist := distance(owner.X, owner.Y, mate.X, mate.Y)
+		if dist < 3.5 || dist > 58 {
+			continue
+		}
+
+		space := nearestOpponentDistance(mate, opponent.Players)
+		laneRisk := passingLaneRisk(owner, mate, opponent.Players)
+		progress := forwardProgress(owner, mate, state)
+
+		for _, isLob := range []bool{false, true} {
+			if isLob && dist < 17 {
+				continue
+			}
+			if !isLob && dist > 38 {
+				continue
+			}
+
+			success := estimatePassSuccess(owner, mate, team, opponent, dist, laneRisk, space, pressure, isLob)
+			score := success*120.0 + progress*0.62 + space*1.05 - laneRisk*24.0
+
+			if owner.Role == "GK" {
+				score += e.goalkeeperBuildUpBias(mate, dist, isLob)
+			}
+
+			if score > bestScore {
+				bestScore = score
+				best = &passDecision{
+					target:       mate,
+					isLob:        isLob,
+					success:      success,
+					targetX:      mate.X,
+					targetY:      mate.Y,
+					initialSpeed: e.passBallSpeed(dist, isLob),
+				}
+			}
+		}
+	}
+
+	return best
+}
+
+func (e *MatchEngine) goalkeeperBuildUpBias(target *rooms.Player, dist float64, isLob bool) float64 {
+	bias := 0.0
+	if target.Role == "LB" || target.Role == "RB" || target.Role == "LCB" || target.Role == "RCB" {
+		bias += 10
+	}
+	if target.Role == "CM" || target.Role == "LCM" || target.Role == "RCM" {
+		bias += 8
+	}
+	if target.Role == "ST" {
+		bias -= 18
+	}
+	if dist > 34 && !isLob {
+		bias -= 14
+	}
+	if isLob && dist > 30 {
+		bias += 2
+	}
+	return bias * e.runtime.GKBuildUpBias
+}
+
+func estimatePassSuccess(owner *rooms.Player, target *rooms.Player, team *rooms.Team, opponent *rooms.Team, dist float64, laneRisk float64, space float64, pressure float64, isLob bool) float64 {
+	passSkill := owner.Passing
+	if isLob {
+		passSkill = owner.LongPass
+	}
+
+	base := 0.26 + float64(passSkill)/150.0 + float64(owner.Vision)/280.0 + float64(target.Mental)/420.0
+	distancePenalty := dist / 100.0
+	if isLob {
+		distancePenalty = dist / 125.0
+	}
+
+	lanePenalty := laneRisk * 0.18
+	if isLob {
+		lanePenalty = laneRisk * 0.12
+	}
+
+	spaceBoost := clamp(space/24.0, 0, 0.2)
+	tacticBoost := team.Tactics.PassRatio*0.08 - opponent.Tactics.Pressure*0.06
+	pressurePenalty := pressure * 0.24
+
+	if isLob {
+		base += 0.03
+	}
+
+	return clamp(base-distancePenalty-lanePenalty-pressurePenalty+spaceBoost+tacticBoost, 0.15, 0.92)
+}
+
+func (e *MatchEngine) passBallSpeed(dist float64, isLob bool) float64 {
+	if isLob {
+		return clamp((0.95+dist*0.014)*e.runtime.PassSpeedScale, 0.82, 2.1)
+	}
+	return clamp((0.72+dist*0.016)*e.runtime.PassSpeedScale, 0.62, 1.85)
+}
+
+func (e *MatchEngine) startPassFlight(state *rooms.MatchState, owner *rooms.Player, passTeamID string, targetID int, targetX float64, targetY float64, speed float64, isLob bool) {
+	dx := targetX - owner.X
+	dy := targetY - owner.Y
+	d := math.Sqrt(dx*dx + dy*dy)
+	if d < 0.01 {
+		return
+	}
+
+	owner.HasBall = false
+	state.Ball.OwnerID = 0
+	state.Ball.OwnerTeamID = ""
+	state.Ball.PassTeamID = passTeamID
+	state.Ball.TargetID = targetID
+	state.Ball.TargetX = targetX
+	state.Ball.TargetY = targetY
+	state.Ball.InFlight = true
+	state.Ball.IsLob = isLob
+	state.Ball.FlightTotal = d
+	state.Ball.FlightLeft = d
+	state.Ball.X = owner.X
+	state.Ball.Y = owner.Y
+	state.Ball.VX = dx / d * speed
+	state.Ball.VY = dy / d * speed
+	state.Ball.Height = 0
+}
+
+func (e *MatchEngine) tryResolveFlightContact(state *rooms.MatchState, tickEvents *[]events.MatchEvent) bool {
+	passingTeamID := state.Ball.PassTeamID
+	intendedReceiver := state.Ball.TargetID
+	passType := "ground"
+	if state.Ball.IsLob {
+		passType = "lob"
+	}
+	var best *rooms.Player
+	bestSkill := 0.0
+
+	for _, p := range state.AllPlayers() {
+		reach := 0.95 * e.runtime.InterceptionRadius
+		if state.Ball.IsLob {
+			reach = 0.88 * e.runtime.InterceptionRadius
+			if state.Ball.Height > 1.5 {
+				reach = 0.62 * e.runtime.InterceptionRadius
+			}
+		}
+
+		d := distance(p.X, p.Y, state.Ball.X, state.Ball.Y)
+		if d > reach {
+			continue
+		}
+
+		control := 0.2 + float64(p.Mental)/380.0 + float64(p.Pace)/520.0
+		if p.TeamID == state.Ball.PassTeamID {
+			control += float64(p.Passing) / 280.0
+		} else {
+			control += float64(p.Defending) / 240.0
+		}
+
+		control += (reach - d) * 0.45
+		if state.Ball.IsLob && state.Ball.Height > 1.2 {
+			control *= 0.65
+		}
+
+		if control > bestSkill {
+			bestSkill = control
+			best = p
+		}
+	}
+
+	if best == nil {
+		return false
+	}
+
+	chance := clamp(0.2+bestSkill*0.34, 0.2, 0.9)
+	if e.rand.Float64() > chance {
+		return false
+	}
+
+	e.giveBallToPlayer(state, best)
+	msg := "Pass received"
+	if best.TeamID != passingTeamID {
+		msg = "Pass intercepted"
+		*tickEvents = append(*tickEvents, events.MatchEvent{
+			Kind:          "interception",
+			TeamID:        best.TeamID,
+			PlayerID:      best.ID,
+			InterceptorID: best.ID,
+			ReceiverID:    intendedReceiver,
+			PassType:      passType,
+			Message:       msg,
+		})
+	}
+	*tickEvents = append(*tickEvents, events.MatchEvent{
+		Kind:       "possession_change",
+		TeamID:     best.TeamID,
+		PlayerID:   best.ID,
+		ReceiverID: intendedReceiver,
+		PassType:   passType,
+		InterceptorID: func() int {
+			if best.TeamID != passingTeamID {
+				return best.ID
+			}
+			return 0
+		}(),
+		Message: msg,
+	})
+	return true
+}
+
+func (e *MatchEngine) giveBallToPlayer(state *rooms.MatchState, owner *rooms.Player) {
+	for _, p := range state.AllPlayers() {
+		p.HasBall = false
+	}
+
+	owner.HasBall = true
+	state.Ball.OwnerID = owner.ID
+	state.Ball.OwnerTeamID = owner.TeamID
+	state.Ball.VX = 0
+	state.Ball.VY = 0
+	state.Ball.Height = 0
+	state.Ball.InFlight = false
+	state.Ball.IsLob = false
+	state.Ball.PassTeamID = ""
+	state.Ball.TargetID = 0
+	state.Ball.FlightLeft = 0
+	state.Ball.FlightTotal = 0
 }
 
 func teamDefendingAverage(players []*rooms.Player) float64 {
@@ -581,14 +1159,17 @@ func ownerTeam(teamID string, state *rooms.MatchState) *rooms.Team {
 	return state.AwayTeam
 }
 
-func paceStep(pace int) float64 {
-	return 0.22 + float64(pace)*0.0048
+func (e *MatchEngine) paceStep(pace int) float64 {
+	return (0.16 + float64(pace)*0.0038) * e.runtime.TempoScale
 }
 
 func moveTowards(x float64, y float64, tx float64, ty float64, maxStep float64) (float64, float64) {
 	dx := tx - x
 	dy := ty - y
 	d := math.Sqrt(dx*dx + dy*dy)
+	if d < 0.06 {
+		return x, y
+	}
 	if d == 0 || d <= maxStep {
 		return tx, ty
 	}

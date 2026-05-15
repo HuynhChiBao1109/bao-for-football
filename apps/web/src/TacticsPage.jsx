@@ -1,88 +1,118 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from "react";
 
-import { apiRequest } from './api'
+import { apiRequest } from "./api";
 
 const DEFAULT_FORM = {
-  formation: '4-3-3',
+  formation: "4-3-3",
   passRatio: 58,
   shotRatio: 42,
   pressure: 61,
-}
+  mode: "casual",
+  gameplay: {
+    passSpeedScale: 1.05,
+    interceptionRadius: 1.02,
+    gkBuildUpBias: 1,
+    tempoScale: 1.05,
+  },
+};
 
 function TacticsPage({ token, sessionData, user, onUnauthorized }) {
   const tacticsTeamId =
     sessionData?.team?.tacticsTeamId ||
-    (sessionData?.user?.id ? `user-${sessionData.user.id}` : '')
+    (sessionData?.user?.id ? `user-${sessionData.user.id}` : "");
 
-  const [form, setForm] = useState(DEFAULT_FORM)
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [message, setMessage] = useState('')
-  const [error, setError] = useState('')
+  const [form, setForm] = useState(DEFAULT_FORM);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
 
     async function loadTactics() {
       if (!tacticsTeamId) {
-        setLoading(false)
-        setError('Không xác định được tacticsTeamId của user hiện tại.')
-        return
+        setLoading(false);
+        setError("Không xác định được tacticsTeamId của user hiện tại.");
+        return;
       }
 
-      setLoading(true)
-      setError('')
-      setMessage('')
+      setLoading(true);
+      setError("");
+      setMessage("");
 
       try {
-        const payload = await apiRequest(`/api/v1/tactics/${tacticsTeamId}`, { token })
-        const data = payload?.data
+        const payload = await apiRequest(`/api/v1/tactics/${tacticsTeamId}`, {
+          token,
+        });
+        const data = payload?.data;
         if (!cancelled && data) {
           setForm({
             formation: data.formation || DEFAULT_FORM.formation,
             passRatio: Math.round(Number(data.passRatio || 0) * 100),
             shotRatio: Math.round(Number(data.shotRatio || 0) * 100),
             pressure: Math.round(Number(data.pressure || 0) * 100),
-          })
+            mode: data.mode || DEFAULT_FORM.mode,
+            gameplay: {
+              passSpeedScale: Number(
+                data.gameplay?.passSpeedScale ||
+                  DEFAULT_FORM.gameplay.passSpeedScale,
+              ),
+              interceptionRadius: Number(
+                data.gameplay?.interceptionRadius ||
+                  DEFAULT_FORM.gameplay.interceptionRadius,
+              ),
+              gkBuildUpBias: Number(
+                data.gameplay?.gkBuildUpBias ||
+                  DEFAULT_FORM.gameplay.gkBuildUpBias,
+              ),
+              tempoScale: Number(
+                data.gameplay?.tempoScale || DEFAULT_FORM.gameplay.tempoScale,
+              ),
+            },
+          });
         }
       } catch (err) {
         if (err.status === 401 || err.status === 403) {
-          onUnauthorized()
-          return
+          onUnauthorized();
+          return;
         }
 
         if (err.status === 404) {
           if (!cancelled) {
-            setForm(DEFAULT_FORM)
+            setForm(DEFAULT_FORM);
           }
         } else if (!cancelled) {
-          setError(err.message)
+          setError(err.message);
         }
       } finally {
         if (!cancelled) {
-          setLoading(false)
+          setLoading(false);
         }
       }
     }
 
-    loadTactics()
+    loadTactics();
 
     return () => {
-      cancelled = true
-    }
-  }, [onUnauthorized, tacticsTeamId, token])
+      cancelled = true;
+    };
+  }, [onUnauthorized, tacticsTeamId, token]);
 
-  const total = useMemo(() => form.passRatio + form.shotRatio + form.pressure, [form])
+  const total = useMemo(
+    () => form.passRatio + form.shotRatio + form.pressure,
+    [form],
+  );
 
   async function submitForm(event) {
-    event.preventDefault()
-    setSaving(true)
-    setError('')
-    setMessage('')
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    setMessage("");
 
     try {
-      const payload = await apiRequest('/api/v1/tactics', {
-        method: 'POST',
+      const payload = await apiRequest("/api/v1/tactics", {
+        method: "POST",
         token,
         body: {
           teamId: tacticsTeamId,
@@ -90,27 +120,54 @@ function TacticsPage({ token, sessionData, user, onUnauthorized }) {
           passRatio: Number(form.passRatio),
           shotRatio: Number(form.shotRatio),
           pressure: Number(form.pressure),
+          mode: form.mode,
+          gameplay: {
+            passSpeedScale: Number(form.gameplay.passSpeedScale),
+            interceptionRadius: Number(form.gameplay.interceptionRadius),
+            gkBuildUpBias: Number(form.gameplay.gkBuildUpBias),
+            tempoScale: Number(form.gameplay.tempoScale),
+          },
         },
-      })
+      });
 
-      const data = payload?.data
+      const data = payload?.data;
       if (data) {
         setForm({
           formation: data.formation,
           passRatio: Math.round(Number(data.passRatio || 0) * 100),
           shotRatio: Math.round(Number(data.shotRatio || 0) * 100),
           pressure: Math.round(Number(data.pressure || 0) * 100),
-        })
+          mode: data.mode || DEFAULT_FORM.mode,
+          gameplay: {
+            passSpeedScale: Number(
+              data.gameplay?.passSpeedScale ||
+                DEFAULT_FORM.gameplay.passSpeedScale,
+            ),
+            interceptionRadius: Number(
+              data.gameplay?.interceptionRadius ||
+                DEFAULT_FORM.gameplay.interceptionRadius,
+            ),
+            gkBuildUpBias: Number(
+              data.gameplay?.gkBuildUpBias ||
+                DEFAULT_FORM.gameplay.gkBuildUpBias,
+            ),
+            tempoScale: Number(
+              data.gameplay?.tempoScale || DEFAULT_FORM.gameplay.tempoScale,
+            ),
+          },
+        });
       }
-      setMessage('Đã lưu chiến thuật thành công và đẩy sang realtime match engine.')
+      setMessage(
+        "Đã lưu chiến thuật thành công và đẩy sang realtime match engine.",
+      );
     } catch (err) {
       if (err.status === 401 || err.status === 403) {
-        onUnauthorized()
-        return
+        onUnauthorized();
+        return;
       }
-      setError(err.message)
+      setError(err.message);
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 
@@ -119,7 +176,9 @@ function TacticsPage({ token, sessionData, user, onUnauthorized }) {
       <article className="rounded-3xl border border-[#1c255b] bg-[#050814]/95 p-5 shadow-[0_24px_60px_-28px_rgba(0,0,128,0.8)]">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Chiến thuật</p>
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
+              Chiến thuật
+            </p>
             <h2 className="mt-2 font-['Space_Grotesk'] text-2xl font-semibold text-white">
               Lấy và lưu chiến thuật qua tactics API
             </h2>
@@ -127,7 +186,14 @@ function TacticsPage({ token, sessionData, user, onUnauthorized }) {
         </div>
 
         <p className="mt-3 text-sm leading-6 text-slate-300">
-          Tactics Team ID hiện tại: <span className="font-semibold text-[#f6d87a]">{tacticsTeamId || 'N/A'}</span>. {sessionData?.team?.clubName ? `CLB tham chiếu: ${sessionData.team.clubName}.` : ''}
+          Tactics Team ID hiện tại:{" "}
+          <span className="font-semibold text-[#f6d87a]">
+            {tacticsTeamId || "N/A"}
+          </span>
+          .{" "}
+          {sessionData?.team?.clubName
+            ? `CLB tham chiếu: ${sessionData.team.clubName}.`
+            : ""}
         </p>
 
         {loading ? (
@@ -137,30 +203,108 @@ function TacticsPage({ token, sessionData, user, onUnauthorized }) {
             <SelectField
               label="Formation"
               value={form.formation}
-              options={['4-3-3', '4-4-2']}
-              onChange={(value) => setForm((current) => ({ ...current, formation: value }))}
+              options={["4-3-3", "4-4-2"]}
+              onChange={(value) =>
+                setForm((current) => ({ ...current, formation: value }))
+              }
             />
 
             <div className="grid gap-4 sm:grid-cols-3">
               <SliderField
                 label="Pass Ratio"
                 value={form.passRatio}
-                onChange={(value) => setForm((current) => ({ ...current, passRatio: value }))}
+                onChange={(value) =>
+                  setForm((current) => ({ ...current, passRatio: value }))
+                }
               />
               <SliderField
                 label="Shot Ratio"
                 value={form.shotRatio}
-                onChange={(value) => setForm((current) => ({ ...current, shotRatio: value }))}
+                onChange={(value) =>
+                  setForm((current) => ({ ...current, shotRatio: value }))
+                }
               />
               <SliderField
                 label="Pressure"
                 value={form.pressure}
-                onChange={(value) => setForm((current) => ({ ...current, pressure: value }))}
+                onChange={(value) =>
+                  setForm((current) => ({ ...current, pressure: value }))
+                }
               />
             </div>
 
+            <div className="grid gap-4 rounded-2xl border border-[#24306e] bg-black/20 p-4">
+              <SelectField
+                label="Match Mode Profile"
+                value={form.mode}
+                options={["ranked", "casual", "ai_campaign"]}
+                onChange={(value) =>
+                  setForm((current) => ({ ...current, mode: value }))
+                }
+              />
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <ScaledSliderField
+                  label="Pass Speed Scale"
+                  value={form.gameplay.passSpeedScale}
+                  min={0.65}
+                  max={1.45}
+                  step={0.01}
+                  onChange={(value) =>
+                    setForm((current) => ({
+                      ...current,
+                      gameplay: { ...current.gameplay, passSpeedScale: value },
+                    }))
+                  }
+                />
+                <ScaledSliderField
+                  label="Interception Radius"
+                  value={form.gameplay.interceptionRadius}
+                  min={0.55}
+                  max={1.6}
+                  step={0.01}
+                  onChange={(value) =>
+                    setForm((current) => ({
+                      ...current,
+                      gameplay: {
+                        ...current.gameplay,
+                        interceptionRadius: value,
+                      },
+                    }))
+                  }
+                />
+                <ScaledSliderField
+                  label="GK Build-up Bias"
+                  value={form.gameplay.gkBuildUpBias}
+                  min={0.5}
+                  max={2.0}
+                  step={0.01}
+                  onChange={(value) =>
+                    setForm((current) => ({
+                      ...current,
+                      gameplay: { ...current.gameplay, gkBuildUpBias: value },
+                    }))
+                  }
+                />
+                <ScaledSliderField
+                  label="Tempo Scale"
+                  value={form.gameplay.tempoScale}
+                  min={0.75}
+                  max={1.4}
+                  step={0.01}
+                  onChange={(value) =>
+                    setForm((current) => ({
+                      ...current,
+                      gameplay: { ...current.gameplay, tempoScale: value },
+                    }))
+                  }
+                />
+              </div>
+            </div>
+
             <div className="rounded-2xl border border-[#24306e] bg-black/20 px-4 py-4 text-sm text-slate-300">
-              Tổng thiên hướng hiện tại: <span className="font-semibold text-[#f6d87a]">{total}</span>
+              Tổng thiên hướng hiện tại:{" "}
+              <span className="font-semibold text-[#f6d87a]">{total}</span>
             </div>
 
             {message && <Notice text={message} tone="success" />}
@@ -171,31 +315,38 @@ function TacticsPage({ token, sessionData, user, onUnauthorized }) {
               disabled={saving}
               className="w-full rounded-xl bg-[#000080] px-4 py-3 font-semibold text-white transition hover:bg-[#1111a8] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {saving ? 'Saving...' : 'Save Tactics'}
+              {saving ? "Saving..." : "Save Tactics"}
             </button>
           </form>
         )}
       </article>
 
       <aside className="rounded-3xl border border-[#1c255b] bg-[#050814]/95 p-5 shadow-[0_24px_60px_-28px_rgba(0,0,128,0.8)]">
-        <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Realtime Note</p>
+        <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
+          Realtime Note
+        </p>
         <div className="mt-4 space-y-3 text-sm leading-6 text-slate-300">
           <p className="rounded-2xl border border-[#24306e] bg-black/20 px-4 py-3">
-            Mỗi user sẽ lưu chiến thuật theo tacticsTeamId riêng. Realtime engine tự bind tacticsTeamId vào team slot phù hợp trong trận đang chạy.
+            Mỗi user sẽ lưu chiến thuật theo tacticsTeamId riêng. Realtime
+            engine tự bind tacticsTeamId vào team slot phù hợp trong trận đang
+            chạy.
           </p>
           <p className="rounded-2xl border border-[#24306e] bg-black/20 px-4 py-3">
-            Khi nhấn save, chiến thuật được lưu vào service-core rồi push tiếp sang service-realtime để ảnh hưởng logic trận đấu.
+            Khi nhấn save, chiến thuật được lưu vào service-core rồi push tiếp
+            sang service-realtime để ảnh hưởng logic trận đấu.
           </p>
         </div>
       </aside>
     </section>
-  )
+  );
 }
 
 function SelectField({ label, value, options, onChange }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs uppercase tracking-[0.16em] text-slate-400">{label}</span>
+      <span className="mb-1 block text-xs uppercase tracking-[0.16em] text-slate-400">
+        {label}
+      </span>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -208,13 +359,15 @@ function SelectField({ label, value, options, onChange }) {
         ))}
       </select>
     </label>
-  )
+  );
 }
 
 function SliderField({ label, value, onChange }) {
   return (
     <label className="block rounded-2xl border border-[#24306e] bg-black/20 p-4">
-      <span className="mb-3 block text-xs uppercase tracking-[0.16em] text-slate-400">{label}</span>
+      <span className="mb-3 block text-xs uppercase tracking-[0.16em] text-slate-400">
+        {label}
+      </span>
       <input
         type="range"
         min="0"
@@ -229,18 +382,48 @@ function SliderField({ label, value, onChange }) {
         <span className="text-slate-400">100</span>
       </div>
     </label>
-  )
+  );
+}
+
+function ScaledSliderField({ label, value, min, max, step, onChange }) {
+  return (
+    <label className="block rounded-2xl border border-[#24306e] bg-black/20 p-4">
+      <span className="mb-3 block text-xs uppercase tracking-[0.16em] text-slate-400">
+        {label}
+      </span>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(event) => onChange(Number(event.target.value))}
+        className="w-full accent-[#4169ff]"
+      />
+      <div className="mt-3 flex items-center justify-between text-sm">
+        <span className="text-slate-400">{min.toFixed(2)}</span>
+        <span className="font-semibold text-white">
+          {Number(value).toFixed(2)}
+        </span>
+        <span className="text-slate-400">{max.toFixed(2)}</span>
+      </div>
+    </label>
+  );
 }
 
 function Notice({ text, tone }) {
   const toneClass =
-    tone === 'success'
-      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
-      : tone === 'error'
-        ? 'border-red-500/30 bg-red-500/10 text-red-300'
-        : 'border-[#24306e] bg-black/20 text-slate-300'
+    tone === "success"
+      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+      : tone === "error"
+        ? "border-red-500/30 bg-red-500/10 text-red-300"
+        : "border-[#24306e] bg-black/20 text-slate-300";
 
-  return <p className={`rounded-2xl border px-4 py-3 text-sm ${toneClass}`}>{text}</p>
+  return (
+    <p className={`rounded-2xl border px-4 py-3 text-sm ${toneClass}`}>
+      {text}
+    </p>
+  );
 }
 
-export default TacticsPage
+export default TacticsPage;

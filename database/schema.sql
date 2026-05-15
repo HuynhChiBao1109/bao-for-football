@@ -14,6 +14,8 @@ DROP TABLE IF EXISTS gacha_logs;
 DROP TABLE IF EXISTS user_players;
 DROP TABLE IF EXISTS skills;
 DROP TABLE IF EXISTS player_templates;
+DROP TABLE IF EXISTS admin_players;
+DROP TABLE IF EXISTS countries;
 DROP TABLE IF EXISTS teams;
 DROP TABLE IF EXISTS users;
 
@@ -45,16 +47,58 @@ CREATE TABLE teams (
     ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
+CREATE TABLE countries (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  name VARCHAR(120) NOT NULL,
+  code VARCHAR(20) NULL,
+  flag VARCHAR(255) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_countries_name (name)
+) ENGINE=InnoDB;
+
+CREATE TABLE admin_players (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  name VARCHAR(120) NOT NULL,
+  country_id BIGINT UNSIGNED NULL,
+  nationality VARCHAR(80) NOT NULL,
+  base_club VARCHAR(120) NOT NULL,
+  season ENUM('Normal', 'Special') NOT NULL DEFAULT 'Normal',
+  source_type ENUM('normal', 'gacha') NOT NULL DEFAULT 'normal',
+  special_skill VARCHAR(120) NOT NULL DEFAULT '',
+  shooting SMALLINT UNSIGNED NOT NULL,
+  passing SMALLINT UNSIGNED NOT NULL,
+  long_pass SMALLINT UNSIGNED NOT NULL DEFAULT 60,
+  vision SMALLINT UNSIGNED NOT NULL DEFAULT 60,
+  pace SMALLINT UNSIGNED NOT NULL,
+  physical SMALLINT UNSIGNED NOT NULL,
+  defending SMALLINT UNSIGNED NOT NULL,
+  dribbling SMALLINT UNSIGNED NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_admin_players_season (season),
+  KEY idx_admin_players_source_type (source_type),
+  KEY idx_admin_players_country_id (country_id),
+  CONSTRAINT fk_admin_players_country_id
+    FOREIGN KEY (country_id) REFERENCES countries(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
 CREATE TABLE player_templates (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   name VARCHAR(120) NOT NULL,
   height_cm SMALLINT UNSIGNED NOT NULL,
+  country_id BIGINT UNSIGNED NULL,
   nationality VARCHAR(80) NOT NULL,
   base_club VARCHAR(120) NOT NULL,
   season ENUM('Normal', 'Special') NOT NULL DEFAULT 'Normal',
   image_url VARCHAR(500) NULL,
   base_shooting SMALLINT UNSIGNED NOT NULL DEFAULT 1,
   base_passing SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+  base_long_pass SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+  base_vision SMALLINT UNSIGNED NOT NULL DEFAULT 1,
   base_pace SMALLINT UNSIGNED NOT NULL DEFAULT 1,
   base_physical SMALLINT UNSIGNED NOT NULL DEFAULT 1,
   base_defending SMALLINT UNSIGNED NOT NULL DEFAULT 1,
@@ -63,7 +107,12 @@ CREATE TABLE player_templates (
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   KEY idx_player_templates_season (season),
-  KEY idx_player_templates_name (name)
+  KEY idx_player_templates_name (name),
+  KEY idx_player_templates_country_id (country_id),
+  CONSTRAINT fk_player_templates_country_id
+    FOREIGN KEY (country_id) REFERENCES countries(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
 CREATE TABLE skills (

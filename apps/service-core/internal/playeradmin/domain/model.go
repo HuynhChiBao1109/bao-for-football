@@ -5,6 +5,8 @@ import "time"
 type Player struct {
 	ID           int64     `json:"id"`
 	Name         string    `json:"name"`
+	CountryID    int64     `json:"countryId"`
+	Country      Country   `json:"country"`
 	Nationality  string    `json:"nationality"`
 	BaseClub     string    `json:"baseClub"`
 	Season       string    `json:"season"`
@@ -12,9 +14,18 @@ type Player struct {
 	SpecialSkill string    `json:"specialSkill"`
 	Shooting     int       `json:"shooting"`
 	Passing      int       `json:"passing"`
+	LongPass     int       `json:"longPass"`
+	Vision       int       `json:"vision"`
 	Pace         int       `json:"pace"`
 	Physical     int       `json:"physical"`
 	Defending    int       `json:"defending"`
 	Dribbling    int       `json:"dribbling"`
 	CreatedAt    time.Time `json:"createdAt"`
+}
+
+type Country struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+	Code string `json:"code"`
+	Flag string `json:"flag"`
 }

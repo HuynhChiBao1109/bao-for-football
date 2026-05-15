@@ -54,21 +54,38 @@ func (migrationTeam) TableName() string {
 	return "teams"
 }
 
+type migrationCountry struct {
+	ID        uint64    `gorm:"primaryKey;autoIncrement;column:id"`
+	Name      string    `gorm:"type:varchar(120);not null;uniqueIndex:uk_countries_name;column:name"`
+	Code      string    `gorm:"type:varchar(20);column:code"`
+	Flag      string    `gorm:"type:varchar(255);column:flag"`
+	CreatedAt time.Time `gorm:"column:created_at"`
+	UpdatedAt time.Time `gorm:"column:updated_at"`
+}
+
+func (migrationCountry) TableName() string {
+	return "countries"
+}
+
 type migrationAdminPlayer struct {
-	ID           uint64    `gorm:"primaryKey;autoIncrement;column:id"`
-	Name         string    `gorm:"type:varchar(120);not null;column:name"`
-	Nationality  string    `gorm:"type:varchar(80);not null;column:nationality"`
-	BaseClub     string    `gorm:"type:varchar(120);not null;column:base_club"`
-	Season       string    `gorm:"type:enum('Normal','Special');not null;default:Normal;index:idx_admin_players_season;column:season"`
-	SourceType   string    `gorm:"type:enum('normal','gacha');not null;default:normal;index:idx_admin_players_source_type;column:source_type"`
-	SpecialSkill string    `gorm:"type:varchar(120);not null;default:'';column:special_skill"`
-	Shooting     uint8     `gorm:"not null;column:shooting"`
-	Passing      uint8     `gorm:"not null;column:passing"`
-	Pace         uint8     `gorm:"not null;column:pace"`
-	Physical     uint8     `gorm:"not null;column:physical"`
-	Defending    uint8     `gorm:"not null;column:defending"`
-	Dribbling    uint8     `gorm:"not null;column:dribbling"`
-	CreatedAt    time.Time `gorm:"column:created_at"`
+	ID           uint64            `gorm:"primaryKey;autoIncrement;column:id"`
+	Name         string            `gorm:"type:varchar(120);not null;column:name"`
+	CountryID    *uint64           `gorm:"index:idx_admin_players_country_id;column:country_id"`
+	Nationality  string            `gorm:"type:varchar(80);not null;column:nationality"`
+	BaseClub     string            `gorm:"type:varchar(120);not null;column:base_club"`
+	Season       string            `gorm:"type:enum('Normal','Special');not null;default:Normal;index:idx_admin_players_season;column:season"`
+	SourceType   string            `gorm:"type:enum('normal','gacha');not null;default:normal;index:idx_admin_players_source_type;column:source_type"`
+	SpecialSkill string            `gorm:"type:varchar(120);not null;default:'';column:special_skill"`
+	Shooting     uint8             `gorm:"not null;column:shooting"`
+	Passing      uint8             `gorm:"not null;column:passing"`
+	LongPass     uint8             `gorm:"not null;default:60;column:long_pass"`
+	Vision       uint8             `gorm:"not null;default:60;column:vision"`
+	Pace         uint8             `gorm:"not null;column:pace"`
+	Physical     uint8             `gorm:"not null;column:physical"`
+	Defending    uint8             `gorm:"not null;column:defending"`
+	Dribbling    uint8             `gorm:"not null;column:dribbling"`
+	CreatedAt    time.Time         `gorm:"column:created_at"`
+	Country      *migrationCountry `gorm:"foreignKey:CountryID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 }
 
 func (migrationAdminPlayer) TableName() string {
@@ -76,21 +93,25 @@ func (migrationAdminPlayer) TableName() string {
 }
 
 type migrationPlayerTemplate struct {
-	ID            uint64    `gorm:"primaryKey;autoIncrement;column:id"`
-	Name          string    `gorm:"type:varchar(120);not null;index:idx_player_templates_name;column:name"`
-	HeightCM      uint16    `gorm:"not null;column:height_cm"`
-	Nationality   string    `gorm:"type:varchar(80);not null;column:nationality"`
-	BaseClub      string    `gorm:"type:varchar(120);not null;column:base_club"`
-	Season        string    `gorm:"type:enum('Normal','Special');not null;default:Normal;index:idx_player_templates_season;column:season"`
-	ImageURL      string    `gorm:"type:varchar(500);column:image_url"`
-	BaseShooting  int       `gorm:"not null;default:1;column:base_shooting"`
-	BasePassing   int       `gorm:"not null;default:1;column:base_passing"`
-	BasePace      int       `gorm:"not null;default:1;column:base_pace"`
-	BasePhysical  int       `gorm:"not null;default:1;column:base_physical"`
-	BaseDefending int       `gorm:"not null;default:1;column:base_defending"`
-	BaseDribbling int       `gorm:"not null;default:1;column:base_dribbling"`
-	CreatedAt     time.Time `gorm:"column:created_at"`
-	UpdatedAt     time.Time `gorm:"column:updated_at"`
+	ID            uint64            `gorm:"primaryKey;autoIncrement;column:id"`
+	Name          string            `gorm:"type:varchar(120);not null;index:idx_player_templates_name;column:name"`
+	HeightCM      uint16            `gorm:"not null;column:height_cm"`
+	CountryID     *uint64           `gorm:"index:idx_player_templates_country_id;column:country_id"`
+	Nationality   string            `gorm:"type:varchar(80);not null;column:nationality"`
+	BaseClub      string            `gorm:"type:varchar(120);not null;column:base_club"`
+	Season        string            `gorm:"type:enum('Normal','Special');not null;default:Normal;index:idx_player_templates_season;column:season"`
+	ImageURL      string            `gorm:"type:varchar(500);column:image_url"`
+	BaseShooting  int               `gorm:"not null;default:1;column:base_shooting"`
+	BasePassing   int               `gorm:"not null;default:1;column:base_passing"`
+	BaseLongPass  int               `gorm:"not null;default:1;column:base_long_pass"`
+	BaseVision    int               `gorm:"not null;default:1;column:base_vision"`
+	BasePace      int               `gorm:"not null;default:1;column:base_pace"`
+	BasePhysical  int               `gorm:"not null;default:1;column:base_physical"`
+	BaseDefending int               `gorm:"not null;default:1;column:base_defending"`
+	BaseDribbling int               `gorm:"not null;default:1;column:base_dribbling"`
+	CreatedAt     time.Time         `gorm:"column:created_at"`
+	UpdatedAt     time.Time         `gorm:"column:updated_at"`
+	Country       *migrationCountry `gorm:"foreignKey:CountryID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 }
 
 func (migrationPlayerTemplate) TableName() string {
@@ -209,15 +230,25 @@ var seededClubs = []defaultClub{
 	{ID: 8, Name: "Ruby Comets", Formation: "4-2-2-2", Budget: 109000000, LeagueName: "Eredivisie"},
 }
 
-var seededNationalities = []string{
-	"Vietnam",
-	"Brazil",
-	"Argentina",
-	"Spain",
-	"France",
-	"Germany",
-	"Portugal",
-	"England",
+type defaultCountry struct {
+	Name string
+	Code string
+	Flag string
+}
+
+var seededCountries = []defaultCountry{
+	{Name: "Vietnam", Code: "VN", Flag: "https://media.api-sports.io/flags/vn.svg"},
+	{Name: "Brazil", Code: "BR", Flag: "https://media.api-sports.io/flags/br.svg"},
+	{Name: "Argentina", Code: "AR", Flag: "https://media.api-sports.io/flags/ar.svg"},
+	{Name: "Spain", Code: "ES", Flag: "https://media.api-sports.io/flags/es.svg"},
+	{Name: "France", Code: "FR", Flag: "https://media.api-sports.io/flags/fr.svg"},
+	{Name: "Germany", Code: "DE", Flag: "https://media.api-sports.io/flags/de.svg"},
+	{Name: "Portugal", Code: "PT", Flag: "https://media.api-sports.io/flags/pt.svg"},
+	{Name: "England", Code: "GB-ENG", Flag: "https://media.api-sports.io/flags/gb-eng.svg"},
+	{Name: "Italy", Code: "IT", Flag: "https://media.api-sports.io/flags/it.svg"},
+	{Name: "Netherlands", Code: "NL", Flag: "https://media.api-sports.io/flags/nl.svg"},
+	{Name: "Japan", Code: "JP", Flag: "https://media.api-sports.io/flags/jp.svg"},
+	{Name: "South-Korea", Code: "KR", Flag: "https://media.api-sports.io/flags/kr.svg"},
 }
 
 func AutoMigrate(ctx context.Context, db *gorm.DB) error {
@@ -230,6 +261,7 @@ func AutoMigrate(ctx context.Context, db *gorm.DB) error {
 
 	if err := db.WithContext(ctx).Set("gorm:table_options", "ENGINE=InnoDB").AutoMigrate(
 		&migrationClub{},
+		&migrationCountry{},
 		&migrationAdminPlayer{},
 		&migrationPlayerTemplate{},
 		&migrationSkill{},
@@ -260,6 +292,12 @@ func EnsureSeedData(ctx context.Context, db *sql.DB) error {
 	defer cancel()
 
 	if err := ensureDefaultClubs(ctx, db); err != nil {
+		return err
+	}
+	if err := ensureCountries(ctx, db); err != nil {
+		return err
+	}
+	if err := backfillCountryRelations(ctx, db); err != nil {
 		return err
 	}
 	if err := ensureDefaultPlayers(ctx, db); err != nil {
@@ -346,6 +384,46 @@ ON DUPLICATE KEY UPDATE
 	return nil
 }
 
+func ensureCountries(ctx context.Context, db *sql.DB) error {
+	for _, country := range seededCountries {
+		_, err := db.ExecContext(ctx, `
+INSERT INTO countries (name, code, flag)
+VALUES (?, ?, ?)
+ON DUPLICATE KEY UPDATE
+  code = VALUES(code),
+  flag = VALUES(flag)`,
+			country.Name,
+			country.Code,
+			country.Flag,
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func backfillCountryRelations(ctx context.Context, db *sql.DB) error {
+	if _, err := db.ExecContext(ctx, `
+UPDATE admin_players ap
+INNER JOIN countries c ON c.name = ap.nationality
+SET ap.country_id = c.id
+WHERE ap.country_id IS NULL`); err != nil {
+		return err
+	}
+
+	if _, err := db.ExecContext(ctx, `
+UPDATE player_templates pt
+INNER JOIN countries c ON c.name = pt.nationality
+SET pt.country_id = c.id
+WHERE pt.country_id IS NULL`); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func ensureDefaultPlayers(ctx context.Context, db *sql.DB) error {
 	for clubIndex, club := range seededClubs {
 		var existingCount int
@@ -363,9 +441,15 @@ WHERE source_type = 'normal' AND base_club = ?`, club.Name).Scan(&existingCount)
 		for i := existingCount + 1; i <= 22; i++ {
 			globalIdx := clubIndex*22 + i
 			name := fmt.Sprintf("%s Player %02d", club.Name, i)
-			nationality := seededNationalities[(globalIdx-1)%len(seededNationalities)]
+			country := seededCountries[(globalIdx-1)%len(seededCountries)]
+			var countryID int64
+			if err := db.QueryRowContext(ctx, `SELECT id FROM countries WHERE name = ? LIMIT 1`, country.Name).Scan(&countryID); err != nil {
+				return err
+			}
 			shooting := boundedStat(60 + (globalIdx % 18))
 			passing := boundedStat(58 + ((globalIdx + 3) % 18))
+			longPass := boundedStat(57 + ((globalIdx + 5) % 18))
+			vision := boundedStat(56 + ((globalIdx + 7) % 18))
 			pace := boundedStat(57 + ((globalIdx + 6) % 18))
 			physical := boundedStat(55 + ((globalIdx + 9) % 18))
 			defending := boundedStat(54 + ((globalIdx + 12) % 18))
@@ -374,6 +458,7 @@ WHERE source_type = 'normal' AND base_club = ?`, club.Name).Scan(&existingCount)
 			_, err := db.ExecContext(ctx, `
 INSERT INTO admin_players (
   name,
+	country_id,
   nationality,
   base_club,
   season,
@@ -381,16 +466,21 @@ INSERT INTO admin_players (
   special_skill,
   shooting,
   passing,
+  long_pass,
+  vision,
   pace,
   physical,
   defending,
   dribbling
-) VALUES (?, ?, ?, 'Normal', 'normal', '', ?, ?, ?, ?, ?, ?)`,
+) VALUES (?, ?, ?, ?, 'Normal', 'normal', '', ?, ?, ?, ?, ?, ?, ?, ?)`,
 				name,
-				nationality,
+				countryID,
+				country.Name,
 				club.Name,
 				shooting,
 				passing,
+				longPass,
+				vision,
 				pace,
 				physical,
 				defending,

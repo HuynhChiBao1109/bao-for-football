@@ -17,10 +17,23 @@ type Player struct {
 	HomeY     float64
 	Pace      int
 	Passing   int
+	LongPass  int
+	Vision    int
 	Shooting  int
 	Defending int
 	Mental    int
 	HasBall   bool
+}
+
+type PlayerStatsInput struct {
+	CardID    uint64
+	Pace      int
+	Passing   int
+	LongPass  int
+	Vision    int
+	Shooting  int
+	Defending int
+	Mental    int
 }
 
 type TeamTactics struct {
@@ -46,8 +59,17 @@ type Ball struct {
 	Y           float64
 	VX          float64
 	VY          float64
+	Height      float64
 	OwnerTeamID string
 	OwnerID     int
+	InFlight    bool
+	IsLob       bool
+	PassTeamID  string
+	TargetID    int
+	TargetX     float64
+	TargetY     float64
+	FlightTotal float64
+	FlightLeft  float64
 }
 
 type MatchState struct {
@@ -151,9 +173,28 @@ func createTeamPlayers(teamID string, mirror bool) []*Player {
 
 		pace := 62 + (i*3)%28
 		passing := 60 + (i*4)%26
+		longPass := 56 + (i*5)%30
+		vision := 58 + (i*4+7)%30
 		shooting := 58 + (i*5)%30
 		defending := 57 + (i*6)%33
 		mental := 60 + (i*2)%24
+
+		if roles[i] == "GK" {
+			longPass += 8
+			vision -= 4
+		}
+		if roles[i] == "CM" || roles[i] == "LCM" || roles[i] == "RCM" {
+			vision += 8
+			passing += 5
+		}
+		if roles[i] == "ST" {
+			vision += 4
+			passing -= 3
+		}
+
+		passing = clampInt(passing, 45, 95)
+		longPass = clampInt(longPass, 40, 95)
+		vision = clampInt(vision, 40, 95)
 
 		players = append(players, &Player{
 			ID:        baseID + i,
@@ -165,6 +206,8 @@ func createTeamPlayers(teamID string, mirror bool) []*Player {
 			HomeY:     y,
 			Pace:      pace,
 			Passing:   passing,
+			LongPass:  longPass,
+			Vision:    vision,
 			Shooting:  shooting,
 			Defending: defending,
 			Mental:    mental,
@@ -194,6 +237,30 @@ func ApplyFormation(team *Team, formation string) {
 	}
 }
 
+func ApplyPlayerStats(team *Team, incoming []PlayerStatsInput) {
+	if len(incoming) == 0 {
+		return
+	}
+
+	limit := len(team.Players)
+	if len(incoming) < limit {
+		limit = len(incoming)
+	}
+
+	for i := 0; i < limit; i++ {
+		src := incoming[i]
+		dst := team.Players[i]
+
+		dst.Pace = clampInt(src.Pace, 35, 99)
+		dst.Passing = clampInt(src.Passing, 35, 99)
+		dst.LongPass = clampInt(src.LongPass, 35, 99)
+		dst.Vision = clampInt(src.Vision, 35, 99)
+		dst.Shooting = clampInt(src.Shooting, 35, 99)
+		dst.Defending = clampInt(src.Defending, 35, 99)
+		dst.Mental = clampInt(src.Mental, 35, 99)
+	}
+}
+
 func formationShape(formation string) []Vec2 {
 	switch formation {
 	case "4-4-2":
@@ -213,4 +280,14 @@ func formationShape(formation string) []Vec2 {
 			{58, 14}, {58, 32}, {58, 50},
 		}
 	}
+}
+
+func clampInt(v int, minV int, maxV int) int {
+	if v < minV {
+		return minV
+	}
+	if v > maxV {
+		return maxV
+	}
+	return v
 }

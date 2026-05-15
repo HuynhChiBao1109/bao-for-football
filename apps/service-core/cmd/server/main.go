@@ -20,6 +20,9 @@ import (
 	gachausecase "fifam/apps/service-core/internal/gacha/usecase"
 	coremiddleware "fifam/apps/service-core/internal/middleware"
 	mysqlplatform "fifam/apps/service-core/internal/platform/mysql"
+	playerhttp "fifam/apps/service-core/internal/player/delivery/http"
+	playermysql "fifam/apps/service-core/internal/player/repository/mysql"
+	playerusecase "fifam/apps/service-core/internal/player/usecase"
 	playeradminhttp "fifam/apps/service-core/internal/playeradmin/delivery/http"
 	playeradminmysql "fifam/apps/service-core/internal/playeradmin/repository/mysql"
 	playeradminusecase "fifam/apps/service-core/internal/playeradmin/usecase"
@@ -70,6 +73,10 @@ func main() {
 	playerAdminUC := playeradminusecase.NewPlayerAdminUseCase(playerAdminRepo)
 	playerAdminHandler := playeradminhttp.NewHandler(playerAdminUC)
 
+	playerRepo := playermysql.NewRepository(db)
+	playerUC := playerusecase.NewPlayerCardUseCase(playerRepo)
+	playerHandler := playerhttp.NewHandler(playerUC)
+
 	aiRepo := aimysql.NewRepository(db)
 	aiUC := aiusecase.NewCampaignUseCase(aiRepo)
 	aiHandler := aihttp.NewHandler(aiUC)
@@ -97,10 +104,15 @@ func main() {
 	api.GET("/tactics/:teamId", tacticsHandler.Get)
 	api.POST("/tactics", tacticsHandler.Save)
 	api.POST("/gacha/roll", gachaHandler.Roll)
+	api.GET("/players", playerHandler.ListMyCards)
+	api.POST("/players/:id/level-up", playerHandler.LevelUp)
+	api.POST("/players/:id/allocate", playerHandler.AllocateStats)
 
 	admin := router.Group("/api/v1/admin")
 	admin.Use(authmiddleware.RequireJWT(authUC, true))
+	admin.GET("/countries", playerAdminHandler.ListCountries)
 	admin.GET("/players", playerAdminHandler.List)
+	admin.GET("/players/:id", playerAdminHandler.Detail)
 	admin.POST("/players", playerAdminHandler.Create)
 
 	log.Printf("service-core listening on %s", cfg.HTTPPort)

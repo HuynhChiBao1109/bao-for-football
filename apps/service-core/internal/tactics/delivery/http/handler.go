@@ -24,6 +24,13 @@ type saveRequest struct {
 	PassRatio float64 `json:"passRatio"`
 	ShotRatio float64 `json:"shotRatio"`
 	Pressure  float64 `json:"pressure"`
+	Mode      string  `json:"mode"`
+	Gameplay  struct {
+		PassSpeedScale     float64 `json:"passSpeedScale"`
+		InterceptionRadius float64 `json:"interceptionRadius"`
+		GKBuildUpBias      float64 `json:"gkBuildUpBias"`
+		TempoScale         float64 `json:"tempoScale"`
+	} `json:"gameplay"`
 }
 
 func (h *Handler) Save(c *gin.Context) {
@@ -39,6 +46,13 @@ func (h *Handler) Save(c *gin.Context) {
 		PassRatio: req.PassRatio,
 		ShotRatio: req.ShotRatio,
 		Pressure:  req.Pressure,
+		Mode:      req.Mode,
+		Gameplay: domain.Gameplay{
+			PassSpeedScale:     req.Gameplay.PassSpeedScale,
+			InterceptionRadius: req.Gameplay.InterceptionRadius,
+			GKBuildUpBias:      req.Gameplay.GKBuildUpBias,
+			TempoScale:         req.Gameplay.TempoScale,
+		},
 	})
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
