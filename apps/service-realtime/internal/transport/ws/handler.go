@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"fmt"
 	"net/http"
 
 	"fifam/apps/service-realtime/internal/broadcaster"
@@ -50,6 +51,47 @@ func (h *Handler) Connect(c *gin.Context) {
 			return
 		}
 		h.hub.Publish(payload)
+	}
+}
+
+func (h *Handler) StreamMatchSSE(c *gin.Context) {
+	h.engine.EnsureRunning()
+
+	c.Writer.Header().Set("Content-Type", "text/event-stream")
+	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("Connection", "keep-alive")
+	c.Writer.Header().Set("X-Accel-Buffering", "no")
+	c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+
+	flusher, ok := c.Writer.(http.Flusher)
+	if !ok {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "streaming unsupported"})
+		return
+	}
+
+	subscriber := h.hub.RegisterSSE()
+	defer h.hub.UnregisterSSE(subscriber)
+
+	if _, err := fmt.Fprint(c.Writer, ": connected\n\n"); err != nil {
+		return
+	}
+	flusher.Flush()
+
+	ctx := c.Request.Context()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case payload, ok := <-subscriber:
+			if !ok {
+				return
+			}
+
+			if _, err := fmt.Fprintf(c.Writer, "event: match_tick\ndata: %s\n\n", payload); err != nil {
+				return
+			}
+			flusher.Flush()
+		}
 	}
 }
 

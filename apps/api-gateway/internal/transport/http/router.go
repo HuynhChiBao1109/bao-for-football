@@ -4,7 +4,9 @@ import (
 	"net/http"
 
 	"fifam/apps/api-gateway/internal/middleware"
+	ssetransport "fifam/apps/api-gateway/internal/transport/sse"
 	wstransport "fifam/apps/api-gateway/internal/transport/ws"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -19,6 +21,7 @@ func NewRouter() *gin.Engine {
 	})
 
 	router.GET("/ws", wstransport.Handle)
+	router.GET("/sse/match", ssetransport.Handle)
 
 	return router
 }

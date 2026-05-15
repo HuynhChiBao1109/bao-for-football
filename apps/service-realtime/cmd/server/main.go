@@ -26,11 +26,22 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
 	router.Use(gin.Recovery())
+	router.Use(func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+		c.Next()
+	})
 
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"service": "service-realtime", "status": "ok"})
 	})
 	router.GET("/ws", handler.Connect)
+	router.GET("/sse/match", handler.StreamMatchSSE)
 	router.POST("/api/v1/tactics", handler.UpdateTactics)
 
 	log.Printf("service-realtime listening on %s", port)
