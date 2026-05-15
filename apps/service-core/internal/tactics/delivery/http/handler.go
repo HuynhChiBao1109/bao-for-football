@@ -11,10 +11,11 @@ import (
 
 type Handler struct {
 	saveTactics *tacticsusecase.SaveTacticsUseCase
+	getTactics  *tacticsusecase.GetTacticsUseCase
 }
 
-func NewHandler(saveTactics *tacticsusecase.SaveTacticsUseCase) *Handler {
-	return &Handler{saveTactics: saveTactics}
+func NewHandler(saveTactics *tacticsusecase.SaveTacticsUseCase, getTactics *tacticsusecase.GetTacticsUseCase) *Handler {
+	return &Handler{saveTactics: saveTactics, getTactics: getTactics}
 }
 
 type saveRequest struct {
@@ -48,4 +49,19 @@ func (h *Handler) Save(c *gin.Context) {
 		"message": "tactics saved and pushed to match engine",
 		"data":    saved,
 	})
+}
+
+func (h *Handler) Get(c *gin.Context) {
+	config, err := h.getTactics.Execute(c.Request.Context(), c.Param("teamId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if config == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "tactics not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": config})
 }

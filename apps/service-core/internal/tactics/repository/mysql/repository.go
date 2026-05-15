@@ -24,6 +24,46 @@ func NewRepository(db *sql.DB) *Repository {
 	}
 }
 
+func (r *Repository) FindByTeamID(ctx context.Context, teamID string) (*domain.Config, error) {
+	if r.db == nil {
+		r.memMu.Lock()
+		defer r.memMu.Unlock()
+
+		cfg, ok := r.memStore[teamID]
+		if !ok {
+			return nil, nil
+		}
+		copyCfg := cfg
+		return &copyCfg, nil
+	}
+
+	if err := r.ensureTable(ctx); err != nil {
+		return nil, err
+	}
+
+	var cfg domain.Config
+	err := r.db.QueryRowContext(ctx, `
+SELECT team_id, formation, pass_ratio, shot_ratio, pressure, updated_at
+FROM team_tactics
+WHERE team_id = ?
+LIMIT 1`, teamID).Scan(
+		&cfg.TeamID,
+		&cfg.Formation,
+		&cfg.PassRatio,
+		&cfg.ShotRatio,
+		&cfg.Pressure,
+		&cfg.UpdatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &cfg, nil
+}
+
 func (r *Repository) Save(ctx context.Context, cfg domain.Config) (domain.Config, error) {
 	cfg.UpdatedAt = time.Now()
 
@@ -63,23 +103,5 @@ updated_at = CURRENT_TIMESTAMP`
 }
 
 func (r *Repository) ensureTable(ctx context.Context) error {
-	r.ensureOnce.Do(func() {
-		if r.db == nil {
-			return
-		}
-		_, r.ensureErr = r.db.ExecContext(ctx, `
-CREATE TABLE IF NOT EXISTS team_tactics (
-  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  team_id VARCHAR(32) NOT NULL,
-  formation VARCHAR(10) NOT NULL,
-  pass_ratio DOUBLE NOT NULL,
-  shot_ratio DOUBLE NOT NULL,
-  pressure DOUBLE NOT NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (id),
-  UNIQUE KEY uk_team_tactics_team_id (team_id)
-) ENGINE=InnoDB`)
-	})
-	return r.ensureErr
+	return nil
 }

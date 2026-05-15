@@ -53,6 +53,8 @@ cd apps/service-realtime && go run ./cmd/server
 ### Feature
 - Đăng ký, đăng nhập , khi mới tạo account sẽ được chọn đội bóng, đặt tên CLB => bao gồm 22 thẻ cầu thủ mùa thường, tối đa 1 user có thể có 50 cầu thủ
 
+- main page sẽ bao gồm quản lí đội bóng, chiến thuật, đấu với máy, đấu với người, gacha cầu thủ, và admin page ( chỉ admin mới có quyền truy cập )
+
 - Thẻ cầu thủ bao gồm chiều cao, chuyền sút, và các chỉ số cơ bản của cầu và kĩ năng ( các kĩ năng đặc biệt có thể buff chỉ số ), câu lạc bộ ( gốc ), quốc gia. Tất cả cầu thủ có các field chỉ số cơ bản giống nhau chỉ có kĩ năng đặc biệt là có thể khác. Tổng chỉ số cầu thủ bằng tất cả + lại và chia ra. Và có các thẻ cầu thủ mùa đặc biệt và các mùa thường. Cầu thủ sẽ có 36 level, mỗi level tăng có thể tăng chỉ số ( tùy ý hoặc nhấn tự động )
 
 - Các kĩ năng đặc biệt bao gồm các hình ảnh hoặc icon đại diện

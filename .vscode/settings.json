@@ -7,6 +7,10 @@
         "true": true,
         "gofmt": true,
         "npm run build": true,
-        "netstat": true
+        "netstat": true,
+        "/^npm --version$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
     }
 }

@@ -3,13 +3,14 @@ import { useEffect, useState } from 'react'
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081'
 
 const emptyLogin = { username: '', password: '' }
-const emptyRegister = { username: '', password: '' }
+const emptyRegister = { username: '', password: '', clubId: 0, clubName: '' }
 
 function AuthGate({ onAuthenticated }) {
   const [tab, setTab] = useState('login')
   const [loginMode, setLoginMode] = useState('user')
   const [loginForm, setLoginForm] = useState(emptyLogin)
   const [registerForm, setRegisterForm] = useState(emptyRegister)
+  const [clubs, setClubs] = useState([])
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -18,6 +19,43 @@ function AuthGate({ onAuthenticated }) {
     setMessage('')
     setError('')
   }, [tab])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadClubs() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/auth/clubs`)
+        const data = await response.json()
+        if (!response.ok) {
+          throw new Error(data?.error || 'Load clubs failed')
+        }
+
+        if (cancelled) {
+          return
+        }
+
+        const nextClubs = Array.isArray(data?.data) ? data.data : []
+        setClubs(nextClubs)
+        setRegisterForm((current) => {
+          if (current.clubId || nextClubs.length === 0) {
+            return current
+          }
+          return { ...current, clubId: nextClubs[0].id }
+        })
+      } catch (err) {
+        if (!cancelled) {
+          setError(err.message)
+        }
+      }
+    }
+
+    loadClubs()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   async function submitLogin(event) {
     event.preventDefault()
@@ -65,10 +103,10 @@ function AuthGate({ onAuthenticated }) {
         throw new Error(data?.error || 'Register failed')
       }
 
-      setMessage('Đăng ký thành công. Hãy đăng nhập bằng admin account để mở dashboard.')
+      setMessage('Đăng ký thành công. Bạn có thể đăng nhập ngay với đội hình khởi tạo ban đầu.')
       setTab('login')
       setLoginForm((current) => ({ ...current, username: registerForm.username }))
-      setRegisterForm(emptyRegister)
+      setRegisterForm((current) => ({ ...emptyRegister, clubId: clubs[0]?.id || current.clubId || 0 }))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -179,6 +217,21 @@ function AuthGate({ onAuthenticated }) {
                 value={registerForm.password}
                 onChange={(value) => setRegisterForm((current) => ({ ...current, password: value }))}
               />
+              <Field
+                label="Tên Câu Lạc Bộ"
+                value={registerForm.clubName}
+                onChange={(value) => setRegisterForm((current) => ({ ...current, clubName: value }))}
+              />
+              <SelectField
+                label="Đội Bóng Khởi Đầu"
+                value={registerForm.clubId}
+                options={clubs}
+                onChange={(value) => setRegisterForm((current) => ({ ...current, clubId: Number(value) }))}
+              />
+
+              {registerForm.clubId ? (
+                <ClubPreview clubs={clubs} clubId={registerForm.clubId} />
+              ) : null}
 
               {message && <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">{message}</p>}
               {error && <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</p>}
@@ -209,6 +262,45 @@ function Field({ label, type = 'text', value, onChange }) {
         className="w-full rounded-xl border border-[#22306f] bg-[#030712] px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#4169ff]"
       />
     </label>
+  )
+}
+
+function SelectField({ label, value, options, onChange }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs uppercase tracking-[0.16em] text-slate-400">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full rounded-xl border border-[#22306f] bg-[#030712] px-3 py-2.5 text-sm text-white outline-none transition focus:border-[#4169ff]"
+      >
+        <option value={0} disabled>
+          Chọn đội bóng
+        </option>
+        {options.map((club) => (
+          <option key={club.id} value={club.id}>
+            {club.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
+function ClubPreview({ clubs, clubId }) {
+  const club = clubs.find((item) => item.id === clubId)
+  if (!club) {
+    return null
+  }
+
+  return (
+    <div className="rounded-xl border border-[#22306f] bg-black/20 px-3 py-3 text-sm text-slate-300">
+      <p className="font-semibold text-white">{club.name}</p>
+      <p className="mt-1">Sơ đồ: {club.formation}</p>
+      <p className="mt-1">Giải đấu: {club.leagueName}</p>
+      <p className="mt-1">Ngân sách khởi điểm: {Number(club.budget || 0).toLocaleString()}</p>
+      <p className="mt-2 text-xs text-slate-400">Đăng ký xong sẽ nhận 22 thẻ cầu thủ mùa thường của đội này.</p>
+    </div>
   )
 }
 

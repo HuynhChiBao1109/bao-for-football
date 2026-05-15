@@ -17,7 +17,7 @@ const defaultForm = {
   dribbling: 70,
 }
 
-function AdminDashboard({ token, user, onLogout, onUnauthorized }) {
+function AdminDashboard({ token, user, onLogout, onUnauthorized, embedded = false }) {
   const [players, setPlayers] = useState([])
   const [form, setForm] = useState(defaultForm)
   const [loading, setLoading] = useState(false)
@@ -93,8 +93,14 @@ function AdminDashboard({ token, user, onLogout, onUnauthorized }) {
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(0,0,128,0.32),transparent_32%),linear-gradient(180deg,#050505_0%,#090d1f_100%)] px-4 py-6 text-slate-100 sm:px-6 lg:px-8">
-      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[1.4fr_0.9fr]">
+    <main
+      className={`text-slate-100 ${
+        embedded
+          ? 'rounded-3xl border border-[#1c255b] bg-[#050814]/95 p-5 shadow-[0_24px_60px_-28px_rgba(0,0,128,0.8)]'
+          : 'min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(0,0,128,0.32),transparent_32%),linear-gradient(180deg,#050505_0%,#090d1f_100%)] px-4 py-6 sm:px-6 lg:px-8'
+      }`}
+    >
+      <div className={`mx-auto grid gap-6 ${embedded ? 'max-w-none lg:grid-cols-[1.35fr_0.95fr]' : 'max-w-7xl lg:grid-cols-[1.4fr_0.9fr]'}`}>
         <section className="rounded-2xl border border-[#1c255b] bg-[#050814]/95 shadow-[0_24px_60px_-28px_rgba(0,0,128,0.8)]">
           <div className="border-b border-[#1c255b] px-5 py-4">
             <div className="flex items-start justify-between gap-4">
@@ -104,13 +110,15 @@ function AdminDashboard({ token, user, onLogout, onUnauthorized }) {
                   Quản lý cầu thủ hiện có
                 </h1>
               </div>
-              <button
-                type="button"
-                onClick={onLogout}
-                className="rounded-xl bg-[#000080] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1111a8]"
-              >
-                Logout
-              </button>
+              {!embedded && (
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="rounded-xl bg-[#000080] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1111a8]"
+                >
+                  Logout
+                </button>
+              )}
             </div>
             <p className="mt-1 text-sm text-slate-400">
               Logged in as <span className="font-semibold text-white">{user?.username || 'admin'}</span>.

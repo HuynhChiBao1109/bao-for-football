@@ -5,7 +5,167 @@ import (
 	"database/sql"
 	"fmt"
 	"time"
+
+	"gorm.io/gorm"
 )
+
+type migrationClub struct {
+	ID         uint64    `gorm:"primaryKey;autoIncrement;column:id"`
+	Name       string    `gorm:"type:varchar(120);not null;uniqueIndex:uk_clubs_name;column:name"`
+	Formation  string    `gorm:"type:varchar(20);not null;column:formation"`
+	Budget     int64     `gorm:"not null;default:0;column:budget"`
+	LeagueName string    `gorm:"type:varchar(120);not null;column:league_name"`
+	CreatedAt  time.Time `gorm:"column:created_at"`
+	UpdatedAt  time.Time `gorm:"column:updated_at"`
+}
+
+func (migrationClub) TableName() string {
+	return "clubs"
+}
+
+type migrationUser struct {
+	ID           uint64                `gorm:"primaryKey;autoIncrement;column:id"`
+	Username     string                `gorm:"type:varchar(50);not null;uniqueIndex:uk_users_username;column:username"`
+	PasswordHash string                `gorm:"type:varchar(255);not null;column:password_hash"`
+	CreatedAt    time.Time             `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:created_at"`
+	UpdatedAt    time.Time             `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:updated_at"`
+	Team         migrationTeam         `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	UserPlayers  []migrationUserPlayer `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	GachaLogs    []migrationGachaLog   `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+}
+
+func (migrationUser) TableName() string {
+	return "users"
+}
+
+type migrationTeam struct {
+	ID        uint64         `gorm:"primaryKey;autoIncrement;column:id"`
+	UserID    uint64         `gorm:"not null;uniqueIndex:uk_teams_user_id;column:user_id"`
+	ClubID    *uint64        `gorm:"index:idx_teams_club_id;column:club_id"`
+	ClubName  string         `gorm:"type:varchar(100);not null;column:club_name"`
+	Budget    int64          `gorm:"not null;default:0;column:budget"`
+	RankPoint int            `gorm:"not null;default:0;column:rank_point"`
+	CreatedAt time.Time      `gorm:"column:created_at"`
+	UpdatedAt time.Time      `gorm:"column:updated_at"`
+	Club      *migrationClub `gorm:"foreignKey:ClubID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+}
+
+func (migrationTeam) TableName() string {
+	return "teams"
+}
+
+type migrationAdminPlayer struct {
+	ID           uint64    `gorm:"primaryKey;autoIncrement;column:id"`
+	Name         string    `gorm:"type:varchar(120);not null;column:name"`
+	Nationality  string    `gorm:"type:varchar(80);not null;column:nationality"`
+	BaseClub     string    `gorm:"type:varchar(120);not null;column:base_club"`
+	Season       string    `gorm:"type:enum('Normal','Special');not null;default:Normal;index:idx_admin_players_season;column:season"`
+	SourceType   string    `gorm:"type:enum('normal','gacha');not null;default:normal;index:idx_admin_players_source_type;column:source_type"`
+	SpecialSkill string    `gorm:"type:varchar(120);not null;default:'';column:special_skill"`
+	Shooting     uint8     `gorm:"not null;column:shooting"`
+	Passing      uint8     `gorm:"not null;column:passing"`
+	Pace         uint8     `gorm:"not null;column:pace"`
+	Physical     uint8     `gorm:"not null;column:physical"`
+	Defending    uint8     `gorm:"not null;column:defending"`
+	Dribbling    uint8     `gorm:"not null;column:dribbling"`
+	CreatedAt    time.Time `gorm:"column:created_at"`
+}
+
+func (migrationAdminPlayer) TableName() string {
+	return "admin_players"
+}
+
+type migrationPlayerTemplate struct {
+	ID            uint64    `gorm:"primaryKey;autoIncrement;column:id"`
+	Name          string    `gorm:"type:varchar(120);not null;index:idx_player_templates_name;column:name"`
+	HeightCM      uint16    `gorm:"not null;column:height_cm"`
+	Nationality   string    `gorm:"type:varchar(80);not null;column:nationality"`
+	BaseClub      string    `gorm:"type:varchar(120);not null;column:base_club"`
+	Season        string    `gorm:"type:enum('Normal','Special');not null;default:Normal;index:idx_player_templates_season;column:season"`
+	ImageURL      string    `gorm:"type:varchar(500);column:image_url"`
+	BaseShooting  int       `gorm:"not null;default:1;column:base_shooting"`
+	BasePassing   int       `gorm:"not null;default:1;column:base_passing"`
+	BasePace      int       `gorm:"not null;default:1;column:base_pace"`
+	BasePhysical  int       `gorm:"not null;default:1;column:base_physical"`
+	BaseDefending int       `gorm:"not null;default:1;column:base_defending"`
+	BaseDribbling int       `gorm:"not null;default:1;column:base_dribbling"`
+	CreatedAt     time.Time `gorm:"column:created_at"`
+	UpdatedAt     time.Time `gorm:"column:updated_at"`
+}
+
+func (migrationPlayerTemplate) TableName() string {
+	return "player_templates"
+}
+
+type migrationUserPlayer struct {
+	ID               uint64                  `gorm:"primaryKey;autoIncrement;column:id"`
+	UserID           uint64                  `gorm:"not null;index:idx_user_players_user_id;column:user_id"`
+	PlayerTemplateID uint64                  `gorm:"not null;index:idx_user_players_template_id;column:player_template_id"`
+	Level            uint8                   `gorm:"not null;default:1;check:ck_user_players_level,level BETWEEN 1 AND 36;column:level"`
+	Exp              uint32                  `gorm:"not null;default:0;column:exp"`
+	CurrentPoints    uint32                  `gorm:"not null;default:0;column:current_points"`
+	BonusShooting    int                     `gorm:"not null;default:0;column:bonus_shooting"`
+	BonusPassing     int                     `gorm:"not null;default:0;column:bonus_passing"`
+	BonusPace        int                     `gorm:"not null;default:0;column:bonus_pace"`
+	BonusPhysical    int                     `gorm:"not null;default:0;column:bonus_physical"`
+	BonusDefending   int                     `gorm:"not null;default:0;column:bonus_defending"`
+	BonusDribbling   int                     `gorm:"not null;default:0;column:bonus_dribbling"`
+	ObtainedAt       time.Time               `gorm:"column:obtained_at"`
+	CreatedAt        time.Time               `gorm:"column:created_at"`
+	UpdatedAt        time.Time               `gorm:"column:updated_at"`
+	Template         migrationPlayerTemplate `gorm:"foreignKey:PlayerTemplateID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+}
+
+func (migrationUserPlayer) TableName() string {
+	return "user_players"
+}
+
+type migrationSkill struct {
+	ID        uint64    `gorm:"primaryKey;autoIncrement;column:id"`
+	Name      string    `gorm:"type:varchar(120);not null;uniqueIndex:uk_skills_name;column:name"`
+	IconURL   string    `gorm:"type:varchar(500);column:icon_url"`
+	BuffType  string    `gorm:"type:enum('shooting','passing','pace','physical','defending','dribbling');not null;column:buff_type"`
+	BuffValue int       `gorm:"not null;default:1;column:buff_value"`
+	CreatedAt time.Time `gorm:"column:created_at"`
+	UpdatedAt time.Time `gorm:"column:updated_at"`
+}
+
+func (migrationSkill) TableName() string {
+	return "skills"
+}
+
+type migrationGachaLog struct {
+	ID                           uint64               `gorm:"primaryKey;autoIncrement;column:id"`
+	UserID                       uint64               `gorm:"not null;index:idx_gacha_logs_user_id;column:user_id"`
+	UserPlayerID                 *uint64              `gorm:"column:user_player_id"`
+	BannerCode                   string               `gorm:"type:varchar(50);not null;index:idx_gacha_logs_banner_code;column:banner_code"`
+	PullCountSinceLastHighRarity uint32               `gorm:"not null;default:0;column:pull_count_since_last_high_rarity"`
+	PityThreshold                uint16               `gorm:"not null;default:60;column:pity_threshold"`
+	IsPityTriggered              bool                 `gorm:"not null;default:false;column:is_pity_triggered"`
+	Rarity                       string               `gorm:"type:enum('N','R','SR','SSR','UR');not null;column:rarity"`
+	PulledAt                     time.Time            `gorm:"column:pulled_at"`
+	CreatedAt                    time.Time            `gorm:"column:created_at"`
+	UserPlayer                   *migrationUserPlayer `gorm:"foreignKey:UserPlayerID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+}
+
+func (migrationGachaLog) TableName() string {
+	return "gacha_logs"
+}
+
+type migrationTeamTactics struct {
+	ID        uint64    `gorm:"primaryKey;autoIncrement;column:id"`
+	TeamID    string    `gorm:"type:varchar(32);not null;uniqueIndex:uk_team_tactics_team_id;column:team_id"`
+	Formation string    `gorm:"type:varchar(10);not null;column:formation"`
+	PassRatio float64   `gorm:"not null;column:pass_ratio"`
+	ShotRatio float64   `gorm:"not null;column:shot_ratio"`
+	Pressure  float64   `gorm:"not null;column:pressure"`
+	CreatedAt time.Time `gorm:"column:created_at"`
+	UpdatedAt time.Time `gorm:"column:updated_at"`
+}
+
+func (migrationTeamTactics) TableName() string {
+	return "team_tactics"
+}
 
 type defaultClub struct {
 	ID         int64
@@ -32,7 +192,7 @@ var seededNationalities = []string{
 	"England",
 }
 
-func EnsureBootstrap(ctx context.Context, db *sql.DB) error {
+func AutoMigrate(ctx context.Context, db *gorm.DB) error {
 	if db == nil {
 		return nil
 	}
@@ -40,9 +200,36 @@ func EnsureBootstrap(ctx context.Context, db *sql.DB) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	if err := ensureTables(ctx, db); err != nil {
+	if err := db.WithContext(ctx).Set("gorm:table_options", "ENGINE=InnoDB").AutoMigrate(
+		&migrationClub{},
+		&migrationAdminPlayer{},
+		&migrationPlayerTemplate{},
+		&migrationSkill{},
+		&migrationUser{},
+		&migrationTeam{},
+		&migrationUserPlayer{},
+		&migrationGachaLog{},
+		&migrationTeamTactics{},
+	); err != nil {
 		return err
 	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+
+	return ensureTriggers(ctx, sqlDB)
+}
+
+func EnsureSeedData(ctx context.Context, db *sql.DB) error {
+	if db == nil {
+		return nil
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
 	if err := ensureDefaultClubs(ctx, db); err != nil {
 		return err
 	}
@@ -53,286 +240,40 @@ func EnsureBootstrap(ctx context.Context, db *sql.DB) error {
 	return nil
 }
 
-func ensureTables(ctx context.Context, db *sql.DB) error {
-	createQueries := []string{
-		`CREATE TABLE IF NOT EXISTS users (
-  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  username VARCHAR(50) NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (id),
-  UNIQUE KEY uk_users_username (username)
-) ENGINE=InnoDB`,
-		`CREATE TABLE IF NOT EXISTS clubs (
-  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  name VARCHAR(120) NOT NULL,
-  formation VARCHAR(20) NOT NULL,
-  budget BIGINT NOT NULL DEFAULT 0,
-  league_name VARCHAR(120) NOT NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (id),
-  UNIQUE KEY uk_clubs_name (name)
-) ENGINE=InnoDB`,
-		`CREATE TABLE IF NOT EXISTS teams (
-  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  user_id BIGINT UNSIGNED NOT NULL,
-  club_name VARCHAR(100) NOT NULL,
-  budget BIGINT NOT NULL DEFAULT 0,
-  rank_point INT NOT NULL DEFAULT 0,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (id),
-  UNIQUE KEY uk_teams_user_id (user_id),
-  CONSTRAINT fk_teams_user_id
-    FOREIGN KEY (user_id) REFERENCES users(id)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE
-) ENGINE=InnoDB`,
-		`CREATE TABLE IF NOT EXISTS admin_players (
-  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  name VARCHAR(120) NOT NULL,
-  nationality VARCHAR(80) NOT NULL,
-  base_club VARCHAR(120) NOT NULL,
-  season ENUM('Normal', 'Special') NOT NULL DEFAULT 'Normal',
-  source_type ENUM('normal', 'gacha') NOT NULL DEFAULT 'normal',
-  special_skill VARCHAR(120) NOT NULL DEFAULT '',
-  shooting TINYINT UNSIGNED NOT NULL,
-  passing TINYINT UNSIGNED NOT NULL,
-  pace TINYINT UNSIGNED NOT NULL,
-  physical TINYINT UNSIGNED NOT NULL,
-  defending TINYINT UNSIGNED NOT NULL,
-  dribbling TINYINT UNSIGNED NOT NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (id),
-  KEY idx_admin_players_season (season),
-  KEY idx_admin_players_source_type (source_type)
-) ENGINE=InnoDB`,
-		`CREATE TABLE IF NOT EXISTS player_templates (
-	id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	name VARCHAR(120) NOT NULL,
-	height_cm SMALLINT UNSIGNED NOT NULL,
-	nationality VARCHAR(80) NOT NULL,
-	base_club VARCHAR(120) NOT NULL,
-	season ENUM('Normal', 'Special') NOT NULL DEFAULT 'Normal',
-	image_url VARCHAR(500) NULL,
-	base_shooting SMALLINT UNSIGNED NOT NULL DEFAULT 1,
-	base_passing SMALLINT UNSIGNED NOT NULL DEFAULT 1,
-	base_pace SMALLINT UNSIGNED NOT NULL DEFAULT 1,
-	base_physical SMALLINT UNSIGNED NOT NULL DEFAULT 1,
-	base_defending SMALLINT UNSIGNED NOT NULL DEFAULT 1,
-	base_dribbling SMALLINT UNSIGNED NOT NULL DEFAULT 1,
-	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-	PRIMARY KEY (id),
-	KEY idx_player_templates_season (season),
-	KEY idx_player_templates_name (name)
-) ENGINE=InnoDB`,
-		`CREATE TABLE IF NOT EXISTS skills (
-	id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	name VARCHAR(120) NOT NULL,
-	icon_url VARCHAR(500) NULL,
-	buff_type ENUM('shooting', 'passing', 'pace', 'physical', 'defending', 'dribbling') NOT NULL,
-	buff_value SMALLINT NOT NULL DEFAULT 1,
-	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-	PRIMARY KEY (id),
-	UNIQUE KEY uk_skills_name (name)
-) ENGINE=InnoDB`,
-		`CREATE TABLE IF NOT EXISTS user_players (
-	id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	user_id BIGINT UNSIGNED NOT NULL,
-	player_template_id BIGINT UNSIGNED NOT NULL,
-	level TINYINT UNSIGNED NOT NULL DEFAULT 1,
-	exp INT UNSIGNED NOT NULL DEFAULT 0,
-	current_points INT UNSIGNED NOT NULL DEFAULT 0,
-	bonus_shooting SMALLINT NOT NULL DEFAULT 0,
-	bonus_passing SMALLINT NOT NULL DEFAULT 0,
-	bonus_pace SMALLINT NOT NULL DEFAULT 0,
-	bonus_physical SMALLINT NOT NULL DEFAULT 0,
-	bonus_defending SMALLINT NOT NULL DEFAULT 0,
-	bonus_dribbling SMALLINT NOT NULL DEFAULT 0,
-	obtained_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-	PRIMARY KEY (id),
-	KEY idx_user_players_user_id (user_id),
-	KEY idx_user_players_template_id (player_template_id),
-	CONSTRAINT ck_user_players_level CHECK (level BETWEEN 1 AND 36),
-	CONSTRAINT fk_user_players_user_id
-		FOREIGN KEY (user_id) REFERENCES users(id)
-		ON DELETE CASCADE
-		ON UPDATE CASCADE,
-	CONSTRAINT fk_user_players_template_id
-		FOREIGN KEY (player_template_id) REFERENCES player_templates(id)
-		ON DELETE RESTRICT
-		ON UPDATE CASCADE
-) ENGINE=InnoDB`,
-		`CREATE TABLE IF NOT EXISTS gacha_logs (
-	id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	user_id BIGINT UNSIGNED NOT NULL,
-	user_player_id BIGINT UNSIGNED NULL,
-	banner_code VARCHAR(50) NOT NULL,
-	pull_count_since_last_high_rarity INT UNSIGNED NOT NULL DEFAULT 0,
-	pity_threshold SMALLINT UNSIGNED NOT NULL DEFAULT 60,
-	is_pity_triggered TINYINT(1) NOT NULL DEFAULT 0,
-	rarity ENUM('N', 'R', 'SR', 'SSR', 'UR') NOT NULL,
-	pulled_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	PRIMARY KEY (id),
-	KEY idx_gacha_logs_user_id (user_id),
-	KEY idx_gacha_logs_banner_code (banner_code),
-	CONSTRAINT fk_gacha_logs_user_id
-		FOREIGN KEY (user_id) REFERENCES users(id)
-		ON DELETE CASCADE
-		ON UPDATE CASCADE,
-	CONSTRAINT fk_gacha_logs_user_player_id
-		FOREIGN KEY (user_player_id) REFERENCES user_players(id)
-		ON DELETE SET NULL
-		ON UPDATE CASCADE
-) ENGINE=InnoDB`,
-		`CREATE TABLE IF NOT EXISTS team_tactics (
-	id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-	team_id VARCHAR(32) NOT NULL,
-	formation VARCHAR(10) NOT NULL,
-	pass_ratio DOUBLE NOT NULL,
-	shot_ratio DOUBLE NOT NULL,
-	pressure DOUBLE NOT NULL,
-	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-	PRIMARY KEY (id),
-	UNIQUE KEY uk_team_tactics_team_id (team_id)
-) ENGINE=InnoDB`,
-	}
-
-	for _, query := range createQueries {
-		if _, err := db.ExecContext(ctx, query); err != nil {
-			return err
-		}
-	}
-
-	if err := syncExistingTables(ctx, db); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func syncExistingTables(ctx context.Context, db *sql.DB) error {
-	columnSync := []struct {
-		table  string
-		column string
-		clause string
-	}{
-		{"users", "updated_at", "ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"},
-		{"clubs", "league_name", "ADD COLUMN league_name VARCHAR(120) NOT NULL DEFAULT ''"},
-		{"teams", "rank_point", "ADD COLUMN rank_point INT NOT NULL DEFAULT 0"},
-		{"admin_players", "source_type", "ADD COLUMN source_type ENUM('normal', 'gacha') NOT NULL DEFAULT 'normal'"},
-		{"admin_players", "special_skill", "ADD COLUMN special_skill VARCHAR(120) NOT NULL DEFAULT ''"},
-		{"player_templates", "height_cm", "ADD COLUMN height_cm SMALLINT UNSIGNED NOT NULL DEFAULT 170"},
-		{"player_templates", "image_url", "ADD COLUMN image_url VARCHAR(500) NULL"},
-		{"gacha_logs", "pull_count_since_last_high_rarity", "ADD COLUMN pull_count_since_last_high_rarity INT UNSIGNED NOT NULL DEFAULT 0"},
-		{"gacha_logs", "pity_threshold", "ADD COLUMN pity_threshold SMALLINT UNSIGNED NOT NULL DEFAULT 60"},
-		{"gacha_logs", "is_pity_triggered", "ADD COLUMN is_pity_triggered TINYINT(1) NOT NULL DEFAULT 0"},
-		{"gacha_logs", "pulled_at", "ADD COLUMN pulled_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"},
-		{"team_tactics", "updated_at", "ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"},
-	}
-
-	for _, item := range columnSync {
-		if err := ensureColumn(ctx, db, item.table, item.column, item.clause); err != nil {
-			return err
-		}
-	}
-
-	indexSync := []struct {
-		table  string
-		name   string
-		clause string
-	}{
-		{"clubs", "uk_clubs_name", "ADD UNIQUE KEY uk_clubs_name (name)"},
-		{"teams", "uk_teams_user_id", "ADD UNIQUE KEY uk_teams_user_id (user_id)"},
-		{"team_tactics", "uk_team_tactics_team_id", "ADD UNIQUE KEY uk_team_tactics_team_id (team_id)"},
-		{"gacha_logs", "idx_gacha_logs_user_id", "ADD KEY idx_gacha_logs_user_id (user_id)"},
-		{"gacha_logs", "idx_gacha_logs_banner_code", "ADD KEY idx_gacha_logs_banner_code (banner_code)"},
-	}
-
-	for _, item := range indexSync {
-		if err := ensureIndex(ctx, db, item.table, item.name, item.clause); err != nil {
-			return err
-		}
-	}
-
-	foreignKeySync := []struct {
-		table          string
-		constraintName string
-		column         string
-		referenceTable string
-		referenceCol   string
-		clause         string
+func ensureTriggers(ctx context.Context, db *sql.DB) error {
+	triggers := []struct {
+		name  string
+		query string
 	}{
 		{
-			table:          "teams",
-			constraintName: "fk_teams_user_id",
-			column:         "user_id",
-			referenceTable: "users",
-			referenceCol:   "id",
-			clause:         "ADD CONSTRAINT fk_teams_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE",
-		},
-		{
-			table:          "user_players",
-			constraintName: "fk_user_players_user_id",
-			column:         "user_id",
-			referenceTable: "users",
-			referenceCol:   "id",
-			clause:         "ADD CONSTRAINT fk_user_players_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE",
-		},
-		{
-			table:          "user_players",
-			constraintName: "fk_user_players_template_id",
-			column:         "player_template_id",
-			referenceTable: "player_templates",
-			referenceCol:   "id",
-			clause:         "ADD CONSTRAINT fk_user_players_template_id FOREIGN KEY (player_template_id) REFERENCES player_templates(id) ON DELETE RESTRICT ON UPDATE CASCADE",
-		},
-		{
-			table:          "gacha_logs",
-			constraintName: "fk_gacha_logs_user_id",
-			column:         "user_id",
-			referenceTable: "users",
-			referenceCol:   "id",
-			clause:         "ADD CONSTRAINT fk_gacha_logs_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE",
-		},
-		{
-			table:          "gacha_logs",
-			constraintName: "fk_gacha_logs_user_player_id",
-			column:         "user_player_id",
-			referenceTable: "user_players",
-			referenceCol:   "id",
-			clause:         "ADD CONSTRAINT fk_gacha_logs_user_player_id FOREIGN KEY (user_player_id) REFERENCES user_players(id) ON DELETE SET NULL ON UPDATE CASCADE",
+			name: "trg_user_players_limit_before_insert",
+			query: `CREATE TRIGGER trg_user_players_limit_before_insert
+BEFORE INSERT ON user_players
+FOR EACH ROW
+BEGIN
+  DECLARE owned_count INT;
+
+  SELECT COUNT(*) INTO owned_count
+  FROM user_players
+  WHERE user_id = NEW.user_id;
+
+  IF owned_count >= 50 THEN
+    SIGNAL SQLSTATE '45000'
+      SET MESSAGE_TEXT = 'User cannot own more than 50 player cards';
+  END IF;
+END`,
 		},
 	}
 
-	for _, item := range foreignKeySync {
-		if err := ensureForeignKey(ctx, db, item.table, item.constraintName, item.column, item.referenceTable, item.referenceCol, item.clause); err != nil {
+	for _, item := range triggers {
+		exists, err := hasTrigger(ctx, db, item.name)
+		if err != nil {
 			return err
 		}
-	}
-
-	checkConstraintSync := []struct {
-		table          string
-		constraintName string
-		clause         string
-	}{
-		{
-			table:          "user_players",
-			constraintName: "ck_user_players_level",
-			clause:         "ADD CONSTRAINT ck_user_players_level CHECK (level BETWEEN 1 AND 36)",
-		},
-	}
-
-	for _, item := range checkConstraintSync {
-		if err := ensureConstraint(ctx, db, item.table, item.constraintName, item.clause); err != nil {
+		if exists {
+			continue
+		}
+		if _, err := db.ExecContext(ctx, item.query); err != nil {
 			return err
 		}
 	}
@@ -340,112 +281,13 @@ func syncExistingTables(ctx context.Context, db *sql.DB) error {
 	return nil
 }
 
-func ensureColumn(ctx context.Context, db *sql.DB, tableName, columnName, alterClause string) error {
-	exists, err := hasColumn(ctx, db, tableName, columnName)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return nil
-	}
-
-	query := fmt.Sprintf("ALTER TABLE `%s` %s", escapeIdentifier(tableName), alterClause)
-	_, err = db.ExecContext(ctx, query)
-	return err
-}
-
-func ensureIndex(ctx context.Context, db *sql.DB, tableName, indexName, alterClause string) error {
-	exists, err := hasIndex(ctx, db, tableName, indexName)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return nil
-	}
-
-	query := fmt.Sprintf("ALTER TABLE `%s` %s", escapeIdentifier(tableName), alterClause)
-	_, err = db.ExecContext(ctx, query)
-	return err
-}
-
-func ensureConstraint(ctx context.Context, db *sql.DB, tableName, constraintName, alterClause string) error {
-	exists, err := hasConstraint(ctx, db, tableName, constraintName)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return nil
-	}
-
-	query := fmt.Sprintf("ALTER TABLE `%s` %s", escapeIdentifier(tableName), alterClause)
-	_, err = db.ExecContext(ctx, query)
-	return err
-}
-
-func ensureForeignKey(ctx context.Context, db *sql.DB, tableName, constraintName, columnName, refTable, refColumn, alterClause string) error {
-	exists, err := hasForeignKeyByDefinition(ctx, db, tableName, columnName, refTable, refColumn)
-	if err != nil {
-		return err
-	}
-	if exists {
-		return nil
-	}
-
-	return ensureConstraint(ctx, db, tableName, constraintName, alterClause)
-}
-
-func hasColumn(ctx context.Context, db *sql.DB, tableName, columnName string) (bool, error) {
+func hasTrigger(ctx context.Context, db *sql.DB, triggerName string) (bool, error) {
 	var count int
 	err := db.QueryRowContext(ctx, `
 SELECT COUNT(*)
-FROM INFORMATION_SCHEMA.COLUMNS
-WHERE TABLE_SCHEMA = DATABASE()
-	AND TABLE_NAME = ?
-	AND COLUMN_NAME = ?`, tableName, columnName).Scan(&count)
-	if err != nil {
-		return false, err
-	}
-	return count > 0, nil
-}
-
-func hasIndex(ctx context.Context, db *sql.DB, tableName, indexName string) (bool, error) {
-	var count int
-	err := db.QueryRowContext(ctx, `
-SELECT COUNT(*)
-FROM INFORMATION_SCHEMA.STATISTICS
-WHERE TABLE_SCHEMA = DATABASE()
-	AND TABLE_NAME = ?
-	AND INDEX_NAME = ?`, tableName, indexName).Scan(&count)
-	if err != nil {
-		return false, err
-	}
-	return count > 0, nil
-}
-
-func hasConstraint(ctx context.Context, db *sql.DB, tableName, constraintName string) (bool, error) {
-	var count int
-	err := db.QueryRowContext(ctx, `
-SELECT COUNT(*)
-FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
-WHERE CONSTRAINT_SCHEMA = DATABASE()
-	AND TABLE_NAME = ?
-	AND CONSTRAINT_NAME = ?`, tableName, constraintName).Scan(&count)
-	if err != nil {
-		return false, err
-	}
-	return count > 0, nil
-}
-
-func hasForeignKeyByDefinition(ctx context.Context, db *sql.DB, tableName, columnName, refTable, refColumn string) (bool, error) {
-	var count int
-	err := db.QueryRowContext(ctx, `
-SELECT COUNT(*)
-FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
-WHERE TABLE_SCHEMA = DATABASE()
-	AND TABLE_NAME = ?
-	AND COLUMN_NAME = ?
-	AND REFERENCED_TABLE_NAME = ?
-	AND REFERENCED_COLUMN_NAME = ?`, tableName, columnName, refTable, refColumn).Scan(&count)
+FROM INFORMATION_SCHEMA.TRIGGERS
+WHERE TRIGGER_SCHEMA = DATABASE()
+	AND TRIGGER_NAME = ?`, triggerName).Scan(&count)
 	if err != nil {
 		return false, err
 	}

@@ -48,6 +48,7 @@ func (User) TableName() string {
 type Team struct {
 	ID        uint64    `gorm:"primaryKey;autoIncrement;column:id"`
 	UserID    uint64    `gorm:"not null;uniqueIndex;column:user_id"`
+	ClubID    *uint64   `gorm:"column:club_id"`
 	ClubName  string    `gorm:"type:varchar(100);not null;column:club_name"`
 	Budget    int64     `gorm:"not null;default:0;column:budget"`
 	RankPoint int       `gorm:"not null;default:0;column:rank_point"`

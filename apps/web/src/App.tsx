@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 
-import AdminDashboard from './AdminDashboard.jsx'
 import AuthGate from './AuthGate.jsx'
-import MatchView from './MatchView.jsx'
+import MainDashboard from './MainDashboard.jsx'
+import { defaultAuthenticatedRoute, normalizeAuthenticatedRoute, ROUTES } from './routes'
 
 type SessionUser = {
   id: number
@@ -20,6 +20,7 @@ const LEGACY_ADMIN_SESSION_KEY = 'fifam-admin-session'
 
 function App() {
   const [session, setSession] = useState<SessionState>(() => loadSession())
+  const [pathname, setPathname] = useState(() => loadPathname())
 
   useEffect(() => {
     if (session?.token) {
@@ -32,41 +33,72 @@ function App() {
     localStorage.removeItem(LEGACY_ADMIN_SESSION_KEY)
   }, [session])
 
+  useEffect(() => {
+    const handlePopState = () => {
+      setPathname(loadPathname())
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!session?.token) {
+      if (pathname !== ROUTES.login) {
+        navigateTo(ROUTES.login, setPathname, true)
+      }
+      return
+    }
+
+    const nextPath = normalizeAuthenticatedRoute(pathname, Boolean(session.user?.isAdmin))
+    if (nextPath !== pathname) {
+      navigateTo(nextPath, setPathname, true)
+    }
+  }, [pathname, session])
+
   if (!session?.token) {
     return (
       <AuthGate
         onAuthenticated={({ token, user }: { token: string; user: SessionUser }) => {
           setSession({ token, user })
+          navigateTo(defaultAuthenticatedRoute(), setPathname)
         }}
       />
     )
   }
 
-  if (!session.user?.isAdmin) {
-    return (
-      <main className="relative min-h-screen bg-[linear-gradient(180deg,#050505_0%,#090d1f_100%)] text-slate-100">
-        <div className="absolute right-4 top-4 z-10 rounded-xl border border-[#1c255b] bg-black/45 px-3 py-2 text-xs sm:right-6 sm:top-6 sm:text-sm">
-          <p className="mb-2 text-slate-300">Xin chào {session.user.username}</p>
-          <button
-            onClick={() => setSession(null)}
-            className="rounded-lg bg-[#000080] px-3 py-1.5 font-semibold text-white transition hover:bg-[#1111a8]"
-          >
-            Logout
-          </button>
-        </div>
-        <MatchView />
-      </main>
-    )
-  }
-
   return (
-    <AdminDashboard
+    <MainDashboard
       token={session.token}
       user={session.user}
-      onLogout={() => setSession(null)}
-      onUnauthorized={() => setSession(null)}
+      pathname={pathname}
+      onNavigate={(nextPath: string) => navigateTo(nextPath, setPathname)}
+      onLogout={() => {
+        setSession(null)
+        navigateTo(ROUTES.login, setPathname)
+      }}
+      onUnauthorized={() => {
+        setSession(null)
+        navigateTo(ROUTES.login, setPathname, true)
+      }}
     />
   )
+}
+
+function navigateTo(pathname: string, setPathname: (value: string) => void, replace = false) {
+  const method = replace ? 'replaceState' : 'pushState'
+  window.history[method](null, '', pathname)
+  setPathname(pathname)
+}
+
+function loadPathname() {
+  if (typeof window === 'undefined') {
+    return ROUTES.login
+  }
+
+  return window.location.pathname || ROUTES.login
 }
 
 function loadSession(): SessionState {

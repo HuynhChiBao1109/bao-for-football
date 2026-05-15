@@ -20,6 +20,7 @@ type registerRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	ClubID   int64  `json:"clubId"`
+	ClubName string `json:"clubName"`
 }
 
 type loginRequest struct {
@@ -34,7 +35,7 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	user, err := h.uc.Register(c.Request.Context(), req.Username, req.Password, req.ClubID)
+	user, err := h.uc.Register(c.Request.Context(), req.Username, req.Password, req.ClubName, req.ClubID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -83,4 +84,39 @@ func (h *Handler) AdminLogin(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "login successful", "token": token.AccessToken, "user": user})
+}
+
+func (h *Handler) Me(c *gin.Context) {
+	userIDValue, exists := c.Get("authUserID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing auth user"})
+		return
+	}
+
+	username, _ := c.Get("authUsername")
+	isAdmin, _ := c.Get("authIsAdmin")
+
+	userID, ok := userIDValue.(uint64)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid auth user"})
+		return
+	}
+
+	session, err := h.uc.GetSession(c.Request.Context(), userID, toString(username), toBool(isAdmin))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": session})
+}
+
+func toString(value any) string {
+	text, _ := value.(string)
+	return text
+}
+
+func toBool(value any) bool {
+	flag, _ := value.(bool)
+	return flag
 }

@@ -120,30 +120,5 @@ INSERT INTO admin_players (
 }
 
 func (r *Repository) ensureTable(ctx context.Context) error {
-	r.ensureOnce.Do(func() {
-		if r.db == nil {
-			return
-		}
-		_, r.ensureErr = r.db.ExecContext(ctx, `
-CREATE TABLE IF NOT EXISTS admin_players (
-  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  name VARCHAR(120) NOT NULL,
-  nationality VARCHAR(80) NOT NULL,
-  base_club VARCHAR(120) NOT NULL,
-  season ENUM('Normal', 'Special') NOT NULL DEFAULT 'Normal',
-  source_type ENUM('normal', 'gacha') NOT NULL DEFAULT 'normal',
-  special_skill VARCHAR(120) NOT NULL DEFAULT '',
-  shooting TINYINT UNSIGNED NOT NULL,
-  passing TINYINT UNSIGNED NOT NULL,
-  pace TINYINT UNSIGNED NOT NULL,
-  physical TINYINT UNSIGNED NOT NULL,
-  defending TINYINT UNSIGNED NOT NULL,
-  dribbling TINYINT UNSIGNED NOT NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (id),
-  KEY idx_admin_players_season (season),
-  KEY idx_admin_players_source_type (source_type)
-) ENGINE=InnoDB`)
-	})
-	return r.ensureErr
+	return nil
 }

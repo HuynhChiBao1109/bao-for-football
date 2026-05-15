@@ -19,7 +19,8 @@ type repository interface {
 	Create(ctx context.Context, username, password string) (domain.User, error)
 	EnsureAdmin(ctx context.Context, username, password string) error
 	ListRegistrationClubs(ctx context.Context) ([]domain.ClubOption, error)
-	AssignClubToUser(ctx context.Context, userID uint64, clubID int64) error
+	AssignClubToUser(ctx context.Context, userID uint64, clubID int64, clubName string) error
+	GetTeamAssignment(ctx context.Context, userID uint64) (*domain.TeamAssignment, error)
 }
 
 type AuthUseCase struct {
@@ -40,6 +41,11 @@ type UserInfo struct {
 	IsAdmin  bool   `json:"isAdmin"`
 }
 
+type SessionInfo struct {
+	User UserInfo                `json:"user"`
+	Team *domain.TeamAssignment  `json:"team,omitempty"`
+}
+
 func (u *AuthUseCase) EnsureAdmin(ctx context.Context) error {
 	return u.repo.EnsureAdmin(ctx, adminUsername(), adminPassword())
 }
@@ -48,11 +54,18 @@ func (u *AuthUseCase) ListRegistrationClubs(ctx context.Context) ([]domain.ClubO
 	return u.repo.ListRegistrationClubs(ctx)
 }
 
-func (u *AuthUseCase) Register(ctx context.Context, username, password string, clubID int64) (UserInfo, error) {
+func (u *AuthUseCase) Register(ctx context.Context, username, password, clubName string, clubID int64) (UserInfo, error) {
 	username = strings.TrimSpace(username)
 	password = strings.TrimSpace(password)
+	clubName = strings.TrimSpace(clubName)
 	if username == "" || password == "" {
 		return UserInfo{}, errors.New("username and password are required")
+	}
+	if clubName == "" {
+		return UserInfo{}, errors.New("clubName is required")
+	}
+	if len(clubName) > 100 {
+		return UserInfo{}, errors.New("clubName must be at most 100 characters")
 	}
 	if len(password) < 4 {
 		return UserInfo{}, errors.New("password must be at least 4 characters")
@@ -89,7 +102,7 @@ func (u *AuthUseCase) Register(ctx context.Context, username, password string, c
 		return UserInfo{}, err
 	}
 
-	if err := u.repo.AssignClubToUser(ctx, user.ID, clubID); err != nil {
+	if err := u.repo.AssignClubToUser(ctx, user.ID, clubID, clubName); err != nil {
 		return UserInfo{}, err
 	}
 
@@ -159,6 +172,22 @@ func (u *AuthUseCase) AdminLogin(ctx context.Context, username, password string)
 	}
 
 	return TokenPair{AccessToken: token}, UserInfo{ID: user.ID, Username: user.Username, IsAdmin: true}, nil
+}
+
+func (u *AuthUseCase) GetSession(ctx context.Context, userID uint64, username string, isAdmin bool) (SessionInfo, error) {
+	team, err := u.repo.GetTeamAssignment(ctx, userID)
+	if err != nil {
+		return SessionInfo{}, err
+	}
+
+	return SessionInfo{
+		User: UserInfo{
+			ID:       userID,
+			Username: username,
+			IsAdmin:  isAdmin,
+		},
+		Team: team,
+	}, nil
 }
 
 func (u *AuthUseCase) ValidateToken(tokenString string) (*domain.TokenClaims, error) {

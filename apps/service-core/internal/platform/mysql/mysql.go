@@ -8,26 +8,33 @@ import (
 	"time"
 
 	mysqldriver "github.com/go-sql-driver/mysql"
+	gormmysql "gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
-func New(dsn string) (*sql.DB, error) {
+func New(dsn string) (*sql.DB, *gorm.DB, error) {
 	if err := ensureDatabaseExists(dsn); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	db, err := sql.Open("mysql", dsn)
+	gormDB, err := gorm.Open(gormmysql.Open(dsn), &gorm.Config{})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+
+	db, err := gormDB.DB()
+	if err != nil {
+		return nil, nil, err
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	if err := db.PingContext(ctx); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return db, nil
+	return db, gormDB, nil
 }
 
 func ensureDatabaseExists(dsn string) error {

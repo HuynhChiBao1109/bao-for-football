@@ -16,7 +16,7 @@ const EVENT_LABELS = {
   match_end: 'MATCH END',
 }
 
-function MatchView() {
+function MatchView({ embedded = false }) {
   const [connectionState, setConnectionState] = useState('Connecting...')
   const [score, setScore] = useState({ home: 0, away: 0 })
   const [elapsedMS, setElapsedMS] = useState(0)
@@ -164,7 +164,11 @@ function MatchView() {
   const minuteText = useMemo(() => formatMatchTime(elapsedMS), [elapsedMS])
 
   return (
-    <section className="mx-auto grid min-h-screen w-full max-w-[1400px] grid-cols-1 gap-4 p-4 lg:grid-cols-[1fr_380px] lg:p-6">
+    <section
+      className={`mx-auto grid w-full max-w-[1400px] grid-cols-1 gap-4 ${
+        embedded ? 'p-0 lg:grid-cols-[1fr_360px]' : 'min-h-screen p-4 lg:grid-cols-[1fr_380px] lg:p-6'
+      }`}
+    >
       <div className="relative overflow-hidden rounded-2xl border border-[#1b2458] bg-[linear-gradient(165deg,#020205_0%,#060b22_100%)] p-3 shadow-[0_30px_70px_-40px_rgba(0,0,128,0.7)]">
         <div className="mb-3 flex items-center justify-between rounded-xl border border-[#1b2458] bg-black/35 px-4 py-3 text-xs tracking-[0.18em] text-slate-300 sm:text-sm">
           <p>LIVE MATCH</p>
@@ -173,7 +177,10 @@ function MatchView() {
         </div>
 
         <div className="rounded-xl border border-[#25306f] bg-[#06133a] p-2 sm:p-3">
-          <svg viewBox={`0 0 ${FIELD.width} ${FIELD.height}`} className="h-[58vh] w-full min-h-[420px] rounded-lg bg-[#0b2f14]">
+          <svg
+            viewBox={`0 0 ${FIELD.width} ${FIELD.height}`}
+            className={`w-full rounded-lg bg-[#0b2f14] ${embedded ? 'h-[48vh] min-h-[360px]' : 'h-[58vh] min-h-[420px]'}`}
+          >
             <defs>
               <linearGradient id="grass" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#114726" />

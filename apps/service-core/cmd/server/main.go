@@ -30,12 +30,15 @@ import (
 
 func main() {
 	cfg := config.Load()
-	db, err := mysqlplatform.New(cfg.MySQLDSN)
+	db, gormDB, err := mysqlplatform.New(cfg.MySQLDSN)
 	if err != nil {
 		log.Printf("mysql connection warning: %v", err)
 	} else {
-		if err := mysqlplatform.EnsureBootstrap(context.Background(), db); err != nil {
-			log.Printf("mysql bootstrap warning: %v", err)
+		if err := mysqlplatform.AutoMigrate(context.Background(), gormDB); err != nil {
+			log.Printf("mysql migrate warning: %v", err)
+		}
+		if err := mysqlplatform.EnsureSeedData(context.Background(), db); err != nil {
+			log.Printf("mysql seed warning: %v", err)
 		}
 	}
 
@@ -53,7 +56,8 @@ func main() {
 	tacticsRepo := tacticsmysql.NewRepository(db)
 	realtimePusher := realtimeclient.NewClient(cfg.RealtimeBaseURL)
 	tacticsUC := tacticsusecase.NewSaveTacticsUseCase(tacticsRepo, realtimePusher)
-	tacticsHandler := tacticshttp.NewHandler(tacticsUC)
+	getTacticsUC := tacticsusecase.NewGetTacticsUseCase(tacticsRepo)
+	tacticsHandler := tacticshttp.NewHandler(tacticsUC, getTacticsUC)
 
 	gachaRepo := gachamysql.NewRepository(db)
 	gachaUC := gachausecase.NewRollUseCase(gachaRepo)
@@ -78,7 +82,9 @@ func main() {
 
 	api := router.Group("/api/v1")
 	api.Use(authmiddleware.RequireJWT(authUC, false))
+	api.GET("/auth/me", authHandler.Me)
 	api.GET("/clubs/:id", clubHandler.GetClubByID)
+	api.GET("/tactics/:teamId", tacticsHandler.Get)
 	api.POST("/tactics", tacticsHandler.Save)
 	api.POST("/gacha/roll", gachaHandler.Roll)
 
