@@ -38,7 +38,11 @@ func (u *PlayerCardUseCase) ListMyCards(ctx context.Context, userID uint64) ([]d
 	}
 
 	for i := range cards {
-		attachLevelProgress(&cards[i])
+		updated, err := u.syncAutoLevel(ctx, userID, cards[i])
+		if err != nil {
+			return nil, err
+		}
+		cards[i] = updated
 	}
 
 	return cards, nil
@@ -80,12 +84,32 @@ func (u *PlayerCardUseCase) AllocateStats(ctx context.Context, userID uint64, us
 		return domain.PlayerCard{}, errors.New("invalid request")
 	}
 
-	delta := int32(input.Shooting + input.Passing + input.Pace + input.Physical + input.Defending + input.Dribbling)
+	delta := int32(
+		input.Shooting +
+			input.Passing +
+			input.LongPass +
+			input.Vision +
+			input.DefensiveAwareness +
+			input.CounterAttackAwareness +
+			input.CrossbarHandling +
+			input.Reflexes +
+			input.AerialCatching +
+			input.Duels +
+			input.Pace +
+			input.Physical +
+			input.Defending +
+			input.Dribbling,
+	)
 	if delta == 0 {
 		return domain.PlayerCard{}, errors.New("no stats changes")
 	}
 
 	card, err := u.repo.FindByUserPlayerID(ctx, userID, userPlayerID)
+	if err != nil {
+		return domain.PlayerCard{}, err
+	}
+
+	card, err = u.syncAutoLevel(ctx, userID, card)
 	if err != nil {
 		return domain.PlayerCard{}, err
 	}
@@ -97,6 +121,14 @@ func (u *PlayerCardUseCase) AllocateStats(ctx context.Context, userID uint64, us
 	}{
 		{name: "shooting", base: card.BonusStats.Shooting, delta: input.Shooting},
 		{name: "passing", base: card.BonusStats.Passing, delta: input.Passing},
+		{name: "longPass", base: card.BonusStats.LongPass, delta: input.LongPass},
+		{name: "vision", base: card.BonusStats.Vision, delta: input.Vision},
+		{name: "defensiveAwareness", base: card.BonusStats.DefensiveAwareness, delta: input.DefensiveAwareness},
+		{name: "counterAttackAwareness", base: card.BonusStats.CounterAttackAwareness, delta: input.CounterAttackAwareness},
+		{name: "crossbarHandling", base: card.BonusStats.CrossbarHandling, delta: input.CrossbarHandling},
+		{name: "reflexes", base: card.BonusStats.Reflexes, delta: input.Reflexes},
+		{name: "aerialCatching", base: card.BonusStats.AerialCatching, delta: input.AerialCatching},
+		{name: "duels", base: card.BonusStats.Duels, delta: input.Duels},
 		{name: "pace", base: card.BonusStats.Pace, delta: input.Pace},
 		{name: "physical", base: card.BonusStats.Physical, delta: input.Physical},
 		{name: "defending", base: card.BonusStats.Defending, delta: input.Defending},
@@ -123,6 +155,30 @@ func (u *PlayerCardUseCase) AllocateStats(ctx context.Context, userID uint64, us
 	attachLevelProgress(&updated)
 
 	return updated, nil
+}
+
+func (u *PlayerCardUseCase) syncAutoLevel(ctx context.Context, userID uint64, card domain.PlayerCard) (domain.PlayerCard, error) {
+	current := card
+
+	for current.Level < maxLevel {
+		required := requiredExpForLevel(current.Level)
+		if required == 0 || current.Exp < required {
+			break
+		}
+
+		if err := u.repo.LevelUp(ctx, userID, current.UserPlayerID, required, pointsPerLevelUp); err != nil {
+			return domain.PlayerCard{}, err
+		}
+
+		next, err := u.repo.FindByUserPlayerID(ctx, userID, current.UserPlayerID)
+		if err != nil {
+			return domain.PlayerCard{}, err
+		}
+		current = next
+	}
+
+	attachLevelProgress(&current)
+	return current, nil
 }
 
 func attachLevelProgress(card *domain.PlayerCard) {

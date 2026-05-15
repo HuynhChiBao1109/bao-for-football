@@ -1,12 +1,20 @@
 package domain
 
 type CardStats struct {
-	Shooting  int `json:"shooting"`
-	Passing   int `json:"passing"`
-	Pace      int `json:"pace"`
-	Physical  int `json:"physical"`
-	Defending int `json:"defending"`
-	Dribbling int `json:"dribbling"`
+	Shooting               int `json:"shooting"`
+	Passing                int `json:"passing"`
+	LongPass               int `json:"longPass"`
+	Vision                 int `json:"vision"`
+	DefensiveAwareness     int `json:"defensiveAwareness"`
+	CounterAttackAwareness int `json:"counterAttackAwareness"`
+	CrossbarHandling       int `json:"crossbarHandling"`
+	Reflexes               int `json:"reflexes"`
+	AerialCatching         int `json:"aerialCatching"`
+	Duels                  int `json:"duels"`
+	Pace                   int `json:"pace"`
+	Physical               int `json:"physical"`
+	Defending              int `json:"defending"`
+	Dribbling              int `json:"dribbling"`
 }
 
 type Country struct {
@@ -37,10 +45,18 @@ type PlayerCard struct {
 }
 
 type AllocateStatsInput struct {
-	Shooting  int `json:"shooting"`
-	Passing   int `json:"passing"`
-	Pace      int `json:"pace"`
-	Physical  int `json:"physical"`
-	Defending int `json:"defending"`
-	Dribbling int `json:"dribbling"`
+	Shooting               int `json:"shooting"`
+	Passing                int `json:"passing"`
+	LongPass               int `json:"longPass"`
+	Vision                 int `json:"vision"`
+	DefensiveAwareness     int `json:"defensiveAwareness"`
+	CounterAttackAwareness int `json:"counterAttackAwareness"`
+	CrossbarHandling       int `json:"crossbarHandling"`
+	Reflexes               int `json:"reflexes"`
+	AerialCatching         int `json:"aerialCatching"`
+	Duels                  int `json:"duels"`
+	Pace                   int `json:"pace"`
+	Physical               int `json:"physical"`
+	Defending              int `json:"defending"`
+	Dribbling              int `json:"dribbling"`
 }

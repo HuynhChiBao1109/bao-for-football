@@ -68,6 +68,24 @@ func (u *PlayerAdminUseCase) Create(ctx context.Context, input domain.Player) (d
 	if input.Vision == 0 {
 		input.Vision = input.Passing
 	}
+	if input.DefAwareness == 0 {
+		input.DefAwareness = input.Defending
+	}
+	if input.CtrAwareness == 0 {
+		input.CtrAwareness = input.Vision
+	}
+	if input.Crossbar == 0 {
+		input.Crossbar = input.Defending
+	}
+	if input.Reflexes == 0 {
+		input.Reflexes = input.Defending
+	}
+	if input.AerialCatch == 0 {
+		input.AerialCatch = input.Physical
+	}
+	if input.Duels == 0 {
+		input.Duels = input.Physical
+	}
 
 	for _, stat := range []struct {
 		name  string
@@ -77,6 +95,12 @@ func (u *PlayerAdminUseCase) Create(ctx context.Context, input domain.Player) (d
 		{"passing", input.Passing},
 		{"longPass", input.LongPass},
 		{"vision", input.Vision},
+		{"defensiveAwareness", input.DefAwareness},
+		{"counterAttackAwareness", input.CtrAwareness},
+		{"crossbarHandling", input.Crossbar},
+		{"reflexes", input.Reflexes},
+		{"aerialCatching", input.AerialCatch},
+		{"duels", input.Duels},
 		{"pace", input.Pace},
 		{"physical", input.Physical},
 		{"defending", input.Defending},

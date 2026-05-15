@@ -29,6 +29,12 @@ type createPlayerRequest struct {
 	Passing      int    `json:"passing"`
 	LongPass     int    `json:"longPass"`
 	Vision       int    `json:"vision"`
+	DefAwareness int    `json:"defensiveAwareness"`
+	CtrAwareness int    `json:"counterAttackAwareness"`
+	Crossbar     int    `json:"crossbarHandling"`
+	Reflexes     int    `json:"reflexes"`
+	AerialCatch  int    `json:"aerialCatching"`
+	Duels        int    `json:"duels"`
 	Pace         int    `json:"pace"`
 	Physical     int    `json:"physical"`
 	Defending    int    `json:"defending"`
@@ -89,6 +95,12 @@ func (h *Handler) Create(c *gin.Context) {
 		Passing:      req.Passing,
 		LongPass:     req.LongPass,
 		Vision:       req.Vision,
+		DefAwareness: req.DefAwareness,
+		CtrAwareness: req.CtrAwareness,
+		Crossbar:     req.Crossbar,
+		Reflexes:     req.Reflexes,
+		AerialCatch:  req.AerialCatch,
+		Duels:        req.Duels,
 		Pace:         req.Pace,
 		Physical:     req.Physical,
 		Defending:    req.Defending,

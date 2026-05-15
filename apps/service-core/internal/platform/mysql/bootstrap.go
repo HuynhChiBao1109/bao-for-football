@@ -80,6 +80,12 @@ type migrationAdminPlayer struct {
 	Passing      uint8             `gorm:"not null;column:passing"`
 	LongPass     uint8             `gorm:"not null;default:60;column:long_pass"`
 	Vision       uint8             `gorm:"not null;default:60;column:vision"`
+	DefAwareness uint8             `gorm:"not null;default:60;column:defensive_awareness"`
+	CtrAwareness uint8             `gorm:"not null;default:60;column:counter_attack_awareness"`
+	Crossbar     uint8             `gorm:"not null;default:60;column:crossbar_handling"`
+	Reflexes     uint8             `gorm:"not null;default:60;column:reflexes"`
+	AerialCatch  uint8             `gorm:"not null;default:60;column:aerial_catching"`
+	Duels        uint8             `gorm:"not null;default:60;column:duels"`
 	Pace         uint8             `gorm:"not null;column:pace"`
 	Physical     uint8             `gorm:"not null;column:physical"`
 	Defending    uint8             `gorm:"not null;column:defending"`
@@ -105,6 +111,12 @@ type migrationPlayerTemplate struct {
 	BasePassing   int               `gorm:"not null;default:1;column:base_passing"`
 	BaseLongPass  int               `gorm:"not null;default:1;column:base_long_pass"`
 	BaseVision    int               `gorm:"not null;default:1;column:base_vision"`
+	BaseDefAware  int               `gorm:"not null;default:1;column:base_defensive_awareness"`
+	BaseCtrAware  int               `gorm:"not null;default:1;column:base_counter_attack_awareness"`
+	BaseCrossbar  int               `gorm:"not null;default:1;column:base_crossbar_handling"`
+	BaseReflexes  int               `gorm:"not null;default:1;column:base_reflexes"`
+	BaseAerial    int               `gorm:"not null;default:1;column:base_aerial_catching"`
+	BaseDuels     int               `gorm:"not null;default:1;column:base_duels"`
 	BasePace      int               `gorm:"not null;default:1;column:base_pace"`
 	BasePhysical  int               `gorm:"not null;default:1;column:base_physical"`
 	BaseDefending int               `gorm:"not null;default:1;column:base_defending"`
@@ -127,6 +139,14 @@ type migrationUserPlayer struct {
 	CurrentPoints    uint32                  `gorm:"not null;default:0;column:current_points"`
 	BonusShooting    int                     `gorm:"not null;default:0;column:bonus_shooting"`
 	BonusPassing     int                     `gorm:"not null;default:0;column:bonus_passing"`
+	BonusLongPass    int                     `gorm:"not null;default:0;column:bonus_long_pass"`
+	BonusVision      int                     `gorm:"not null;default:0;column:bonus_vision"`
+	BonusDefAware    int                     `gorm:"not null;default:0;column:bonus_defensive_awareness"`
+	BonusCtrAware    int                     `gorm:"not null;default:0;column:bonus_counter_attack_awareness"`
+	BonusCrossbar    int                     `gorm:"not null;default:0;column:bonus_crossbar_handling"`
+	BonusReflexes    int                     `gorm:"not null;default:0;column:bonus_reflexes"`
+	BonusAerial      int                     `gorm:"not null;default:0;column:bonus_aerial_catching"`
+	BonusDuels       int                     `gorm:"not null;default:0;column:bonus_duels"`
 	BonusPace        int                     `gorm:"not null;default:0;column:bonus_pace"`
 	BonusPhysical    int                     `gorm:"not null;default:0;column:bonus_physical"`
 	BonusDefending   int                     `gorm:"not null;default:0;column:bonus_defending"`
@@ -145,7 +165,7 @@ type migrationSkill struct {
 	ID        uint64    `gorm:"primaryKey;autoIncrement;column:id"`
 	Name      string    `gorm:"type:varchar(120);not null;uniqueIndex:uk_skills_name;column:name"`
 	IconURL   string    `gorm:"type:varchar(500);column:icon_url"`
-	BuffType  string    `gorm:"type:enum('shooting','passing','pace','physical','defending','dribbling');not null;column:buff_type"`
+	BuffType  string    `gorm:"type:enum('shooting','passing','longPass','vision','defensiveAwareness','counterAttackAwareness','crossbarHandling','reflexes','aerialCatching','duels','pace','physical','defending','dribbling');not null;column:buff_type"`
 	BuffValue int       `gorm:"not null;default:1;column:buff_value"`
 	CreatedAt time.Time `gorm:"column:created_at"`
 	UpdatedAt time.Time `gorm:"column:updated_at"`
@@ -450,6 +470,12 @@ WHERE source_type = 'normal' AND base_club = ?`, club.Name).Scan(&existingCount)
 			passing := boundedStat(58 + ((globalIdx + 3) % 18))
 			longPass := boundedStat(57 + ((globalIdx + 5) % 18))
 			vision := boundedStat(56 + ((globalIdx + 7) % 18))
+			defAwareness := boundedStat(55 + ((globalIdx + 4) % 18))
+			ctrAwareness := boundedStat(56 + ((globalIdx + 8) % 18))
+			crossbar := boundedStat(54 + ((globalIdx + 10) % 18))
+			reflexes := boundedStat(58 + ((globalIdx + 11) % 18))
+			aerialCatch := boundedStat(57 + ((globalIdx + 13) % 18))
+			duels := boundedStat(59 + ((globalIdx + 14) % 18))
 			pace := boundedStat(57 + ((globalIdx + 6) % 18))
 			physical := boundedStat(55 + ((globalIdx + 9) % 18))
 			defending := boundedStat(54 + ((globalIdx + 12) % 18))
@@ -468,6 +494,12 @@ INSERT INTO admin_players (
   passing,
   long_pass,
   vision,
+	defensive_awareness,
+	counter_attack_awareness,
+	crossbar_handling,
+	reflexes,
+	aerial_catching,
+	duels,
   pace,
   physical,
   defending,
@@ -481,6 +513,12 @@ INSERT INTO admin_players (
 				passing,
 				longPass,
 				vision,
+				defAwareness,
+				ctrAwareness,
+				crossbar,
+				reflexes,
+				aerialCatch,
+				duels,
 				pace,
 				physical,
 				defending,

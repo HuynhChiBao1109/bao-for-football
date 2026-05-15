@@ -16,6 +16,12 @@ type Player struct {
 	Passing      int       `json:"passing"`
 	LongPass     int       `json:"longPass"`
 	Vision       int       `json:"vision"`
+	DefAwareness int       `json:"defensiveAwareness"`
+	CtrAwareness int       `json:"counterAttackAwareness"`
+	Crossbar     int       `json:"crossbarHandling"`
+	Reflexes     int       `json:"reflexes"`
+	AerialCatch  int       `json:"aerialCatching"`
+	Duels        int       `json:"duels"`
 	Pace         int       `json:"pace"`
 	Physical     int       `json:"physical"`
 	Defending    int       `json:"defending"`

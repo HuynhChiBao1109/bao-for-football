@@ -105,7 +105,6 @@ func main() {
 	api.POST("/tactics", tacticsHandler.Save)
 	api.POST("/gacha/roll", gachaHandler.Roll)
 	api.GET("/players", playerHandler.ListMyCards)
-	api.POST("/players/:id/level-up", playerHandler.LevelUp)
 	api.POST("/players/:id/allocate", playerHandler.AllocateStats)
 
 	admin := router.Group("/api/v1/admin")

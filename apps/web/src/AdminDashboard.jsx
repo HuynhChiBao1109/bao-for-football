@@ -12,6 +12,14 @@ const defaultForm = {
   specialSkill: "",
   shooting: 70,
   passing: 70,
+  longPass: 70,
+  vision: 70,
+  defensiveAwareness: 70,
+  counterAttackAwareness: 70,
+  crossbarHandling: 70,
+  reflexes: 70,
+  aerialCatching: 70,
+  duels: 70,
   pace: 70,
   physical: 70,
   defending: 70,
@@ -273,8 +281,12 @@ function AdminDashboard({
                       {player.specialSkill || "-"}
                     </td>
                     <td className="px-4 py-3 text-slate-300">
-                      {player.shooting}/{player.passing}/{player.pace}/
-                      {player.physical}/{player.defending}/{player.dribbling}
+                      {player.shooting}/{player.passing}/{player.longPass}/
+                      {player.vision}/{player.defensiveAwareness}/
+                      {player.counterAttackAwareness}/{player.crossbarHandling}/
+                      {player.reflexes}/{player.aerialCatching}/{player.duels}/
+                      {player.pace}/{player.physical}/{player.defending}/
+                      {player.dribbling}
                     </td>
                   </tr>
                 ))}
@@ -340,6 +352,14 @@ function AdminDashboard({
               {[
                 "shooting",
                 "passing",
+                "longPass",
+                "vision",
+                "defensiveAwareness",
+                "counterAttackAwareness",
+                "crossbarHandling",
+                "reflexes",
+                "aerialCatching",
+                "duels",
                 "pace",
                 "physical",
                 "defending",
@@ -421,6 +441,11 @@ function AdminDashboard({
                 <div>CLB: {selectedPlayer.baseClub}</div>
                 <div>
                   Stats: {selectedPlayer.shooting}/{selectedPlayer.passing}/
+                  {selectedPlayer.longPass}/{selectedPlayer.vision}/
+                  {selectedPlayer.defensiveAwareness}/
+                  {selectedPlayer.counterAttackAwareness}/
+                  {selectedPlayer.crossbarHandling}/{selectedPlayer.reflexes}/
+                  {selectedPlayer.aerialCatching}/{selectedPlayer.duels}/
                   {selectedPlayer.pace}/{selectedPlayer.physical}/
                   {selectedPlayer.defending}/{selectedPlayer.dribbling}
                 </div>
@@ -491,12 +516,20 @@ function averageStats(form) {
   const total =
     Number(form.shooting) +
     Number(form.passing) +
+    Number(form.longPass) +
+    Number(form.vision) +
+    Number(form.defensiveAwareness) +
+    Number(form.counterAttackAwareness) +
+    Number(form.crossbarHandling) +
+    Number(form.reflexes) +
+    Number(form.aerialCatching) +
+    Number(form.duels) +
     Number(form.pace) +
     Number(form.physical) +
     Number(form.defending) +
     Number(form.dribbling);
 
-  return total / 6;
+  return total / 14;
 }
 
 export default AdminDashboard;

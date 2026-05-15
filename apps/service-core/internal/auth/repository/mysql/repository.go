@@ -334,13 +334,21 @@ INSERT INTO user_players (
   current_points,
   bonus_shooting,
   bonus_passing,
+	bonus_long_pass,
+	bonus_vision,
+	bonus_defensive_awareness,
+	bonus_counter_attack_awareness,
+	bonus_crossbar_handling,
+	bonus_reflexes,
+	bonus_aerial_catching,
+	bonus_duels,
   bonus_pace,
   bonus_physical,
   bonus_defending,
   bonus_dribbling,
   obtained_at
 )
-SELECT ?, pt.id, 1, 0, 0, 0, 0, 0, 0, 0, 0, CURRENT_TIMESTAMP
+SELECT ?, pt.id, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, CURRENT_TIMESTAMP
 FROM player_templates pt
 LEFT JOIN user_players up
   ON up.user_id = ? AND up.player_template_id = pt.id
@@ -378,6 +386,12 @@ INSERT INTO player_templates (
   base_passing,
 	base_long_pass,
 	base_vision,
+	base_defensive_awareness,
+	base_counter_attack_awareness,
+	base_crossbar_handling,
+	base_reflexes,
+	base_aerial_catching,
+	base_duels,
   base_pace,
   base_physical,
   base_defending,
@@ -395,6 +409,12 @@ SELECT
   ap.passing,
 	ap.long_pass,
 	ap.vision,
+	ap.defensive_awareness,
+	ap.counter_attack_awareness,
+	ap.crossbar_handling,
+	ap.reflexes,
+	ap.aerial_catching,
+	ap.duels,
   ap.pace,
   ap.physical,
   ap.defending,
