@@ -16,7 +16,7 @@ const EVENT_LABELS = {
   match_end: 'MATCH END',
 }
 
-function MatchView({ embedded = false }) {
+function MatchView({ embedded = false, onMatchEnd }) {
   const [connectionState, setConnectionState] = useState('Connecting...')
   const [score, setScore] = useState({ home: 0, away: 0 })
   const [elapsedMS, setElapsedMS] = useState(0)
@@ -26,6 +26,7 @@ function MatchView({ embedded = false }) {
   const [ball, setBall] = useState({ x: 50, y: 32, ownerTeamId: '', ownerId: 0 })
 
   const targetsRef = useRef(new Map())
+  const matchEndFiredRef = useRef(false)
 
   useEffect(() => {
     const socket = new WebSocket(WS_URL)
@@ -91,6 +92,19 @@ function MatchView({ embedded = false }) {
             detail: keyEvent.message || '',
           })
         }
+
+    const ended = payload.events.some((event) => event.kind === 'match_end')
+    if (ended && !matchEndFiredRef.current) {
+      matchEndFiredRef.current = true
+      const home = Number(payload?.score?.home || 0)
+      const away = Number(payload?.score?.away || 0)
+      onMatchEnd?.({
+        home,
+        away,
+        didWin: home > away,
+        isDraw: home === away,
+      })
+    }
       }
     }
 

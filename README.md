@@ -48,6 +48,9 @@ cd apps/service-realtime && go run ./cmd/server
 - `GET /ws` (gateway and realtime)
 - `POST /api/v1/tactics` (service-core, auto-push to realtime)
 - `POST /api/v1/gacha/roll` (service-core, 90/10 + pity 51)
+- `GET /api/v1/ai/stages` (service-core, danh sách 50 màn + trạng thái khóa/mở)
+- `GET /api/v1/ai/stages/:stageNo` (service-core, chi tiết màn + đội hình 22 cầu thủ đối thủ)
+- `POST /api/v1/ai/stages/:stageNo/result` (service-core, cập nhật kết quả thắng/thua để mở màn mới)
 
 
 ### Feature
@@ -62,8 +65,9 @@ cd apps/service-realtime && go run ./cmd/server
 - Các chế độ thi đấu:
 
 + đấu với máy theo từng màn: tạo sẵn 50 màn (màn 1 -> màn 50), mỗi màn có phần thưởng tiền + EXP tăng cho mỗi cầu thủ thi đấu.
-+ phải thắng màn 1 mới mở màn 2 
++ phải thắng màn hiện tại mới mở màn kế tiếp.
 + chỉ khi người chơi bấm nút "Thi đấu" thì mới mở màn hình thi đấu.
++ mỗi màn sẽ random CLB đối thủ và đội hình 22 cầu thủ của CLB đó; chỉ số cầu thủ đối thủ tăng dần khi qua màn mới.
 
 + đấu với người ( rank) : ghép trận tự động => và thắng sẽ phân hạng từ nghiệp dư, bán chuyên, chuyên nghiệp, hạng 3, hạng 2, hạng 1 và siêu sao. 10 trận nếu thắng 6 sẽ lên hạng
 

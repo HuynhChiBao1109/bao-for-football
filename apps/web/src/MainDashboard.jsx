@@ -144,7 +144,12 @@ function renderRoute(pathname, props) {
   }
 
   if (pathname === ROUTES.aiMatch) {
-    return <AiMatchPage />
+    return (
+      <AiMatchPage
+        token={props.token}
+        onUnauthorized={props.onUnauthorized}
+      />
+    )
   }
 
   if (pathname === ROUTES.pvp) {

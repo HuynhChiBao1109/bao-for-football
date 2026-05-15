@@ -4,6 +4,9 @@ import (
 	"context"
 	"log"
 
+	aihttp "fifam/apps/service-core/internal/ai/delivery/http"
+	aimysql "fifam/apps/service-core/internal/ai/repository/mysql"
+	aiusecase "fifam/apps/service-core/internal/ai/usecase"
 	authhttp "fifam/apps/service-core/internal/auth/delivery/http"
 	authmiddleware "fifam/apps/service-core/internal/auth/middleware"
 	authmysql "fifam/apps/service-core/internal/auth/repository/mysql"
@@ -67,6 +70,10 @@ func main() {
 	playerAdminUC := playeradminusecase.NewPlayerAdminUseCase(playerAdminRepo)
 	playerAdminHandler := playeradminhttp.NewHandler(playerAdminUC)
 
+	aiRepo := aimysql.NewRepository(db)
+	aiUC := aiusecase.NewCampaignUseCase(aiRepo)
+	aiHandler := aihttp.NewHandler(aiUC)
+
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
 	router.Use(coremiddleware.CORS())
@@ -84,6 +91,9 @@ func main() {
 	api.Use(authmiddleware.RequireJWT(authUC, false))
 	api.GET("/auth/me", authHandler.Me)
 	api.GET("/clubs/:id", clubHandler.GetClubByID)
+	api.GET("/ai/stages", aiHandler.ListStages)
+	api.GET("/ai/stages/:stageNo", aiHandler.GetStageDetail)
+	api.POST("/ai/stages/:stageNo/result", aiHandler.SubmitResult)
 	api.GET("/tactics/:teamId", tacticsHandler.Get)
 	api.POST("/tactics", tacticsHandler.Save)
 	api.POST("/gacha/roll", gachaHandler.Roll)

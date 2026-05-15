@@ -167,6 +167,29 @@ func (migrationTeamTactics) TableName() string {
 	return "team_tactics"
 }
 
+type migrationAIUserStage struct {
+	ID             uint64     `gorm:"primaryKey;autoIncrement;column:id"`
+	UserID         uint64     `gorm:"not null;uniqueIndex:uk_ai_user_stage,priority:1;index:idx_ai_user_stages_user_id;column:user_id"`
+	StageNo        int        `gorm:"not null;uniqueIndex:uk_ai_user_stage,priority:2;column:stage_no"`
+	ClubID         uint64     `gorm:"not null;index:idx_ai_user_stages_club_id;column:club_id"`
+	ClubName       string     `gorm:"type:varchar(120);not null;column:club_name"`
+	RewardMoney    int64      `gorm:"not null;default:0;column:reward_money"`
+	RewardExp      int        `gorm:"not null;default:0;column:reward_exp"`
+	EnemyStatBonus int        `gorm:"not null;default:0;column:enemy_stat_bonus"`
+	IsUnlocked     bool       `gorm:"not null;default:false;column:is_unlocked"`
+	IsCleared      bool       `gorm:"not null;default:false;column:is_cleared"`
+	Attempts       int        `gorm:"not null;default:0;column:attempts"`
+	Wins           int        `gorm:"not null;default:0;column:wins"`
+	UnlockedAt     *time.Time `gorm:"column:unlocked_at"`
+	LastClearedAt  *time.Time `gorm:"column:last_cleared_at"`
+	CreatedAt      time.Time  `gorm:"column:created_at"`
+	UpdatedAt      time.Time  `gorm:"column:updated_at"`
+}
+
+func (migrationAIUserStage) TableName() string {
+	return "ai_user_stages"
+}
+
 type defaultClub struct {
 	ID         int64
 	Name       string
@@ -179,6 +202,11 @@ var seededClubs = []defaultClub{
 	{ID: 1, Name: "FC Navy", Formation: "4-3-3", Budget: 120000000, LeagueName: "Premier League"},
 	{ID: 2, Name: "Crimson United", Formation: "4-2-3-1", Budget: 115000000, LeagueName: "Premier League"},
 	{ID: 3, Name: "Golden Phoenix", Formation: "3-5-2", Budget: 110000000, LeagueName: "Championship"},
+	{ID: 4, Name: "Azure Storm", Formation: "4-4-2", Budget: 108000000, LeagueName: "Serie A"},
+	{ID: 5, Name: "Emerald Rovers", Formation: "4-1-4-1", Budget: 106000000, LeagueName: "La Liga"},
+	{ID: 6, Name: "Ivory Titans", Formation: "3-4-3", Budget: 112000000, LeagueName: "Bundesliga"},
+	{ID: 7, Name: "Shadow Rangers", Formation: "5-3-2", Budget: 103000000, LeagueName: "Ligue 1"},
+	{ID: 8, Name: "Ruby Comets", Formation: "4-2-2-2", Budget: 109000000, LeagueName: "Eredivisie"},
 }
 
 var seededNationalities = []string{
@@ -210,6 +238,7 @@ func AutoMigrate(ctx context.Context, db *gorm.DB) error {
 		&migrationUserPlayer{},
 		&migrationGachaLog{},
 		&migrationTeamTactics{},
+		&migrationAIUserStage{},
 	); err != nil {
 		return err
 	}
