@@ -1,0 +1,19 @@
+internal/club/
+├─ domain/
+│  ├─ entity.go
+│  ├─ repository.go
+│  └─ service.go
+├─ usecase/
+│  ├─ create_club.go
+│  ├─ get_club.go
+│  └─ update_club.go
+├─ repository/
+│  └─ mysql/
+│     ├─ club_repo.go
+│     └─ mapper.go
+└─ delivery/
+   ├─ http/
+   │  ├─ handler.go
+   │  └─ dto.go
+   └─ ws/
+      └─ handler.go

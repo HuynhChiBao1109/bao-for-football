@@ -1,0 +1,51 @@
+package http
+
+import (
+	"net/http"
+
+	"fifam/apps/service-core/internal/tactics/domain"
+	tacticsusecase "fifam/apps/service-core/internal/tactics/usecase"
+
+	"github.com/gin-gonic/gin"
+)
+
+type Handler struct {
+	saveTactics *tacticsusecase.SaveTacticsUseCase
+}
+
+func NewHandler(saveTactics *tacticsusecase.SaveTacticsUseCase) *Handler {
+	return &Handler{saveTactics: saveTactics}
+}
+
+type saveRequest struct {
+	TeamID    string  `json:"teamId"`
+	Formation string  `json:"formation"`
+	PassRatio float64 `json:"passRatio"`
+	ShotRatio float64 `json:"shotRatio"`
+	Pressure  float64 `json:"pressure"`
+}
+
+func (h *Handler) Save(c *gin.Context) {
+	var req saveRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	saved, err := h.saveTactics.Execute(c.Request.Context(), domain.Config{
+		TeamID:    req.TeamID,
+		Formation: req.Formation,
+		PassRatio: req.PassRatio,
+		ShotRatio: req.ShotRatio,
+		Pressure:  req.Pressure,
+	})
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "tactics saved and pushed to match engine",
+		"data":    saved,
+	})
+}

@@ -1,0 +1,94 @@
+package main
+
+import (
+	"context"
+	"log"
+
+	authhttp "fifam/apps/service-core/internal/auth/delivery/http"
+	authmiddleware "fifam/apps/service-core/internal/auth/middleware"
+	authmysql "fifam/apps/service-core/internal/auth/repository/mysql"
+	authusecase "fifam/apps/service-core/internal/auth/usecase"
+	clubhttp "fifam/apps/service-core/internal/club/delivery/http"
+	clubmysql "fifam/apps/service-core/internal/club/repository/mysql"
+	clubusecase "fifam/apps/service-core/internal/club/usecase"
+	"fifam/apps/service-core/internal/config"
+	gachahttp "fifam/apps/service-core/internal/gacha/delivery/http"
+	gachamysql "fifam/apps/service-core/internal/gacha/repository/mysql"
+	gachausecase "fifam/apps/service-core/internal/gacha/usecase"
+	coremiddleware "fifam/apps/service-core/internal/middleware"
+	mysqlplatform "fifam/apps/service-core/internal/platform/mysql"
+	playeradminhttp "fifam/apps/service-core/internal/playeradmin/delivery/http"
+	playeradminmysql "fifam/apps/service-core/internal/playeradmin/repository/mysql"
+	playeradminusecase "fifam/apps/service-core/internal/playeradmin/usecase"
+	tacticshttp "fifam/apps/service-core/internal/tactics/delivery/http"
+	realtimeclient "fifam/apps/service-core/internal/tactics/integration/realtime"
+	tacticsmysql "fifam/apps/service-core/internal/tactics/repository/mysql"
+	tacticsusecase "fifam/apps/service-core/internal/tactics/usecase"
+
+	"github.com/gin-gonic/gin"
+)
+
+func main() {
+	cfg := config.Load()
+	db, err := mysqlplatform.New(cfg.MySQLDSN)
+	if err != nil {
+		log.Printf("mysql connection warning: %v", err)
+	} else {
+		if err := mysqlplatform.EnsureBootstrap(context.Background(), db); err != nil {
+			log.Printf("mysql bootstrap warning: %v", err)
+		}
+	}
+
+	authRepo := authmysql.NewRepository(db)
+	authUC := authusecase.NewAuthUseCase(authRepo)
+	if err := authUC.EnsureAdmin(context.Background()); err != nil {
+		log.Printf("admin seed warning: %v", err)
+	}
+	authHandler := authhttp.NewHandler(authUC)
+
+	clubRepo := clubmysql.NewRepository(db)
+	clubUC := clubusecase.NewGetClubUseCase(clubRepo)
+	clubHandler := clubhttp.NewHandler(clubUC)
+
+	tacticsRepo := tacticsmysql.NewRepository(db)
+	realtimePusher := realtimeclient.NewClient(cfg.RealtimeBaseURL)
+	tacticsUC := tacticsusecase.NewSaveTacticsUseCase(tacticsRepo, realtimePusher)
+	tacticsHandler := tacticshttp.NewHandler(tacticsUC)
+
+	gachaRepo := gachamysql.NewRepository(db)
+	gachaUC := gachausecase.NewRollUseCase(gachaRepo)
+	gachaHandler := gachahttp.NewHandler(gachaUC)
+
+	playerAdminRepo := playeradminmysql.NewRepository(db)
+	playerAdminUC := playeradminusecase.NewPlayerAdminUseCase(playerAdminRepo)
+	playerAdminHandler := playeradminhttp.NewHandler(playerAdminUC)
+
+	gin.SetMode(gin.ReleaseMode)
+	router := gin.New()
+	router.Use(coremiddleware.CORS())
+	router.Use(gin.Recovery())
+
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{"service": "service-core", "status": "ok"})
+	})
+	router.GET("/api/v1/auth/clubs", authHandler.ListRegistrationClubs)
+	router.POST("/api/v1/auth/login", authHandler.Login)
+	router.POST("/api/v1/auth/register", authHandler.Register)
+	router.POST("/admin/login", authHandler.AdminLogin)
+
+	api := router.Group("/api/v1")
+	api.Use(authmiddleware.RequireJWT(authUC, false))
+	api.GET("/clubs/:id", clubHandler.GetClubByID)
+	api.POST("/tactics", tacticsHandler.Save)
+	api.POST("/gacha/roll", gachaHandler.Roll)
+
+	admin := router.Group("/api/v1/admin")
+	admin.Use(authmiddleware.RequireJWT(authUC, true))
+	admin.GET("/players", playerAdminHandler.List)
+	admin.POST("/players", playerAdminHandler.Create)
+
+	log.Printf("service-core listening on %s", cfg.HTTPPort)
+	if err := router.Run(":" + cfg.HTTPPort); err != nil {
+		log.Fatal(err)
+	}
+}

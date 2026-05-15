@@ -1,0 +1,74 @@
+version: '3.9'
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: fifam-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-1234}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-fifam_dev}
+    ports:
+      - '3306:3306'
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  api-gateway:
+    image: golang:1.24
+    container_name: fifam-api-gateway
+    working_dir: /app/apps/api-gateway
+    command: sh -c "go run ./cmd/server"
+    volumes:
+      - ../../:/app
+    environment:
+      API_GATEWAY_PORT: 8080
+    ports:
+      - '8080:8080'
+    depends_on:
+      - mysql
+
+  service-core:
+    image: golang:1.24
+    container_name: fifam-service-core
+    working_dir: /app/apps/service-core
+    command: sh -c "go run ./cmd/server"
+    volumes:
+      - ../../:/app
+    environment:
+      SERVICE_CORE_PORT: 8081
+      MYSQL_DSN: root:1234@tcp(mysql:3306)/fifam_dev?parseTime=true
+    ports:
+      - '8081:8081'
+    depends_on:
+      - mysql
+
+  service-realtime:
+    image: golang:1.24
+    container_name: fifam-service-realtime
+    working_dir: /app/apps/service-realtime
+    command: sh -c "go run ./cmd/server"
+    volumes:
+      - ../../:/app
+    environment:
+      SERVICE_REALTIME_PORT: 8082
+    ports:
+      - '8082:8082'
+
+  web:
+    image: node:24-alpine
+    container_name: fifam-web
+    working_dir: /app/apps/web
+    command: sh -c "npm install && npm run dev -- --host"
+    volumes:
+      - ../../:/app
+    environment:
+      VITE_API_BASE_URL: http://localhost:8081
+      VITE_WS_URL: ws://localhost:8082/ws
+    ports:
+      - '5173:5173'
+    depends_on:
+      - service-core
+      - service-realtime
+
+volumes:
+  mysql_data:
