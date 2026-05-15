@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -42,8 +43,8 @@ type UserInfo struct {
 }
 
 type SessionInfo struct {
-	User UserInfo                `json:"user"`
-	Team *domain.TeamAssignment  `json:"team,omitempty"`
+	User UserInfo               `json:"user"`
+	Team *domain.TeamAssignment `json:"team,omitempty"`
 }
 
 func (u *AuthUseCase) EnsureAdmin(ctx context.Context) error {
@@ -180,6 +181,10 @@ func (u *AuthUseCase) GetSession(ctx context.Context, userID uint64, username st
 		return SessionInfo{}, err
 	}
 
+	if team != nil {
+		team.TacticsTeamID = buildTacticsTeamID(userID)
+	}
+
 	return SessionInfo{
 		User: UserInfo{
 			ID:       userID,
@@ -188,6 +193,10 @@ func (u *AuthUseCase) GetSession(ctx context.Context, userID uint64, username st
 		},
 		Team: team,
 	}, nil
+}
+
+func buildTacticsTeamID(userID uint64) string {
+	return fmt.Sprintf("user-%d", userID)
 }
 
 func (u *AuthUseCase) ValidateToken(tokenString string) (*domain.TokenClaims, error) {

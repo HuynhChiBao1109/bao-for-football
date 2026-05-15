@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,12 +20,13 @@ const (
 )
 
 type MatchEngine struct {
-	hub     *hub.Hub
-	rand    *rand.Rand
-	mu      sync.Mutex
-	running bool
-	state   *rooms.MatchState
-	pending map[string]UpdateTacticsInput
+	hub      *hub.Hub
+	rand     *rand.Rand
+	mu       sync.Mutex
+	running  bool
+	state    *rooms.MatchState
+	pending  map[string]UpdateTacticsInput
+	bindings map[string]string
 }
 
 type UpdateTacticsInput struct {
@@ -37,9 +39,10 @@ type UpdateTacticsInput struct {
 
 func NewMatchEngine(h *hub.Hub) *MatchEngine {
 	return &MatchEngine{
-		hub:     h,
-		rand:    rand.New(rand.NewSource(time.Now().UnixNano())),
-		pending: make(map[string]UpdateTacticsInput),
+		hub:      h,
+		rand:     rand.New(rand.NewSource(time.Now().UnixNano())),
+		pending:  make(map[string]UpdateTacticsInput),
+		bindings: make(map[string]string),
 	}
 }
 
@@ -61,11 +64,12 @@ func (e *MatchEngine) run() {
 
 	e.mu.Lock()
 	e.state = state
-	if input, ok := e.pending[state.HomeTeam.ID]; ok {
-		e.applyTacticsLocked(input)
-	}
-	if input, ok := e.pending[state.AwayTeam.ID]; ok {
-		e.applyTacticsLocked(input)
+	for externalTeamID, input := range e.pending {
+		internalTeamID, err := e.resolveInternalTeamIDLocked(externalTeamID)
+		if err != nil {
+			continue
+		}
+		e.applyTacticsLocked(input, internalTeamID)
 	}
 	e.mu.Unlock()
 
@@ -107,30 +111,42 @@ func (e *MatchEngine) UpdateTeamTactics(input UpdateTacticsInput) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	if e.state == nil {
-		return fmt.Errorf("match is not running")
-	}
-
-	if input.TeamID != "home" && input.TeamID != "away" {
-		return fmt.Errorf("invalid teamId")
+	input.TeamID = strings.ToLower(strings.TrimSpace(input.TeamID))
+	if input.TeamID == "" {
+		return fmt.Errorf("teamId is required")
 	}
 	if input.Formation != "4-3-3" && input.Formation != "4-4-2" {
 		return fmt.Errorf("invalid formation")
 	}
+	if input.PassRatio < 0 || input.PassRatio > 1 {
+		return fmt.Errorf("passRatio must be between 0 and 1")
+	}
+	if input.ShotRatio < 0 || input.ShotRatio > 1 {
+		return fmt.Errorf("shotRatio must be between 0 and 1")
+	}
+	if input.Pressure < 0 || input.Pressure > 1 {
+		return fmt.Errorf("pressure must be between 0 and 1")
+	}
+
+	internalTeamID, err := e.resolveInternalTeamIDLocked(input.TeamID)
+	if err != nil {
+		return err
+	}
+
+	e.pending[input.TeamID] = input
 
 	if e.state == nil {
-		e.pending[input.TeamID] = input
 		return nil
 	}
 
-	e.applyTacticsLocked(input)
+	e.applyTacticsLocked(input, internalTeamID)
 
 	return nil
 }
 
-func (e *MatchEngine) applyTacticsLocked(input UpdateTacticsInput) {
+func (e *MatchEngine) applyTacticsLocked(input UpdateTacticsInput, internalTeamID string) {
 	team := e.state.HomeTeam
-	if input.TeamID == e.state.AwayTeam.ID {
+	if internalTeamID == e.state.AwayTeam.ID {
 		team = e.state.AwayTeam
 	}
 
@@ -140,7 +156,44 @@ func (e *MatchEngine) applyTacticsLocked(input UpdateTacticsInput) {
 	team.Tactics.Pressing = team.Tactics.Pressure
 	team.Tactics.Mental = clamp(0.45+team.Tactics.ShotRatio*0.2+team.Tactics.PassRatio*0.2, 0.45, 0.9)
 	rooms.ApplyFormation(team, input.Formation)
-	e.pending[input.TeamID] = input
+}
+
+func (e *MatchEngine) resolveInternalTeamIDLocked(externalTeamID string) (string, error) {
+	if externalTeamID == "" {
+		return "", fmt.Errorf("teamId is required")
+	}
+
+	if externalTeamID == "home" || externalTeamID == "away" {
+		e.bindings[externalTeamID] = externalTeamID
+		return externalTeamID, nil
+	}
+
+	if mapped, ok := e.bindings[externalTeamID]; ok {
+		return mapped, nil
+	}
+
+	usedHome := false
+	usedAway := false
+	for _, slot := range e.bindings {
+		if slot == "home" {
+			usedHome = true
+		}
+		if slot == "away" {
+			usedAway = true
+		}
+	}
+
+	if !usedHome {
+		e.bindings[externalTeamID] = "home"
+		return "home", nil
+	}
+
+	if !usedAway {
+		e.bindings[externalTeamID] = "away"
+		return "away", nil
+	}
+
+	return "", fmt.Errorf("match already has 2 tactic team bindings")
 }
 
 func (e *MatchEngine) updateState(state *rooms.MatchState) []events.MatchEvent {

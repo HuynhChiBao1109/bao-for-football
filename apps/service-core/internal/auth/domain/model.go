@@ -10,11 +10,12 @@ type User struct {
 }
 
 type TeamAssignment struct {
-	UserID    uint64 `json:"userId"`
-	ClubID    *int64 `json:"clubId,omitempty"`
-	ClubName  string `json:"clubName"`
-	Budget    int64  `json:"budget"`
-	RankPoint int    `json:"rankPoint"`
+	UserID        uint64 `json:"userId"`
+	ClubID        *int64 `json:"clubId,omitempty"`
+	ClubName      string `json:"clubName"`
+	Budget        int64  `json:"budget"`
+	RankPoint     int    `json:"rankPoint"`
+	TacticsTeamID string `json:"tacticsTeamId"`
 }
 
 type ClubOption struct {

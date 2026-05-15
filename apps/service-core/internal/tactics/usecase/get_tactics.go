@@ -2,8 +2,6 @@ package usecase
 
 import (
 	"context"
-	"errors"
-	"strings"
 
 	"fifam/apps/service-core/internal/tactics/domain"
 )
@@ -21,10 +19,10 @@ func NewGetTacticsUseCase(repo tacticsReader) *GetTacticsUseCase {
 }
 
 func (u *GetTacticsUseCase) Execute(ctx context.Context, teamID string) (*domain.Config, error) {
-	teamID = strings.ToLower(strings.TrimSpace(teamID))
-	if teamID != "home" && teamID != "away" {
-		return nil, errors.New("teamId must be home or away")
+	normalizedID, err := normalizeTeamID(teamID)
+	if err != nil {
+		return nil, err
 	}
 
-	return u.repo.FindByTeamID(ctx, teamID)
+	return u.repo.FindByTeamID(ctx, normalizedID)
 }

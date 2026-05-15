@@ -10,7 +10,10 @@ const DEFAULT_FORM = {
 }
 
 function TacticsPage({ token, sessionData, user, onUnauthorized }) {
-  const [teamSlot, setTeamSlot] = useState(user?.isAdmin ? 'away' : 'home')
+  const tacticsTeamId =
+    sessionData?.team?.tacticsTeamId ||
+    (sessionData?.user?.id ? `user-${sessionData.user.id}` : '')
+
   const [form, setForm] = useState(DEFAULT_FORM)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -21,12 +24,18 @@ function TacticsPage({ token, sessionData, user, onUnauthorized }) {
     let cancelled = false
 
     async function loadTactics() {
+      if (!tacticsTeamId) {
+        setLoading(false)
+        setError('Không xác định được tacticsTeamId của user hiện tại.')
+        return
+      }
+
       setLoading(true)
       setError('')
       setMessage('')
 
       try {
-        const payload = await apiRequest(`/api/v1/tactics/${teamSlot}`, { token })
+        const payload = await apiRequest(`/api/v1/tactics/${tacticsTeamId}`, { token })
         const data = payload?.data
         if (!cancelled && data) {
           setForm({
@@ -61,7 +70,7 @@ function TacticsPage({ token, sessionData, user, onUnauthorized }) {
     return () => {
       cancelled = true
     }
-  }, [onUnauthorized, teamSlot, token])
+  }, [onUnauthorized, tacticsTeamId, token])
 
   const total = useMemo(() => form.passRatio + form.shotRatio + form.pressure, [form])
 
@@ -76,7 +85,7 @@ function TacticsPage({ token, sessionData, user, onUnauthorized }) {
         method: 'POST',
         token,
         body: {
-          teamId: teamSlot,
+          teamId: tacticsTeamId,
           formation: form.formation,
           passRatio: Number(form.passRatio),
           shotRatio: Number(form.shotRatio),
@@ -115,27 +124,10 @@ function TacticsPage({ token, sessionData, user, onUnauthorized }) {
               Lấy và lưu chiến thuật qua tactics API
             </h2>
           </div>
-
-          <div className="rounded-2xl border border-[#24306e] bg-black/20 p-2">
-            <div className="flex gap-2">
-              {['home', 'away'].map((slot) => (
-                <button
-                  key={slot}
-                  type="button"
-                  onClick={() => setTeamSlot(slot)}
-                  className={`rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition ${
-                    teamSlot === slot ? 'bg-[#000080] text-white' : 'text-slate-300 hover:bg-white/5'
-                  }`}
-                >
-                  {slot}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
         <p className="mt-3 text-sm leading-6 text-slate-300">
-          Slot realtime hiện tại: <span className="font-semibold text-[#f6d87a]">{teamSlot}</span>. {sessionData?.team?.clubName ? `CLB tham chiếu: ${sessionData.team.clubName}.` : ''}
+          Tactics Team ID hiện tại: <span className="font-semibold text-[#f6d87a]">{tacticsTeamId || 'N/A'}</span>. {sessionData?.team?.clubName ? `CLB tham chiếu: ${sessionData.team.clubName}.` : ''}
         </p>
 
         {loading ? (
@@ -189,7 +181,7 @@ function TacticsPage({ token, sessionData, user, onUnauthorized }) {
         <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Realtime Note</p>
         <div className="mt-4 space-y-3 text-sm leading-6 text-slate-300">
           <p className="rounded-2xl border border-[#24306e] bg-black/20 px-4 py-3">
-            Backend realtime hiện dùng hai slot chiến thuật chuẩn là home và away. Màn này đang thao tác trực tiếp trên đúng cấu trúc đó.
+            Mỗi user sẽ lưu chiến thuật theo tacticsTeamId riêng. Realtime engine tự bind tacticsTeamId vào team slot phù hợp trong trận đang chạy.
           </p>
           <p className="rounded-2xl border border-[#24306e] bg-black/20 px-4 py-3">
             Khi nhấn save, chiến thuật được lưu vào service-core rồi push tiếp sang service-realtime để ảnh hưởng logic trận đấu.

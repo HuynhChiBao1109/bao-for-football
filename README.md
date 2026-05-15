@@ -61,7 +61,9 @@ cd apps/service-realtime && go run ./cmd/server
 
 - Các chế độ thi đấu:
 
-+ đấu với máy theo từng màn , mỗi màn sẽ có phần thưởng tiền + exp tăng cho mỗi cầu thủ thi đấu.
++ đấu với máy theo từng màn: tạo sẵn 50 màn (màn 1 -> màn 50), mỗi màn có phần thưởng tiền + EXP tăng cho mỗi cầu thủ thi đấu.
++ phải thắng màn 1 mới mở màn 2 
++ chỉ khi người chơi bấm nút "Thi đấu" thì mới mở màn hình thi đấu.
 
 + đấu với người ( rank) : ghép trận tự động => và thắng sẽ phân hạng từ nghiệp dư, bán chuyên, chuyên nghiệp, hạng 3, hạng 2, hạng 1 và siêu sao. 10 trận nếu thắng 6 sẽ lên hạng
 

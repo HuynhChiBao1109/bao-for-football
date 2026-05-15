@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import AdminDashboard from './AdminDashboard.jsx'
+import AiMatchPage from './AiMatchPage.jsx'
 import ClubPage from './ClubPage.jsx'
 import GachaPage from './GachaPage.jsx'
-import MatchView from './MatchView.jsx'
 import TacticsPage from './TacticsPage.jsx'
 import { apiRequest } from './api'
 import { navItems, ROUTES } from './routes'
@@ -144,7 +144,7 @@ function renderRoute(pathname, props) {
   }
 
   if (pathname === ROUTES.aiMatch) {
-    return <MatchView embedded />
+    return <AiMatchPage />
   }
 
   if (pathname === ROUTES.pvp) {

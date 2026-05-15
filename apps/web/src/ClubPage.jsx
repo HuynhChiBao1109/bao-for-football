@@ -82,7 +82,7 @@ function ClubPage({ token, sessionData, onUnauthorized, onNavigate }) {
             <InfoCard label="Tên CLB người chơi" value={team.clubName || 'Chưa đặt tên'} />
             <InfoCard label="Ngân sách" value={Number(team.budget || 0).toLocaleString()} />
             <InfoCard label="Điểm rank" value={String(team.rankPoint || 0)} />
-            <InfoCard label="Đăng nhập bằng" value={sessionData?.user?.isAdmin ? 'Admin' : 'User'} />
+            <InfoCard label="Tactics Team ID" value={team.tacticsTeamId || 'N/A'} />
           </div>
         )}
 

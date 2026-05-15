@@ -72,5 +72,5 @@ func (h *Handler) UpdateTactics(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "tactics applied to running match"})
+	c.JSON(http.StatusOK, gin.H{"message": "tactics accepted"})
 }

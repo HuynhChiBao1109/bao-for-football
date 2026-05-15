@@ -26,12 +26,13 @@ func NewSaveTacticsUseCase(repo repository, pusher realtimePusher) *SaveTacticsU
 }
 
 func (u *SaveTacticsUseCase) Execute(ctx context.Context, cfg domain.Config) (domain.Config, error) {
-	cfg.TeamID = strings.ToLower(strings.TrimSpace(cfg.TeamID))
-	cfg.Formation = strings.TrimSpace(cfg.Formation)
-
-	if cfg.TeamID != "home" && cfg.TeamID != "away" {
-		return domain.Config{}, errors.New("teamId must be home or away")
+	teamID, err := normalizeTeamID(cfg.TeamID)
+	if err != nil {
+		return domain.Config{}, err
 	}
+
+	cfg.TeamID = teamID
+	cfg.Formation = strings.TrimSpace(cfg.Formation)
 
 	if cfg.Formation != "4-3-3" && cfg.Formation != "4-4-2" {
 		return domain.Config{}, errors.New("formation must be 4-3-3 or 4-4-2")
