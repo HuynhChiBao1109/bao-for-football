@@ -58,15 +58,20 @@ ORDER BY c.id ASC`)
 	clubs := make([]domain.ClubOption, 0, 4)
 	for rows.Next() {
 		var club domain.ClubOption
+		var countryID sql.NullInt64
 		if err := rows.Scan(
 			&club.ID,
 			&club.Name,
 			&club.Logo,
-			&club.CountryID,
+			&countryID,
 			&club.Budget,
 			&club.LeagueName,
 		); err != nil {
 			return nil, err
+		}
+		if countryID.Valid {
+			value := countryID.Int64
+			club.CountryID = &value
 		}
 		clubs = append(clubs, club)
 	}

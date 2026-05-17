@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
+import AdminClubCreateCard from "./AdminClubCreateCard.jsx";
+import AdminCountryCreateCard from "./AdminCountryCreateCard.jsx";
 import AdminGachaCreateCard from "./AdminGachaCreateCard.jsx";
 import AdminPlayerCreateCard from "./AdminPlayerCreateCard.jsx";
 
@@ -16,6 +18,7 @@ function AdminDashboard({
 }) {
   const [players, setPlayers] = useState([]);
   const [countries, setCountries] = useState([]);
+  const [clubsRefreshToken, setClubsRefreshToken] = useState(0);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [loadingPlayers, setLoadingPlayers] = useState(false);
   const [loadingCountries, setLoadingCountries] = useState(false);
@@ -246,6 +249,7 @@ function AdminDashboard({
             season="Normal"
             sourceType="normal"
             countries={countries}
+            clubsRefreshToken={clubsRefreshToken}
             onCreated={loadPlayers}
             onUnauthorized={onUnauthorized}
           />
@@ -257,7 +261,25 @@ function AdminDashboard({
             season="Special"
             sourceType="gacha"
             countries={countries}
+            clubsRefreshToken={clubsRefreshToken}
             onCreated={loadPlayers}
+            onUnauthorized={onUnauthorized}
+          />
+
+          <AdminCountryCreateCard
+            token={token}
+            onCreated={() => {
+              loadCountries();
+            }}
+            onUnauthorized={onUnauthorized}
+          />
+
+          <AdminClubCreateCard
+            token={token}
+            countries={countries}
+            onCreated={() => {
+              setClubsRefreshToken((current) => current + 1);
+            }}
             onUnauthorized={onUnauthorized}
           />
 

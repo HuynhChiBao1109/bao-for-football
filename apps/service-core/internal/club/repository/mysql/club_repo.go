@@ -29,6 +29,7 @@ func (r *Repository) GetByID(ctx context.Context, id int64) (*domain.Club, error
 	}
 
 	club := &domain.Club{}
+	var countryID sql.NullInt64
 	query := `
 SELECT id, name, logo, country_id, budget, league_name
 FROM clubs
@@ -39,7 +40,7 @@ LIMIT 1`
 		&club.ID,
 		&club.Name,
 		&club.Logo,
-		&club.CountryID,
+		&countryID,
 		&club.Budget,
 		&club.LeagueName,
 	)
@@ -48,6 +49,10 @@ LIMIT 1`
 			return nil, nil
 		}
 		return nil, err
+	}
+	if countryID.Valid {
+		value := countryID.Int64
+		club.CountryID = &value
 	}
 
 	return club, nil

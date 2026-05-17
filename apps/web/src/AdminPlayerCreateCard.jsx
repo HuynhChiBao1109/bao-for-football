@@ -57,6 +57,7 @@ function AdminPlayerCreateCard({
   season,
   sourceType,
   countries,
+  clubsRefreshToken = 0,
   onCreated,
   onUnauthorized,
 }) {
@@ -115,7 +116,7 @@ function AdminPlayerCreateCard({
     return () => {
       active = false;
     };
-  }, []);
+  }, [clubsRefreshToken]);
 
   useEffect(() => {
     if (!form.baseClub && clubs.length > 0) {

@@ -12,16 +12,20 @@ import (
 )
 
 type Repository struct {
-	db         *sql.DB
-	ensureOnce sync.Once
-	ensureErr  error
-	memMu      sync.Mutex
-	memData    []domain.Player
-	nextID     int64
+	db            *sql.DB
+	ensureOnce    sync.Once
+	ensureErr     error
+	memMu         sync.Mutex
+	memData       []domain.Player
+	memCountries  []domain.Country
+	memClubs      []domain.Club
+	nextID        int64
+	nextCountryID int64
+	nextClubID    int64
 }
 
 func NewRepository(db *sql.DB) *Repository {
-	return &Repository{db: db, nextID: 1}
+	return &Repository{db: db, nextID: 1, nextCountryID: 1, nextClubID: 1}
 }
 
 func (r *Repository) List(ctx context.Context) ([]domain.Player, error) {
@@ -198,7 +202,11 @@ LIMIT 1`, id)
 
 func (r *Repository) ListCountries(ctx context.Context) ([]domain.Country, error) {
 	if r.db == nil {
-		return []domain.Country{}, nil
+		r.memMu.Lock()
+		defer r.memMu.Unlock()
+		out := make([]domain.Country, len(r.memCountries))
+		copy(out, r.memCountries)
+		return out, nil
 	}
 
 	rows, err := r.db.QueryContext(ctx, `
@@ -220,6 +228,64 @@ ORDER BY name ASC`)
 	}
 
 	return out, rows.Err()
+}
+
+func (r *Repository) CreateCountry(ctx context.Context, input domain.Country) (domain.Country, error) {
+	if r.db == nil {
+		r.memMu.Lock()
+		defer r.memMu.Unlock()
+		input.ID = r.nextCountryID
+		r.nextCountryID++
+		r.memCountries = append([]domain.Country{input}, r.memCountries...)
+		return input, nil
+	}
+
+	if err := r.ensureTable(ctx); err != nil {
+		return domain.Country{}, err
+	}
+
+	result, err := r.db.ExecContext(ctx, `
+INSERT INTO countries (name, code, flag)
+VALUES (?, ?, ?)`, input.Name, input.Code, input.Flag)
+	if err != nil {
+		return domain.Country{}, err
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return domain.Country{}, err
+	}
+	input.ID = id
+	return input, nil
+}
+
+func (r *Repository) CreateClub(ctx context.Context, input domain.Club) (domain.Club, error) {
+	if r.db == nil {
+		r.memMu.Lock()
+		defer r.memMu.Unlock()
+		input.ID = r.nextClubID
+		r.nextClubID++
+		r.memClubs = append([]domain.Club{input}, r.memClubs...)
+		return input, nil
+	}
+
+	if err := r.ensureTable(ctx); err != nil {
+		return domain.Club{}, err
+	}
+
+	result, err := r.db.ExecContext(ctx, `
+INSERT INTO clubs (name, logo, country_id, budget, league_name)
+VALUES (?, ?, ?, ?, ?)`, input.Name, input.Logo, input.CountryID, input.Budget, input.LeagueName)
+	if err != nil {
+		return domain.Club{}, err
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return domain.Club{}, err
+	}
+	input.ID = id
+	return input, nil
 }
 
 func (r *Repository) Create(ctx context.Context, input domain.Player) (domain.Player, error) {

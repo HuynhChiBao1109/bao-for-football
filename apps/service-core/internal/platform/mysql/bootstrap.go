@@ -395,11 +395,11 @@ func EnsureSeedData(ctx context.Context, db *sql.DB) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	if err := ensureDefaultClubs(ctx, db); err != nil {
-		return fmt.Errorf("ensureDefaultClubs: %w", err)
-	}
 	if err := ensureCountries(ctx, db); err != nil {
 		return fmt.Errorf("ensureCountries: %w", err)
+	}
+	if err := ensureDefaultClubs(ctx, db); err != nil {
+		return fmt.Errorf("ensureDefaultClubs: %w", err)
 	}
 	if err := backfillCountryRelations(ctx, db); err != nil {
 		return fmt.Errorf("backfillCountryRelations: %w", err)
@@ -585,14 +585,8 @@ func ensureDefaultClubs(ctx context.Context, db *sql.DB) error {
 		}
 
 		_, err = db.ExecContext(ctx, `
-INSERT INTO clubs (id, name, logo, country_id, budget, league_name)
-VALUES (?, ?, ?, ?, ?, ?)
-ON DUPLICATE KEY UPDATE
-  name = VALUES(name),
-  logo = VALUES(logo),
-  country_id = VALUES(country_id),
-  budget = VALUES(budget),
-  league_name = VALUES(league_name)`,
+INSERT IGNORE INTO clubs (id, name, logo, country_id, budget, league_name)
+VALUES (?, ?, ?, ?, ?, ?)`,
 			club.ID,
 			club.Name,
 			club.Logo,
@@ -608,13 +602,15 @@ ON DUPLICATE KEY UPDATE
 }
 
 func ensureCountries(ctx context.Context, db *sql.DB) error {
-	for _, country := range seededCountries {
+	countries, err := loadSeededCountries()
+	if err != nil {
+		return err
+	}
+
+	for _, country := range countries {
 		_, err := db.ExecContext(ctx, `
-INSERT INTO countries (name, code, flag)
-VALUES (?, ?, ?)
-ON DUPLICATE KEY UPDATE
-  code = VALUES(code),
-  flag = VALUES(flag)`,
+INSERT IGNORE INTO countries (name, code, flag)
+VALUES (?, ?, ?)`,
 			country.Name,
 			country.Code,
 			country.Flag,
@@ -758,13 +754,70 @@ func boundedStat(v int) int {
 }
 
 type rawClubSeed struct {
-	ID          int64  `json:"id"`
-	Name        string `json:"name"`
-	Logo        string `json:"logo"`
-	CountryName string `json:"countryName"`
-	CountryCode string `json:"countryCode"`
-	Budget      int64  `json:"budget"`
-	LeagueName  string `json:"leagueName"`
+	Team rawClubTeam `json:"team"`
+}
+
+type rawClubTeam struct {
+	ID      int64  `json:"id"`
+	Name    string `json:"name"`
+	Country string `json:"country"`
+	Logo    string `json:"logo"`
+}
+
+type rawCountrySeed struct {
+	Name string  `json:"name"`
+	Code *string `json:"code"`
+	Flag *string `json:"flag"`
+}
+
+func loadSeededCountries() ([]defaultCountry, error) {
+	seedFiles := []string{
+		filepath.Join("database", "country.json"),
+		filepath.Join("..", "database", "country.json"),
+		filepath.Join("..", "..", "database", "country.json"),
+	}
+
+	for _, seedFile := range seedFiles {
+		content, err := os.ReadFile(seedFile)
+		if err != nil {
+			continue
+		}
+
+		var rawCountries []rawCountrySeed
+		if err := json.Unmarshal(content, &rawCountries); err != nil {
+			continue
+		}
+		if len(rawCountries) == 0 {
+			continue
+		}
+
+		countries := make([]defaultCountry, 0, len(rawCountries))
+		for _, rawCountry := range rawCountries {
+			name := strings.TrimSpace(rawCountry.Name)
+			if name == "" {
+				continue
+			}
+			code := ""
+			if rawCountry.Code != nil {
+				code = strings.TrimSpace(*rawCountry.Code)
+			}
+			flag := ""
+			if rawCountry.Flag != nil {
+				flag = strings.TrimSpace(*rawCountry.Flag)
+			}
+			countries = append(countries, defaultCountry{
+				Name: name,
+				Code: code,
+				Flag: flag,
+			})
+		}
+
+		if len(countries) > 0 {
+			return countries, nil
+		}
+	}
+
+	return seededCountries, nil
 }
 
 func loadSeededClubs() ([]defaultClub, error) {
@@ -790,14 +843,18 @@ func loadSeededClubs() ([]defaultClub, error) {
 
 		clubs := make([]defaultClub, 0, len(rawClubs))
 		for _, rawClub := range rawClubs {
+			name := normalizeClubName(rawClub.Team.Name)
+			if name == "" {
+				continue
+			}
 			clubs = append(clubs, defaultClub{
-				ID:          rawClub.ID,
-				Name:        strings.TrimSpace(rawClub.Name),
-				Logo:        strings.TrimSpace(rawClub.Logo),
-				CountryName: strings.TrimSpace(rawClub.CountryName),
-				CountryCode: strings.TrimSpace(rawClub.CountryCode),
-				Budget:      rawClub.Budget,
-				LeagueName:  strings.TrimSpace(rawClub.LeagueName),
+				ID:          rawClub.Team.ID,
+				Name:        name,
+				Logo:        strings.TrimSpace(rawClub.Team.Logo),
+				CountryName: strings.TrimSpace(rawClub.Team.Country),
+				CountryCode: "GB-ENG",
+				Budget:      clubBudgetFor(name),
+				LeagueName:  "Premier League",
 			})
 		}
 
@@ -805,6 +862,52 @@ func loadSeededClubs() ([]defaultClub, error) {
 	}
 
 	return fallbackSeededClubs, nil
+}
+
+func normalizeClubName(name string) string {
+	switch strings.TrimSpace(name) {
+	case "":
+		return ""
+	case "Newcastle":
+		return "Newcastle United"
+	case "Tottenham":
+		return "Tottenham Hotspur"
+	case "Leicester":
+		return "Leicester City"
+	case "West Ham":
+		return "West Ham United"
+	case "Brighton":
+		return "Brighton & Hove Albion"
+	case "Wolves":
+		return "Wolverhampton Wanderers"
+	case "Bournemouth":
+		return "AFC Bournemouth"
+	default:
+		return strings.TrimSpace(name)
+	}
+}
+
+func clubBudgetFor(name string) int64 {
+	switch name {
+	case "Manchester United":
+		return 120000000
+	case "Manchester City":
+		return 118000000
+	case "Liverpool":
+		return 116000000
+	case "Chelsea":
+		return 114000000
+	case "Arsenal":
+		return 112000000
+	case "Tottenham Hotspur":
+		return 110000000
+	case "Newcastle United":
+		return 108000000
+	case "Aston Villa":
+		return 106000000
+	default:
+		return 100000000
+	}
 }
 
 func resolveCountryID(ctx context.Context, db *sql.DB, countryName string, countryCode string) (*uint64, error) {

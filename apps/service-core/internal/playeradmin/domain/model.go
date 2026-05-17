@@ -38,3 +38,13 @@ type Country struct {
 	Code string `json:"code"`
 	Flag string `json:"flag"`
 }
+
+type Club struct {
+	ID         int64   `json:"id"`
+	Name       string  `json:"name"`
+	Logo       string  `json:"logo"`
+	CountryID  *int64  `json:"countryId,omitempty"`
+	Country    Country `json:"country"`
+	Budget     int64   `json:"budget"`
+	LeagueName string  `json:"leagueName"`
+}

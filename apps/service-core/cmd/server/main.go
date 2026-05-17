@@ -139,6 +139,8 @@ func main() {
 	admin := router.Group("/api/v1/admin")
 	admin.Use(authmiddleware.RequireJWT(authUC, true))
 	admin.GET("/countries", playerAdminHandler.ListCountries)
+	admin.POST("/countries", playerAdminHandler.CreateCountry)
+	admin.POST("/clubs", playerAdminHandler.CreateClub)
 	admin.GET("/players", playerAdminHandler.List)
 	admin.GET("/players/:id", playerAdminHandler.Detail)
 	admin.POST("/players", playerAdminHandler.Create)

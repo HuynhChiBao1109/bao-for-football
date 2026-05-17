@@ -56,6 +56,20 @@ type createPlayerRequest struct {
 	Dribbling      int `json:"dribbling" form:"dribbling"`
 }
 
+type createCountryRequest struct {
+	Name string `json:"name" form:"name"`
+	Code string `json:"code" form:"code"`
+	Flag string `json:"flag" form:"flag"`
+}
+
+type createClubRequest struct {
+	Name       string `json:"name" form:"name"`
+	Logo       string `json:"logo" form:"logo"`
+	CountryID  int64  `json:"countryId" form:"countryId"`
+	Budget     int64  `json:"budget" form:"budget"`
+	LeagueName string `json:"leagueName" form:"leagueName"`
+}
+
 func (h *Handler) ListCountries(c *gin.Context) {
 	countries, err := h.uc.ListCountries(c.Request.Context())
 	if err != nil {
@@ -64,6 +78,49 @@ func (h *Handler) ListCountries(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": countries})
+}
+
+func (h *Handler) CreateCountry(c *gin.Context) {
+	var req createCountryRequest
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	created, err := h.uc.CreateCountry(c.Request.Context(), domain.Country{
+		Name: req.Name,
+		Code: req.Code,
+		Flag: req.Flag,
+	})
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "country created", "data": created})
+}
+
+func (h *Handler) CreateClub(c *gin.Context) {
+	var req createClubRequest
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	countryID := req.CountryID
+	created, err := h.uc.CreateClub(c.Request.Context(), domain.Club{
+		Name:       req.Name,
+		Logo:       req.Logo,
+		CountryID:  &countryID,
+		Budget:     req.Budget,
+		LeagueName: req.LeagueName,
+	})
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "club created", "data": created})
 }
 
 func (h *Handler) List(c *gin.Context) {

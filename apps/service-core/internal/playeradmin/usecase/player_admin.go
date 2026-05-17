@@ -12,6 +12,8 @@ type repository interface {
 	List(ctx context.Context) ([]domain.Player, error)
 	GetByID(ctx context.Context, id int64) (domain.Player, error)
 	ListCountries(ctx context.Context) ([]domain.Country, error)
+	CreateCountry(ctx context.Context, input domain.Country) (domain.Country, error)
+	CreateClub(ctx context.Context, input domain.Club) (domain.Club, error)
 	Create(ctx context.Context, input domain.Player) (domain.Player, error)
 }
 
@@ -37,6 +39,39 @@ func (u *PlayerAdminUseCase) GetByID(ctx context.Context, id int64) (domain.Play
 
 func (u *PlayerAdminUseCase) ListCountries(ctx context.Context) ([]domain.Country, error) {
 	return u.repo.ListCountries(ctx)
+}
+
+func (u *PlayerAdminUseCase) CreateCountry(ctx context.Context, input domain.Country) (domain.Country, error) {
+	input.Name = strings.TrimSpace(input.Name)
+	input.Code = strings.TrimSpace(strings.ToUpper(input.Code))
+	input.Flag = strings.TrimSpace(input.Flag)
+
+	if input.Name == "" {
+		return domain.Country{}, errors.New("country name is required")
+	}
+
+	return u.repo.CreateCountry(ctx, input)
+}
+
+func (u *PlayerAdminUseCase) CreateClub(ctx context.Context, input domain.Club) (domain.Club, error) {
+	input.Name = strings.TrimSpace(input.Name)
+	input.Logo = strings.TrimSpace(input.Logo)
+	input.LeagueName = strings.TrimSpace(input.LeagueName)
+
+	if input.Name == "" {
+		return domain.Club{}, errors.New("club name is required")
+	}
+	if input.CountryID == nil || *input.CountryID <= 0 {
+		return domain.Club{}, errors.New("countryId is required")
+	}
+	if input.LeagueName == "" {
+		return domain.Club{}, errors.New("leagueName is required")
+	}
+	if input.Budget < 0 {
+		return domain.Club{}, errors.New("budget must be non-negative")
+	}
+
+	return u.repo.CreateClub(ctx, input)
 }
 
 func (u *PlayerAdminUseCase) Create(ctx context.Context, input domain.Player) (domain.Player, error) {
