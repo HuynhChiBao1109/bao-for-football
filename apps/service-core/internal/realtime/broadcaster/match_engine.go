@@ -15,12 +15,13 @@ import (
 )
 
 const (
-	tickInterval = 100 * time.Millisecond
-	matchLength  = 2 * time.Minute
-	gkHomeMinX   = 2.0
-	gkHomeMaxX   = 15.0
-	gkAwayMinX   = 85.0
-	gkAwayMaxX   = 98.0
+	tickInterval          = 100 * time.Millisecond
+	preKickoffWarmupTicks = 7
+	matchLength           = 2 * time.Minute
+	gkHomeMinX            = 2.0
+	gkHomeMaxX            = 15.0
+	gkAwayMinX            = 85.0
+	gkAwayMaxX            = 98.0
 )
 
 type gameplayRuntime struct {
@@ -141,13 +142,14 @@ func (e *MatchEngine) run(matchID string, stopCh chan struct{}) {
 	}
 	e.mu.Unlock()
 
-	kickoffEvents := e.prepareKickoffSequence(state, startingKickoffTeamID, "Match started")
-	e.broadcastTick(state, 0, kickoffEvents)
+	// First emit a neutral snapshot so UI can fully mount before kickoff events begin.
+	e.broadcastTick(state, 0, nil)
 
 	ticker := time.NewTicker(tickInterval)
 	defer ticker.Stop()
 
 	tick := 0
+	kickoffWarmupTicks := preKickoffWarmupTicks
 	halfTimeAnnounced := false
 	halfTimeHoldTicks := 0
 	secondHalfKickoffDelayTicks := 0
@@ -164,6 +166,18 @@ func (e *MatchEngine) run(matchID string, stopCh chan struct{}) {
 
 		tick++
 		e.mu.Lock()
+
+		if kickoffWarmupTicks > 0 {
+			kickoffWarmupTicks--
+			if kickoffWarmupTicks == 0 {
+				tickEvents := e.prepareKickoffSequence(state, startingKickoffTeamID, "Match started")
+				e.broadcastTick(state, tick, tickEvents)
+			} else {
+				e.broadcastTick(state, tick, nil)
+			}
+			e.mu.Unlock()
+			continue
+		}
 
 		if halfTimeHoldTicks > 0 {
 			halfTimeHoldTicks--

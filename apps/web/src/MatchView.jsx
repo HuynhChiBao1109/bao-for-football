@@ -122,22 +122,6 @@ const EV = {
   possession_change: { label: "Đổi Bóng" },
 };
 
-const KEY_EVENTS = new Set([
-  "goal",
-  "var",
-  "yellow_card",
-  "red_card",
-  "foul",
-  "free_kick",
-  "corner",
-  "argument",
-  "substitution",
-  "half_time",
-  "second_half_start",
-  "match_end",
-  "kickoff",
-]);
-
 const EMPTY_TEAM_STATS = {
   passes: 0,
   successfulPasses: 0,
@@ -186,6 +170,8 @@ function MatchView({ embedded = false, onMatchEnd, matchId = "" }) {
   const lastTickRef = useRef(-1);
   const scorersRef = useRef([]);
   const matchStatsRef = useRef(INITIAL_MATCH_STATS);
+  const eventQueueRef = useRef([]);
+  const eventQueueTimerRef = useRef(0);
 
   const matchWSURL = useMemo(() => {
     return buildMatchWebSocketURL(MATCH_WS_BASE_URL, matchId);
@@ -215,10 +201,134 @@ function MatchView({ embedded = false, onMatchEnd, matchId = "" }) {
     matchEndFiredRef.current = false;
     lastTickRef.current = -1;
     scorersRef.current = [];
+    eventQueueRef.current = [];
+    if (eventQueueTimerRef.current) {
+      window.clearTimeout(eventQueueTimerRef.current);
+      eventQueueTimerRef.current = 0;
+    }
 
     let socket;
     let reconnectTimer = 0;
     let closed = false;
+
+    const processQueuedMatchEvent = (entry) => {
+      const { event, payload } = entry;
+      if (!event) return;
+
+      if (event.kind === "shot") ballAlphaRef.current = 0.5;
+      else if (event.kind === "pass") ballAlphaRef.current = 0.36;
+      else ballAlphaRef.current = 0.24;
+
+      const cfg = EV[event.kind];
+      if (cfg?.title) {
+        setPopup({
+          kind: event.kind,
+          title: cfg.title,
+          color: cfg.color,
+          bg: cfg.bg,
+          border: cfg.bdr,
+          detail: event.message || "",
+          duration: cfg.dur || 2500,
+        });
+      }
+      if (cfg?.phase) setMatchPhase(cfg.phase);
+      if (cfg?.phase === "second_half") {
+        setTimeout(() => setMatchPhase("playing"), 3600);
+      }
+
+      const bx = payload.ball?.x ?? 50;
+      const by = payload.ball?.y ?? 32;
+      const id = ++fxIdRef.current;
+      let fx = null;
+      if (event.kind === "foul") {
+        fx = { id, type: "foul", x: bx, y: by };
+      } else if (event.kind === "free_kick") {
+        fx = { id, type: "free_kick", x: bx, y: by };
+      } else if (event.kind === "corner") {
+        fx = { id, type: "corner", x: bx < 50 ? 1 : 99, y: by < 32 ? 1 : 63 };
+      } else if (event.kind === "yellow_card") {
+        const pl = payload.players?.find((p) => p.id === event.playerId);
+        fx = { id, type: "yellow_card", x: pl?.x ?? bx, y: pl?.y ?? by };
+      } else if (event.kind === "red_card") {
+        const pl = payload.players?.find((p) => p.id === event.playerId);
+        fx = { id, type: "red_card", x: pl?.x ?? bx, y: pl?.y ?? by };
+      } else if (event.kind === "argument") {
+        fx = { id, type: "argument", x: bx, y: by };
+      } else if (event.kind === "substitution") {
+        fx = { id, type: "substitution", x: bx, y: by };
+      } else if (event.kind === "var") {
+        fx = { id, type: "var", x: 50, y: 32 };
+      } else if (event.kind === "goal") {
+        fx = { id, type: "goal", x: bx, y: by };
+      } else if (event.kind === "kickoff") {
+        fx = { id, type: "kickoff", x: 50, y: 32 };
+      } else if (event.kind === "shot") {
+        fx = {
+          id,
+          type: "shot",
+          x: bx,
+          y: by,
+          vx: payload.ball?.vx || 0,
+          vy: payload.ball?.vy || 0,
+          power: event.shotPower || 0,
+        };
+      }
+
+      if (fx) {
+        setFieldFx((prev) => [...prev, fx].slice(-10));
+        setTimeout(() => {
+          setFieldFx((prev) => prev.filter((f) => f.id !== id));
+        }, 3200);
+      }
+
+      if (event.kind === "goal") {
+        scorersRef.current.push({
+          teamId: event.teamId,
+          playerId: Number(event.playerId || 0),
+          minute: Math.floor(Number(payload.elapsedMs || 0) / 1000 / 60),
+        });
+      }
+
+      if (event.kind === "match_end" && !matchEndFiredRef.current) {
+        matchEndFiredRef.current = true;
+        const home = Number(payload?.score?.home || 0);
+        const away = Number(payload?.score?.away || 0);
+        onMatchEnd?.({
+          matchId,
+          home,
+          away,
+          homeStats: matchStatsRef.current.home,
+          awayStats: matchStatsRef.current.away,
+          scorers: scorersRef.current,
+          didWin: home > away,
+          isDraw: home === away,
+        });
+      }
+    };
+
+    const drainEventQueue = () => {
+      if (closed) return;
+      const next = eventQueueRef.current.shift();
+      if (!next) {
+        eventQueueTimerRef.current = 0;
+        return;
+      }
+
+      processQueuedMatchEvent(next);
+      eventQueueTimerRef.current = window.setTimeout(drainEventQueue, 55);
+    };
+
+    const enqueueMatchEvents = (payload) => {
+      if (!Array.isArray(payload?.events) || payload.events.length === 0)
+        return;
+      for (const event of payload.events) {
+        eventQueueRef.current.push({ event, payload });
+      }
+
+      if (!eventQueueTimerRef.current) {
+        drainEventQueue();
+      }
+    };
 
     const handleEvent = (rawData) => {
       let payload;
@@ -270,128 +380,8 @@ function MatchView({ embedded = false, onMatchEnd, matchId = "" }) {
         });
       }
 
-      if (
-        !isReplay &&
-        Array.isArray(payload.events) &&
-        payload.events.length > 0
-      ) {
-        // tune ball lerp speed per event kind
-        if (payload.events.some((e) => e.kind === "shot"))
-          ballAlphaRef.current = 0.5;
-        else if (payload.events.some((e) => e.kind === "pass"))
-          ballAlphaRef.current = 0.36;
-        else ballAlphaRef.current = 0.24;
-
-        // popup for key events
-        const keyEv = payload.events.find((e) => KEY_EVENTS.has(e.kind));
-        if (keyEv) {
-          const cfg = EV[keyEv.kind];
-          if (cfg?.title) {
-            setPopup({
-              kind: keyEv.kind,
-              title: cfg.title,
-              color: cfg.color,
-              bg: cfg.bg,
-              border: cfg.bdr,
-              detail: keyEv.message || "",
-              duration: cfg.dur || 2500,
-            });
-          }
-          // phase transition
-          if (cfg?.phase) setMatchPhase(cfg.phase);
-          // restore 'playing' after second_half_start entry animation
-          if (cfg?.phase === "second_half")
-            setTimeout(() => setMatchPhase("playing"), 3600);
-        }
-
-        // field effects
-        const newFx = [];
-        const bx = payload.ball?.x ?? 50;
-        const by = payload.ball?.y ?? 32;
-        for (const e of payload.events) {
-          const id = ++fxIdRef.current;
-          if (e.kind === "foul") {
-            newFx.push({ id, type: "foul", x: bx, y: by });
-          } else if (e.kind === "free_kick") {
-            newFx.push({ id, type: "free_kick", x: bx, y: by });
-          } else if (e.kind === "corner") {
-            newFx.push({
-              id,
-              type: "corner",
-              x: bx < 50 ? 1 : 99,
-              y: by < 32 ? 1 : 63,
-            });
-          } else if (e.kind === "yellow_card") {
-            const pl = payload.players?.find((p) => p.id === e.playerId);
-            newFx.push({
-              id,
-              type: "yellow_card",
-              x: pl?.x ?? bx,
-              y: pl?.y ?? by,
-            });
-          } else if (e.kind === "red_card") {
-            const pl = payload.players?.find((p) => p.id === e.playerId);
-            newFx.push({
-              id,
-              type: "red_card",
-              x: pl?.x ?? bx,
-              y: pl?.y ?? by,
-            });
-          } else if (e.kind === "argument") {
-            newFx.push({ id, type: "argument", x: bx, y: by });
-          } else if (e.kind === "substitution") {
-            newFx.push({ id, type: "substitution", x: bx, y: by });
-          } else if (e.kind === "var") {
-            newFx.push({ id, type: "var", x: 50, y: 32 });
-          } else if (e.kind === "goal") {
-            newFx.push({ id, type: "goal", x: bx, y: by });
-          } else if (e.kind === "kickoff") {
-            newFx.push({ id, type: "kickoff", x: 50, y: 32 });
-          } else if (e.kind === "shot") {
-            newFx.push({
-              id,
-              type: "shot",
-              x: bx,
-              y: by,
-              vx: payload.ball?.vx || 0,
-              vy: payload.ball?.vy || 0,
-              power: e.shotPower || 0,
-            });
-          }
-        }
-        if (newFx.length > 0) {
-          setFieldFx((prev) => [...prev, ...newFx].slice(-10));
-          const ids = new Set(newFx.map((f) => f.id));
-          setTimeout(
-            () => setFieldFx((prev) => prev.filter((f) => !ids.has(f.id))),
-            3200,
-          );
-        }
-
-        const ended = payload.events.some((e) => e.kind === "match_end");
-        for (const e of payload.events) {
-          if (e.kind !== "goal") continue;
-          scorersRef.current.push({
-            teamId: e.teamId,
-            playerId: Number(e.playerId || 0),
-            minute: Math.floor(Number(payload.elapsedMs || 0) / 1000 / 60),
-          });
-        }
-        if (ended && !matchEndFiredRef.current) {
-          matchEndFiredRef.current = true;
-          const home = Number(payload?.score?.home || 0);
-          const away = Number(payload?.score?.away || 0);
-          onMatchEnd?.({
-            matchId,
-            home,
-            away,
-            homeStats: matchStatsRef.current.home,
-            awayStats: matchStatsRef.current.away,
-            scorers: scorersRef.current,
-            didWin: home > away,
-            isDraw: home === away,
-          });
-        }
+      if (!isReplay) {
+        enqueueMatchEvents(payload);
       }
     };
 
@@ -423,6 +413,10 @@ function MatchView({ embedded = false, onMatchEnd, matchId = "" }) {
     return () => {
       closed = true;
       if (reconnectTimer) window.clearTimeout(reconnectTimer);
+      if (eventQueueTimerRef.current) {
+        window.clearTimeout(eventQueueTimerRef.current);
+        eventQueueTimerRef.current = 0;
+      }
       socket?.close();
     };
   }, [matchId, matchWSURL, onMatchEnd]);
