@@ -11,22 +11,6 @@
       "env": {
         "GO111MODULE": "on"
       }
-    },
-    {
-      "name": "Debug api-gateway",
-      "type": "go",
-      "request": "launch",
-      "mode": "debug",
-      "program": "${workspaceFolder}/apps/api-gateway/cmd/server",
-      "cwd": "${workspaceFolder}/apps/api-gateway"
-    },
-    {
-      "name": "Debug service-realtime",
-      "type": "go",
-      "request": "launch",
-      "mode": "debug",
-      "program": "${workspaceFolder}/apps/service-realtime/cmd/server",
-      "cwd": "${workspaceFolder}/apps/service-realtime"
-    }
+    }, 
   ]
 }

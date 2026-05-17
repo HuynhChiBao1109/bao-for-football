@@ -229,6 +229,7 @@ function MatchView({ embedded = false, onMatchEnd, matchId = "" }) {
       }
       if (payload?.type !== "match_tick") return;
       if (matchId && payload?.matchId !== matchId) return;
+      const isReplay = Boolean(payload?.replay);
 
       const tick = Number(payload.tick ?? -1);
       if (tick >= 0) {
@@ -269,7 +270,11 @@ function MatchView({ embedded = false, onMatchEnd, matchId = "" }) {
         });
       }
 
-      if (Array.isArray(payload.events) && payload.events.length > 0) {
+      if (
+        !isReplay &&
+        Array.isArray(payload.events) &&
+        payload.events.length > 0
+      ) {
         // tune ball lerp speed per event kind
         if (payload.events.some((e) => e.kind === "shot"))
           ballAlphaRef.current = 0.5;

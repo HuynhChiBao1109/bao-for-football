@@ -1,6 +1,16 @@
 package hub
 
-import "github.com/gorilla/websocket"
+import (
+	"encoding/json"
+	"sync"
+
+	"github.com/gorilla/websocket"
+)
+
+type tickMeta struct {
+	Type    string `json:"type"`
+	MatchID string `json:"matchId"`
+}
 
 type Hub struct {
 	clients       map[*websocket.Conn]bool
@@ -10,6 +20,8 @@ type Hub struct {
 	unregister    chan *websocket.Conn
 	registerSSE   chan chan []byte
 	unregisterSSE chan chan []byte
+	recentMu      sync.RWMutex
+	recentByMatch map[string][]byte
 }
 
 func New() *Hub {
@@ -21,6 +33,7 @@ func New() *Hub {
 		unregister:    make(chan *websocket.Conn),
 		registerSSE:   make(chan chan []byte),
 		unregisterSSE: make(chan chan []byte),
+		recentByMatch: make(map[string][]byte),
 	}
 }
 
@@ -34,6 +47,21 @@ func (h *Hub) Unregister(conn *websocket.Conn) {
 
 func (h *Hub) Publish(payload []byte) {
 	h.broadcast <- payload
+}
+
+func (h *Hub) Latest(matchID string) []byte {
+	h.recentMu.RLock()
+	defer h.recentMu.RUnlock()
+
+	payload := h.recentByMatch[matchID]
+	if len(payload) == 0 {
+		return nil
+	}
+
+	cp := make([]byte, len(payload))
+	copy(cp, payload)
+
+	return cp
 }
 
 func (h *Hub) RegisterSSE() chan []byte {
@@ -64,6 +92,8 @@ func (h *Hub) Run() {
 				close(sse)
 			}
 		case payload := <-h.broadcast:
+			h.rememberTick(payload)
+
 			for conn := range h.clients {
 				if err := conn.WriteMessage(websocket.TextMessage, payload); err != nil {
 					delete(h.clients, conn)
@@ -79,4 +109,21 @@ func (h *Hub) Run() {
 			}
 		}
 	}
+}
+
+func (h *Hub) rememberTick(payload []byte) {
+	var meta tickMeta
+	if err := json.Unmarshal(payload, &meta); err != nil {
+		return
+	}
+	if meta.Type != "match_tick" || meta.MatchID == "" {
+		return
+	}
+
+	cp := make([]byte, len(payload))
+	copy(cp, payload)
+
+	h.recentMu.Lock()
+	defer h.recentMu.Unlock()
+	h.recentByMatch[meta.MatchID] = cp
 }

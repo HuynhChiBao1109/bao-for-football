@@ -1,10 +1,12 @@
 package ws
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
 	"fifam/apps/service-core/internal/realtime/broadcaster"
+	"fifam/apps/service-core/internal/realtime/events"
 	"fifam/apps/service-core/internal/realtime/hub"
 	"fifam/apps/service-core/internal/realtime/rooms"
 
@@ -63,6 +65,21 @@ func (h *Handler) Connect(c *gin.Context) {
 	if err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
+	}
+
+	if matchID := c.Query("matchId"); matchID != "" {
+		if payload := h.hub.Latest(matchID); len(payload) > 0 {
+			replayPayload, err := toReplayPayload(payload)
+			if err != nil {
+				conn.Close()
+				return
+			}
+
+			if err := conn.WriteMessage(websocket.TextMessage, replayPayload); err != nil {
+				conn.Close()
+				return
+			}
+		}
 	}
 
 	h.hub.Register(conn)
@@ -194,4 +211,16 @@ func mapPlayers(input []struct {
 	}
 
 	return out
+}
+
+func toReplayPayload(raw []byte) ([]byte, error) {
+	var snapshot events.TickPayload
+	if err := json.Unmarshal(raw, &snapshot); err != nil {
+		return nil, err
+	}
+
+	snapshot.Replay = true
+	snapshot.Events = nil
+
+	return json.Marshal(snapshot)
 }

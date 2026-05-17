@@ -67,6 +67,7 @@ type ScoreSnapshot struct {
 type TickPayload struct {
 	Type      string           `json:"type"`
 	MatchID   string           `json:"matchId"`
+	Replay    bool             `json:"replay,omitempty"`
 	Tick      int              `json:"tick"`
 	ElapsedMS int64            `json:"elapsedMs"`
 	Score     ScoreSnapshot    `json:"score"`
