@@ -80,11 +80,11 @@ type migrationAdminPlayer struct {
 	Passing        uint8             `gorm:"not null;column:passing"`
 	LongPass       uint8             `gorm:"not null;default:60;column:long_pass"`
 	Vision         uint8             `gorm:"not null;default:60;column:vision"`
-	DefAwareness   uint8             `gorm:"not null;default:60;column:defensive_awareness"`
+	GKReach        uint8             `gorm:"not null;default:60;column:gk_reach"`
 	CtrAwareness   uint8             `gorm:"not null;default:60;column:counter_attack_awareness"`
-	Crossbar       uint8             `gorm:"not null;default:60;column:crossbar_handling"`
-	Reflexes       uint8             `gorm:"not null;default:60;column:reflexes"`
-	AerialCatch    uint8             `gorm:"not null;default:60;column:aerial_catching"`
+	GKParrying     uint8             `gorm:"not null;default:60;column:gk_parrying"`
+	GKReflex       uint8             `gorm:"not null;default:60;column:gk_reflex"`
+	GKCatching     uint8             `gorm:"not null;default:60;column:gk_catching"`
 	Duels          uint8             `gorm:"not null;default:60;column:duels"`
 	Pace           uint8             `gorm:"not null;column:pace"`
 	Physical       uint8             `gorm:"not null;column:physical"`
@@ -113,11 +113,11 @@ type migrationPlayerTemplate struct {
 	BasePassing        int               `gorm:"not null;default:1;column:base_passing"`
 	BaseLongPass       int               `gorm:"not null;default:1;column:base_long_pass"`
 	BaseVision         int               `gorm:"not null;default:1;column:base_vision"`
-	BaseDefAware       int               `gorm:"not null;default:1;column:base_defensive_awareness"`
+	BaseGKReach        int               `gorm:"not null;default:1;column:base_gk_reach"`
 	BaseCtrAware       int               `gorm:"not null;default:1;column:base_counter_attack_awareness"`
-	BaseCrossbar       int               `gorm:"not null;default:1;column:base_crossbar_handling"`
-	BaseReflexes       int               `gorm:"not null;default:1;column:base_reflexes"`
-	BaseAerial         int               `gorm:"not null;default:1;column:base_aerial_catching"`
+	BaseGKParrying     int               `gorm:"not null;default:1;column:base_gk_parrying"`
+	BaseGKReflex       int               `gorm:"not null;default:1;column:base_gk_reflex"`
+	BaseGKCatching     int               `gorm:"not null;default:1;column:base_gk_catching"`
 	BaseDuels          int               `gorm:"not null;default:1;column:base_duels"`
 	BasePace           int               `gorm:"not null;default:1;column:base_pace"`
 	BasePhysical       int               `gorm:"not null;default:1;column:base_physical"`
@@ -145,11 +145,11 @@ type migrationUserPlayer struct {
 	BonusPassing        int                     `gorm:"not null;default:0;column:bonus_passing"`
 	BonusLongPass       int                     `gorm:"not null;default:0;column:bonus_long_pass"`
 	BonusVision         int                     `gorm:"not null;default:0;column:bonus_vision"`
-	BonusDefAware       int                     `gorm:"not null;default:0;column:bonus_defensive_awareness"`
+	BonusGKReach        int                     `gorm:"not null;default:0;column:bonus_gk_reach"`
 	BonusCtrAware       int                     `gorm:"not null;default:0;column:bonus_counter_attack_awareness"`
-	BonusCrossbar       int                     `gorm:"not null;default:0;column:bonus_crossbar_handling"`
-	BonusReflexes       int                     `gorm:"not null;default:0;column:bonus_reflexes"`
-	BonusAerial         int                     `gorm:"not null;default:0;column:bonus_aerial_catching"`
+	BonusGKParrying     int                     `gorm:"not null;default:0;column:bonus_gk_parrying"`
+	BonusGKReflex       int                     `gorm:"not null;default:0;column:bonus_gk_reflex"`
+	BonusGKCatching     int                     `gorm:"not null;default:0;column:bonus_gk_catching"`
 	BonusDuels          int                     `gorm:"not null;default:0;column:bonus_duels"`
 	BonusPace           int                     `gorm:"not null;default:0;column:bonus_pace"`
 	BonusPhysical       int                     `gorm:"not null;default:0;column:bonus_physical"`
@@ -171,7 +171,7 @@ type migrationSkill struct {
 	ID        uint64    `gorm:"primaryKey;autoIncrement;column:id"`
 	Name      string    `gorm:"type:varchar(120);not null;uniqueIndex:uk_skills_name;column:name"`
 	IconURL   string    `gorm:"type:varchar(500);column:icon_url"`
-	BuffType  string    `gorm:"type:enum('shooting','passing','longPass','vision','defensiveAwareness','counterAttackAwareness','crossbarHandling','reflexes','aerialCatching','duels','pace','physical','defending','standingTackle','slidingTackle','dribbling');not null;column:buff_type"`
+	BuffType  string    `gorm:"type:enum('shooting','passing','longPass','vision','defensiveAwareness','counterAttackAwareness','crossbarHandling','reflexes','aerialCatching','gkReach','gkParrying','gkReflex','gkCatching','duels','pace','physical','defending','standingTackle','slidingTackle','dribbling');not null;column:buff_type"`
 	BuffValue int       `gorm:"not null;default:1;column:buff_value"`
 	CreatedAt time.Time `gorm:"column:created_at"`
 	UpdatedAt time.Time `gorm:"column:updated_at"`
@@ -325,6 +325,15 @@ func AutoMigrate(ctx context.Context, db *gorm.DB) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+
+	if err := ensureGoalkeeperColumnRenames(ctx, sqlDB); err != nil {
+		return err
+	}
+
 	if err := db.WithContext(ctx).Set("gorm:table_options", "ENGINE=InnoDB").AutoMigrate(
 		&migrationClub{},
 		&migrationCountry{},
@@ -340,11 +349,6 @@ func AutoMigrate(ctx context.Context, db *gorm.DB) error {
 		&migrationMatch{},
 		&migrationMatchScorer{},
 	); err != nil {
-		return err
-	}
-
-	sqlDB, err := db.DB()
-	if err != nil {
 		return err
 	}
 
@@ -426,6 +430,79 @@ WHERE TRIGGER_SCHEMA = DATABASE()
 	if err != nil {
 		return false, err
 	}
+	return count > 0, nil
+}
+
+func ensureGoalkeeperColumnRenames(ctx context.Context, db *sql.DB) error {
+	if db == nil {
+		return nil
+	}
+
+	for _, item := range []struct {
+		table      string
+		oldColumn  string
+		newColumn  string
+		definition string
+	}{
+		{"admin_players", "defensive_awareness", "gk_reach", "TINYINT UNSIGNED NOT NULL DEFAULT 60"},
+		{"admin_players", "crossbar_handling", "gk_parrying", "TINYINT UNSIGNED NOT NULL DEFAULT 60"},
+		{"admin_players", "reflexes", "gk_reflex", "TINYINT UNSIGNED NOT NULL DEFAULT 60"},
+		{"admin_players", "aerial_catching", "gk_catching", "TINYINT UNSIGNED NOT NULL DEFAULT 60"},
+		{"player_templates", "base_defensive_awareness", "base_gk_reach", "INT NOT NULL DEFAULT 1"},
+		{"player_templates", "base_crossbar_handling", "base_gk_parrying", "INT NOT NULL DEFAULT 1"},
+		{"player_templates", "base_reflexes", "base_gk_reflex", "INT NOT NULL DEFAULT 1"},
+		{"player_templates", "base_aerial_catching", "base_gk_catching", "INT NOT NULL DEFAULT 1"},
+		{"user_players", "bonus_defensive_awareness", "bonus_gk_reach", "INT NOT NULL DEFAULT 0"},
+		{"user_players", "bonus_crossbar_handling", "bonus_gk_parrying", "INT NOT NULL DEFAULT 0"},
+		{"user_players", "bonus_reflexes", "bonus_gk_reflex", "INT NOT NULL DEFAULT 0"},
+		{"user_players", "bonus_aerial_catching", "bonus_gk_catching", "INT NOT NULL DEFAULT 0"},
+	} {
+		if err := renameColumnIfExists(ctx, db, item.table, item.oldColumn, item.newColumn, item.definition); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func renameColumnIfExists(ctx context.Context, db *sql.DB, table string, oldColumn string, newColumn string, definition string) error {
+	if table == "" || oldColumn == "" || newColumn == "" || definition == "" {
+		return nil
+	}
+
+	newExists, err := hasColumn(ctx, db, table, newColumn)
+	if err != nil {
+		return err
+	}
+	if newExists {
+		return nil
+	}
+
+	oldExists, err := hasColumn(ctx, db, table, oldColumn)
+	if err != nil {
+		return err
+	}
+	if !oldExists {
+		return nil
+	}
+
+	query := fmt.Sprintf("ALTER TABLE %s CHANGE COLUMN %s %s %s", table, oldColumn, newColumn, definition)
+	_, err = db.ExecContext(ctx, query)
+	return err
+}
+
+func hasColumn(ctx context.Context, db *sql.DB, tableName string, columnName string) (bool, error) {
+	var count int
+	err := db.QueryRowContext(ctx, `
+SELECT COUNT(*)
+FROM information_schema.columns
+WHERE table_schema = DATABASE()
+  AND table_name = ?
+  AND column_name = ?`, tableName, columnName).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+
 	return count > 0, nil
 }
 
@@ -518,11 +595,11 @@ WHERE source_type = 'normal' AND base_club = ?`, club.Name).Scan(&existingCount)
 			passing := boundedStat(58 + ((globalIdx + 3) % 18))
 			longPass := boundedStat(57 + ((globalIdx + 5) % 18))
 			vision := boundedStat(56 + ((globalIdx + 7) % 18))
-			defAwareness := boundedStat(55 + ((globalIdx + 4) % 18))
+			gkReach := boundedStat(55 + ((globalIdx + 4) % 18))
 			ctrAwareness := boundedStat(56 + ((globalIdx + 8) % 18))
-			crossbar := boundedStat(54 + ((globalIdx + 10) % 18))
-			reflexes := boundedStat(58 + ((globalIdx + 11) % 18))
-			aerialCatch := boundedStat(57 + ((globalIdx + 13) % 18))
+			gkParrying := boundedStat(54 + ((globalIdx + 10) % 18))
+			gkReflex := boundedStat(58 + ((globalIdx + 11) % 18))
+			gkCatching := boundedStat(57 + ((globalIdx + 13) % 18))
 			duels := boundedStat(59 + ((globalIdx + 14) % 18))
 			pace := boundedStat(57 + ((globalIdx + 6) % 18))
 			physical := boundedStat(55 + ((globalIdx + 9) % 18))
@@ -542,11 +619,11 @@ INSERT INTO admin_players (
   passing,
   long_pass,
   vision,
-	defensive_awareness,
+	gk_reach,
 	counter_attack_awareness,
-	crossbar_handling,
-	reflexes,
-	aerial_catching,
+	gk_parrying,
+	gk_reflex,
+	gk_catching,
 	duels,
   pace,
   physical,
@@ -561,11 +638,11 @@ INSERT INTO admin_players (
 				passing,
 				longPass,
 				vision,
-				defAwareness,
+				gkReach,
 				ctrAwareness,
-				crossbar,
-				reflexes,
-				aerialCatch,
+				gkParrying,
+				gkReflex,
+				gkCatching,
 				duels,
 				pace,
 				physical,

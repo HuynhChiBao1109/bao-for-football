@@ -84,9 +84,13 @@ cd apps/service-core && go run ./cmd/server
 
 - tạo 1 admin page để thêm cầu thủ đặc biệt hoặc cầu thủ thường
 
+### Thông tin thẻ cầu thủ
+
+1.
+
 - Event trong trận
 
-* giao banh khi bắt đầu trận, sau ghi bàn, sang hiệp 2
+### giao banh khi bắt đầu trận, sau ghi bàn, sang hiệp 2
 
 ### Logic Phạm Lỗi (Foul & Card Simulation Logic)
 

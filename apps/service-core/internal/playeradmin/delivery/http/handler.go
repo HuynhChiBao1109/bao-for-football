@@ -19,28 +19,34 @@ func NewHandler(uc *playeradminusecase.PlayerAdminUseCase) *Handler {
 }
 
 type createPlayerRequest struct {
-	Name           string `json:"name"`
-	CountryID      int64  `json:"countryId"`
-	BaseClub       string `json:"baseClub"`
-	Season         string `json:"season"`
-	SourceType     string `json:"sourceType"`
-	SpecialSkill   string `json:"specialSkill"`
-	Shooting       int    `json:"shooting"`
-	Passing        int    `json:"passing"`
-	LongPass       int    `json:"longPass"`
-	Vision         int    `json:"vision"`
-	DefAwareness   int    `json:"defensiveAwareness"`
-	CtrAwareness   int    `json:"counterAttackAwareness"`
-	Crossbar       int    `json:"crossbarHandling"`
-	Reflexes       int    `json:"reflexes"`
-	AerialCatch    int    `json:"aerialCatching"`
-	Duels          int    `json:"duels"`
-	Pace           int    `json:"pace"`
-	Physical       int    `json:"physical"`
-	Defending      int    `json:"defending"`
-	StandingTackle int    `json:"standingTackle"`
-	SlidingTackle  int    `json:"slidingTackle"`
-	Dribbling      int    `json:"dribbling"`
+	Name         string `json:"name"`
+	CountryID    int64  `json:"countryId"`
+	BaseClub     string `json:"baseClub"`
+	Season       string `json:"season"`
+	SourceType   string `json:"sourceType"`
+	SpecialSkill string `json:"specialSkill"`
+	Shooting     int    `json:"shooting"`
+	Passing      int    `json:"passing"`
+	LongPass     int    `json:"longPass"`
+	Vision       int    `json:"vision"`
+	GKReach      int    `json:"gkReach"`
+	CtrAwareness int    `json:"counterAttackAwareness"`
+	GKParrying   int    `json:"gkParrying"`
+	GKReflex     int    `json:"gkReflex"`
+	GKCatching   int    `json:"gkCatching"`
+
+	// Backward-compatibility aliases for older admin clients.
+	DefAwareness   int `json:"defensiveAwareness"`
+	Crossbar       int `json:"crossbarHandling"`
+	Reflexes       int `json:"reflexes"`
+	AerialCatch    int `json:"aerialCatching"`
+	Duels          int `json:"duels"`
+	Pace           int `json:"pace"`
+	Physical       int `json:"physical"`
+	Defending      int `json:"defending"`
+	StandingTackle int `json:"standingTackle"`
+	SlidingTackle  int `json:"slidingTackle"`
+	Dribbling      int `json:"dribbling"`
 }
 
 func (h *Handler) ListCountries(c *gin.Context) {
@@ -97,11 +103,11 @@ func (h *Handler) Create(c *gin.Context) {
 		Passing:        req.Passing,
 		LongPass:       req.LongPass,
 		Vision:         req.Vision,
-		DefAwareness:   req.DefAwareness,
+		GKReach:        firstNonZero(req.GKReach, req.DefAwareness),
 		CtrAwareness:   req.CtrAwareness,
-		Crossbar:       req.Crossbar,
-		Reflexes:       req.Reflexes,
-		AerialCatch:    req.AerialCatch,
+		GKParrying:     firstNonZero(req.GKParrying, req.Crossbar),
+		GKReflex:       firstNonZero(req.GKReflex, req.Reflexes),
+		GKCatching:     firstNonZero(req.GKCatching, req.AerialCatch),
 		Duels:          req.Duels,
 		Pace:           req.Pace,
 		Physical:       req.Physical,
@@ -119,4 +125,11 @@ func (h *Handler) Create(c *gin.Context) {
 		"message": "player added to catalog",
 		"data":    created,
 	})
+}
+
+func firstNonZero(primary int, fallback int) int {
+	if primary != 0 {
+		return primary
+	}
+	return fallback
 }

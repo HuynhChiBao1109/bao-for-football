@@ -44,7 +44,7 @@ SELECT ap.id, ap.name, ap.country_id,
 	COALESCE(c.flag, ''),
 	COALESCE(c.name, ap.nationality) AS nationality,
 	ap.base_club, ap.season, ap.source_type, ap.special_skill,
-	ap.shooting, ap.passing, ap.long_pass, ap.vision, ap.defensive_awareness, ap.counter_attack_awareness, ap.crossbar_handling, ap.reflexes, ap.aerial_catching, ap.duels, ap.pace, ap.physical, ap.defending, ap.standing_tackle, ap.sliding_tackle, ap.dribbling, ap.created_at
+	ap.shooting, ap.passing, ap.long_pass, ap.vision, ap.gk_reach, ap.counter_attack_awareness, ap.gk_parrying, ap.gk_reflex, ap.gk_catching, ap.duels, ap.pace, ap.physical, ap.defending, ap.standing_tackle, ap.sliding_tackle, ap.dribbling, ap.created_at
 FROM admin_players ap
 LEFT JOIN countries c ON c.id = ap.country_id
 ORDER BY ap.id DESC`)
@@ -57,6 +57,7 @@ ORDER BY ap.id DESC`)
 	for rows.Next() {
 		var p domain.Player
 		var countryRowID int64
+		var createdAt sql.NullTime
 		if err := rows.Scan(
 			&p.ID,
 			&p.Name,
@@ -74,11 +75,11 @@ ORDER BY ap.id DESC`)
 			&p.Passing,
 			&p.LongPass,
 			&p.Vision,
-			&p.DefAwareness,
+			&p.GKReach,
 			&p.CtrAwareness,
-			&p.Crossbar,
-			&p.Reflexes,
-			&p.AerialCatch,
+			&p.GKParrying,
+			&p.GKReflex,
+			&p.GKCatching,
 			&p.Duels,
 			&p.Pace,
 			&p.Physical,
@@ -86,9 +87,12 @@ ORDER BY ap.id DESC`)
 			&p.StandingTackle,
 			&p.SlidingTackle,
 			&p.Dribbling,
-			&p.CreatedAt,
+			&createdAt,
 		); err != nil {
 			return nil, err
+		}
+		if createdAt.Valid {
+			p.CreatedAt = createdAt.Time
 		}
 		if countryRowID > 0 {
 			p.Country.ID = countryRowID
@@ -123,7 +127,7 @@ SELECT ap.id, ap.name, ap.country_id,
 	COALESCE(c.flag, ''),
 	COALESCE(c.name, ap.nationality) AS nationality,
 	ap.base_club, ap.season, ap.source_type, ap.special_skill,
-	ap.shooting, ap.passing, ap.long_pass, ap.vision, ap.defensive_awareness, ap.counter_attack_awareness, ap.crossbar_handling, ap.reflexes, ap.aerial_catching, ap.duels, ap.pace, ap.physical, ap.defending, ap.standing_tackle, ap.sliding_tackle, ap.dribbling, ap.created_at
+	ap.shooting, ap.passing, ap.long_pass, ap.vision, ap.gk_reach, ap.counter_attack_awareness, ap.gk_parrying, ap.gk_reflex, ap.gk_catching, ap.duels, ap.pace, ap.physical, ap.defending, ap.standing_tackle, ap.sliding_tackle, ap.dribbling, ap.created_at
 FROM admin_players ap
 LEFT JOIN countries c ON c.id = ap.country_id
 WHERE ap.id = ?
@@ -131,6 +135,7 @@ LIMIT 1`, id)
 
 	var p domain.Player
 	var countryRowID int64
+	var createdAt sql.NullTime
 	if err := row.Scan(
 		&p.ID,
 		&p.Name,
@@ -148,11 +153,11 @@ LIMIT 1`, id)
 		&p.Passing,
 		&p.LongPass,
 		&p.Vision,
-		&p.DefAwareness,
+		&p.GKReach,
 		&p.CtrAwareness,
-		&p.Crossbar,
-		&p.Reflexes,
-		&p.AerialCatch,
+		&p.GKParrying,
+		&p.GKReflex,
+		&p.GKCatching,
 		&p.Duels,
 		&p.Pace,
 		&p.Physical,
@@ -160,12 +165,15 @@ LIMIT 1`, id)
 		&p.StandingTackle,
 		&p.SlidingTackle,
 		&p.Dribbling,
-		&p.CreatedAt,
+		&createdAt,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return domain.Player{}, errors.New("player not found")
 		}
 		return domain.Player{}, err
+	}
+	if createdAt.Valid {
+		p.CreatedAt = createdAt.Time
 	}
 
 	if countryRowID > 0 {
@@ -236,7 +244,7 @@ LIMIT 1`, input.CountryID)
 	result, err := r.db.ExecContext(ctx, `
 INSERT INTO admin_players (
   name, country_id, nationality, base_club, season, source_type, special_skill,
-  shooting, passing, long_pass, vision, defensive_awareness, counter_attack_awareness, crossbar_handling, reflexes, aerial_catching, duels, pace, physical, defending, standing_tackle, sliding_tackle, dribbling
+	shooting, passing, long_pass, vision, gk_reach, counter_attack_awareness, gk_parrying, gk_reflex, gk_catching, duels, pace, physical, defending, standing_tackle, sliding_tackle, dribbling
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		input.Name,
 		input.CountryID,
@@ -249,11 +257,11 @@ INSERT INTO admin_players (
 		input.Passing,
 		input.LongPass,
 		input.Vision,
-		input.DefAwareness,
+		input.GKReach,
 		input.CtrAwareness,
-		input.Crossbar,
-		input.Reflexes,
-		input.AerialCatch,
+		input.GKParrying,
+		input.GKReflex,
+		input.GKCatching,
 		input.Duels,
 		input.Pace,
 		input.Physical,

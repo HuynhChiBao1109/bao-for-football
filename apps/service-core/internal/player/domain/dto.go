@@ -5,11 +5,11 @@ type CardStats struct {
 	Passing                int `json:"passing"`
 	LongPass               int `json:"longPass"`
 	Vision                 int `json:"vision"`
-	DefensiveAwareness     int `json:"defensiveAwareness"`
+	GKReach                int `json:"gkReach"`
 	CounterAttackAwareness int `json:"counterAttackAwareness"`
-	CrossbarHandling       int `json:"crossbarHandling"`
-	Reflexes               int `json:"reflexes"`
-	AerialCatching         int `json:"aerialCatching"`
+	GKParrying             int `json:"gkParrying"`
+	GKReflex               int `json:"gkReflex"`
+	GKCatching             int `json:"gkCatching"`
 	Duels                  int `json:"duels"`
 	Pace                   int `json:"pace"`
 	Physical               int `json:"physical"`
@@ -51,11 +51,11 @@ type AllocateStatsInput struct {
 	Passing                int `json:"passing"`
 	LongPass               int `json:"longPass"`
 	Vision                 int `json:"vision"`
-	DefensiveAwareness     int `json:"defensiveAwareness"`
+	GKReach                int `json:"gkReach"`
 	CounterAttackAwareness int `json:"counterAttackAwareness"`
-	CrossbarHandling       int `json:"crossbarHandling"`
-	Reflexes               int `json:"reflexes"`
-	AerialCatching         int `json:"aerialCatching"`
+	GKParrying             int `json:"gkParrying"`
+	GKReflex               int `json:"gkReflex"`
+	GKCatching             int `json:"gkCatching"`
 	Duels                  int `json:"duels"`
 	Pace                   int `json:"pace"`
 	Physical               int `json:"physical"`

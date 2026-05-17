@@ -68,20 +68,20 @@ func (u *PlayerAdminUseCase) Create(ctx context.Context, input domain.Player) (d
 	if input.Vision == 0 {
 		input.Vision = input.Passing
 	}
-	if input.DefAwareness == 0 {
-		input.DefAwareness = input.Defending
+	if input.GKReach == 0 {
+		input.GKReach = input.Defending
 	}
 	if input.CtrAwareness == 0 {
 		input.CtrAwareness = input.Vision
 	}
-	if input.Crossbar == 0 {
-		input.Crossbar = input.Defending
+	if input.GKParrying == 0 {
+		input.GKParrying = input.Defending
 	}
-	if input.Reflexes == 0 {
-		input.Reflexes = input.Defending
+	if input.GKReflex == 0 {
+		input.GKReflex = input.Defending
 	}
-	if input.AerialCatch == 0 {
-		input.AerialCatch = input.Physical
+	if input.GKCatching == 0 {
+		input.GKCatching = input.Physical
 	}
 	if input.Duels == 0 {
 		input.Duels = input.Physical
@@ -101,11 +101,11 @@ func (u *PlayerAdminUseCase) Create(ctx context.Context, input domain.Player) (d
 		{"passing", input.Passing},
 		{"longPass", input.LongPass},
 		{"vision", input.Vision},
-		{"defensiveAwareness", input.DefAwareness},
+		{"gkReach", input.GKReach},
 		{"counterAttackAwareness", input.CtrAwareness},
-		{"crossbarHandling", input.Crossbar},
-		{"reflexes", input.Reflexes},
-		{"aerialCatching", input.AerialCatch},
+		{"gkParrying", input.GKParrying},
+		{"gkReflex", input.GKReflex},
+		{"gkCatching", input.GKCatching},
 		{"duels", input.Duels},
 		{"pace", input.Pace},
 		{"physical", input.Physical},

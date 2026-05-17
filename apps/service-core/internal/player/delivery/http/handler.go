@@ -23,18 +23,24 @@ type allocateStatsRequest struct {
 	Passing                int `json:"passing"`
 	LongPass               int `json:"longPass"`
 	Vision                 int `json:"vision"`
-	DefensiveAwareness     int `json:"defensiveAwareness"`
+	GKReach                int `json:"gkReach"`
 	CounterAttackAwareness int `json:"counterAttackAwareness"`
-	CrossbarHandling       int `json:"crossbarHandling"`
-	Reflexes               int `json:"reflexes"`
-	AerialCatching         int `json:"aerialCatching"`
-	Duels                  int `json:"duels"`
-	Pace                   int `json:"pace"`
-	Physical               int `json:"physical"`
-	Defending              int `json:"defending"`
-	StandingTackle         int `json:"standingTackle"`
-	SlidingTackle          int `json:"slidingTackle"`
-	Dribbling              int `json:"dribbling"`
+	GKParrying             int `json:"gkParrying"`
+	GKReflex               int `json:"gkReflex"`
+	GKCatching             int `json:"gkCatching"`
+
+	// Backward-compatibility aliases for older clients.
+	DefensiveAwareness int `json:"defensiveAwareness"`
+	CrossbarHandling   int `json:"crossbarHandling"`
+	Reflexes           int `json:"reflexes"`
+	AerialCatching     int `json:"aerialCatching"`
+	Duels              int `json:"duels"`
+	Pace               int `json:"pace"`
+	Physical           int `json:"physical"`
+	Defending          int `json:"defending"`
+	StandingTackle     int `json:"standingTackle"`
+	SlidingTackle      int `json:"slidingTackle"`
+	Dribbling          int `json:"dribbling"`
 }
 
 func (h *Handler) ListMyCards(c *gin.Context) {
@@ -77,11 +83,11 @@ func (h *Handler) AllocateStats(c *gin.Context) {
 		Passing:                req.Passing,
 		LongPass:               req.LongPass,
 		Vision:                 req.Vision,
-		DefensiveAwareness:     req.DefensiveAwareness,
+		GKReach:                firstNonZero(req.GKReach, req.DefensiveAwareness),
 		CounterAttackAwareness: req.CounterAttackAwareness,
-		CrossbarHandling:       req.CrossbarHandling,
-		Reflexes:               req.Reflexes,
-		AerialCatching:         req.AerialCatching,
+		GKParrying:             firstNonZero(req.GKParrying, req.CrossbarHandling),
+		GKReflex:               firstNonZero(req.GKReflex, req.Reflexes),
+		GKCatching:             firstNonZero(req.GKCatching, req.AerialCatching),
 		Duels:                  req.Duels,
 		Pace:                   req.Pace,
 		Physical:               req.Physical,
@@ -113,4 +119,11 @@ func getAuthUserID(c *gin.Context) (uint64, bool) {
 	}
 
 	return userID, true
+}
+
+func firstNonZero(primary int, fallback int) int {
+	if primary != 0 {
+		return primary
+	}
+	return fallback
 }

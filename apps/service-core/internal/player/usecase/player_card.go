@@ -89,11 +89,11 @@ func (u *PlayerCardUseCase) AllocateStats(ctx context.Context, userID uint64, us
 			input.Passing +
 			input.LongPass +
 			input.Vision +
-			input.DefensiveAwareness +
+			input.GKReach +
 			input.CounterAttackAwareness +
-			input.CrossbarHandling +
-			input.Reflexes +
-			input.AerialCatching +
+			input.GKParrying +
+			input.GKReflex +
+			input.GKCatching +
 			input.Duels +
 			input.Pace +
 			input.Physical +
@@ -125,11 +125,11 @@ func (u *PlayerCardUseCase) AllocateStats(ctx context.Context, userID uint64, us
 		{name: "passing", base: card.BonusStats.Passing, delta: input.Passing},
 		{name: "longPass", base: card.BonusStats.LongPass, delta: input.LongPass},
 		{name: "vision", base: card.BonusStats.Vision, delta: input.Vision},
-		{name: "defensiveAwareness", base: card.BonusStats.DefensiveAwareness, delta: input.DefensiveAwareness},
+		{name: "gkReach", base: card.BonusStats.GKReach, delta: input.GKReach},
 		{name: "counterAttackAwareness", base: card.BonusStats.CounterAttackAwareness, delta: input.CounterAttackAwareness},
-		{name: "crossbarHandling", base: card.BonusStats.CrossbarHandling, delta: input.CrossbarHandling},
-		{name: "reflexes", base: card.BonusStats.Reflexes, delta: input.Reflexes},
-		{name: "aerialCatching", base: card.BonusStats.AerialCatching, delta: input.AerialCatching},
+		{name: "gkParrying", base: card.BonusStats.GKParrying, delta: input.GKParrying},
+		{name: "gkReflex", base: card.BonusStats.GKReflex, delta: input.GKReflex},
+		{name: "gkCatching", base: card.BonusStats.GKCatching, delta: input.GKCatching},
 		{name: "duels", base: card.BonusStats.Duels, delta: input.Duels},
 		{name: "pace", base: card.BonusStats.Pace, delta: input.Pace},
 		{name: "physical", base: card.BonusStats.Physical, delta: input.Physical},

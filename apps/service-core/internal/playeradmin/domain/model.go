@@ -16,11 +16,11 @@ type Player struct {
 	Passing        int       `json:"passing"`
 	LongPass       int       `json:"longPass"`
 	Vision         int       `json:"vision"`
-	DefAwareness   int       `json:"defensiveAwareness"`
+	GKReach        int       `json:"gkReach"`
 	CtrAwareness   int       `json:"counterAttackAwareness"`
-	Crossbar       int       `json:"crossbarHandling"`
-	Reflexes       int       `json:"reflexes"`
-	AerialCatch    int       `json:"aerialCatching"`
+	GKParrying     int       `json:"gkParrying"`
+	GKReflex       int       `json:"gkReflex"`
+	GKCatching     int       `json:"gkCatching"`
 	Duels          int       `json:"duels"`
 	Pace           int       `json:"pace"`
 	Physical       int       `json:"physical"`

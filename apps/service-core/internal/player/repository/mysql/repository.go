@@ -34,11 +34,11 @@ type rawCard struct {
 	BasePassing         int
 	BaseLongPass        int
 	BaseVision          int
-	BaseDefAwareness    int
+	BaseGKReach         int
 	BaseCtrAwareness    int
-	BaseCrossbar        int
-	BaseReflexes        int
-	BaseAerialCatch     int
+	BaseGKParrying      int
+	BaseGKReflex        int
+	BaseGKCatching      int
 	BaseDuels           int
 	BasePace            int
 	BasePhysical        int
@@ -50,11 +50,11 @@ type rawCard struct {
 	BonusPassing        int
 	BonusLongPass       int
 	BonusVision         int
-	BonusDefAware       int
+	BonusGKReach        int
 	BonusCtrAware       int
-	BonusCrossbar       int
-	BonusReflexes       int
-	BonusAerialCatch    int
+	BonusGKParrying     int
+	BonusGKReflex       int
+	BonusGKCatching     int
 	BonusDuels          int
 	BonusPace           int
 	BonusPhysical       int
@@ -88,11 +88,11 @@ SELECT
 	pt.base_passing,
 	pt.base_long_pass,
 	pt.base_vision,
-	pt.base_defensive_awareness,
+	pt.base_gk_reach,
 	pt.base_counter_attack_awareness,
-	pt.base_crossbar_handling,
-	pt.base_reflexes,
-	pt.base_aerial_catching,
+	pt.base_gk_parrying,
+	pt.base_gk_reflex,
+	pt.base_gk_catching,
 	pt.base_duels,
 	pt.base_pace,
 	pt.base_physical,
@@ -104,11 +104,11 @@ SELECT
 	up.bonus_passing,
 	up.bonus_long_pass,
 	up.bonus_vision,
-	up.bonus_defensive_awareness,
+	up.bonus_gk_reach,
 	up.bonus_counter_attack_awareness,
-	up.bonus_crossbar_handling,
-	up.bonus_reflexes,
-	up.bonus_aerial_catching,
+	up.bonus_gk_parrying,
+	up.bonus_gk_reflex,
+	up.bonus_gk_catching,
 	up.bonus_duels,
 	up.bonus_pace,
 	up.bonus_physical,
@@ -166,11 +166,11 @@ SELECT
 	pt.base_passing,
 	pt.base_long_pass,
 	pt.base_vision,
-	pt.base_defensive_awareness,
+	pt.base_gk_reach,
 	pt.base_counter_attack_awareness,
-	pt.base_crossbar_handling,
-	pt.base_reflexes,
-	pt.base_aerial_catching,
+	pt.base_gk_parrying,
+	pt.base_gk_reflex,
+	pt.base_gk_catching,
 	pt.base_duels,
 	pt.base_pace,
 	pt.base_physical,
@@ -182,11 +182,11 @@ SELECT
 	up.bonus_passing,
 	up.bonus_long_pass,
 	up.bonus_vision,
-	up.bonus_defensive_awareness,
+	up.bonus_gk_reach,
 	up.bonus_counter_attack_awareness,
-	up.bonus_crossbar_handling,
-	up.bonus_reflexes,
-	up.bonus_aerial_catching,
+	up.bonus_gk_parrying,
+	up.bonus_gk_reflex,
+	up.bonus_gk_catching,
 	up.bonus_duels,
 	up.bonus_pace,
 	up.bonus_physical,
@@ -251,11 +251,11 @@ SET bonus_shooting = bonus_shooting + ?,
 	bonus_passing = bonus_passing + ?,
 	bonus_long_pass = bonus_long_pass + ?,
 	bonus_vision = bonus_vision + ?,
-	bonus_defensive_awareness = bonus_defensive_awareness + ?,
+	bonus_gk_reach = bonus_gk_reach + ?,
 	bonus_counter_attack_awareness = bonus_counter_attack_awareness + ?,
-	bonus_crossbar_handling = bonus_crossbar_handling + ?,
-	bonus_reflexes = bonus_reflexes + ?,
-	bonus_aerial_catching = bonus_aerial_catching + ?,
+	bonus_gk_parrying = bonus_gk_parrying + ?,
+	bonus_gk_reflex = bonus_gk_reflex + ?,
+	bonus_gk_catching = bonus_gk_catching + ?,
 	bonus_duels = bonus_duels + ?,
 	bonus_pace = bonus_pace + ?,
 	bonus_physical = bonus_physical + ?,
@@ -270,11 +270,11 @@ WHERE id = ?
 	AND bonus_passing + ? >= 0
 	AND bonus_long_pass + ? >= 0
 	AND bonus_vision + ? >= 0
-	AND bonus_defensive_awareness + ? >= 0
+	AND bonus_gk_reach + ? >= 0
 	AND bonus_counter_attack_awareness + ? >= 0
-	AND bonus_crossbar_handling + ? >= 0
-	AND bonus_reflexes + ? >= 0
-	AND bonus_aerial_catching + ? >= 0
+	AND bonus_gk_parrying + ? >= 0
+	AND bonus_gk_reflex + ? >= 0
+	AND bonus_gk_catching + ? >= 0
 	AND bonus_duels + ? >= 0
 	AND bonus_pace + ? >= 0
 	AND bonus_physical + ? >= 0
@@ -288,11 +288,11 @@ WHERE id = ?
 		input.Passing,
 		input.LongPass,
 		input.Vision,
-		input.DefensiveAwareness,
+		input.GKReach,
 		input.CounterAttackAwareness,
-		input.CrossbarHandling,
-		input.Reflexes,
-		input.AerialCatching,
+		input.GKParrying,
+		input.GKReflex,
+		input.GKCatching,
 		input.Duels,
 		input.Pace,
 		input.Physical,
@@ -307,11 +307,11 @@ WHERE id = ?
 		input.Passing,
 		input.LongPass,
 		input.Vision,
-		input.DefensiveAwareness,
+		input.GKReach,
 		input.CounterAttackAwareness,
-		input.CrossbarHandling,
-		input.Reflexes,
-		input.AerialCatching,
+		input.GKParrying,
+		input.GKReflex,
+		input.GKCatching,
 		input.Duels,
 		input.Pace,
 		input.Physical,
@@ -366,11 +366,11 @@ func scanRawCard(s scanner) (rawCard, error) {
 		&item.BasePassing,
 		&item.BaseLongPass,
 		&item.BaseVision,
-		&item.BaseDefAwareness,
+		&item.BaseGKReach,
 		&item.BaseCtrAwareness,
-		&item.BaseCrossbar,
-		&item.BaseReflexes,
-		&item.BaseAerialCatch,
+		&item.BaseGKParrying,
+		&item.BaseGKReflex,
+		&item.BaseGKCatching,
 		&item.BaseDuels,
 		&item.BasePace,
 		&item.BasePhysical,
@@ -382,11 +382,11 @@ func scanRawCard(s scanner) (rawCard, error) {
 		&item.BonusPassing,
 		&item.BonusLongPass,
 		&item.BonusVision,
-		&item.BonusDefAware,
+		&item.BonusGKReach,
 		&item.BonusCtrAware,
-		&item.BonusCrossbar,
-		&item.BonusReflexes,
-		&item.BonusAerialCatch,
+		&item.BonusGKParrying,
+		&item.BonusGKReflex,
+		&item.BonusGKCatching,
 		&item.BonusDuels,
 		&item.BonusPace,
 		&item.BonusPhysical,
@@ -407,11 +407,11 @@ func toPlayerCard(item rawCard) domain.PlayerCard {
 		Passing:                item.BasePassing,
 		LongPass:               item.BaseLongPass,
 		Vision:                 item.BaseVision,
-		DefensiveAwareness:     item.BaseDefAwareness,
+		GKReach:                item.BaseGKReach,
 		CounterAttackAwareness: item.BaseCtrAwareness,
-		CrossbarHandling:       item.BaseCrossbar,
-		Reflexes:               item.BaseReflexes,
-		AerialCatching:         item.BaseAerialCatch,
+		GKParrying:             item.BaseGKParrying,
+		GKReflex:               item.BaseGKReflex,
+		GKCatching:             item.BaseGKCatching,
 		Duels:                  item.BaseDuels,
 		Pace:                   item.BasePace,
 		Physical:               item.BasePhysical,
@@ -426,11 +426,11 @@ func toPlayerCard(item rawCard) domain.PlayerCard {
 		Passing:                item.BonusPassing,
 		LongPass:               item.BonusLongPass,
 		Vision:                 item.BonusVision,
-		DefensiveAwareness:     item.BonusDefAware,
+		GKReach:                item.BonusGKReach,
 		CounterAttackAwareness: item.BonusCtrAware,
-		CrossbarHandling:       item.BonusCrossbar,
-		Reflexes:               item.BonusReflexes,
-		AerialCatching:         item.BonusAerialCatch,
+		GKParrying:             item.BonusGKParrying,
+		GKReflex:               item.BonusGKReflex,
+		GKCatching:             item.BonusGKCatching,
 		Duels:                  item.BonusDuels,
 		Pace:                   item.BonusPace,
 		Physical:               item.BonusPhysical,
@@ -445,11 +445,11 @@ func toPlayerCard(item rawCard) domain.PlayerCard {
 		Passing:                base.Passing + bonus.Passing,
 		LongPass:               base.LongPass + bonus.LongPass,
 		Vision:                 base.Vision + bonus.Vision,
-		DefensiveAwareness:     base.DefensiveAwareness + bonus.DefensiveAwareness,
+		GKReach:                base.GKReach + bonus.GKReach,
 		CounterAttackAwareness: base.CounterAttackAwareness + bonus.CounterAttackAwareness,
-		CrossbarHandling:       base.CrossbarHandling + bonus.CrossbarHandling,
-		Reflexes:               base.Reflexes + bonus.Reflexes,
-		AerialCatching:         base.AerialCatching + bonus.AerialCatching,
+		GKParrying:             base.GKParrying + bonus.GKParrying,
+		GKReflex:               base.GKReflex + bonus.GKReflex,
+		GKCatching:             base.GKCatching + bonus.GKCatching,
 		Duels:                  base.Duels + bonus.Duels,
 		Pace:                   base.Pace + bonus.Pace,
 		Physical:               base.Physical + bonus.Physical,
@@ -463,11 +463,11 @@ func toPlayerCard(item rawCard) domain.PlayerCard {
 			total.Passing+
 			total.LongPass+
 			total.Vision+
-			total.DefensiveAwareness+
+			total.GKReach+
 			total.CounterAttackAwareness+
-			total.CrossbarHandling+
-			total.Reflexes+
-			total.AerialCatching+
+			total.GKParrying+
+			total.GKReflex+
+			total.GKCatching+
 			total.Duels+
 			total.Pace+
 			total.Physical+

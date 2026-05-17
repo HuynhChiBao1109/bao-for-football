@@ -7,11 +7,11 @@ const defaultAllocate = {
   passing: 0,
   longPass: 0,
   vision: 0,
-  defensiveAwareness: 0,
+  gkReach: 0,
   counterAttackAwareness: 0,
-  crossbarHandling: 0,
-  reflexes: 0,
-  aerialCatching: 0,
+  gkParrying: 0,
+  gkReflex: 0,
+  gkCatching: 0,
   duels: 0,
   pace: 0,
   physical: 0,
@@ -26,11 +26,11 @@ const allocateKeys = [
   "passing",
   "longPass",
   "vision",
-  "defensiveAwareness",
+  "gkReach",
   "counterAttackAwareness",
-  "crossbarHandling",
-  "reflexes",
-  "aerialCatching",
+  "gkParrying",
+  "gkReflex",
+  "gkCatching",
   "duels",
   "pace",
   "physical",
@@ -46,18 +46,10 @@ const statMetas = [
   { key: "longPass", label: "Chuyền dài", allocatable: true },
   { key: "vision", label: "Tầm nhìn", allocatable: true },
   {
-    key: "defensiveAwareness",
-    label: "Nhận thức phòng ngự",
-    allocatable: true,
-  },
-  {
     key: "counterAttackAwareness",
     label: "Nhận thức phản công",
     allocatable: true,
   },
-  { key: "crossbarHandling", label: "Bắt bóng xà", allocatable: true },
-  { key: "reflexes", label: "Phản xạ", allocatable: true },
-  { key: "aerialCatching", label: "Bắt bóng bổng", allocatable: true },
   { key: "duels", label: "Tranh chấp", allocatable: true },
   { key: "pace", label: "Tốc độ", allocatable: true },
   { key: "physical", label: "Thể chất", allocatable: true },
@@ -65,6 +57,14 @@ const statMetas = [
   { key: "standingTackle", label: "Tắc bóng", allocatable: true },
   { key: "slidingTackle", label: "Xoạc bóng", allocatable: true },
   { key: "dribbling", label: "Rê bóng", allocatable: true },
+  { key: "gkParrying", label: "GK Parrying (thủ môn)", allocatable: true },
+  { key: "gkReflex", label: "GK Reflex (thủ môn)", allocatable: true },
+  { key: "gkCatching", label: "GK Catching (thủ môn)", allocatable: true },
+  {
+    key: "gkReach",
+    label: "GK Reach (thủ môn)",
+    allocatable: true,
+  },
 ];
 
 function buildTargetStats(card) {
@@ -139,21 +139,21 @@ function PlayerManagementPage({ token, onUnauthorized }) {
       vision:
         Number(selectedCard.bonusStats.vision || 0) +
         Number(allocateDelta.vision || 0),
-      defensiveAwareness:
-        Number(selectedCard.bonusStats.defensiveAwareness || 0) +
-        Number(allocateDelta.defensiveAwareness || 0),
+      gkReach:
+        Number(selectedCard.bonusStats.gkReach || 0) +
+        Number(allocateDelta.gkReach || 0),
       counterAttackAwareness:
         Number(selectedCard.bonusStats.counterAttackAwareness || 0) +
         Number(allocateDelta.counterAttackAwareness || 0),
-      crossbarHandling:
-        Number(selectedCard.bonusStats.crossbarHandling || 0) +
-        Number(allocateDelta.crossbarHandling || 0),
-      reflexes:
-        Number(selectedCard.bonusStats.reflexes || 0) +
-        Number(allocateDelta.reflexes || 0),
-      aerialCatching:
-        Number(selectedCard.bonusStats.aerialCatching || 0) +
-        Number(allocateDelta.aerialCatching || 0),
+      gkParrying:
+        Number(selectedCard.bonusStats.gkParrying || 0) +
+        Number(allocateDelta.gkParrying || 0),
+      gkReflex:
+        Number(selectedCard.bonusStats.gkReflex || 0) +
+        Number(allocateDelta.gkReflex || 0),
+      gkCatching:
+        Number(selectedCard.bonusStats.gkCatching || 0) +
+        Number(allocateDelta.gkCatching || 0),
       duels:
         Number(selectedCard.bonusStats.duels || 0) +
         Number(allocateDelta.duels || 0),
@@ -539,9 +539,8 @@ function PlayerManagementPage({ token, onUnauthorized }) {
                       {projected.nextBonus.vision}
                     </p>
                     <p>
-                      Nhận thức phòng ngự: +
-                      {selectedCard.bonusStats.defensiveAwareness} {"->"} +
-                      {projected.nextBonus.defensiveAwareness}
+                      GK Reach: +{selectedCard.bonusStats.gkReach} {"->"} +
+                      {projected.nextBonus.gkReach}
                     </p>
                     <p>
                       Nhận thức phản công: +
@@ -549,16 +548,16 @@ function PlayerManagementPage({ token, onUnauthorized }) {
                       {projected.nextBonus.counterAttackAwareness}
                     </p>
                     <p>
-                      Bắt bóng xà: +{selectedCard.bonusStats.crossbarHandling}{" "}
-                      {"->"} +{projected.nextBonus.crossbarHandling}
+                      GK Parrying: +{selectedCard.bonusStats.gkParrying} {"->"}{" "}
+                      +{projected.nextBonus.gkParrying}
                     </p>
                     <p>
-                      Phản xạ: +{selectedCard.bonusStats.reflexes} {"->"} +
-                      {projected.nextBonus.reflexes}
+                      GK Reflex: +{selectedCard.bonusStats.gkReflex} {"->"} +
+                      {projected.nextBonus.gkReflex}
                     </p>
                     <p>
-                      Bắt bóng bổng: +{selectedCard.bonusStats.aerialCatching}{" "}
-                      {"->"} +{projected.nextBonus.aerialCatching}
+                      GK Catching: +{selectedCard.bonusStats.gkCatching} {"->"}{" "}
+                      +{projected.nextBonus.gkCatching}
                     </p>
                     <p>
                       Tranh chấp: +{selectedCard.bonusStats.duels} {"->"} +

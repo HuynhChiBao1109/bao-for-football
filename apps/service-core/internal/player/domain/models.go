@@ -76,6 +76,10 @@ type PlayerTemplate struct {
 	BasePassing        int       `gorm:"not null;default:1;column:base_passing"`
 	BaseLongPass       int       `gorm:"not null;default:1;column:base_long_pass"`
 	BaseVision         int       `gorm:"not null;default:1;column:base_vision"`
+	BaseGKReach        int       `gorm:"not null;default:1;column:base_gk_reach"`
+	BaseGKParrying     int       `gorm:"not null;default:1;column:base_gk_parrying"`
+	BaseGKReflex       int       `gorm:"not null;default:1;column:base_gk_reflex"`
+	BaseGKCatching     int       `gorm:"not null;default:1;column:base_gk_catching"`
 	BasePace           int       `gorm:"not null;default:1;column:base_pace"`
 	BasePhysical       int       `gorm:"not null;default:1;column:base_physical"`
 	BaseDefending      int       `gorm:"not null;default:1;column:base_defending"`
@@ -112,6 +116,12 @@ type UserPlayer struct {
 	CurrentPoints       uint32    `gorm:"not null;default:0;column:current_points"`
 	BonusShooting       int       `gorm:"not null;default:0;column:bonus_shooting"`
 	BonusPassing        int       `gorm:"not null;default:0;column:bonus_passing"`
+	BonusLongPass       int       `gorm:"not null;default:0;column:bonus_long_pass"`
+	BonusVision         int       `gorm:"not null;default:0;column:bonus_vision"`
+	BonusGKReach        int       `gorm:"not null;default:0;column:bonus_gk_reach"`
+	BonusGKParrying     int       `gorm:"not null;default:0;column:bonus_gk_parrying"`
+	BonusGKReflex       int       `gorm:"not null;default:0;column:bonus_gk_reflex"`
+	BonusGKCatching     int       `gorm:"not null;default:0;column:bonus_gk_catching"`
 	BonusPace           int       `gorm:"not null;default:0;column:bonus_pace"`
 	BonusPhysical       int       `gorm:"not null;default:0;column:bonus_physical"`
 	BonusDefending      int       `gorm:"not null;default:0;column:bonus_defending"`

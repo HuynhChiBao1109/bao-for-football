@@ -14,11 +14,11 @@ const defaultForm = {
   passing: 70,
   longPass: 70,
   vision: 70,
-  defensiveAwareness: 70,
+  gkReach: 70,
   counterAttackAwareness: 70,
-  crossbarHandling: 70,
-  reflexes: 70,
-  aerialCatching: 70,
+  gkParrying: 70,
+  gkReflex: 70,
+  gkCatching: 70,
   duels: 70,
   pace: 70,
   physical: 70,
@@ -26,6 +26,25 @@ const defaultForm = {
   standingTackle: 70,
   slidingTackle: 70,
   dribbling: 70,
+};
+
+const statLabels = {
+  shooting: "Shooting",
+  passing: "Passing",
+  longPass: "Long Pass",
+  vision: "Vision",
+  counterAttackAwareness: "Counter Attack Awareness",
+  duels: "Duels",
+  pace: "Pace",
+  physical: "Physical",
+  defending: "Defending",
+  standingTackle: "Standing Tackle",
+  slidingTackle: "Sliding Tackle",
+  dribbling: "Dribbling",
+  gkReach: "GK Reach (thủ môn)",
+  gkParrying: "GK Parrying (thủ môn)",
+  gkReflex: "GK Reflex (thủ môn)",
+  gkCatching: "GK Catching (thủ môn)",
 };
 
 function AdminDashboard({
@@ -282,9 +301,9 @@ function AdminDashboard({
                     </td>
                     <td className="px-4 py-3 text-slate-300">
                       {player.shooting}/{player.passing}/{player.longPass}/
-                      {player.vision}/{player.defensiveAwareness}/
-                      {player.counterAttackAwareness}/{player.crossbarHandling}/
-                      {player.reflexes}/{player.aerialCatching}/{player.duels}/
+                      {player.vision}/{player.gkReach}/
+                      {player.counterAttackAwareness}/{player.gkParrying}/
+                      {player.gkReflex}/{player.gkCatching}/{player.duels}/
                       {player.pace}/{player.physical}/{player.defending}/
                       {player.standingTackle}/{player.slidingTackle}/
                       {player.dribbling}
@@ -295,7 +314,6 @@ function AdminDashboard({
             </table>
           </div>
         </section>
-
         <aside className="game-panel overflow-hidden p-5">
           <div className="mb-4">
             <p className="game-header-kicker">Create Player</p>
@@ -353,11 +371,11 @@ function AdminDashboard({
                 "passing",
                 "longPass",
                 "vision",
-                "defensiveAwareness",
+                "gkReach",
                 "counterAttackAwareness",
-                "crossbarHandling",
-                "reflexes",
-                "aerialCatching",
+                "gkParrying",
+                "gkReflex",
+                "gkCatching",
                 "duels",
                 "pace",
                 "physical",
@@ -368,7 +386,7 @@ function AdminDashboard({
               ].map((key) => (
                 <NumberField
                   key={key}
-                  label={key}
+                  label={statLabels[key] || key}
                   value={form[key]}
                   onChange={(value) => updateField(key, value)}
                 />
@@ -435,10 +453,10 @@ function AdminDashboard({
                 <div>
                   Stats: {selectedPlayer.shooting}/{selectedPlayer.passing}/
                   {selectedPlayer.longPass}/{selectedPlayer.vision}/
-                  {selectedPlayer.defensiveAwareness}/
+                  {selectedPlayer.gkReach}/
                   {selectedPlayer.counterAttackAwareness}/
-                  {selectedPlayer.crossbarHandling}/{selectedPlayer.reflexes}/
-                  {selectedPlayer.aerialCatching}/{selectedPlayer.duels}/
+                  {selectedPlayer.gkParrying}/{selectedPlayer.gkReflex}/
+                  {selectedPlayer.gkCatching}/{selectedPlayer.duels}/
                   {selectedPlayer.pace}/{selectedPlayer.physical}/
                   {selectedPlayer.defending}/{selectedPlayer.standingTackle}/
                   {selectedPlayer.slidingTackle}/{selectedPlayer.dribbling}
@@ -506,11 +524,11 @@ function averageStats(form) {
     Number(form.passing) +
     Number(form.longPass) +
     Number(form.vision) +
-    Number(form.defensiveAwareness) +
+    Number(form.gkReach) +
     Number(form.counterAttackAwareness) +
-    Number(form.crossbarHandling) +
-    Number(form.reflexes) +
-    Number(form.aerialCatching) +
+    Number(form.gkParrying) +
+    Number(form.gkReflex) +
+    Number(form.gkCatching) +
     Number(form.duels) +
     Number(form.pace) +
     Number(form.physical) +
