@@ -21,6 +21,7 @@
             "matchCommandLine": true
         },
         "npm exec": true,
-        "tailwindcss": true
+        "tailwindcss": true,
+        "npm run dev": true
     }
 }
