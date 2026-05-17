@@ -43,6 +43,7 @@ func main() {
 	router.GET("/ws", handler.Connect)
 	router.GET("/sse/match", handler.StreamMatchSSE)
 	router.POST("/api/v1/tactics", handler.UpdateTactics)
+	router.POST("/api/v1/matches/start", handler.StartMatch)
 
 	log.Printf("service-realtime listening on %s", port)
 	if err := router.Run(":" + port); err != nil {

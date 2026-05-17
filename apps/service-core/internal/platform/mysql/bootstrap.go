@@ -231,6 +231,46 @@ func (migrationAIUserStage) TableName() string {
 	return "ai_user_stages"
 }
 
+type migrationMatch struct {
+	ID           uint64     `gorm:"primaryKey;autoIncrement;column:id"`
+	MatchUUID    string     `gorm:"type:char(36);not null;uniqueIndex:uk_matches_match_uuid;column:match_uuid"`
+	UserID       uint64     `gorm:"not null;index:idx_matches_user_id;column:user_id"`
+	HomeClubName string     `gorm:"type:varchar(120);not null;column:home_club_name"`
+	AwayClubName string     `gorm:"type:varchar(120);not null;column:away_club_name"`
+	HomeScore    int        `gorm:"not null;default:0;column:home_score"`
+	AwayScore    int        `gorm:"not null;default:0;column:away_score"`
+	Mode         string     `gorm:"type:varchar(32);not null;default:casual;column:mode"`
+	StageNo      *int       `gorm:"column:stage_no"`
+	Status       string     `gorm:"type:enum('running','finished');not null;default:running;column:status"`
+	HomeStats    string     `gorm:"type:json;column:home_stats"`
+	AwayStats    string     `gorm:"type:json;column:away_stats"`
+	StartedAt    time.Time  `gorm:"column:started_at"`
+	EndedAt      *time.Time `gorm:"column:ended_at"`
+	CreatedAt    time.Time  `gorm:"column:created_at"`
+	UpdatedAt    time.Time  `gorm:"column:updated_at"`
+
+	User    migrationUser          `gorm:"foreignKey:UserID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	Scorers []migrationMatchScorer `gorm:"foreignKey:MatchID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+}
+
+func (migrationMatch) TableName() string {
+	return "matches"
+}
+
+type migrationMatchScorer struct {
+	ID         uint64    `gorm:"primaryKey;autoIncrement;column:id"`
+	MatchID    uint64    `gorm:"not null;index:idx_match_scorers_match_id;column:match_id"`
+	TeamSide   string    `gorm:"type:enum('home','away');not null;column:team_side"`
+	PlayerID   int       `gorm:"not null;column:player_id"`
+	PlayerName string    `gorm:"type:varchar(120);column:player_name"`
+	Minute     int       `gorm:"not null;default:0;column:minute"`
+	CreatedAt  time.Time `gorm:"column:created_at"`
+}
+
+func (migrationMatchScorer) TableName() string {
+	return "match_scorers"
+}
+
 type defaultClub struct {
 	ID         int64
 	Name       string
@@ -291,6 +331,8 @@ func AutoMigrate(ctx context.Context, db *gorm.DB) error {
 		&migrationGachaLog{},
 		&migrationTeamTactics{},
 		&migrationAIUserStage{},
+		&migrationMatch{},
+		&migrationMatchScorer{},
 	); err != nil {
 		return err
 	}

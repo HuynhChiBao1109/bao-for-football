@@ -37,6 +37,10 @@ type updateTacticsRequest struct {
 	} `json:"players"`
 }
 
+type startMatchRequest struct {
+	MatchID string `json:"matchId"`
+}
+
 type Handler struct {
 	hub    *hub.Hub
 	engine *broadcaster.MatchEngine
@@ -60,7 +64,6 @@ func (h *Handler) Connect(c *gin.Context) {
 	}
 
 	h.hub.Register(conn)
-	h.engine.EnsureRunning()
 
 	for {
 		_, payload, err := conn.ReadMessage()
@@ -73,8 +76,6 @@ func (h *Handler) Connect(c *gin.Context) {
 }
 
 func (h *Handler) StreamMatchSSE(c *gin.Context) {
-	h.engine.EnsureRunning()
-
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
 	c.Writer.Header().Set("Cache-Control", "no-cache")
 	c.Writer.Header().Set("Connection", "keep-alive")
@@ -111,6 +112,21 @@ func (h *Handler) StreamMatchSSE(c *gin.Context) {
 			flusher.Flush()
 		}
 	}
+}
+
+func (h *Handler) StartMatch(c *gin.Context) {
+	var req startMatchRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.engine.StartMatch(req.MatchID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "match started", "matchId": req.MatchID})
 }
 
 func (h *Handler) UpdateTactics(c *gin.Context) {

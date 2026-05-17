@@ -13,6 +13,8 @@ function AiMatchPage({ token, onUnauthorized }) {
   const [detailLoading, setDetailLoading] = useState(false);
 
   const [isFighting, setIsFighting] = useState(false);
+  const [startingMatch, setStartingMatch] = useState(false);
+  const [activeMatchID, setActiveMatchID] = useState("");
   const [submittingResult, setSubmittingResult] = useState(false);
   const [resultMessage, setResultMessage] = useState("");
 
@@ -149,7 +151,71 @@ function AiMatchPage({ token, onUnauthorized }) {
       return;
     }
 
+    if (!activeMatchID) {
+      setError("Thiếu matchId để chốt kết quả trận đấu.");
+      return;
+    }
+
+    try {
+      await apiRequest(`/api/v1/matches/${activeMatchID}/finalize`, {
+        method: "POST",
+        token,
+        body: {
+          homeScore: Number(result?.home || 0),
+          awayScore: Number(result?.away || 0),
+          homeStats: result?.homeStats || {},
+          awayStats: result?.awayStats || {},
+          scorers: Array.isArray(result?.scorers) ? result.scorers : [],
+        },
+      });
+    } catch (err) {
+      setError(`Không lưu được lịch sử trận: ${err.message}`);
+    }
+
     await submitStageResult(selected.stageNo, Boolean(result?.didWin));
+  }
+
+  async function startCampaignMatch() {
+    if (
+      !selected ||
+      !selected.isUnlocked ||
+      selected.isCleared ||
+      startingMatch
+    ) {
+      return;
+    }
+
+    setStartingMatch(true);
+    setError("");
+    setResultMessage("");
+
+    try {
+      const payload = await apiRequest("/api/v1/matches/start", {
+        method: "POST",
+        token,
+        body: {
+          awayClubName: selected.clubName,
+          mode: "ai_campaign",
+          stageNo: selected.stageNo,
+        },
+      });
+
+      const matchID = payload?.data?.matchId;
+      if (!matchID) {
+        throw new Error("Server không trả về matchId");
+      }
+
+      setActiveMatchID(matchID);
+      setIsFighting(true);
+    } catch (err) {
+      if (err.status === 401 || err.status === 403) {
+        onUnauthorized();
+        return;
+      }
+      setError(err.message);
+    } finally {
+      setStartingMatch(false);
+    }
   }
 
   if (loading) {
@@ -187,7 +253,10 @@ function AiMatchPage({ token, onUnauthorized }) {
 
               <button
                 type="button"
-                onClick={() => setIsFighting(false)}
+                onClick={() => {
+                  setIsFighting(false);
+                  setActiveMatchID("");
+                }}
                 className="game-button-secondary"
               >
                 Quay lại chọn màn
@@ -196,7 +265,11 @@ function AiMatchPage({ token, onUnauthorized }) {
           </div>
         </div>
 
-        <MatchView embedded onMatchEnd={handleMatchEnd} />
+        <MatchView
+          embedded
+          onMatchEnd={handleMatchEnd}
+          matchId={activeMatchID}
+        />
 
         <div className="game-panel overflow-hidden p-5">
           <div className="game-panel__content">
@@ -254,16 +327,17 @@ function AiMatchPage({ token, onUnauthorized }) {
 
           <button
             type="button"
-            disabled={!selected.isUnlocked || selected.isCleared}
-            onClick={() => {
-              setResultMessage("");
-              setIsFighting(true);
-            }}
+            disabled={
+              !selected.isUnlocked || selected.isCleared || startingMatch
+            }
+            onClick={startCampaignMatch}
             className="game-button-primary mt-4 w-full disabled:border-slate-700/70 disabled:bg-slate-900/50 disabled:text-slate-400"
           >
-            {selected.isCleared
-              ? `Màn ${selected.stageNo} đã hoàn thành`
-              : `Vào thi đấu màn ${selected.stageNo}`}
+            {startingMatch
+              ? "Đang tạo trận..."
+              : selected.isCleared
+                ? `Màn ${selected.stageNo} đã hoàn thành`
+                : `Vào thi đấu màn ${selected.stageNo}`}
           </button>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

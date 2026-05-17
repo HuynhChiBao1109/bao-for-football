@@ -88,11 +88,28 @@ func (e *MatchEngine) EnsureRunning() {
 	e.running = true
 	e.mu.Unlock()
 
-	go e.run()
+	go e.run("match-demo-11v11")
 }
 
-func (e *MatchEngine) run() {
-	state := rooms.NewDemoMatchState()
+func (e *MatchEngine) StartMatch(matchID string) error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	matchID = strings.TrimSpace(matchID)
+	if matchID == "" {
+		return fmt.Errorf("matchId is required")
+	}
+	if e.running {
+		return fmt.Errorf("a match is already running")
+	}
+
+	e.running = true
+	go e.run(matchID)
+	return nil
+}
+
+func (e *MatchEngine) run(matchID string) {
+	state := rooms.NewDemoMatchState(matchID)
 	state.Duration = matchLength
 	startingKickoffTeamID := state.HomeTeam.ID
 
@@ -424,12 +441,12 @@ func (e *MatchEngine) resolveLooseBall(state *rooms.MatchState, tickEvents *[]ev
 
 	if distance(nearest.X, nearest.Y, state.Ball.X, state.Ball.Y) < 1.15 {
 		e.giveBallToPlayer(state, nearest)
-		*tickEvents = append(*tickEvents, events.MatchEvent{
-			Kind:     "possession_change",
-			TeamID:   nearest.TeamID,
-			PlayerID: nearest.ID,
-			Message:  "Recovered possession",
-		})
+		// *tickEvents = append(*tickEvents, events.MatchEvent{
+		// 	Kind:     "possession_change",
+		// 	TeamID:   nearest.TeamID,
+		// 	PlayerID: nearest.ID,
+		// 	Message:  "Recovered possession",
+		// })
 	}
 }
 

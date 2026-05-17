@@ -91,9 +91,12 @@ func (m *MatchState) AllPlayers() []*Player {
 	return players
 }
 
-func NewDemoMatchState() *MatchState {
+func NewDemoMatchState(matchID string) *MatchState {
 	fieldW := 100.0
 	fieldH := 64.0
+	if matchID == "" {
+		matchID = "match-demo-11v11"
+	}
 
 	home := &Team{
 		ID:        "home",
@@ -127,7 +130,7 @@ func NewDemoMatchState() *MatchState {
 	away.Players = createTeamPlayers(away.ID, true)
 
 	state := &MatchState{
-		MatchID:   "match-demo-11v11",
+		MatchID:   matchID,
 		Duration:  2 * time.Minute,
 		Elapsed:   0,
 		FieldW:    fieldW,

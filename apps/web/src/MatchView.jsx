@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const F = { w: 100, h: 64 };
-const MATCH_WS_URL =
+const MATCH_WS_BASE_URL =
   import.meta.env.VITE_MATCH_WS_URL ||
   import.meta.env.VITE_WS_URL ||
   deriveMatchWebSocketURL(import.meta.env.VITE_MATCH_SSE_URL) ||
@@ -156,7 +156,7 @@ const INITIAL_MATCH_STATS = {
   away: { ...EMPTY_TEAM_STATS },
 };
 
-function MatchView({ embedded = false, onMatchEnd }) {
+function MatchView({ embedded = false, onMatchEnd, matchId = "" }) {
   const [connState, setConnState] = useState("Connecting...");
   const [score, setScore] = useState({ home: 0, away: 0 });
   const [elapsedMS, setElapsedMS] = useState(0);
@@ -184,6 +184,12 @@ function MatchView({ embedded = false, onMatchEnd }) {
   const matchEndFiredRef = useRef(false);
   const fxIdRef = useRef(0);
   const lastTickRef = useRef(-1);
+  const scorersRef = useRef([]);
+  const matchStatsRef = useRef(INITIAL_MATCH_STATS);
+
+  const matchWSURL = useMemo(() => {
+    return buildMatchWebSocketURL(MATCH_WS_BASE_URL, matchId);
+  }, [matchId]);
 
   // keep phase ref in sync
   useEffect(() => {
@@ -191,6 +197,25 @@ function MatchView({ embedded = false, onMatchEnd }) {
   }, [matchPhase]);
 
   useEffect(() => {
+    setConnState("Connecting...");
+    setScore({ home: 0, away: 0 });
+    setElapsedMS(0);
+    setPopup(null);
+    setMatchStats(INITIAL_MATCH_STATS);
+    matchStatsRef.current = INITIAL_MATCH_STATS;
+    setDisplayPlayers([]);
+    setDisplayBall({ x: 50, y: 32, height: 0, vx: 0, vy: 0 });
+    setDebugOverlay({ gameplay: null, passPreview: null });
+    setFieldFx([]);
+    setMatchPhase("playing");
+    targetsRef.current = new Map();
+    ballTargetRef.current = { x: 50, y: 32, height: 0, vx: 0, vy: 0 };
+    ballAlphaRef.current = 0.3;
+    matchPhaseRef.current = "playing";
+    matchEndFiredRef.current = false;
+    lastTickRef.current = -1;
+    scorersRef.current = [];
+
     let socket;
     let reconnectTimer = 0;
     let closed = false;
@@ -203,6 +228,7 @@ function MatchView({ embedded = false, onMatchEnd }) {
         return;
       }
       if (payload?.type !== "match_tick") return;
+      if (matchId && payload?.matchId !== matchId) return;
 
       const tick = Number(payload.tick ?? -1);
       if (tick >= 0) {
@@ -212,7 +238,11 @@ function MatchView({ embedded = false, onMatchEnd }) {
 
       setScore(payload.score || { home: 0, away: 0 });
       setElapsedMS(payload.elapsedMs || 0);
-      setMatchStats((prev) => accumulateMatchStats(prev, payload));
+      setMatchStats((prev) => {
+        const next = accumulateMatchStats(prev, payload);
+        matchStatsRef.current = next;
+        return next;
+      });
 
       // update ball target (smooth lerp happens in RAF)
       if (payload.ball) {
@@ -334,13 +364,25 @@ function MatchView({ embedded = false, onMatchEnd }) {
         }
 
         const ended = payload.events.some((e) => e.kind === "match_end");
+        for (const e of payload.events) {
+          if (e.kind !== "goal") continue;
+          scorersRef.current.push({
+            teamId: e.teamId,
+            playerId: Number(e.playerId || 0),
+            minute: Math.floor(Number(payload.elapsedMs || 0) / 1000 / 60),
+          });
+        }
         if (ended && !matchEndFiredRef.current) {
           matchEndFiredRef.current = true;
           const home = Number(payload?.score?.home || 0);
           const away = Number(payload?.score?.away || 0);
           onMatchEnd?.({
+            matchId,
             home,
             away,
+            homeStats: matchStatsRef.current.home,
+            awayStats: matchStatsRef.current.away,
+            scorers: scorersRef.current,
             didWin: home > away,
             isDraw: home === away,
           });
@@ -351,7 +393,7 @@ function MatchView({ embedded = false, onMatchEnd }) {
     const connect = () => {
       if (closed) return;
 
-      socket = new WebSocket(MATCH_WS_URL);
+      socket = new WebSocket(matchWSURL);
       socket.onopen = () => {
         setConnState("Live");
       };
@@ -378,7 +420,7 @@ function MatchView({ embedded = false, onMatchEnd }) {
       if (reconnectTimer) window.clearTimeout(reconnectTimer);
       socket?.close();
     };
-  }, [onMatchEnd]);
+  }, [matchId, matchWSURL, onMatchEnd]);
 
   // auto-clear popup after its configured duration
   useEffect(() => {
@@ -1514,6 +1556,18 @@ function deriveMatchWebSocketURL(rawURL) {
     return url.toString();
   } catch {
     return "";
+  }
+}
+
+function buildMatchWebSocketURL(baseURL, matchId) {
+  if (!matchId) return baseURL;
+  try {
+    const url = new URL(baseURL);
+    url.searchParams.set("matchId", matchId);
+    return url.toString();
+  } catch {
+    const sep = baseURL.includes("?") ? "&" : "?";
+    return `${baseURL}${sep}matchId=${encodeURIComponent(matchId)}`;
   }
 }
 

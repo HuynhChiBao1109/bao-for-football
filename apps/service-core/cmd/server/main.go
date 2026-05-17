@@ -18,6 +18,9 @@ import (
 	gachahttp "fifam/apps/service-core/internal/gacha/delivery/http"
 	gachamysql "fifam/apps/service-core/internal/gacha/repository/mysql"
 	gachausecase "fifam/apps/service-core/internal/gacha/usecase"
+	matchhttp "fifam/apps/service-core/internal/match/delivery/http"
+	matchmysql "fifam/apps/service-core/internal/match/repository/mysql"
+	matchusecase "fifam/apps/service-core/internal/match/usecase"
 	coremiddleware "fifam/apps/service-core/internal/middleware"
 	mysqlplatform "fifam/apps/service-core/internal/platform/mysql"
 	playerhttp "fifam/apps/service-core/internal/player/delivery/http"
@@ -65,6 +68,10 @@ func main() {
 	getTacticsUC := tacticsusecase.NewGetTacticsUseCase(tacticsRepo)
 	tacticsHandler := tacticshttp.NewHandler(tacticsUC, getTacticsUC)
 
+	matchRepo := matchmysql.NewRepository(db)
+	matchUC := matchusecase.NewMatchUseCase(matchRepo, realtimePusher)
+	matchHandler := matchhttp.NewHandler(matchUC)
+
 	gachaRepo := gachamysql.NewRepository(db)
 	gachaUC := gachausecase.NewRollUseCase(gachaRepo)
 	gachaHandler := gachahttp.NewHandler(gachaUC)
@@ -106,6 +113,8 @@ func main() {
 	api.POST("/gacha/roll", gachaHandler.Roll)
 	api.GET("/players", playerHandler.ListMyCards)
 	api.POST("/players/:id/allocate", playerHandler.AllocateStats)
+	api.POST("/matches/start", matchHandler.Start)
+	api.POST("/matches/:matchId/finalize", matchHandler.Finalize)
 
 	admin := router.Group("/api/v1/admin")
 	admin.Use(authmiddleware.RequireJWT(authUC, true))

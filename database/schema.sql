@@ -11,6 +11,8 @@ SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
 DROP TABLE IF EXISTS gacha_logs;
+DROP TABLE IF EXISTS match_scorers;
+DROP TABLE IF EXISTS matches;
 DROP TABLE IF EXISTS user_players;
 DROP TABLE IF EXISTS skills;
 DROP TABLE IF EXISTS player_templates;
@@ -198,6 +200,48 @@ CREATE TABLE gacha_logs (
   CONSTRAINT fk_gacha_logs_user_player_id
     FOREIGN KEY (user_player_id) REFERENCES user_players(id)
     ON DELETE SET NULL
+    ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE matches (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  match_uuid CHAR(36) NOT NULL,
+  user_id BIGINT UNSIGNED NOT NULL,
+  home_club_name VARCHAR(120) NOT NULL,
+  away_club_name VARCHAR(120) NOT NULL,
+  home_score INT NOT NULL DEFAULT 0,
+  away_score INT NOT NULL DEFAULT 0,
+  mode VARCHAR(32) NOT NULL DEFAULT 'casual',
+  stage_no INT NULL,
+  status ENUM('running', 'finished') NOT NULL DEFAULT 'running',
+  home_stats JSON NULL,
+  away_stats JSON NULL,
+  started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ended_at TIMESTAMP NULL DEFAULT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_matches_match_uuid (match_uuid),
+  KEY idx_matches_user_id (user_id),
+  CONSTRAINT fk_matches_user_id
+    FOREIGN KEY (user_id) REFERENCES users(id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE match_scorers (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  match_id BIGINT UNSIGNED NOT NULL,
+  team_side ENUM('home', 'away') NOT NULL,
+  player_id INT NOT NULL,
+  player_name VARCHAR(120) NULL,
+  minute INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_match_scorers_match_id (match_id),
+  CONSTRAINT fk_match_scorers_match_id
+    FOREIGN KEY (match_id) REFERENCES matches(id)
+    ON DELETE CASCADE
     ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
