@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -74,6 +75,10 @@ func (c *Client) StartMatch(ctx context.Context, matchID string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		if len(body) > 0 {
+			return fmt.Errorf("realtime service rejected match start: status=%d body=%s", resp.StatusCode, strings.TrimSpace(string(body)))
+		}
 		return fmt.Errorf("realtime service rejected match start: status=%d", resp.StatusCode)
 	}
 

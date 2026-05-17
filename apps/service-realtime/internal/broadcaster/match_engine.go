@@ -47,12 +47,21 @@ type passDecision struct {
 	initialSpeed float64
 }
 
+type kickoffPassState struct {
+	teamID     string
+	passerID   int
+	receiverID int
+	delayTicks int
+}
+
 type MatchEngine struct {
 	hub      *hub.Hub
 	rand     *rand.Rand
 	mu       sync.Mutex
 	running  bool
+	stopCh   chan struct{}
 	state    *rooms.MatchState
+	kickoff  *kickoffPassState
 	pending  map[string]UpdateTacticsInput
 	bindings map[string]string
 	runtime  gameplayRuntime
@@ -85,30 +94,38 @@ func (e *MatchEngine) EnsureRunning() {
 		e.mu.Unlock()
 		return
 	}
+	stopCh := make(chan struct{})
 	e.running = true
+	e.stopCh = stopCh
 	e.mu.Unlock()
 
-	go e.run("match-demo-11v11")
+	go e.run("match-demo-11v11", stopCh)
 }
 
 func (e *MatchEngine) StartMatch(matchID string) error {
 	e.mu.Lock()
-	defer e.mu.Unlock()
-
 	matchID = strings.TrimSpace(matchID)
 	if matchID == "" {
+		e.mu.Unlock()
 		return fmt.Errorf("matchId is required")
 	}
+
 	if e.running {
-		return fmt.Errorf("a match is already running")
+		if e.stopCh != nil {
+			close(e.stopCh)
+		}
 	}
 
+	stopCh := make(chan struct{})
 	e.running = true
-	go e.run(matchID)
+	e.stopCh = stopCh
+	e.mu.Unlock()
+
+	go e.run(matchID, stopCh)
 	return nil
 }
 
-func (e *MatchEngine) run(matchID string) {
+func (e *MatchEngine) run(matchID string, stopCh chan struct{}) {
 	state := rooms.NewDemoMatchState(matchID)
 	state.Duration = matchLength
 	startingKickoffTeamID := state.HomeTeam.ID
@@ -124,9 +141,8 @@ func (e *MatchEngine) run(matchID string) {
 	}
 	e.mu.Unlock()
 
-	e.resetKickoff(state, startingKickoffTeamID)
-	kickoff := events.MatchEvent{Kind: "kickoff", TeamID: startingKickoffTeamID, Message: "Match started"}
-	e.broadcastTick(state, 0, []events.MatchEvent{kickoff})
+	kickoffEvents := e.prepareKickoffSequence(state, startingKickoffTeamID, "Match started")
+	e.broadcastTick(state, 0, kickoffEvents)
 
 	ticker := time.NewTicker(tickInterval)
 	defer ticker.Stop()
@@ -136,8 +152,16 @@ func (e *MatchEngine) run(matchID string) {
 	halfTimeHoldTicks := 0
 	secondHalfKickoffDelayTicks := 0
 	secondHalfKickoffTeamID := state.AwayTeam.ID
+	stopped := false
 
-	for range ticker.C {
+	for {
+		select {
+		case <-stopCh:
+			stopped = true
+			goto cleanup
+		case <-ticker.C:
+		}
+
 		tick++
 		e.mu.Lock()
 
@@ -157,8 +181,19 @@ func (e *MatchEngine) run(matchID string) {
 		if secondHalfKickoffDelayTicks > 0 {
 			secondHalfKickoffDelayTicks--
 			if secondHalfKickoffDelayTicks == 0 {
-				e.resetKickoff(state, secondHalfKickoffTeamID)
-				tickEvents := []events.MatchEvent{{Kind: "kickoff", TeamID: secondHalfKickoffTeamID, Message: "Second half kickoff"}}
+				tickEvents := e.prepareKickoffSequence(state, secondHalfKickoffTeamID, "Second half kickoff")
+				e.broadcastTick(state, tick, tickEvents)
+			} else {
+				e.broadcastTick(state, tick, nil)
+			}
+			e.mu.Unlock()
+			continue
+		}
+
+		if e.kickoff != nil {
+			e.kickoff.delayTicks--
+			if e.kickoff.delayTicks <= 0 {
+				tickEvents := e.executeKickoffPass(state)
 				e.broadcastTick(state, tick, tickEvents)
 			} else {
 				e.broadcastTick(state, tick, nil)
@@ -185,15 +220,22 @@ func (e *MatchEngine) run(matchID string) {
 		}
 	}
 
-	endEvent := events.MatchEvent{
-		Kind:    "match_end",
-		Message: fmt.Sprintf("FT %s %d-%d %s", state.HomeTeam.Name, state.HomeTeam.Score, state.AwayTeam.Score, state.AwayTeam.Name),
+cleanup:
+	if !stopped {
+		endEvent := events.MatchEvent{
+			Kind:    "match_end",
+			Message: fmt.Sprintf("FT %s %d-%d %s", state.HomeTeam.Name, state.HomeTeam.Score, state.AwayTeam.Score, state.AwayTeam.Name),
+		}
+		e.broadcastTick(state, tick, []events.MatchEvent{endEvent})
 	}
-	e.broadcastTick(state, tick, []events.MatchEvent{endEvent})
 
 	e.mu.Lock()
-	e.running = false
-	e.state = nil
+	if e.stopCh == stopCh {
+		e.running = false
+		e.state = nil
+		e.kickoff = nil
+		e.stopCh = nil
+	}
 	e.mu.Unlock()
 }
 
@@ -601,8 +643,7 @@ func (e *MatchEngine) handleShot(state *rooms.MatchState, owner *rooms.Player, o
 	*tickEvents = append(*tickEvents, events.MatchEvent{Kind: "goal", TeamID: owner.TeamID, PlayerID: owner.ID, Message: "Goal scored"})
 
 	kickoffTeamID := oppositeTeamID(owner.TeamID, state)
-	e.resetKickoff(state, kickoffTeamID)
-	*tickEvents = append(*tickEvents, events.MatchEvent{Kind: "kickoff", TeamID: kickoffTeamID, Message: "Kickoff after goal"})
+	*tickEvents = append(*tickEvents, e.prepareKickoffSequence(state, kickoffTeamID, "Kickoff after goal")...)
 }
 
 func (e *MatchEngine) handleFoul(defender *rooms.Player, attacker *rooms.Player, tickEvents *[]events.MatchEvent) {
@@ -627,7 +668,55 @@ func (e *MatchEngine) handleFoul(defender *rooms.Player, attacker *rooms.Player,
 	}
 }
 
-func (e *MatchEngine) resetKickoff(state *rooms.MatchState, kickoffTeamID string) {
+func (e *MatchEngine) prepareKickoffSequence(state *rooms.MatchState, kickoffTeamID string, message string) []events.MatchEvent {
+	kickoffPlayer, receiver := e.resetKickoff(state, kickoffTeamID)
+	tickEvents := []events.MatchEvent{{Kind: "kickoff", TeamID: kickoffTeamID, Message: message}}
+
+	if kickoffPlayer == nil || receiver == nil {
+		e.kickoff = nil
+		return tickEvents
+	}
+
+	e.kickoff = &kickoffPassState{
+		teamID:     kickoffTeamID,
+		passerID:   kickoffPlayer.ID,
+		receiverID: receiver.ID,
+		delayTicks: 2, // ~200ms with 100ms tick interval
+	}
+
+	return tickEvents
+}
+
+func (e *MatchEngine) executeKickoffPass(state *rooms.MatchState) []events.MatchEvent {
+	if e.kickoff == nil {
+		return nil
+	}
+
+	passer := findPlayerByID(state.AllPlayers(), e.kickoff.passerID)
+	receiver := findPlayerByID(state.AllPlayers(), e.kickoff.receiverID)
+	teamID := e.kickoff.teamID
+	e.kickoff = nil
+
+	if passer == nil || receiver == nil {
+		return nil
+	}
+
+	dist := distance(passer.X, passer.Y, receiver.X, receiver.Y)
+	kickoffSpeed := clamp(e.passBallSpeed(dist, false)*0.64, 0.5, 0.85)
+	e.startPassFlight(state, passer, teamID, receiver.ID, receiver.X, receiver.Y, kickoffSpeed, false)
+
+	return []events.MatchEvent{{
+		Kind:       "pass",
+		TeamID:     teamID,
+		PlayerID:   passer.ID,
+		ReceiverID: receiver.ID,
+		PassType:   "ground",
+		SuccessPct: 100,
+		Message:    "Kickoff short pass",
+	}}
+}
+
+func (e *MatchEngine) resetKickoff(state *rooms.MatchState, kickoffTeamID string) (*rooms.Player, *rooms.Player) {
 	for _, p := range state.AllPlayers() {
 		p.X = p.HomeX
 		p.Y = p.HomeY
@@ -649,12 +738,48 @@ func (e *MatchEngine) resetKickoff(state *rooms.MatchState, kickoffTeamID string
 	state.Ball.FlightTotal = 0
 	state.Ball.OwnerTeamID = kickoffTeamID
 
-	kickoffPlayer := state.HomeTeam.Players[9]
-	if kickoffTeamID == state.AwayTeam.ID {
-		kickoffPlayer = state.AwayTeam.Players[9]
+	for _, p := range state.HomeTeam.Players {
+		p.X = clamp(p.X, 0, 49.4)
 	}
+	for _, p := range state.AwayTeam.Players {
+		p.X = clamp(p.X, 50.6, state.FieldW)
+	}
+
+	kickoffTeam := state.HomeTeam
+	if kickoffTeamID == state.AwayTeam.ID {
+		kickoffTeam = state.AwayTeam
+	}
+
+	if len(kickoffTeam.Players) == 0 {
+		state.Ball.OwnerID = 0
+		return nil, nil
+	}
+
+	kickoffPlayer := kickoffTeam.Players[9]
+	if len(kickoffTeam.Players) <= 9 {
+		kickoffPlayer = kickoffTeam.Players[len(kickoffTeam.Players)-1]
+	}
+
+	receiver := kickoffTeam.Players[6]
+	if len(kickoffTeam.Players) <= 6 || receiver.ID == kickoffPlayer.ID {
+		receiver = kickoffTeam.Players[0]
+		for _, candidate := range kickoffTeam.Players {
+			if candidate.ID != kickoffPlayer.ID {
+				receiver = candidate
+				break
+			}
+		}
+	}
+
+	kickoffPlayer.X = state.FieldW / 2
+	kickoffPlayer.Y = state.FieldH / 2
+	receiver.X = clamp(state.FieldW/2-kickoffTeam.AttackDir*2.4, 0, state.FieldW)
+	receiver.Y = clamp(state.FieldH/2+1.3, 0, state.FieldH)
+
 	kickoffPlayer.HasBall = true
 	state.Ball.OwnerID = kickoffPlayer.ID
+
+	return kickoffPlayer, receiver
 }
 
 func (e *MatchEngine) updateBall(state *rooms.MatchState) {

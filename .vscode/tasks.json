@@ -1,0 +1,15 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "service-core: dev (auto-restart)",
+      "type": "shell",
+      "command": "air -c .air.toml",
+      "options": {
+        "cwd": "${workspaceFolder}/apps/service-core"
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    }
+  ]
+}
