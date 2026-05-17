@@ -87,3 +87,54 @@ cd apps/service-core && go run ./cmd/server
 - Event trong trận
 
 * giao banh khi bắt đầu trận, sau ghi bàn, sang hiệp 2
+
+### Logic Phạm Lỗi (Foul & Card Simulation Logic)
+
+Match Engine Core xử lý logic phạm lỗi dựa trên các thông số chiến thuật (Pressing, Aggression), chỉ số ẩn của cầu thủ, và trạng thái va chạm vật lý trên sân.
+
+#### 1. Điều kiện kích hoạt Phạm lỗi (Trigger Conditions)
+
+- **Tỷ lệ phạm lỗi (Foul Probability):** Phụ thuộc trực tiếp vào mức độ **Pressing/Áp lực** trong cài đặt chiến thuật của đội phòng ngự và chỉ số **Phòng ngự (Defense/Tackling)** của cầu thủ tranh chấp.
+- **Công thức gợi ý cho Match Engine:**
+  $$P(foul) = \text{Base\_Rate} \times \text{Tactical\_Pressing\_Modifier} \times (1 - \text{Tackling\_Attribute})$$
+- Nếu Random Chance trúng tỷ lệ phạm lỗi khi 2 cầu thủ vòng tròn va chạm (Collision) gần bóng, trận đấu tạm dừng để xử lý Foul Event.
+
+#### 2. Phân loại lỗi và Thẻ phạt (Foul Severity & Cards)
+
+Khi xảy ra phạm lỗi, Match Engine sẽ tính toán mức độ nghiêm trọng (Severity Score từ `0.0` đến `1.0`):
+
+- **Lỗi nhẹ (Minor Foul - `Score < 0.5`):**
+  - Trọng tài thổi còi phạt đền/phạt trực tiếp/phạt gián tiếp.
+  - Nhắc nhở (No card).
+- **Thẻ vàng (Yellow Card - `0.5 <= Score < 0.85`):**
+  - Phạt thẻ vàng cho cầu thủ phạm lỗi.
+  - **Logic cộng dồn:** Nếu cầu thủ đã có 1 thẻ vàng trước đó $\rightarrow$ Tự động chuyển thành **Thẻ đỏ (Red Card)** và đuổi khỏi sân.
+- **Thẻ đỏ trực tiếp (Straight Red Card - `Score >= 0.85`):**
+  - Phạm lỗi nghiêm trọng (xoạc bóng từ phía sau, ngăn chặn cơ hội ghi bàn mười mươi).
+  - Cầu thủ bị truất quyền thi đấu ngay lập tức.
+
+#### 3. Hệ quả sau khi dính Thẻ đỏ (Red Card Consequences)
+
+- **Frontend (UI/UX):**
+  - Vòng tròn avatar của cầu thủ bị thẻ đỏ sẽ **bị xóa khỏi sa bàn 2D** (Sân bóng chỉ còn di chuyển 10 cầu thủ hoặc ít hơn).
+  - Hiện thông báo Event Log ở sidebar bên phải: `[Phút X] - [Tên cầu thủ] nhận thẻ đỏ và rời sân!`
+- **Backend (Match Engine):**
+  - Cập nhật mảng danh sách cầu thủ đang thi đấu trên sân (Active Players).
+  - **Ảnh hưởng chiến thuật:** AI di chuyển của các cầu thủ còn lại phải tự động co cụm hoặc dãn đội hình để bù đắp vào vị trí trống (Zone) của cầu thủ bị đuổi, dẫn đến giảm chỉ số phòng thủ chung của toàn đội.
+
+#### 4. Trạng thái bóng chết sau Phạm lỗi (Set Pieces Trigger)
+
+Tùy thuộc vào vị trí (Tọa độ X, Y) xảy ra va chạm trên sa bàn:
+
+- **Ngoài vòng cấm (Outside Penalty Area):** Khởi động trạng thái **Đá phạt (Free Kick)**. Cầu thủ sút phạt tốt nhất sẽ thực hiện chuyền bóng hoặc sút thẳng (tùy khoảng cách đến khung thành).
+- **Trong vòng cấm đội phòng ngự (Inside Penalty Area):** Khởi động trạng thái **Phạt đền (Penalty Kick)**.
+  - Chuyển màn hình về trạng thái 1v1 (Thủ môn vs Cầu thủ sút phạt).
+  - Tỷ lệ ghi bàn dựa trên: `Chỉ số Sút của Tiền đạo` vs `Chỉ số Thủ môn`.
+
+#### 5. Logic VAR (Video Assistant Referee)
+
+- **Tỷ lệ xuất hiện:** `5% - 10%` đối với các tình huống nhạy cảm (Phạt đền Penalty hoặc Thẻ đỏ trực tiếp).
+- **Trạng thái Game Loop:**
+  1.  Trận đấu tạm dừng $\rightarrow$ Hiển thị icon VAR trên màn hình.
+  2.  Event log thông báo: _"Trọng tài đang kiểm tra VAR..."_
+  3.  Sau 3 giây delay, đưa ra quyết định cuối cùng (Bẻ còi hủy phạt đền/thẻ phạt hoặc giữ nguyên quyết định).

@@ -17,7 +17,7 @@ import (
 const (
 	tickInterval          = 100 * time.Millisecond
 	preKickoffWarmupTicks = 7
-	matchLength           = 2 * time.Minute
+	matchLength           = 1 * time.Minute
 	gkHomeMinX            = 2.0
 	gkHomeMaxX            = 15.0
 	gkAwayMinX            = 85.0
@@ -530,8 +530,23 @@ func (e *MatchEngine) resolvePossessionPlay(state *rooms.MatchState, tickEvents 
 	nearestDef := nearestOpponent(owner, opponent.Players)
 	foulProb := 0.0
 	if nearestDef != nil {
-		closePressure := clamp(1.5-distance(owner.X, owner.Y, nearestDef.X, nearestDef.Y), 0, 1.5)
-		foulProb = clamp(0.004+float64(nearestDef.SlidingTackle)/3200.0+opponent.Tactics.Pressing*0.03+opponent.Tactics.Pressure*0.03+closePressure*0.02, 0.01, 0.2)
+		duelDist := distance(owner.X, owner.Y, nearestDef.X, nearestDef.Y)
+		closePressure := clamp((2.2-duelDist)/2.2, 0, 1)
+		tackleAggression := clamp(float64(nearestDef.SlidingTackle-nearestDef.StandingTackle)/100.0, -0.15, 0.18)
+		attackerAgility := clamp((float64(owner.Pace)+float64(owner.Mental))/220.0, 0.35, 0.92)
+		riskyZone := clamp(1.0-distanceToGoal(owner, state)/28.0, 0, 1)
+
+		foulProb = clamp(
+			0.008+
+				closePressure*0.08+
+				tackleAggression*0.07+
+				opponent.Tactics.Pressing*0.04+
+				opponent.Tactics.Pressure*0.04+
+				riskyZone*0.03+
+				attackerAgility*0.03,
+			0.015,
+			0.34,
+		)
 	}
 
 	r := e.rand.Float64()
@@ -546,7 +561,7 @@ func (e *MatchEngine) resolvePossessionPlay(state *rooms.MatchState, tickEvents 
 	}
 
 	if e.rand.Float64() < foulProb && nearestDef != nil {
-		e.handleFoul(nearestDef, owner, tickEvents)
+		e.handleFoul(state, nearestDef, owner, tickEvents)
 	}
 }
 
@@ -660,7 +675,7 @@ func (e *MatchEngine) handleShot(state *rooms.MatchState, owner *rooms.Player, o
 	*tickEvents = append(*tickEvents, e.prepareKickoffSequence(state, kickoffTeamID, "Kickoff after goal")...)
 }
 
-func (e *MatchEngine) handleFoul(defender *rooms.Player, attacker *rooms.Player, tickEvents *[]events.MatchEvent) {
+func (e *MatchEngine) handleFoul(state *rooms.MatchState, defender *rooms.Player, attacker *rooms.Player, tickEvents *[]events.MatchEvent) {
 	*tickEvents = append(*tickEvents, events.MatchEvent{
 		Kind:     "foul",
 		TeamID:   defender.TeamID,
@@ -668,8 +683,32 @@ func (e *MatchEngine) handleFoul(defender *rooms.Player, attacker *rooms.Player,
 		Message:  fmt.Sprintf("Foul on player %d", attacker.ID),
 	})
 
+	isPenalty := isInPenaltyArea(attacker, state)
+	if isPenalty {
+		*tickEvents = append(*tickEvents, events.MatchEvent{
+			Kind:     "penalty_awarded",
+			TeamID:   attacker.TeamID,
+			PlayerID: attacker.ID,
+			Message:  "Penalty awarded",
+		})
+	} else {
+		// Foul stops active play and restarts with the fouled player in possession.
+		e.giveBallToPlayer(state, attacker)
+		*tickEvents = append(*tickEvents, events.MatchEvent{
+			Kind:     "free_kick",
+			TeamID:   attacker.TeamID,
+			PlayerID: attacker.ID,
+			Message:  "Free kick awarded",
+		})
+	}
+
+	dangerFactor := clamp(1.0-distanceToGoal(attacker, state)/35.0, 0, 1)
+	aggression := clamp(float64(defender.SlidingTackle-defender.StandingTackle)/100.0, -0.15, 0.22)
 	cardRoll := e.rand.Float64()
-	if cardRoll < 0.08 {
+	redThreshold := clamp(0.04+dangerFactor*0.08+aggression*0.1, 0.03, 0.22)
+	yellowThreshold := clamp(redThreshold+0.24+dangerFactor*0.14+aggression*0.1, redThreshold+0.14, 0.86)
+
+	if cardRoll < redThreshold {
 		*tickEvents = append(*tickEvents, events.MatchEvent{Kind: "red_card", TeamID: defender.TeamID, PlayerID: defender.ID, Message: "Straight red card"})
 		defender.Pace = maxInt(defender.Pace-8, 35)
 		defender.Defending = maxInt(defender.Defending-10, 30)
@@ -678,11 +717,179 @@ func (e *MatchEngine) handleFoul(defender *rooms.Player, attacker *rooms.Player,
 		return
 	}
 
-	if cardRoll < 0.33 {
+	if cardRoll < yellowThreshold {
 		*tickEvents = append(*tickEvents, events.MatchEvent{Kind: "yellow_card", TeamID: defender.TeamID, PlayerID: defender.ID, Message: "Yellow card"})
 		defender.Defending = maxInt(defender.Defending-3, 30)
 		defender.SlidingTackle = maxInt(defender.SlidingTackle-4, 30)
 	}
+
+	if isPenalty {
+		e.handlePenaltyKick(state, attacker, tickEvents)
+	}
+}
+
+func (e *MatchEngine) handlePenaltyKick(state *rooms.MatchState, fouled *rooms.Player, tickEvents *[]events.MatchEvent) {
+	attacking := ownerTeam(fouled.TeamID, state)
+	defending := state.HomeTeam
+	if attacking.ID == state.HomeTeam.ID {
+		defending = state.AwayTeam
+	}
+
+	taker := choosePenaltyTaker(attacking, fouled)
+	if taker == nil {
+		taker = fouled
+	}
+	if taker == nil {
+		return
+	}
+
+	gk := findGoalkeeper(defending)
+
+	spotX := 11.0
+	if attacking.ID == state.HomeTeam.ID {
+		spotX = state.FieldW - 11.0
+	}
+	spotY := state.FieldH / 2
+
+	taker.X = spotX
+	taker.Y = spotY
+	e.giveBallToPlayer(state, taker)
+
+	*tickEvents = append(*tickEvents, events.MatchEvent{
+		Kind:     "penalty_taken",
+		TeamID:   attacking.ID,
+		PlayerID: taker.ID,
+		Message:  "Penalty kick taken",
+	})
+
+	takerSkill := clamp(float64(taker.Shooting)/120.0+float64(taker.Mental)/260.0+float64(taker.Vision)/450.0, 0.35, 1.2)
+	gkSkill := 0.62
+	if gk != nil {
+		gkSkill = clamp(float64(gk.Defending)/160.0+float64(gk.StandingTackle)/260.0+float64(gk.Mental)/360.0, 0.38, 1.1)
+	}
+
+	missChance := clamp(0.045+(1.0-takerSkill)*0.06+defending.Tactics.Pressure*0.03, 0.03, 0.18)
+	saveChance := clamp(0.16+gkSkill*0.27-takerSkill*0.14+defending.Tactics.Pressure*0.05, 0.08, 0.52)
+
+	roll := e.rand.Float64()
+	if roll < missChance {
+		taker.HasBall = false
+		state.Ball.OwnerID = 0
+		state.Ball.OwnerTeamID = ""
+		state.Ball.PassTeamID = ""
+		state.Ball.InFlight = false
+		state.Ball.VX = 0
+		state.Ball.VY = 0
+		state.Ball.X = clamp(spotX+ownerGoalDirection(attacking.ID, state)*6.5, 0, state.FieldW)
+		state.Ball.Y = clamp(spotY+(e.rand.Float64()-0.5)*9.5, 0, state.FieldH)
+
+		*tickEvents = append(*tickEvents, events.MatchEvent{
+			Kind:     "penalty_missed",
+			TeamID:   attacking.ID,
+			PlayerID: taker.ID,
+			Message:  "Penalty missed",
+		})
+		return
+	}
+
+	if roll < missChance+saveChance {
+		if gk != nil {
+			e.giveBallToPlayer(state, gk)
+			*tickEvents = append(*tickEvents, events.MatchEvent{
+				Kind:          "penalty_saved",
+				TeamID:        gk.TeamID,
+				PlayerID:      gk.ID,
+				ReceiverID:    taker.ID,
+				InterceptorID: gk.ID,
+				Message:       "Goalkeeper saved the penalty",
+			})
+			return
+		}
+
+		taker.HasBall = false
+		state.Ball.OwnerID = 0
+		state.Ball.OwnerTeamID = ""
+		state.Ball.PassTeamID = ""
+		state.Ball.InFlight = false
+		state.Ball.VX = 0
+		state.Ball.VY = 0
+
+		*tickEvents = append(*tickEvents, events.MatchEvent{
+			Kind:     "penalty_saved",
+			TeamID:   defending.ID,
+			PlayerID: taker.ID,
+			Message:  "Penalty saved",
+		})
+		return
+	}
+
+	if attacking.ID == state.HomeTeam.ID {
+		state.HomeTeam.Score++
+	} else {
+		state.AwayTeam.Score++
+	}
+
+	*tickEvents = append(*tickEvents, events.MatchEvent{Kind: "penalty_scored", TeamID: attacking.ID, PlayerID: taker.ID, Message: "Penalty scored"})
+	*tickEvents = append(*tickEvents, events.MatchEvent{Kind: "goal", TeamID: attacking.ID, PlayerID: taker.ID, Message: "Goal scored"})
+
+	kickoffTeamID := oppositeTeamID(attacking.ID, state)
+	*tickEvents = append(*tickEvents, e.prepareKickoffSequence(state, kickoffTeamID, "Kickoff after penalty goal")...)
+}
+
+func choosePenaltyTaker(team *rooms.Team, preferred *rooms.Player) *rooms.Player {
+	if team == nil || len(team.Players) == 0 {
+		return nil
+	}
+
+	best := team.Players[0]
+	bestScore := -1.0
+
+	for _, p := range team.Players {
+		score := float64(p.Shooting)*1.45 + float64(p.Mental)*0.95 + float64(p.Vision)*0.55
+		if preferred != nil && p.ID == preferred.ID {
+			score += 6
+		}
+		if p.Role == "GK" {
+			score -= 25
+		}
+		if score > bestScore {
+			bestScore = score
+			best = p
+		}
+	}
+
+	return best
+}
+
+func findGoalkeeper(team *rooms.Team) *rooms.Player {
+	if team == nil || len(team.Players) == 0 {
+		return nil
+	}
+
+	for _, p := range team.Players {
+		if p.Role == "GK" {
+			return p
+		}
+	}
+
+	return team.Players[0]
+}
+
+func isInPenaltyArea(attacker *rooms.Player, state *rooms.MatchState) bool {
+	if attacker == nil || state == nil {
+		return false
+	}
+
+	inY := attacker.Y >= 12 && attacker.Y <= (state.FieldH-12)
+	if !inY {
+		return false
+	}
+
+	if attacker.TeamID == state.HomeTeam.ID {
+		return attacker.X >= (state.FieldW - 16.5)
+	}
+
+	return attacker.X <= 16.5
 }
 
 func (e *MatchEngine) prepareKickoffSequence(state *rooms.MatchState, kickoffTeamID string, message string) []events.MatchEvent {
