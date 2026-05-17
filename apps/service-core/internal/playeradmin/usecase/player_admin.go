@@ -41,6 +41,14 @@ func (u *PlayerAdminUseCase) ListCountries(ctx context.Context) ([]domain.Countr
 
 func (u *PlayerAdminUseCase) Create(ctx context.Context, input domain.Player) (domain.Player, error) {
 	input.Name = strings.TrimSpace(input.Name)
+	if input.Avatar != nil {
+		trimmedAvatar := strings.TrimSpace(*input.Avatar)
+		if trimmedAvatar == "" {
+			input.Avatar = nil
+		} else {
+			input.Avatar = &trimmedAvatar
+		}
+	}
 	input.BaseClub = strings.TrimSpace(input.BaseClub)
 	input.SpecialSkill = strings.TrimSpace(input.SpecialSkill)
 	input.Season = strings.TrimSpace(input.Season)

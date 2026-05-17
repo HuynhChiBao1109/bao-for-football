@@ -395,15 +395,21 @@ function ClubPreview({ clubs, clubId }) {
   return (
     <div className="game-stat-card">
       <p className="game-stat-card__label">Starter Club Preview</p>
-      <p className="mt-3 text-xl font-semibold text-white">{club.name}</p>
+      <div className="mt-3 flex items-center gap-3">
+        <img
+          src={club.logo || "/default-avatar.svg"}
+          alt={club.name}
+          className="h-14 w-14 rounded-2xl bg-white/10 object-contain p-2"
+        />
+        <p className="text-xl font-semibold text-white">{club.name}</p>
+      </div>
       <div className="mt-3 grid gap-2 text-sm text-slate-300 sm:grid-cols-2">
-        <p>Sơ đồ: {club.formation}</p>
         <p>Giải đấu: {club.leagueName}</p>
         <p>Ngân sách: {Number(club.budget || 0).toLocaleString()}</p>
         <p>Roster: 22 thẻ thường</p>
       </div>
       <p className="mt-3 text-xs uppercase tracking-[0.18em] text-slate-400">
-        Đăng ký xong nhận ngay đội hình khởi tạo của CLB này.
+        Đăng ký xong nhận ngay CLB khởi tạo này.
       </p>
     </div>
   );

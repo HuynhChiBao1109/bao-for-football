@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strings"
 	"sync"
 	"time"
 
@@ -37,7 +38,7 @@ func (r *Repository) List(ctx context.Context) ([]domain.Player, error) {
 	}
 
 	rows, err := r.db.QueryContext(ctx, `
-SELECT ap.id, ap.name, ap.country_id,
+SELECT ap.id, ap.name, ap.country_id, ap.avatar,
 	COALESCE(c.id, 0) AS country_row_id,
 	COALESCE(c.name, ''),
 	COALESCE(c.code, ''),
@@ -57,11 +58,13 @@ ORDER BY ap.id DESC`)
 	for rows.Next() {
 		var p domain.Player
 		var countryRowID int64
+		var avatar sql.NullString
 		var createdAt sql.NullTime
 		if err := rows.Scan(
 			&p.ID,
 			&p.Name,
 			&p.CountryID,
+			&avatar,
 			&countryRowID,
 			&p.Country.Name,
 			&p.Country.Code,
@@ -90,6 +93,10 @@ ORDER BY ap.id DESC`)
 			&createdAt,
 		); err != nil {
 			return nil, err
+		}
+		if avatar.Valid {
+			avatarValue := avatar.String
+			p.Avatar = &avatarValue
 		}
 		if createdAt.Valid {
 			p.CreatedAt = createdAt.Time
@@ -120,7 +127,7 @@ func (r *Repository) GetByID(ctx context.Context, id int64) (domain.Player, erro
 	}
 
 	row := r.db.QueryRowContext(ctx, `
-SELECT ap.id, ap.name, ap.country_id,
+SELECT ap.id, ap.name, ap.country_id, ap.avatar,
 	COALESCE(c.id, 0) AS country_row_id,
 	COALESCE(c.name, ''),
 	COALESCE(c.code, ''),
@@ -135,11 +142,13 @@ LIMIT 1`, id)
 
 	var p domain.Player
 	var countryRowID int64
+	var avatar sql.NullString
 	var createdAt sql.NullTime
 	if err := row.Scan(
 		&p.ID,
 		&p.Name,
 		&p.CountryID,
+		&avatar,
 		&countryRowID,
 		&p.Country.Name,
 		&p.Country.Code,
@@ -171,6 +180,10 @@ LIMIT 1`, id)
 			return domain.Player{}, errors.New("player not found")
 		}
 		return domain.Player{}, err
+	}
+	if avatar.Valid {
+		avatarValue := avatar.String
+		p.Avatar = &avatarValue
 	}
 	if createdAt.Valid {
 		p.CreatedAt = createdAt.Time
@@ -243,11 +256,12 @@ LIMIT 1`, input.CountryID)
 
 	result, err := r.db.ExecContext(ctx, `
 INSERT INTO admin_players (
-  name, country_id, nationality, base_club, season, source_type, special_skill,
+  name, country_id, avatar, nationality, base_club, season, source_type, special_skill,
 	shooting, passing, long_pass, vision, gk_reach, counter_attack_awareness, gk_parrying, gk_reflex, gk_catching, duels, pace, physical, defending, standing_tackle, sliding_tackle, dribbling
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		input.Name,
 		input.CountryID,
+		avatarValue(input.Avatar),
 		input.Nationality,
 		input.BaseClub,
 		input.Season,
@@ -281,6 +295,17 @@ INSERT INTO admin_players (
 	input.ID = id
 
 	return input, nil
+}
+
+func avatarValue(value *string) sql.NullString {
+	if value == nil {
+		return sql.NullString{}
+	}
+	trimmed := strings.TrimSpace(*value)
+	if trimmed == "" {
+		return sql.NullString{}
+	}
+	return sql.NullString{String: trimmed, Valid: true}
 }
 
 func (r *Repository) ensureTable(ctx context.Context) error {

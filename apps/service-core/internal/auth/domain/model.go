@@ -21,7 +21,8 @@ type TeamAssignment struct {
 type ClubOption struct {
 	ID         int64  `json:"id"`
 	Name       string `json:"name"`
-	Formation  string `json:"formation"`
+	Logo       string `json:"logo"`
+	CountryID  *int64 `json:"countryId,omitempty"`
 	Budget     int64  `json:"budget"`
 	LeagueName string `json:"leagueName"`
 }

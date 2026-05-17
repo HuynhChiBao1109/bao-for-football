@@ -17,6 +17,10 @@ export function normalizeAuthenticatedRoute(
   pathname: string,
   isAdmin: boolean,
 ) {
+  if (isAdmin) {
+    return pathname === ROUTES.admin ? ROUTES.admin : ROUTES.admin;
+  }
+
   if (!pathname || pathname === "/" || pathname === ROUTES.login) {
     return defaultAuthenticatedRoute();
   }
@@ -30,14 +34,14 @@ export function normalizeAuthenticatedRoute(
     ROUTES.gacha,
   ]);
 
-  if (isAdmin) {
-    allowed.add(ROUTES.admin);
-  }
-
   return allowed.has(pathname) ? pathname : defaultAuthenticatedRoute();
 }
 
 export function navItems(isAdmin: boolean) {
+  if (isAdmin) {
+    return [{ path: ROUTES.admin, label: "Admin" }];
+  }
+
   const items = [
     { path: ROUTES.club, label: "CLB" },
     { path: ROUTES.players, label: "Cầu thủ" },
@@ -46,10 +50,6 @@ export function navItems(isAdmin: boolean) {
     { path: ROUTES.pvp, label: "PvP" },
     { path: ROUTES.gacha, label: "Gacha" },
   ];
-
-  if (isAdmin) {
-    items.push({ path: ROUTES.admin, label: "Admin" });
-  }
 
   return items;
 }

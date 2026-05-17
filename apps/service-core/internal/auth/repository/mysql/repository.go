@@ -47,9 +47,9 @@ func (r *Repository) ListRegistrationClubs(ctx context.Context) ([]domain.ClubOp
 	}
 
 	rows, err := r.db.QueryContext(ctx, `
-SELECT id, name, formation, budget, league_name
-FROM clubs
-ORDER BY id ASC`)
+SELECT c.id, c.name, c.logo, c.country_id, c.budget, c.league_name
+FROM clubs c
+ORDER BY c.id ASC`)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,8 @@ ORDER BY id ASC`)
 		if err := rows.Scan(
 			&club.ID,
 			&club.Name,
-			&club.Formation,
+			&club.Logo,
+			&club.CountryID,
 			&club.Budget,
 			&club.LeagueName,
 		); err != nil {
@@ -439,8 +440,13 @@ ORDER BY ap.id ASC`, starterClubName)
 
 func defaultClubs() []domain.ClubOption {
 	return []domain.ClubOption{
-		{ID: 1, Name: "FC Navy", Formation: "4-3-3", Budget: 120000000, LeagueName: "Premier League"},
-		{ID: 2, Name: "Crimson United", Formation: "4-2-3-1", Budget: 115000000, LeagueName: "Premier League"},
-		{ID: 3, Name: "Golden Phoenix", Formation: "3-5-2", Budget: 110000000, LeagueName: "Championship"},
+		{ID: 1, Name: "Manchester United", Logo: "https://media.api-sports.io/football/teams/33.png", Budget: 120000000, LeagueName: "Premier League"},
+		{ID: 2, Name: "Manchester City", Logo: "https://media.api-sports.io/football/teams/50.png", Budget: 118000000, LeagueName: "Premier League"},
+		{ID: 3, Name: "Liverpool", Logo: "https://media.api-sports.io/football/teams/40.png", Budget: 116000000, LeagueName: "Premier League"},
+		{ID: 4, Name: "Chelsea", Logo: "https://media.api-sports.io/football/teams/49.png", Budget: 114000000, LeagueName: "Premier League"},
+		{ID: 5, Name: "Arsenal", Logo: "https://media.api-sports.io/football/teams/42.png", Budget: 112000000, LeagueName: "Premier League"},
+		{ID: 6, Name: "Tottenham Hotspur", Logo: "https://media.api-sports.io/football/teams/47.png", Budget: 110000000, LeagueName: "Premier League"},
+		{ID: 7, Name: "Newcastle United", Logo: "https://media.api-sports.io/football/teams/34.png", Budget: 108000000, LeagueName: "Premier League"},
+		{ID: 8, Name: "Aston Villa", Logo: "https://media.api-sports.io/football/teams/66.png", Budget: 106000000, LeagueName: "Premier League"},
 	}
 }

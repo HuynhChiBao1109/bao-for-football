@@ -1,0 +1,74 @@
+[
+  {
+    "id": 1,
+    "name": "Manchester United",
+    "logo": "https://media.api-sports.io/football/teams/33.png",
+    "countryName": "England",
+    "countryCode": "GB-ENG",
+    "budget": 120000000,
+    "leagueName": "Premier League"
+  },
+  {
+    "id": 2,
+    "name": "Manchester City",
+    "logo": "https://media.api-sports.io/football/teams/50.png",
+    "countryName": "England",
+    "countryCode": "GB-ENG",
+    "budget": 118000000,
+    "leagueName": "Premier League"
+  },
+  {
+    "id": 3,
+    "name": "Liverpool",
+    "logo": "https://media.api-sports.io/football/teams/40.png",
+    "countryName": "England",
+    "countryCode": "GB-ENG",
+    "budget": 116000000,
+    "leagueName": "Premier League"
+  },
+  {
+    "id": 4,
+    "name": "Chelsea",
+    "logo": "https://media.api-sports.io/football/teams/49.png",
+    "countryName": "England",
+    "countryCode": "GB-ENG",
+    "budget": 114000000,
+    "leagueName": "Premier League"
+  },
+  {
+    "id": 5,
+    "name": "Arsenal",
+    "logo": "https://media.api-sports.io/football/teams/42.png",
+    "countryName": "England",
+    "countryCode": "GB-ENG",
+    "budget": 112000000,
+    "leagueName": "Premier League"
+  },
+  {
+    "id": 6,
+    "name": "Tottenham Hotspur",
+    "logo": "https://media.api-sports.io/football/teams/47.png",
+    "countryName": "England",
+    "countryCode": "GB-ENG",
+    "budget": 110000000,
+    "leagueName": "Premier League"
+  },
+  {
+    "id": 7,
+    "name": "Newcastle United",
+    "logo": "https://media.api-sports.io/football/teams/34.png",
+    "countryName": "England",
+    "countryCode": "GB-ENG",
+    "budget": 108000000,
+    "leagueName": "Premier League"
+  },
+  {
+    "id": 8,
+    "name": "Aston Villa",
+    "logo": "https://media.api-sports.io/football/teams/66.png",
+    "countryName": "England",
+    "countryCode": "GB-ENG",
+    "budget": 106000000,
+    "leagueName": "Premier League"
+  }
+]

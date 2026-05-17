@@ -7,6 +7,7 @@ type Player struct {
 	Name           string    `json:"name"`
 	CountryID      int64     `json:"countryId"`
 	Country        Country   `json:"country"`
+	Avatar         *string   `json:"avatar"`
 	Nationality    string    `json:"nationality"`
 	BaseClub       string    `json:"baseClub"`
 	Season         string    `json:"season"`

@@ -110,11 +110,17 @@ function ClubPage({ token, sessionData, onUnauthorized, onNavigate }) {
                 <p className="game-stat-card__label text-emerald-300">
                   Starter Club
                 </p>
-                <h3 className="mt-3 text-3xl font-semibold text-white">
-                  {club.name}
-                </h3>
+                <div className="mt-3 flex items-center gap-3">
+                  <img
+                    src={club.logo || "/default-avatar.svg"}
+                    alt={club.name}
+                    className="h-16 w-16 rounded-2xl bg-white/10 object-contain p-2"
+                  />
+                  <h3 className="text-3xl font-semibold text-white">
+                    {club.name}
+                  </h3>
+                </div>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <MiniInfo label="Formation" value={club.formation} />
                   <MiniInfo label="League" value={club.leagueName} />
                   <MiniInfo
                     label="Starter Budget"

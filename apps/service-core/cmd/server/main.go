@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"os"
 
 	aihttp "fifam/apps/service-core/internal/ai/delivery/http"
 	aimysql "fifam/apps/service-core/internal/ai/repository/mysql"
@@ -18,6 +19,9 @@ import (
 	gachahttp "fifam/apps/service-core/internal/gacha/delivery/http"
 	gachamysql "fifam/apps/service-core/internal/gacha/repository/mysql"
 	gachausecase "fifam/apps/service-core/internal/gacha/usecase"
+	gachaadminhttp "fifam/apps/service-core/internal/gachaadmin/delivery/http"
+	gachaadminmysql "fifam/apps/service-core/internal/gachaadmin/repository/mysql"
+	gachaadminusecase "fifam/apps/service-core/internal/gachaadmin/usecase"
 	matchhttp "fifam/apps/service-core/internal/match/delivery/http"
 	matchmysql "fifam/apps/service-core/internal/match/repository/mysql"
 	matchusecase "fifam/apps/service-core/internal/match/usecase"
@@ -82,6 +86,9 @@ func main() {
 	gachaRepo := gachamysql.NewRepository(db)
 	gachaUC := gachausecase.NewRollUseCase(gachaRepo)
 	gachaHandler := gachahttp.NewHandler(gachaUC)
+	gachaAdminRepo := gachaadminmysql.NewRepository(db)
+	gachaAdminUC := gachaadminusecase.NewBannerUseCase(gachaAdminRepo)
+	gachaAdminHandler := gachaadminhttp.NewHandler(gachaAdminUC)
 
 	playerAdminRepo := playeradminmysql.NewRepository(db)
 	playerAdminUC := playeradminusecase.NewPlayerAdminUseCase(playerAdminRepo)
@@ -99,6 +106,10 @@ func main() {
 	router := gin.New()
 	router.Use(coremiddleware.CORS())
 	router.Use(gin.Recovery())
+	if err := os.MkdirAll("uploads/image", 0755); err != nil {
+		log.Printf("upload directory warning: %v", err)
+	}
+	router.Static("/uploads/image", "./uploads/image")
 
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"service": "service-core", "status": "ok"})
@@ -131,6 +142,8 @@ func main() {
 	admin.GET("/players", playerAdminHandler.List)
 	admin.GET("/players/:id", playerAdminHandler.Detail)
 	admin.POST("/players", playerAdminHandler.Create)
+	admin.POST("/uploads/image", gachaAdminHandler.UploadImage)
+	admin.POST("/gacha/banners", gachaAdminHandler.CreateBanner)
 
 	log.Printf("service-core listening on %s", cfg.HTTPPort)
 	if err := router.Run(":" + cfg.HTTPPort); err != nil {

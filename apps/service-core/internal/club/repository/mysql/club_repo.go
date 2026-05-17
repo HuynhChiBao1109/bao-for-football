@@ -20,8 +20,9 @@ func (r *Repository) GetByID(ctx context.Context, id int64) (*domain.Club, error
 	if r.db == nil {
 		return &domain.Club{
 			ID:         id,
-			Name:       "FC Navy",
-			Formation:  "4-3-3",
+			Name:       "Manchester United",
+			Logo:       "https://media.api-sports.io/football/teams/33.png",
+			CountryID:  nil,
 			Budget:     120000000,
 			LeagueName: "Premier League",
 		}, nil
@@ -29,7 +30,7 @@ func (r *Repository) GetByID(ctx context.Context, id int64) (*domain.Club, error
 
 	club := &domain.Club{}
 	query := `
-SELECT id, name, formation, budget, league_name
+SELECT id, name, logo, country_id, budget, league_name
 FROM clubs
 WHERE id = ?
 LIMIT 1`
@@ -37,7 +38,8 @@ LIMIT 1`
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&club.ID,
 		&club.Name,
-		&club.Formation,
+		&club.Logo,
+		&club.CountryID,
 		&club.Budget,
 		&club.LeagueName,
 	)
