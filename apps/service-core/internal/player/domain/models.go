@@ -3,27 +3,31 @@ package domain
 import "time"
 
 type Stats struct {
-	Shooting  int
-	Passing   int
-	Pace      int
-	Physical  int
-	Defending int
-	Dribbling int
+	Shooting       int
+	Passing        int
+	Pace           int
+	Physical       int
+	Defending      int
+	StandingTackle int
+	SlidingTackle  int
+	Dribbling      int
 }
 
 func (s Stats) OverallAverage() float64 {
-	total := s.Shooting + s.Passing + s.Pace + s.Physical + s.Defending + s.Dribbling
-	return float64(total) / 6.0
+	total := s.Shooting + s.Passing + s.Pace + s.Physical + s.Defending + s.StandingTackle + s.SlidingTackle + s.Dribbling
+	return float64(total) / 8.0
 }
 
 func CalculateTotalStats(base Stats, bonus Stats) (Stats, float64) {
 	total := Stats{
-		Shooting:  base.Shooting + bonus.Shooting,
-		Passing:   base.Passing + bonus.Passing,
-		Pace:      base.Pace + bonus.Pace,
-		Physical:  base.Physical + bonus.Physical,
-		Defending: base.Defending + bonus.Defending,
-		Dribbling: base.Dribbling + bonus.Dribbling,
+		Shooting:       base.Shooting + bonus.Shooting,
+		Passing:        base.Passing + bonus.Passing,
+		Pace:           base.Pace + bonus.Pace,
+		Physical:       base.Physical + bonus.Physical,
+		Defending:      base.Defending + bonus.Defending,
+		StandingTackle: base.StandingTackle + bonus.StandingTackle,
+		SlidingTackle:  base.SlidingTackle + bonus.SlidingTackle,
+		Dribbling:      base.Dribbling + bonus.Dribbling,
 	}
 
 	return total, total.OverallAverage()
@@ -61,23 +65,25 @@ func (Team) TableName() string {
 }
 
 type PlayerTemplate struct {
-	ID            uint64    `gorm:"primaryKey;autoIncrement;column:id"`
-	Name          string    `gorm:"type:varchar(120);not null;index:idx_player_templates_name;column:name"`
-	HeightCM      uint16    `gorm:"not null;column:height_cm"`
-	Nationality   string    `gorm:"type:varchar(80);not null;column:nationality"`
-	BaseClub      string    `gorm:"type:varchar(120);not null;column:base_club"`
-	Season        string    `gorm:"type:enum('Normal','Special');not null;default:Normal;index:idx_player_templates_season;column:season"`
-	ImageURL      string    `gorm:"type:varchar(500);column:image_url"`
-	BaseShooting  int       `gorm:"not null;default:1;column:base_shooting"`
-	BasePassing   int       `gorm:"not null;default:1;column:base_passing"`
-	BaseLongPass  int       `gorm:"not null;default:1;column:base_long_pass"`
-	BaseVision    int       `gorm:"not null;default:1;column:base_vision"`
-	BasePace      int       `gorm:"not null;default:1;column:base_pace"`
-	BasePhysical  int       `gorm:"not null;default:1;column:base_physical"`
-	BaseDefending int       `gorm:"not null;default:1;column:base_defending"`
-	BaseDribbling int       `gorm:"not null;default:1;column:base_dribbling"`
-	CreatedAt     time.Time `gorm:"column:created_at"`
-	UpdatedAt     time.Time `gorm:"column:updated_at"`
+	ID                 uint64    `gorm:"primaryKey;autoIncrement;column:id"`
+	Name               string    `gorm:"type:varchar(120);not null;index:idx_player_templates_name;column:name"`
+	HeightCM           uint16    `gorm:"not null;column:height_cm"`
+	Nationality        string    `gorm:"type:varchar(80);not null;column:nationality"`
+	BaseClub           string    `gorm:"type:varchar(120);not null;column:base_club"`
+	Season             string    `gorm:"type:enum('Normal','Special');not null;default:Normal;index:idx_player_templates_season;column:season"`
+	ImageURL           string    `gorm:"type:varchar(500);column:image_url"`
+	BaseShooting       int       `gorm:"not null;default:1;column:base_shooting"`
+	BasePassing        int       `gorm:"not null;default:1;column:base_passing"`
+	BaseLongPass       int       `gorm:"not null;default:1;column:base_long_pass"`
+	BaseVision         int       `gorm:"not null;default:1;column:base_vision"`
+	BasePace           int       `gorm:"not null;default:1;column:base_pace"`
+	BasePhysical       int       `gorm:"not null;default:1;column:base_physical"`
+	BaseDefending      int       `gorm:"not null;default:1;column:base_defending"`
+	BaseStandingTackle int       `gorm:"not null;default:1;column:base_standing_tackle"`
+	BaseSlidingTackle  int       `gorm:"not null;default:1;column:base_sliding_tackle"`
+	BaseDribbling      int       `gorm:"not null;default:1;column:base_dribbling"`
+	CreatedAt          time.Time `gorm:"column:created_at"`
+	UpdatedAt          time.Time `gorm:"column:updated_at"`
 }
 
 func (PlayerTemplate) TableName() string {
@@ -86,31 +92,35 @@ func (PlayerTemplate) TableName() string {
 
 func (p PlayerTemplate) BaseStats() Stats {
 	return Stats{
-		Shooting:  p.BaseShooting,
-		Passing:   p.BasePassing,
-		Pace:      p.BasePace,
-		Physical:  p.BasePhysical,
-		Defending: p.BaseDefending,
-		Dribbling: p.BaseDribbling,
+		Shooting:       p.BaseShooting,
+		Passing:        p.BasePassing,
+		Pace:           p.BasePace,
+		Physical:       p.BasePhysical,
+		Defending:      p.BaseDefending,
+		StandingTackle: p.BaseStandingTackle,
+		SlidingTackle:  p.BaseSlidingTackle,
+		Dribbling:      p.BaseDribbling,
 	}
 }
 
 type UserPlayer struct {
-	ID               uint64    `gorm:"primaryKey;autoIncrement;column:id"`
-	UserID           uint64    `gorm:"not null;index:idx_user_players_user_id;column:user_id"`
-	PlayerTemplateID uint64    `gorm:"not null;index:idx_user_players_template_id;column:player_template_id"`
-	Level            uint8     `gorm:"not null;default:1;check:level_between_1_36,level BETWEEN 1 AND 36;column:level"`
-	Exp              uint32    `gorm:"not null;default:0;column:exp"`
-	CurrentPoints    uint32    `gorm:"not null;default:0;column:current_points"`
-	BonusShooting    int       `gorm:"not null;default:0;column:bonus_shooting"`
-	BonusPassing     int       `gorm:"not null;default:0;column:bonus_passing"`
-	BonusPace        int       `gorm:"not null;default:0;column:bonus_pace"`
-	BonusPhysical    int       `gorm:"not null;default:0;column:bonus_physical"`
-	BonusDefending   int       `gorm:"not null;default:0;column:bonus_defending"`
-	BonusDribbling   int       `gorm:"not null;default:0;column:bonus_dribbling"`
-	ObtainedAt       time.Time `gorm:"column:obtained_at"`
-	CreatedAt        time.Time `gorm:"column:created_at"`
-	UpdatedAt        time.Time `gorm:"column:updated_at"`
+	ID                  uint64    `gorm:"primaryKey;autoIncrement;column:id"`
+	UserID              uint64    `gorm:"not null;index:idx_user_players_user_id;column:user_id"`
+	PlayerTemplateID    uint64    `gorm:"not null;index:idx_user_players_template_id;column:player_template_id"`
+	Level               uint8     `gorm:"not null;default:1;check:level_between_1_36,level BETWEEN 1 AND 36;column:level"`
+	Exp                 uint32    `gorm:"not null;default:0;column:exp"`
+	CurrentPoints       uint32    `gorm:"not null;default:0;column:current_points"`
+	BonusShooting       int       `gorm:"not null;default:0;column:bonus_shooting"`
+	BonusPassing        int       `gorm:"not null;default:0;column:bonus_passing"`
+	BonusPace           int       `gorm:"not null;default:0;column:bonus_pace"`
+	BonusPhysical       int       `gorm:"not null;default:0;column:bonus_physical"`
+	BonusDefending      int       `gorm:"not null;default:0;column:bonus_defending"`
+	BonusStandingTackle int       `gorm:"not null;default:0;column:bonus_standing_tackle"`
+	BonusSlidingTackle  int       `gorm:"not null;default:0;column:bonus_sliding_tackle"`
+	BonusDribbling      int       `gorm:"not null;default:0;column:bonus_dribbling"`
+	ObtainedAt          time.Time `gorm:"column:obtained_at"`
+	CreatedAt           time.Time `gorm:"column:created_at"`
+	UpdatedAt           time.Time `gorm:"column:updated_at"`
 
 	Template PlayerTemplate `gorm:"foreignKey:PlayerTemplateID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
 }
@@ -121,12 +131,14 @@ func (UserPlayer) TableName() string {
 
 func (u UserPlayer) BonusStats() Stats {
 	return Stats{
-		Shooting:  u.BonusShooting,
-		Passing:   u.BonusPassing,
-		Pace:      u.BonusPace,
-		Physical:  u.BonusPhysical,
-		Defending: u.BonusDefending,
-		Dribbling: u.BonusDribbling,
+		Shooting:       u.BonusShooting,
+		Passing:        u.BonusPassing,
+		Pace:           u.BonusPace,
+		Physical:       u.BonusPhysical,
+		Defending:      u.BonusDefending,
+		StandingTackle: u.BonusStandingTackle,
+		SlidingTackle:  u.BonusSlidingTackle,
+		Dribbling:      u.BonusDribbling,
 	}
 }
 
@@ -138,7 +150,7 @@ type Skill struct {
 	ID        uint64    `gorm:"primaryKey;autoIncrement;column:id"`
 	Name      string    `gorm:"type:varchar(120);not null;uniqueIndex;column:name"`
 	IconURL   string    `gorm:"type:varchar(500);column:icon_url"`
-	BuffType  string    `gorm:"type:enum('shooting','passing','pace','physical','defending','dribbling');not null;column:buff_type"`
+	BuffType  string    `gorm:"type:enum('shooting','passing','pace','physical','defending','standingTackle','slidingTackle','dribbling');not null;column:buff_type"`
 	BuffValue int       `gorm:"not null;default:1;column:buff_value"`
 	CreatedAt time.Time `gorm:"column:created_at"`
 	UpdatedAt time.Time `gorm:"column:updated_at"`

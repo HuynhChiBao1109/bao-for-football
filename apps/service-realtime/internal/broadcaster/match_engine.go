@@ -517,7 +517,7 @@ func (e *MatchEngine) resolvePossessionPlay(state *rooms.MatchState, tickEvents 
 	foulProb := 0.0
 	if nearestDef != nil {
 		closePressure := clamp(1.5-distance(owner.X, owner.Y, nearestDef.X, nearestDef.Y), 0, 1.5)
-		foulProb = clamp(0.004+float64(nearestDef.Defending)/3200.0+opponent.Tactics.Pressing*0.03+opponent.Tactics.Pressure*0.03+closePressure*0.02, 0.01, 0.2)
+		foulProb = clamp(0.004+float64(nearestDef.SlidingTackle)/3200.0+opponent.Tactics.Pressing*0.03+opponent.Tactics.Pressure*0.03+closePressure*0.02, 0.01, 0.2)
 	}
 
 	r := e.rand.Float64()
@@ -659,12 +659,15 @@ func (e *MatchEngine) handleFoul(defender *rooms.Player, attacker *rooms.Player,
 		*tickEvents = append(*tickEvents, events.MatchEvent{Kind: "red_card", TeamID: defender.TeamID, PlayerID: defender.ID, Message: "Straight red card"})
 		defender.Pace = maxInt(defender.Pace-8, 35)
 		defender.Defending = maxInt(defender.Defending-10, 30)
+		defender.SlidingTackle = maxInt(defender.SlidingTackle-12, 30)
+		defender.StandingTackle = maxInt(defender.StandingTackle-8, 30)
 		return
 	}
 
 	if cardRoll < 0.33 {
 		*tickEvents = append(*tickEvents, events.MatchEvent{Kind: "yellow_card", TeamID: defender.TeamID, PlayerID: defender.ID, Message: "Yellow card"})
 		defender.Defending = maxInt(defender.Defending-3, 30)
+		defender.SlidingTackle = maxInt(defender.SlidingTackle-4, 30)
 	}
 }
 
@@ -948,7 +951,7 @@ func (e *MatchEngine) estimateLaneInterceptionPoint(owner *rooms.Player, target 
 			continue
 		}
 
-		score := (1.0 - perp/reach) * (0.5 + float64(o.Defending)/220.0)
+		score := (1.0 - perp/reach) * (0.45 + float64(o.StandingTackle)/250.0 + float64(o.Defending)/420.0)
 		if score <= bestScore {
 			continue
 		}
@@ -1037,7 +1040,7 @@ func passingLaneRisk(owner *rooms.Player, target *rooms.Player, opponents []*roo
 			continue
 		}
 
-		lineThreat := (1.0 - perp/4.4) * (0.58 + float64(o.Defending)/220.0)
+		lineThreat := (1.0 - perp/4.4) * (0.46 + float64(o.StandingTackle)/260.0 + float64(o.Defending)/460.0)
 		risk += lineThreat
 	}
 
@@ -1230,7 +1233,8 @@ func (e *MatchEngine) tryResolveFlightContact(state *rooms.MatchState, tickEvent
 		if p.TeamID == state.Ball.PassTeamID {
 			control += float64(p.Passing) / 280.0
 		} else {
-			control += float64(p.Defending) / 240.0
+			control += float64(p.StandingTackle) / 270.0
+			control += float64(p.SlidingTackle) / 360.0
 		}
 
 		control += (reach - d) * 0.45
@@ -1309,9 +1313,9 @@ func teamDefendingAverage(players []*rooms.Player) float64 {
 	}
 	sum := 0
 	for _, p := range players {
-		sum += p.Defending
+		sum += p.Defending + p.StandingTackle + p.SlidingTackle
 	}
-	return float64(sum) / float64(len(players))
+	return float64(sum) / float64(len(players)*3)
 }
 
 func distanceToGoal(p *rooms.Player, state *rooms.MatchState) float64 {

@@ -23,6 +23,8 @@ const defaultForm = {
   pace: 70,
   physical: 70,
   defending: 70,
+  standingTackle: 70,
+  slidingTackle: 70,
   dribbling: 70,
 };
 
@@ -284,6 +286,7 @@ function AdminDashboard({
                       {player.counterAttackAwareness}/{player.crossbarHandling}/
                       {player.reflexes}/{player.aerialCatching}/{player.duels}/
                       {player.pace}/{player.physical}/{player.defending}/
+                      {player.standingTackle}/{player.slidingTackle}/
                       {player.dribbling}
                     </td>
                   </tr>
@@ -359,6 +362,8 @@ function AdminDashboard({
                 "pace",
                 "physical",
                 "defending",
+                "standingTackle",
+                "slidingTackle",
                 "dribbling",
               ].map((key) => (
                 <NumberField
@@ -435,7 +440,8 @@ function AdminDashboard({
                   {selectedPlayer.crossbarHandling}/{selectedPlayer.reflexes}/
                   {selectedPlayer.aerialCatching}/{selectedPlayer.duels}/
                   {selectedPlayer.pace}/{selectedPlayer.physical}/
-                  {selectedPlayer.defending}/{selectedPlayer.dribbling}
+                  {selectedPlayer.defending}/{selectedPlayer.standingTackle}/
+                  {selectedPlayer.slidingTackle}/{selectedPlayer.dribbling}
                 </div>
               </div>
             )}
@@ -509,9 +515,11 @@ function averageStats(form) {
     Number(form.pace) +
     Number(form.physical) +
     Number(form.defending) +
+    Number(form.standingTackle) +
+    Number(form.slidingTackle) +
     Number(form.dribbling);
 
-  return total / 14;
+  return total / 16;
 }
 
 export default AdminDashboard;

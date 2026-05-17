@@ -44,7 +44,7 @@ SELECT ap.id, ap.name, ap.country_id,
 	COALESCE(c.flag, ''),
 	COALESCE(c.name, ap.nationality) AS nationality,
 	ap.base_club, ap.season, ap.source_type, ap.special_skill,
-	ap.shooting, ap.passing, ap.long_pass, ap.vision, ap.defensive_awareness, ap.counter_attack_awareness, ap.crossbar_handling, ap.reflexes, ap.aerial_catching, ap.duels, ap.pace, ap.physical, ap.defending, ap.dribbling, ap.created_at
+	ap.shooting, ap.passing, ap.long_pass, ap.vision, ap.defensive_awareness, ap.counter_attack_awareness, ap.crossbar_handling, ap.reflexes, ap.aerial_catching, ap.duels, ap.pace, ap.physical, ap.defending, ap.standing_tackle, ap.sliding_tackle, ap.dribbling, ap.created_at
 FROM admin_players ap
 LEFT JOIN countries c ON c.id = ap.country_id
 ORDER BY ap.id DESC`)
@@ -83,6 +83,8 @@ ORDER BY ap.id DESC`)
 			&p.Pace,
 			&p.Physical,
 			&p.Defending,
+			&p.StandingTackle,
+			&p.SlidingTackle,
 			&p.Dribbling,
 			&p.CreatedAt,
 		); err != nil {
@@ -121,7 +123,7 @@ SELECT ap.id, ap.name, ap.country_id,
 	COALESCE(c.flag, ''),
 	COALESCE(c.name, ap.nationality) AS nationality,
 	ap.base_club, ap.season, ap.source_type, ap.special_skill,
-	ap.shooting, ap.passing, ap.long_pass, ap.vision, ap.defensive_awareness, ap.counter_attack_awareness, ap.crossbar_handling, ap.reflexes, ap.aerial_catching, ap.duels, ap.pace, ap.physical, ap.defending, ap.dribbling, ap.created_at
+	ap.shooting, ap.passing, ap.long_pass, ap.vision, ap.defensive_awareness, ap.counter_attack_awareness, ap.crossbar_handling, ap.reflexes, ap.aerial_catching, ap.duels, ap.pace, ap.physical, ap.defending, ap.standing_tackle, ap.sliding_tackle, ap.dribbling, ap.created_at
 FROM admin_players ap
 LEFT JOIN countries c ON c.id = ap.country_id
 WHERE ap.id = ?
@@ -155,6 +157,8 @@ LIMIT 1`, id)
 		&p.Pace,
 		&p.Physical,
 		&p.Defending,
+		&p.StandingTackle,
+		&p.SlidingTackle,
 		&p.Dribbling,
 		&p.CreatedAt,
 	); err != nil {
@@ -232,8 +236,8 @@ LIMIT 1`, input.CountryID)
 	result, err := r.db.ExecContext(ctx, `
 INSERT INTO admin_players (
   name, country_id, nationality, base_club, season, source_type, special_skill,
-  shooting, passing, long_pass, vision, defensive_awareness, counter_attack_awareness, crossbar_handling, reflexes, aerial_catching, duels, pace, physical, defending, dribbling
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  shooting, passing, long_pass, vision, defensive_awareness, counter_attack_awareness, crossbar_handling, reflexes, aerial_catching, duels, pace, physical, defending, standing_tackle, sliding_tackle, dribbling
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		input.Name,
 		input.CountryID,
 		input.Nationality,
@@ -254,6 +258,8 @@ INSERT INTO admin_players (
 		input.Pace,
 		input.Physical,
 		input.Defending,
+		input.StandingTackle,
+		input.SlidingTackle,
 		input.Dribbling,
 	)
 	if err != nil {

@@ -32,6 +32,8 @@ type allocateStatsRequest struct {
 	Pace                   int `json:"pace"`
 	Physical               int `json:"physical"`
 	Defending              int `json:"defending"`
+	StandingTackle         int `json:"standingTackle"`
+	SlidingTackle          int `json:"slidingTackle"`
 	Dribbling              int `json:"dribbling"`
 }
 
@@ -84,6 +86,8 @@ func (h *Handler) AllocateStats(c *gin.Context) {
 		Pace:                   req.Pace,
 		Physical:               req.Physical,
 		Defending:              req.Defending,
+		StandingTackle:         req.StandingTackle,
+		SlidingTackle:          req.SlidingTackle,
 		Dribbling:              req.Dribbling,
 	})
 	if err != nil {

@@ -345,10 +345,12 @@ INSERT INTO user_players (
   bonus_pace,
   bonus_physical,
   bonus_defending,
+	bonus_standing_tackle,
+	bonus_sliding_tackle,
   bonus_dribbling,
   obtained_at
 )
-SELECT ?, pt.id, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, CURRENT_TIMESTAMP
+SELECT ?, pt.id, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, CURRENT_TIMESTAMP
 FROM player_templates pt
 LEFT JOIN user_players up
   ON up.user_id = ? AND up.player_template_id = pt.id
@@ -395,6 +397,8 @@ INSERT INTO player_templates (
   base_pace,
   base_physical,
   base_defending,
+	base_standing_tackle,
+	base_sliding_tackle,
   base_dribbling
 )
 SELECT
@@ -418,6 +422,8 @@ SELECT
   ap.pace,
   ap.physical,
   ap.defending,
+	ap.standing_tackle,
+	ap.sliding_tackle,
   ap.dribbling
 FROM admin_players ap
 LEFT JOIN player_templates pt

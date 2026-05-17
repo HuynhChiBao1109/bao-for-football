@@ -17,47 +17,51 @@ func NewRepository(db *sql.DB) *Repository {
 }
 
 type rawCard struct {
-	UserPlayerID     uint64
-	PlayerTemplateID uint64
-	Name             string
-	HeightCM         uint16
-	BaseClub         string
-	Season           string
-	Level            uint8
-	Exp              uint32
-	CurrentPoints    uint32
-	CountryID        int64
-	CountryName      string
-	CountryCode      string
-	CountryFlag      string
-	BaseShooting     int
-	BasePassing      int
-	BaseLongPass     int
-	BaseVision       int
-	BaseDefAwareness int
-	BaseCtrAwareness int
-	BaseCrossbar     int
-	BaseReflexes     int
-	BaseAerialCatch  int
-	BaseDuels        int
-	BasePace         int
-	BasePhysical     int
-	BaseDefending    int
-	BaseDribbling    int
-	BonusShooting    int
-	BonusPassing     int
-	BonusLongPass    int
-	BonusVision      int
-	BonusDefAware    int
-	BonusCtrAware    int
-	BonusCrossbar    int
-	BonusReflexes    int
-	BonusAerialCatch int
-	BonusDuels       int
-	BonusPace        int
-	BonusPhysical    int
-	BonusDefending   int
-	BonusDribbling   int
+	UserPlayerID        uint64
+	PlayerTemplateID    uint64
+	Name                string
+	HeightCM            uint16
+	BaseClub            string
+	Season              string
+	Level               uint8
+	Exp                 uint32
+	CurrentPoints       uint32
+	CountryID           int64
+	CountryName         string
+	CountryCode         string
+	CountryFlag         string
+	BaseShooting        int
+	BasePassing         int
+	BaseLongPass        int
+	BaseVision          int
+	BaseDefAwareness    int
+	BaseCtrAwareness    int
+	BaseCrossbar        int
+	BaseReflexes        int
+	BaseAerialCatch     int
+	BaseDuels           int
+	BasePace            int
+	BasePhysical        int
+	BaseDefending       int
+	BaseStandingTackle  int
+	BaseSlidingTackle   int
+	BaseDribbling       int
+	BonusShooting       int
+	BonusPassing        int
+	BonusLongPass       int
+	BonusVision         int
+	BonusDefAware       int
+	BonusCtrAware       int
+	BonusCrossbar       int
+	BonusReflexes       int
+	BonusAerialCatch    int
+	BonusDuels          int
+	BonusPace           int
+	BonusPhysical       int
+	BonusDefending      int
+	BonusStandingTackle int
+	BonusSlidingTackle  int
+	BonusDribbling      int
 }
 
 func (r *Repository) ListByUserID(ctx context.Context, userID uint64) ([]domain.PlayerCard, error) {
@@ -93,6 +97,8 @@ SELECT
 	pt.base_pace,
 	pt.base_physical,
 	pt.base_defending,
+	pt.base_standing_tackle,
+	pt.base_sliding_tackle,
 	pt.base_dribbling,
 	up.bonus_shooting,
 	up.bonus_passing,
@@ -107,6 +113,8 @@ SELECT
 	up.bonus_pace,
 	up.bonus_physical,
 	up.bonus_defending,
+	up.bonus_standing_tackle,
+	up.bonus_sliding_tackle,
 	up.bonus_dribbling
 FROM user_players up
 INNER JOIN player_templates pt ON pt.id = up.player_template_id
@@ -167,6 +175,8 @@ SELECT
 	pt.base_pace,
 	pt.base_physical,
 	pt.base_defending,
+	pt.base_standing_tackle,
+	pt.base_sliding_tackle,
 	pt.base_dribbling,
 	up.bonus_shooting,
 	up.bonus_passing,
@@ -181,6 +191,8 @@ SELECT
 	up.bonus_pace,
 	up.bonus_physical,
 	up.bonus_defending,
+	up.bonus_standing_tackle,
+	up.bonus_sliding_tackle,
 	up.bonus_dribbling
 FROM user_players up
 INNER JOIN player_templates pt ON pt.id = up.player_template_id
@@ -248,6 +260,8 @@ SET bonus_shooting = bonus_shooting + ?,
 	bonus_pace = bonus_pace + ?,
 	bonus_physical = bonus_physical + ?,
 	bonus_defending = bonus_defending + ?,
+	bonus_standing_tackle = bonus_standing_tackle + ?,
+	bonus_sliding_tackle = bonus_sliding_tackle + ?,
 	bonus_dribbling = bonus_dribbling + ?,
 	current_points = current_points - ?
 WHERE id = ?
@@ -265,6 +279,8 @@ WHERE id = ?
 	AND bonus_pace + ? >= 0
 	AND bonus_physical + ? >= 0
 	AND bonus_defending + ? >= 0
+	AND bonus_standing_tackle + ? >= 0
+	AND bonus_sliding_tackle + ? >= 0
 	AND bonus_dribbling + ? >= 0`
 
 	args := []any{
@@ -281,6 +297,8 @@ WHERE id = ?
 		input.Pace,
 		input.Physical,
 		input.Defending,
+		input.StandingTackle,
+		input.SlidingTackle,
 		input.Dribbling,
 		deltaPoints,
 		userPlayerID,
@@ -298,6 +316,8 @@ WHERE id = ?
 		input.Pace,
 		input.Physical,
 		input.Defending,
+		input.StandingTackle,
+		input.SlidingTackle,
 		input.Dribbling,
 	}
 
@@ -355,6 +375,8 @@ func scanRawCard(s scanner) (rawCard, error) {
 		&item.BasePace,
 		&item.BasePhysical,
 		&item.BaseDefending,
+		&item.BaseStandingTackle,
+		&item.BaseSlidingTackle,
 		&item.BaseDribbling,
 		&item.BonusShooting,
 		&item.BonusPassing,
@@ -369,6 +391,8 @@ func scanRawCard(s scanner) (rawCard, error) {
 		&item.BonusPace,
 		&item.BonusPhysical,
 		&item.BonusDefending,
+		&item.BonusStandingTackle,
+		&item.BonusSlidingTackle,
 		&item.BonusDribbling,
 	)
 	if err != nil {
@@ -392,6 +416,8 @@ func toPlayerCard(item rawCard) domain.PlayerCard {
 		Pace:                   item.BasePace,
 		Physical:               item.BasePhysical,
 		Defending:              item.BaseDefending,
+		StandingTackle:         item.BaseStandingTackle,
+		SlidingTackle:          item.BaseSlidingTackle,
 		Dribbling:              item.BaseDribbling,
 	}
 
@@ -409,6 +435,8 @@ func toPlayerCard(item rawCard) domain.PlayerCard {
 		Pace:                   item.BonusPace,
 		Physical:               item.BonusPhysical,
 		Defending:              item.BonusDefending,
+		StandingTackle:         item.BonusStandingTackle,
+		SlidingTackle:          item.BonusSlidingTackle,
 		Dribbling:              item.BonusDribbling,
 	}
 
@@ -426,6 +454,8 @@ func toPlayerCard(item rawCard) domain.PlayerCard {
 		Pace:                   base.Pace + bonus.Pace,
 		Physical:               base.Physical + bonus.Physical,
 		Defending:              base.Defending + bonus.Defending,
+		StandingTackle:         base.StandingTackle + bonus.StandingTackle,
+		SlidingTackle:          base.SlidingTackle + bonus.SlidingTackle,
 		Dribbling:              base.Dribbling + bonus.Dribbling,
 	}
 	overall := float64(
@@ -442,8 +472,10 @@ func toPlayerCard(item rawCard) domain.PlayerCard {
 			total.Pace+
 			total.Physical+
 			total.Defending+
+			total.StandingTackle+
+			total.SlidingTackle+
 			total.Dribbling,
-	) / 14.0
+	) / 16.0
 
 	return domain.PlayerCard{
 		UserPlayerID:     item.UserPlayerID,

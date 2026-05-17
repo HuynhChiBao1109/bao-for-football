@@ -14,6 +14,8 @@ type CardStats struct {
 	Pace                   int `json:"pace"`
 	Physical               int `json:"physical"`
 	Defending              int `json:"defending"`
+	StandingTackle         int `json:"standingTackle"`
+	SlidingTackle          int `json:"slidingTackle"`
 	Dribbling              int `json:"dribbling"`
 }
 
@@ -58,5 +60,7 @@ type AllocateStatsInput struct {
 	Pace                   int `json:"pace"`
 	Physical               int `json:"physical"`
 	Defending              int `json:"defending"`
+	StandingTackle         int `json:"standingTackle"`
+	SlidingTackle          int `json:"slidingTackle"`
 	Dribbling              int `json:"dribbling"`
 }

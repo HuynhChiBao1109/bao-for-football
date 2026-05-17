@@ -98,6 +98,8 @@ func (u *PlayerCardUseCase) AllocateStats(ctx context.Context, userID uint64, us
 			input.Pace +
 			input.Physical +
 			input.Defending +
+			input.StandingTackle +
+			input.SlidingTackle +
 			input.Dribbling,
 	)
 	if delta == 0 {
@@ -132,6 +134,8 @@ func (u *PlayerCardUseCase) AllocateStats(ctx context.Context, userID uint64, us
 		{name: "pace", base: card.BonusStats.Pace, delta: input.Pace},
 		{name: "physical", base: card.BonusStats.Physical, delta: input.Physical},
 		{name: "defending", base: card.BonusStats.Defending, delta: input.Defending},
+		{name: "standingTackle", base: card.BonusStats.StandingTackle, delta: input.StandingTackle},
+		{name: "slidingTackle", base: card.BonusStats.SlidingTackle, delta: input.SlidingTackle},
 		{name: "dribbling", base: card.BonusStats.Dribbling, delta: input.Dribbling},
 	} {
 		if item.base+item.delta < 0 {

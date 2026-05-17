@@ -8,32 +8,36 @@ type Vec2 struct {
 }
 
 type Player struct {
-	ID        int
-	TeamID    string
-	Role      string
-	X         float64
-	Y         float64
-	HomeX     float64
-	HomeY     float64
-	Pace      int
-	Passing   int
-	LongPass  int
-	Vision    int
-	Shooting  int
-	Defending int
-	Mental    int
-	HasBall   bool
+	ID             int
+	TeamID         string
+	Role           string
+	X              float64
+	Y              float64
+	HomeX          float64
+	HomeY          float64
+	Pace           int
+	Passing        int
+	LongPass       int
+	Vision         int
+	Shooting       int
+	Defending      int
+	StandingTackle int
+	SlidingTackle  int
+	Mental         int
+	HasBall        bool
 }
 
 type PlayerStatsInput struct {
-	CardID    uint64
-	Pace      int
-	Passing   int
-	LongPass  int
-	Vision    int
-	Shooting  int
-	Defending int
-	Mental    int
+	CardID         uint64
+	Pace           int
+	Passing        int
+	LongPass       int
+	Vision         int
+	Shooting       int
+	Defending      int
+	StandingTackle int
+	SlidingTackle  int
+	Mental         int
 }
 
 type TeamTactics struct {
@@ -180,6 +184,8 @@ func createTeamPlayers(teamID string, mirror bool) []*Player {
 		vision := 58 + (i*4+7)%30
 		shooting := 58 + (i*5)%30
 		defending := 57 + (i*6)%33
+		standingTackle := 56 + (i*5+3)%31
+		slidingTackle := 55 + (i*4+9)%32
 		mental := 60 + (i*2)%24
 
 		if roles[i] == "GK" {
@@ -200,20 +206,22 @@ func createTeamPlayers(teamID string, mirror bool) []*Player {
 		vision = clampInt(vision, 40, 95)
 
 		players = append(players, &Player{
-			ID:        baseID + i,
-			TeamID:    teamID,
-			Role:      roles[i],
-			X:         x,
-			Y:         y,
-			HomeX:     x,
-			HomeY:     y,
-			Pace:      pace,
-			Passing:   passing,
-			LongPass:  longPass,
-			Vision:    vision,
-			Shooting:  shooting,
-			Defending: defending,
-			Mental:    mental,
+			ID:             baseID + i,
+			TeamID:         teamID,
+			Role:           roles[i],
+			X:              x,
+			Y:              y,
+			HomeX:          x,
+			HomeY:          y,
+			Pace:           pace,
+			Passing:        passing,
+			LongPass:       longPass,
+			Vision:         vision,
+			Shooting:       shooting,
+			Defending:      defending,
+			StandingTackle: standingTackle,
+			SlidingTackle:  slidingTackle,
+			Mental:         mental,
 		})
 	}
 
@@ -260,6 +268,8 @@ func ApplyPlayerStats(team *Team, incoming []PlayerStatsInput) {
 		dst.Vision = clampInt(src.Vision, 35, 99)
 		dst.Shooting = clampInt(src.Shooting, 35, 99)
 		dst.Defending = clampInt(src.Defending, 35, 99)
+		dst.StandingTackle = clampInt(src.StandingTackle, 35, 99)
+		dst.SlidingTackle = clampInt(src.SlidingTackle, 35, 99)
 		dst.Mental = clampInt(src.Mental, 35, 99)
 	}
 }

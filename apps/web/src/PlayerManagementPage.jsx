@@ -16,6 +16,8 @@ const defaultAllocate = {
   pace: 0,
   physical: 0,
   defending: 0,
+  standingTackle: 0,
+  slidingTackle: 0,
   dribbling: 0,
 };
 
@@ -33,6 +35,8 @@ const allocateKeys = [
   "pace",
   "physical",
   "defending",
+  "standingTackle",
+  "slidingTackle",
   "dribbling",
 ];
 
@@ -58,6 +62,8 @@ const statMetas = [
   { key: "pace", label: "Tốc độ", allocatable: true },
   { key: "physical", label: "Thể chất", allocatable: true },
   { key: "defending", label: "Phòng ngự", allocatable: true },
+  { key: "standingTackle", label: "Tắc bóng", allocatable: true },
+  { key: "slidingTackle", label: "Xoạc bóng", allocatable: true },
   { key: "dribbling", label: "Rê bóng", allocatable: true },
 ];
 
@@ -160,6 +166,12 @@ function PlayerManagementPage({ token, onUnauthorized }) {
       defending:
         Number(selectedCard.bonusStats.defending || 0) +
         Number(allocateDelta.defending || 0),
+      standingTackle:
+        Number(selectedCard.bonusStats.standingTackle || 0) +
+        Number(allocateDelta.standingTackle || 0),
+      slidingTackle:
+        Number(selectedCard.bonusStats.slidingTackle || 0) +
+        Number(allocateDelta.slidingTackle || 0),
       dribbling:
         Number(selectedCard.bonusStats.dribbling || 0) +
         Number(allocateDelta.dribbling || 0),

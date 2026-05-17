@@ -68,30 +68,32 @@ func (migrationCountry) TableName() string {
 }
 
 type migrationAdminPlayer struct {
-	ID           uint64            `gorm:"primaryKey;autoIncrement;column:id"`
-	Name         string            `gorm:"type:varchar(120);not null;column:name"`
-	CountryID    *uint64           `gorm:"index:idx_admin_players_country_id;column:country_id"`
-	Nationality  string            `gorm:"type:varchar(80);not null;column:nationality"`
-	BaseClub     string            `gorm:"type:varchar(120);not null;column:base_club"`
-	Season       string            `gorm:"type:enum('Normal','Special');not null;default:Normal;index:idx_admin_players_season;column:season"`
-	SourceType   string            `gorm:"type:enum('normal','gacha');not null;default:normal;index:idx_admin_players_source_type;column:source_type"`
-	SpecialSkill string            `gorm:"type:varchar(120);not null;default:'';column:special_skill"`
-	Shooting     uint8             `gorm:"not null;column:shooting"`
-	Passing      uint8             `gorm:"not null;column:passing"`
-	LongPass     uint8             `gorm:"not null;default:60;column:long_pass"`
-	Vision       uint8             `gorm:"not null;default:60;column:vision"`
-	DefAwareness uint8             `gorm:"not null;default:60;column:defensive_awareness"`
-	CtrAwareness uint8             `gorm:"not null;default:60;column:counter_attack_awareness"`
-	Crossbar     uint8             `gorm:"not null;default:60;column:crossbar_handling"`
-	Reflexes     uint8             `gorm:"not null;default:60;column:reflexes"`
-	AerialCatch  uint8             `gorm:"not null;default:60;column:aerial_catching"`
-	Duels        uint8             `gorm:"not null;default:60;column:duels"`
-	Pace         uint8             `gorm:"not null;column:pace"`
-	Physical     uint8             `gorm:"not null;column:physical"`
-	Defending    uint8             `gorm:"not null;column:defending"`
-	Dribbling    uint8             `gorm:"not null;column:dribbling"`
-	CreatedAt    time.Time         `gorm:"column:created_at"`
-	Country      *migrationCountry `gorm:"foreignKey:CountryID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	ID             uint64            `gorm:"primaryKey;autoIncrement;column:id"`
+	Name           string            `gorm:"type:varchar(120);not null;column:name"`
+	CountryID      *uint64           `gorm:"index:idx_admin_players_country_id;column:country_id"`
+	Nationality    string            `gorm:"type:varchar(80);not null;column:nationality"`
+	BaseClub       string            `gorm:"type:varchar(120);not null;column:base_club"`
+	Season         string            `gorm:"type:enum('Normal','Special');not null;default:Normal;index:idx_admin_players_season;column:season"`
+	SourceType     string            `gorm:"type:enum('normal','gacha');not null;default:normal;index:idx_admin_players_source_type;column:source_type"`
+	SpecialSkill   string            `gorm:"type:varchar(120);not null;default:'';column:special_skill"`
+	Shooting       uint8             `gorm:"not null;column:shooting"`
+	Passing        uint8             `gorm:"not null;column:passing"`
+	LongPass       uint8             `gorm:"not null;default:60;column:long_pass"`
+	Vision         uint8             `gorm:"not null;default:60;column:vision"`
+	DefAwareness   uint8             `gorm:"not null;default:60;column:defensive_awareness"`
+	CtrAwareness   uint8             `gorm:"not null;default:60;column:counter_attack_awareness"`
+	Crossbar       uint8             `gorm:"not null;default:60;column:crossbar_handling"`
+	Reflexes       uint8             `gorm:"not null;default:60;column:reflexes"`
+	AerialCatch    uint8             `gorm:"not null;default:60;column:aerial_catching"`
+	Duels          uint8             `gorm:"not null;default:60;column:duels"`
+	Pace           uint8             `gorm:"not null;column:pace"`
+	Physical       uint8             `gorm:"not null;column:physical"`
+	Defending      uint8             `gorm:"not null;column:defending"`
+	StandingTackle uint8             `gorm:"not null;default:60;column:standing_tackle"`
+	SlidingTackle  uint8             `gorm:"not null;default:60;column:sliding_tackle"`
+	Dribbling      uint8             `gorm:"not null;column:dribbling"`
+	CreatedAt      time.Time         `gorm:"column:created_at"`
+	Country        *migrationCountry `gorm:"foreignKey:CountryID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 }
 
 func (migrationAdminPlayer) TableName() string {
@@ -99,31 +101,33 @@ func (migrationAdminPlayer) TableName() string {
 }
 
 type migrationPlayerTemplate struct {
-	ID            uint64            `gorm:"primaryKey;autoIncrement;column:id"`
-	Name          string            `gorm:"type:varchar(120);not null;index:idx_player_templates_name;column:name"`
-	HeightCM      uint16            `gorm:"not null;column:height_cm"`
-	CountryID     *uint64           `gorm:"index:idx_player_templates_country_id;column:country_id"`
-	Nationality   string            `gorm:"type:varchar(80);not null;column:nationality"`
-	BaseClub      string            `gorm:"type:varchar(120);not null;column:base_club"`
-	Season        string            `gorm:"type:enum('Normal','Special');not null;default:Normal;index:idx_player_templates_season;column:season"`
-	ImageURL      string            `gorm:"type:varchar(500);column:image_url"`
-	BaseShooting  int               `gorm:"not null;default:1;column:base_shooting"`
-	BasePassing   int               `gorm:"not null;default:1;column:base_passing"`
-	BaseLongPass  int               `gorm:"not null;default:1;column:base_long_pass"`
-	BaseVision    int               `gorm:"not null;default:1;column:base_vision"`
-	BaseDefAware  int               `gorm:"not null;default:1;column:base_defensive_awareness"`
-	BaseCtrAware  int               `gorm:"not null;default:1;column:base_counter_attack_awareness"`
-	BaseCrossbar  int               `gorm:"not null;default:1;column:base_crossbar_handling"`
-	BaseReflexes  int               `gorm:"not null;default:1;column:base_reflexes"`
-	BaseAerial    int               `gorm:"not null;default:1;column:base_aerial_catching"`
-	BaseDuels     int               `gorm:"not null;default:1;column:base_duels"`
-	BasePace      int               `gorm:"not null;default:1;column:base_pace"`
-	BasePhysical  int               `gorm:"not null;default:1;column:base_physical"`
-	BaseDefending int               `gorm:"not null;default:1;column:base_defending"`
-	BaseDribbling int               `gorm:"not null;default:1;column:base_dribbling"`
-	CreatedAt     time.Time         `gorm:"column:created_at"`
-	UpdatedAt     time.Time         `gorm:"column:updated_at"`
-	Country       *migrationCountry `gorm:"foreignKey:CountryID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	ID                 uint64            `gorm:"primaryKey;autoIncrement;column:id"`
+	Name               string            `gorm:"type:varchar(120);not null;index:idx_player_templates_name;column:name"`
+	HeightCM           uint16            `gorm:"not null;column:height_cm"`
+	CountryID          *uint64           `gorm:"index:idx_player_templates_country_id;column:country_id"`
+	Nationality        string            `gorm:"type:varchar(80);not null;column:nationality"`
+	BaseClub           string            `gorm:"type:varchar(120);not null;column:base_club"`
+	Season             string            `gorm:"type:enum('Normal','Special');not null;default:Normal;index:idx_player_templates_season;column:season"`
+	ImageURL           string            `gorm:"type:varchar(500);column:image_url"`
+	BaseShooting       int               `gorm:"not null;default:1;column:base_shooting"`
+	BasePassing        int               `gorm:"not null;default:1;column:base_passing"`
+	BaseLongPass       int               `gorm:"not null;default:1;column:base_long_pass"`
+	BaseVision         int               `gorm:"not null;default:1;column:base_vision"`
+	BaseDefAware       int               `gorm:"not null;default:1;column:base_defensive_awareness"`
+	BaseCtrAware       int               `gorm:"not null;default:1;column:base_counter_attack_awareness"`
+	BaseCrossbar       int               `gorm:"not null;default:1;column:base_crossbar_handling"`
+	BaseReflexes       int               `gorm:"not null;default:1;column:base_reflexes"`
+	BaseAerial         int               `gorm:"not null;default:1;column:base_aerial_catching"`
+	BaseDuels          int               `gorm:"not null;default:1;column:base_duels"`
+	BasePace           int               `gorm:"not null;default:1;column:base_pace"`
+	BasePhysical       int               `gorm:"not null;default:1;column:base_physical"`
+	BaseDefending      int               `gorm:"not null;default:1;column:base_defending"`
+	BaseStandingTackle int               `gorm:"not null;default:1;column:base_standing_tackle"`
+	BaseSlidingTackle  int               `gorm:"not null;default:1;column:base_sliding_tackle"`
+	BaseDribbling      int               `gorm:"not null;default:1;column:base_dribbling"`
+	CreatedAt          time.Time         `gorm:"column:created_at"`
+	UpdatedAt          time.Time         `gorm:"column:updated_at"`
+	Country            *migrationCountry `gorm:"foreignKey:CountryID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 }
 
 func (migrationPlayerTemplate) TableName() string {
@@ -131,30 +135,32 @@ func (migrationPlayerTemplate) TableName() string {
 }
 
 type migrationUserPlayer struct {
-	ID               uint64                  `gorm:"primaryKey;autoIncrement;column:id"`
-	UserID           uint64                  `gorm:"not null;index:idx_user_players_user_id;column:user_id"`
-	PlayerTemplateID uint64                  `gorm:"not null;index:idx_user_players_template_id;column:player_template_id"`
-	Level            uint8                   `gorm:"not null;default:1;check:ck_user_players_level,level BETWEEN 1 AND 36;column:level"`
-	Exp              uint32                  `gorm:"not null;default:0;column:exp"`
-	CurrentPoints    uint32                  `gorm:"not null;default:0;column:current_points"`
-	BonusShooting    int                     `gorm:"not null;default:0;column:bonus_shooting"`
-	BonusPassing     int                     `gorm:"not null;default:0;column:bonus_passing"`
-	BonusLongPass    int                     `gorm:"not null;default:0;column:bonus_long_pass"`
-	BonusVision      int                     `gorm:"not null;default:0;column:bonus_vision"`
-	BonusDefAware    int                     `gorm:"not null;default:0;column:bonus_defensive_awareness"`
-	BonusCtrAware    int                     `gorm:"not null;default:0;column:bonus_counter_attack_awareness"`
-	BonusCrossbar    int                     `gorm:"not null;default:0;column:bonus_crossbar_handling"`
-	BonusReflexes    int                     `gorm:"not null;default:0;column:bonus_reflexes"`
-	BonusAerial      int                     `gorm:"not null;default:0;column:bonus_aerial_catching"`
-	BonusDuels       int                     `gorm:"not null;default:0;column:bonus_duels"`
-	BonusPace        int                     `gorm:"not null;default:0;column:bonus_pace"`
-	BonusPhysical    int                     `gorm:"not null;default:0;column:bonus_physical"`
-	BonusDefending   int                     `gorm:"not null;default:0;column:bonus_defending"`
-	BonusDribbling   int                     `gorm:"not null;default:0;column:bonus_dribbling"`
-	ObtainedAt       time.Time               `gorm:"column:obtained_at"`
-	CreatedAt        time.Time               `gorm:"column:created_at"`
-	UpdatedAt        time.Time               `gorm:"column:updated_at"`
-	Template         migrationPlayerTemplate `gorm:"foreignKey:PlayerTemplateID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
+	ID                  uint64                  `gorm:"primaryKey;autoIncrement;column:id"`
+	UserID              uint64                  `gorm:"not null;index:idx_user_players_user_id;column:user_id"`
+	PlayerTemplateID    uint64                  `gorm:"not null;index:idx_user_players_template_id;column:player_template_id"`
+	Level               uint8                   `gorm:"not null;default:1;check:ck_user_players_level,level BETWEEN 1 AND 36;column:level"`
+	Exp                 uint32                  `gorm:"not null;default:0;column:exp"`
+	CurrentPoints       uint32                  `gorm:"not null;default:0;column:current_points"`
+	BonusShooting       int                     `gorm:"not null;default:0;column:bonus_shooting"`
+	BonusPassing        int                     `gorm:"not null;default:0;column:bonus_passing"`
+	BonusLongPass       int                     `gorm:"not null;default:0;column:bonus_long_pass"`
+	BonusVision         int                     `gorm:"not null;default:0;column:bonus_vision"`
+	BonusDefAware       int                     `gorm:"not null;default:0;column:bonus_defensive_awareness"`
+	BonusCtrAware       int                     `gorm:"not null;default:0;column:bonus_counter_attack_awareness"`
+	BonusCrossbar       int                     `gorm:"not null;default:0;column:bonus_crossbar_handling"`
+	BonusReflexes       int                     `gorm:"not null;default:0;column:bonus_reflexes"`
+	BonusAerial         int                     `gorm:"not null;default:0;column:bonus_aerial_catching"`
+	BonusDuels          int                     `gorm:"not null;default:0;column:bonus_duels"`
+	BonusPace           int                     `gorm:"not null;default:0;column:bonus_pace"`
+	BonusPhysical       int                     `gorm:"not null;default:0;column:bonus_physical"`
+	BonusDefending      int                     `gorm:"not null;default:0;column:bonus_defending"`
+	BonusStandingTackle int                     `gorm:"not null;default:0;column:bonus_standing_tackle"`
+	BonusSlidingTackle  int                     `gorm:"not null;default:0;column:bonus_sliding_tackle"`
+	BonusDribbling      int                     `gorm:"not null;default:0;column:bonus_dribbling"`
+	ObtainedAt          time.Time               `gorm:"column:obtained_at"`
+	CreatedAt           time.Time               `gorm:"column:created_at"`
+	UpdatedAt           time.Time               `gorm:"column:updated_at"`
+	Template            migrationPlayerTemplate `gorm:"foreignKey:PlayerTemplateID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
 }
 
 func (migrationUserPlayer) TableName() string {
@@ -165,7 +171,7 @@ type migrationSkill struct {
 	ID        uint64    `gorm:"primaryKey;autoIncrement;column:id"`
 	Name      string    `gorm:"type:varchar(120);not null;uniqueIndex:uk_skills_name;column:name"`
 	IconURL   string    `gorm:"type:varchar(500);column:icon_url"`
-	BuffType  string    `gorm:"type:enum('shooting','passing','longPass','vision','defensiveAwareness','counterAttackAwareness','crossbarHandling','reflexes','aerialCatching','duels','pace','physical','defending','dribbling');not null;column:buff_type"`
+	BuffType  string    `gorm:"type:enum('shooting','passing','longPass','vision','defensiveAwareness','counterAttackAwareness','crossbarHandling','reflexes','aerialCatching','duels','pace','physical','defending','standingTackle','slidingTackle','dribbling');not null;column:buff_type"`
 	BuffValue int       `gorm:"not null;default:1;column:buff_value"`
 	CreatedAt time.Time `gorm:"column:created_at"`
 	UpdatedAt time.Time `gorm:"column:updated_at"`

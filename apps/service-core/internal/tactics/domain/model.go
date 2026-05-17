@@ -22,12 +22,14 @@ type Gameplay struct {
 }
 
 type Player struct {
-	CardID    uint64 `json:"cardId,omitempty"`
-	Pace      int    `json:"pace"`
-	Passing   int    `json:"passing"`
-	LongPass  int    `json:"longPass"`
-	Vision    int    `json:"vision"`
-	Shooting  int    `json:"shooting"`
-	Defending int    `json:"defending"`
-	Mental    int    `json:"mental"`
+	CardID         uint64 `json:"cardId,omitempty"`
+	Pace           int    `json:"pace"`
+	Passing        int    `json:"passing"`
+	LongPass       int    `json:"longPass"`
+	Vision         int    `json:"vision"`
+	Shooting       int    `json:"shooting"`
+	Defending      int    `json:"defending"`
+	StandingTackle int    `json:"standingTackle"`
+	SlidingTackle  int    `json:"slidingTackle"`
+	Mental         int    `json:"mental"`
 }

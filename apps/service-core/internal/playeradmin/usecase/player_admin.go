@@ -86,6 +86,12 @@ func (u *PlayerAdminUseCase) Create(ctx context.Context, input domain.Player) (d
 	if input.Duels == 0 {
 		input.Duels = input.Physical
 	}
+	if input.StandingTackle == 0 {
+		input.StandingTackle = input.Defending
+	}
+	if input.SlidingTackle == 0 {
+		input.SlidingTackle = input.Defending
+	}
 
 	for _, stat := range []struct {
 		name  string
@@ -104,6 +110,8 @@ func (u *PlayerAdminUseCase) Create(ctx context.Context, input domain.Player) (d
 		{"pace", input.Pace},
 		{"physical", input.Physical},
 		{"defending", input.Defending},
+		{"standingTackle", input.StandingTackle},
+		{"slidingTackle", input.SlidingTackle},
 		{"dribbling", input.Dribbling},
 	} {
 		if stat.value < 1 || stat.value > 99 {

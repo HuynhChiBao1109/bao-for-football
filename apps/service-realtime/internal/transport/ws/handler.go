@@ -26,14 +26,16 @@ type updateTacticsRequest struct {
 		TempoScale         float64 `json:"tempoScale"`
 	} `json:"gameplay"`
 	Players []struct {
-		CardID    uint64 `json:"cardId"`
-		Pace      int    `json:"pace"`
-		Passing   int    `json:"passing"`
-		LongPass  int    `json:"longPass"`
-		Vision    int    `json:"vision"`
-		Shooting  int    `json:"shooting"`
-		Defending int    `json:"defending"`
-		Mental    int    `json:"mental"`
+		CardID         uint64 `json:"cardId"`
+		Pace           int    `json:"pace"`
+		Passing        int    `json:"passing"`
+		LongPass       int    `json:"longPass"`
+		Vision         int    `json:"vision"`
+		Shooting       int    `json:"shooting"`
+		Defending      int    `json:"defending"`
+		StandingTackle int    `json:"standingTackle"`
+		SlidingTackle  int    `json:"slidingTackle"`
+		Mental         int    `json:"mental"`
 	} `json:"players"`
 }
 
@@ -160,14 +162,16 @@ func (h *Handler) UpdateTactics(c *gin.Context) {
 }
 
 func mapPlayers(input []struct {
-	CardID    uint64 `json:"cardId"`
-	Pace      int    `json:"pace"`
-	Passing   int    `json:"passing"`
-	LongPass  int    `json:"longPass"`
-	Vision    int    `json:"vision"`
-	Shooting  int    `json:"shooting"`
-	Defending int    `json:"defending"`
-	Mental    int    `json:"mental"`
+	CardID         uint64 `json:"cardId"`
+	Pace           int    `json:"pace"`
+	Passing        int    `json:"passing"`
+	LongPass       int    `json:"longPass"`
+	Vision         int    `json:"vision"`
+	Shooting       int    `json:"shooting"`
+	Defending      int    `json:"defending"`
+	StandingTackle int    `json:"standingTackle"`
+	SlidingTackle  int    `json:"slidingTackle"`
+	Mental         int    `json:"mental"`
 }) []rooms.PlayerStatsInput {
 	if len(input) == 0 {
 		return nil
@@ -176,14 +180,16 @@ func mapPlayers(input []struct {
 	out := make([]rooms.PlayerStatsInput, 0, len(input))
 	for _, p := range input {
 		out = append(out, rooms.PlayerStatsInput{
-			CardID:    p.CardID,
-			Pace:      p.Pace,
-			Passing:   p.Passing,
-			LongPass:  p.LongPass,
-			Vision:    p.Vision,
-			Shooting:  p.Shooting,
-			Defending: p.Defending,
-			Mental:    p.Mental,
+			CardID:         p.CardID,
+			Pace:           p.Pace,
+			Passing:        p.Passing,
+			LongPass:       p.LongPass,
+			Vision:         p.Vision,
+			Shooting:       p.Shooting,
+			Defending:      p.Defending,
+			StandingTackle: p.StandingTackle,
+			SlidingTackle:  p.SlidingTackle,
+			Mental:         p.Mental,
 		})
 	}
 

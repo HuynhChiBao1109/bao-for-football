@@ -134,10 +134,12 @@ SELECT
   up.id,
   LEAST(99, GREATEST(1, pt.base_pace + up.bonus_pace)) AS pace,
   LEAST(99, GREATEST(1, pt.base_passing + up.bonus_passing)) AS passing,
-  LEAST(99, GREATEST(1, pt.base_long_pass)) AS long_pass,
-  LEAST(99, GREATEST(1, pt.base_vision)) AS vision,
+	LEAST(99, GREATEST(1, pt.base_long_pass + up.bonus_long_pass)) AS long_pass,
+	LEAST(99, GREATEST(1, pt.base_vision + up.bonus_vision)) AS vision,
   LEAST(99, GREATEST(1, pt.base_shooting + up.bonus_shooting)) AS shooting,
   LEAST(99, GREATEST(1, pt.base_defending + up.bonus_defending)) AS defending,
+	LEAST(99, GREATEST(1, pt.base_standing_tackle + up.bonus_standing_tackle)) AS standing_tackle,
+	LEAST(99, GREATEST(1, pt.base_sliding_tackle + up.bonus_sliding_tackle)) AS sliding_tackle,
   LEAST(99, GREATEST(1, ROUND((
     (pt.base_physical + up.bonus_physical) +
     (pt.base_dribbling + up.bonus_dribbling) +
@@ -164,6 +166,8 @@ LIMIT 11`, userID)
 			&p.Vision,
 			&p.Shooting,
 			&p.Defending,
+			&p.StandingTackle,
+			&p.SlidingTackle,
 			&p.Mental,
 		); err != nil {
 			return nil, err
@@ -188,6 +192,8 @@ SELECT
   LEAST(99, GREATEST(1, ap.vision)) AS vision,
   LEAST(99, GREATEST(1, ap.shooting)) AS shooting,
   LEAST(99, GREATEST(1, ap.defending)) AS defending,
+	LEAST(99, GREATEST(1, ap.standing_tackle)) AS standing_tackle,
+	LEAST(99, GREATEST(1, ap.sliding_tackle)) AS sliding_tackle,
   LEAST(99, GREATEST(1, ROUND((ap.physical + ap.dribbling + ap.passing) / 3, 0))) AS mental
 FROM teams t
 INNER JOIN admin_players ap ON ap.base_club = t.club_name
@@ -209,6 +215,8 @@ LIMIT 11`, userID)
 			&p.Vision,
 			&p.Shooting,
 			&p.Defending,
+			&p.StandingTackle,
+			&p.SlidingTackle,
 			&p.Mental,
 		); err != nil {
 			return nil, err
