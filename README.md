@@ -12,11 +12,9 @@ Web game boilerplate for football management 11v11.
 ## Repository Layout
 
 - `apps/web`: Frontend client
-- `apps/api-gateway`: Gateway service + websocket entry
-- `apps/service-core`: Core domain APIs (Clean Architecture style)
-- `apps/service-realtime`: Realtime broadcast hub
+- `apps/service-core`: Core domain APIs + realtime match engine + websocket/sse
 - `deployments/docker`: Local Docker Compose files
-- `database/migrations`: SQL migrations
+- `database`: SQL helper files
 
 ## Quick Start (Local)
 
@@ -33,20 +31,19 @@ cd apps/web
 npm run dev
 ```
 
-3. Start backend services in separate terminals:
+3. Start backend service:
 
 ```bash
-cd apps/api-gateway && go run ./cmd/server
 cd apps/service-core && go run ./cmd/server
-cd apps/service-realtime && go run ./cmd/server
 ```
 
 ## API Endpoints
 
 - `GET /health`
 - `GET /api/v1/clubs/:id` (service-core)
-- `GET /ws` (gateway and realtime)
-- `POST /api/v1/tactics` (service-core, auto-push to realtime)
+- `GET /ws` (service-core)
+- `GET /sse/match` (service-core)
+- `POST /api/v1/tactics` (service-core, auto-push to in-process match engine)
 - `POST /api/v1/gacha/roll` (service-core, 90/10 + pity 51)
 - `GET /api/v1/ai/stages` (service-core, danh sách 50 màn + trạng thái khóa/mở)
 - `GET /api/v1/ai/stages/:stageNo` (service-core, chi tiết màn + đội hình 22 cầu thủ đối thủ)

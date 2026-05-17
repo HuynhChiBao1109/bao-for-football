@@ -29,6 +29,9 @@ import (
 	playeradminhttp "fifam/apps/service-core/internal/playeradmin/delivery/http"
 	playeradminmysql "fifam/apps/service-core/internal/playeradmin/repository/mysql"
 	playeradminusecase "fifam/apps/service-core/internal/playeradmin/usecase"
+	realtimebroadcaster "fifam/apps/service-core/internal/realtime/broadcaster"
+	realtimehub "fifam/apps/service-core/internal/realtime/hub"
+	realtimewshandler "fifam/apps/service-core/internal/realtime/transport/ws"
 	tacticshttp "fifam/apps/service-core/internal/tactics/delivery/http"
 	realtimeclient "fifam/apps/service-core/internal/tactics/integration/realtime"
 	tacticsmysql "fifam/apps/service-core/internal/tactics/repository/mysql"
@@ -61,9 +64,13 @@ func main() {
 	clubRepo := clubmysql.NewRepository(db)
 	clubUC := clubusecase.NewGetClubUseCase(clubRepo)
 	clubHandler := clubhttp.NewHandler(clubUC)
+	realtimeHub := realtimehub.New()
+	go realtimeHub.Run()
+	matchEngine := realtimebroadcaster.NewMatchEngine(realtimeHub)
+	realtimeHandler := realtimewshandler.NewHandler(realtimeHub, matchEngine)
 
 	tacticsRepo := tacticsmysql.NewRepository(db)
-	realtimePusher := realtimeclient.NewClient(cfg.RealtimeBaseURL)
+	realtimePusher := realtimeclient.NewInProcessClient(matchEngine)
 	tacticsUC := tacticsusecase.NewSaveTacticsUseCase(tacticsRepo, realtimePusher)
 	getTacticsUC := tacticsusecase.NewGetTacticsUseCase(tacticsRepo)
 	tacticsHandler := tacticshttp.NewHandler(tacticsUC, getTacticsUC)
@@ -96,6 +103,8 @@ func main() {
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"service": "service-core", "status": "ok"})
 	})
+	router.GET("/ws", realtimeHandler.Connect)
+	router.GET("/sse/match", realtimeHandler.StreamMatchSSE)
 	router.GET("/api/v1/auth/clubs", authHandler.ListRegistrationClubs)
 	router.POST("/api/v1/auth/login", authHandler.Login)
 	router.POST("/api/v1/auth/register", authHandler.Register)

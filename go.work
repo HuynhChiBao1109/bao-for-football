@@ -1,7 +1,5 @@
 go 1.25.0
 
 use (
-    ./apps/api-gateway
-    ./apps/service-core
-    ./apps/service-realtime
+	./apps/service-core
 )

@@ -13,20 +13,6 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
 
-  api-gateway:
-    image: golang:1.24
-    container_name: fifam-api-gateway
-    working_dir: /app/apps/api-gateway
-    command: sh -c "go run ./cmd/server"
-    volumes:
-      - ../../:/app
-    environment:
-      API_GATEWAY_PORT: 8080
-    ports:
-      - '8080:8080'
-    depends_on:
-      - mysql
-
   service-core:
     image: golang:1.24
     container_name: fifam-service-core
@@ -42,18 +28,6 @@ services:
     depends_on:
       - mysql
 
-  service-realtime:
-    image: golang:1.24
-    container_name: fifam-service-realtime
-    working_dir: /app/apps/service-realtime
-    command: sh -c "go run ./cmd/server"
-    volumes:
-      - ../../:/app
-    environment:
-      SERVICE_REALTIME_PORT: 8082
-    ports:
-      - '8082:8082'
-
   web:
     image: node:24-alpine
     container_name: fifam-web
@@ -63,12 +37,11 @@ services:
       - ../../:/app
     environment:
       VITE_API_BASE_URL: http://localhost:8081
-      VITE_WS_URL: ws://localhost:8082/ws
+      VITE_WS_URL: ws://localhost:8081/ws
     ports:
       - '5173:5173'
     depends_on:
       - service-core
-      - service-realtime
 
 volumes:
   mysql_data:

@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"fifam/apps/service-realtime/internal/events"
-	"fifam/apps/service-realtime/internal/hub"
-	"fifam/apps/service-realtime/internal/rooms"
+	"fifam/apps/service-core/internal/realtime/events"
+	"fifam/apps/service-core/internal/realtime/hub"
+	"fifam/apps/service-core/internal/realtime/rooms"
 )
 
 const (

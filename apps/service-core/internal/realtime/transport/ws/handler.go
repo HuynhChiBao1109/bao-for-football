@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"fifam/apps/service-realtime/internal/broadcaster"
-	"fifam/apps/service-realtime/internal/hub"
-	"fifam/apps/service-realtime/internal/rooms"
+	"fifam/apps/service-core/internal/realtime/broadcaster"
+	"fifam/apps/service-core/internal/realtime/hub"
+	"fifam/apps/service-core/internal/realtime/rooms"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"

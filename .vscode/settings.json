@@ -22,6 +22,9 @@
         },
         "npm exec": true,
         "tailwindcss": true,
-        "npm run dev": true
+        "npm run dev": true,
+        "New-Item": true,
+        "Out-Null": true,
+        "Copy-Item": true
     }
 }

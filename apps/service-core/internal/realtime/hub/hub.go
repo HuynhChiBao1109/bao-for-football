@@ -3,22 +3,22 @@ package hub
 import "github.com/gorilla/websocket"
 
 type Hub struct {
-	clients    map[*websocket.Conn]bool
-	sseClients map[chan []byte]bool
-	broadcast  chan []byte
-	register   chan *websocket.Conn
-	unregister chan *websocket.Conn
+	clients       map[*websocket.Conn]bool
+	sseClients    map[chan []byte]bool
+	broadcast     chan []byte
+	register      chan *websocket.Conn
+	unregister    chan *websocket.Conn
 	registerSSE   chan chan []byte
 	unregisterSSE chan chan []byte
 }
 
 func New() *Hub {
 	return &Hub{
-		clients:    make(map[*websocket.Conn]bool),
-		sseClients: make(map[chan []byte]bool),
-		broadcast:  make(chan []byte),
-		register:   make(chan *websocket.Conn),
-		unregister: make(chan *websocket.Conn),
+		clients:       make(map[*websocket.Conn]bool),
+		sseClients:    make(map[chan []byte]bool),
+		broadcast:     make(chan []byte),
+		register:      make(chan *websocket.Conn),
+		unregister:    make(chan *websocket.Conn),
 		registerSSE:   make(chan chan []byte),
 		unregisterSSE: make(chan chan []byte),
 	}

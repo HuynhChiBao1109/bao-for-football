@@ -3,12 +3,11 @@ package config
 import "os"
 
 type Config struct {
-	HTTPPort        string
-	MySQLDSN        string
-	RealtimeBaseURL string
-	JWTSecret       string
-	AdminUsername   string
-	AdminPassword   string
+	HTTPPort      string
+	MySQLDSN      string
+	JWTSecret     string
+	AdminUsername string
+	AdminPassword string
 }
 
 func Load() Config {
@@ -20,11 +19,6 @@ func Load() Config {
 	dsn := os.Getenv("MYSQL_DSN")
 	if dsn == "" {
 		dsn = "root:1234@tcp(localhost:3306)/fifam_dev?parseTime=true"
-	}
-
-	realtimeBaseURL := os.Getenv("REALTIME_BASE_URL")
-	if realtimeBaseURL == "" {
-		realtimeBaseURL = "http://localhost:8082"
 	}
 
 	jwtSecret := os.Getenv("JWT_SECRET")
@@ -43,11 +37,10 @@ func Load() Config {
 	}
 
 	return Config{
-		HTTPPort:        port,
-		MySQLDSN:        dsn,
-		RealtimeBaseURL: realtimeBaseURL,
-		JWTSecret:       jwtSecret,
-		AdminUsername:   adminUsername,
-		AdminPassword:   adminPassword,
+		HTTPPort:      port,
+		MySQLDSN:      dsn,
+		JWTSecret:     jwtSecret,
+		AdminUsername: adminUsername,
+		AdminPassword: adminPassword,
 	}
 }

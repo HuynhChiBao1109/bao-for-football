@@ -5,7 +5,7 @@ const MATCH_WS_BASE_URL =
   import.meta.env.VITE_MATCH_WS_URL ||
   import.meta.env.VITE_WS_URL ||
   deriveMatchWebSocketURL(import.meta.env.VITE_MATCH_SSE_URL) ||
-  "ws://localhost:8082/ws";
+  "ws://localhost:8081/ws";
 
 // Per-event display config: label (log), title (popup), color, bg, border, duration(ms)
 const EV = {
@@ -1147,6 +1147,83 @@ function MatchView({ embedded = false, onMatchEnd, matchId = "" }) {
                 fill="rgba(255,255,255,0.03)"
               />
             ))}
+
+            {/* Debug coordinate grid */}
+            <g pointerEvents="none" opacity="0.55">
+              {Array.from({ length: 11 }).map((_, i) => {
+                const x = i * 10;
+                return (
+                  <g key={`grid-x-${x}`}>
+                    <line
+                      x1={x}
+                      y1="0"
+                      x2={x}
+                      y2={F.h}
+                      stroke={x === 50 ? "#facc15" : "#93c5fd"}
+                      strokeWidth={x === 50 ? "0.2" : "0.1"}
+                      strokeDasharray={x === 50 ? "none" : "0.5 0.7"}
+                    />
+                    <text
+                      x={x}
+                      y="2.2"
+                      textAnchor="middle"
+                      fill="#e2e8f0"
+                      fontSize="1.35"
+                      fontWeight="600"
+                    >
+                      {x}
+                    </text>
+                  </g>
+                );
+              })}
+              {Array.from({ length: 7 }).map((_, i) => {
+                const y = i * 10;
+                if (y > F.h) return null;
+                return (
+                  <g key={`grid-y-${y}`}>
+                    <line
+                      x1="0"
+                      y1={y}
+                      x2={F.w}
+                      y2={y}
+                      stroke={y === 32 ? "#facc15" : "#93c5fd"}
+                      strokeWidth={y === 32 ? "0.2" : "0.1"}
+                      strokeDasharray={y === 32 ? "none" : "0.5 0.7"}
+                    />
+                    <text
+                      x="1.6"
+                      y={y + 1.6}
+                      textAnchor="start"
+                      fill="#e2e8f0"
+                      fontSize="1.35"
+                      fontWeight="600"
+                    >
+                      {y}
+                    </text>
+                  </g>
+                );
+              })}
+              <text
+                x="96"
+                y="3.2"
+                textAnchor="end"
+                fill="#fef08a"
+                fontSize="1.6"
+                fontWeight="700"
+              >
+                X
+              </text>
+              <text
+                x="2"
+                y="60"
+                textAnchor="start"
+                fill="#fef08a"
+                fontSize="1.6"
+                fontWeight="700"
+              >
+                Y
+              </text>
+            </g>
 
             {/* Lines */}
             <rect
