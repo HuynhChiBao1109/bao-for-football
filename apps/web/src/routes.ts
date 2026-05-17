@@ -39,16 +39,16 @@ export function normalizeAuthenticatedRoute(
 
 export function navItems(isAdmin: boolean) {
   const items = [
-    { path: ROUTES.club, label: "Quản lí đội bóng" },
-    { path: ROUTES.players, label: "Quản lí cầu thủ" },
+    { path: ROUTES.club, label: "CLB" },
+    { path: ROUTES.players, label: "Cầu thủ" },
     { path: ROUTES.tactics, label: "Chiến thuật" },
-    { path: ROUTES.aiMatch, label: "Đấu với máy" },
-    { path: ROUTES.pvp, label: "Đấu với người" },
-    { path: ROUTES.gacha, label: "Gacha cầu thủ" },
+    { path: ROUTES.aiMatch, label: "Campaign AI" },
+    { path: ROUTES.pvp, label: "PvP" },
+    { path: ROUTES.gacha, label: "Gacha" },
   ];
 
   if (isAdmin) {
-    items.push({ path: ROUTES.admin, label: "Quản lí cầu thủ" });
+    items.push({ path: ROUTES.admin, label: "Admin" });
   }
 
   return items;

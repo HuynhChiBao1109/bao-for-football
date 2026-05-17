@@ -311,300 +311,304 @@ function PlayerManagementPage({ token, onUnauthorized }) {
 
   return (
     <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-      <article className="rounded-3xl border border-[#1c255b] bg-[#050814]/95 p-5 shadow-[0_24px_60px_-28px_rgba(0,0,128,0.8)]">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
-              Quản lí cầu thủ
-            </p>
-            <h2 className="mt-2 font-['Space_Grotesk'] text-2xl font-semibold text-white">
-              Quản lí cầu thủ, cấp độ và chỉ số
-            </h2>
+      <article className="game-panel game-panel--accent overflow-hidden p-5 sm:p-6">
+        <div className="game-panel__content">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="game-header-kicker">Player Lab</p>
+              <h2 className="game-title mt-3 text-3xl font-bold text-white">
+                Quản lí cầu thủ, cấp độ và chỉ số
+              </h2>
+              <p className="game-copy mt-3 max-w-2xl text-base">
+                Chọn thẻ cầu thủ, kiểm tra tiến trình level, cộng kỹ năng và xem
+                toàn bộ chỉ số nền/tăng thêm/tổng trong cùng một bảng điều
+                khiển.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={loadCards}
+              className="game-button-secondary"
+            >
+              Tải lại
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={loadCards}
-            className="rounded-xl border border-[#2b397f] bg-[#08113a] px-3 py-2 text-xs text-slate-200 transition hover:border-[#4169ff]"
-          >
-            Tải lại
-          </button>
-        </div>
 
-        {loading && (
-          <StateBox tone="info" text="Đang tải danh sách cầu thủ..." />
-        )}
-        {error && <StateBox tone="error" text={error} />}
-        {message && <StateBox tone="success" text={message} />}
+          {loading && (
+            <StateBox tone="info" text="Đang tải danh sách cầu thủ..." />
+          )}
+          {error && <StateBox tone="error" text={error} />}
+          {message && <StateBox tone="success" text={message} />}
 
-        {!loading && !error && cards.length === 0 && (
-          <StateBox tone="muted" text="Bạn chưa có cầu thủ nào." />
-        )}
+          {!loading && !error && cards.length === 0 && (
+            <StateBox tone="muted" text="Bạn chưa có cầu thủ nào." />
+          )}
 
-        {!loading && cards.length > 0 && (
-          <div className="mt-5 overflow-x-auto">
-            <table className="min-w-full overflow-hidden rounded-xl border border-[#1d275e] text-left text-sm">
-              <thead className="bg-[#08113a] text-slate-200">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Cầu thủ</th>
-                  <th className="px-4 py-3 font-medium">Quốc gia</th>
-                  <th className="px-4 py-3 font-medium">Cấp độ</th>
-                  <th className="px-4 py-3 font-medium">Chỉ số tổng</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#15204e] bg-[#040711]">
-                {cards.map((card) => (
-                  <tr
-                    key={card.userPlayerId}
-                    onClick={() => setSelectedId(card.userPlayerId)}
-                    className={`cursor-pointer transition hover:bg-white/5 ${
-                      selectedCard?.userPlayerId === card.userPlayerId
-                        ? "bg-[#0a133d]"
-                        : ""
-                    }`}
-                  >
-                    <td className="px-4 py-3 font-medium text-white">
-                      <div>{card.name}</div>
-                      <div className="text-xs text-slate-400">
-                        {card.baseClub} • {card.season}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-slate-200">
-                      <div className="flex items-center gap-2">
-                        {card?.country?.flag ? (
-                          <img
-                            src={card.country.flag}
-                            alt={card.country.name}
-                            className="h-4 w-6 rounded-sm object-cover"
-                          />
-                        ) : (
-                          <span className="inline-block h-4 w-6 rounded-sm bg-slate-700" />
-                        )}
-                        <span>
-                          {card?.country?.code || card?.country?.name || "-"}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-slate-200">{card.level}</td>
-                    <td className="px-4 py-3 text-slate-200">
-                      {Number(card.overall || 0).toFixed(1)}
-                    </td>
+          {!loading && cards.length > 0 && (
+            <div className="mt-5 overflow-x-auto">
+              <table className="game-table min-w-full text-left text-sm">
+                <thead className="text-slate-200">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Cầu thủ</th>
+                    <th className="px-4 py-3 font-medium">Quốc gia</th>
+                    <th className="px-4 py-3 font-medium">Cấp độ</th>
+                    <th className="px-4 py-3 font-medium">Chỉ số tổng</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                </thead>
+                <tbody>
+                  {cards.map((card) => (
+                    <tr
+                      key={card.userPlayerId}
+                      onClick={() => setSelectedId(card.userPlayerId)}
+                      data-active={
+                        selectedCard?.userPlayerId === card.userPlayerId
+                      }
+                      className="cursor-pointer"
+                    >
+                      <td className="px-4 py-3 font-medium text-white">
+                        <div>{card.name}</div>
+                        <div className="text-xs text-slate-400">
+                          {card.baseClub} • {card.season}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-slate-200">
+                        <div className="flex items-center gap-2">
+                          {card?.country?.flag ? (
+                            <img
+                              src={card.country.flag}
+                              alt={card.country.name}
+                              className="h-4 w-6 rounded-sm object-cover"
+                            />
+                          ) : (
+                            <span className="inline-block h-4 w-6 rounded-sm bg-slate-700" />
+                          )}
+                          <span>
+                            {card?.country?.code || card?.country?.name || "-"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-slate-200">{card.level}</td>
+                      <td className="px-4 py-3 text-slate-200">
+                        {Number(card.overall || 0).toFixed(1)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </article>
 
-      <aside className="rounded-3xl border border-[#1c255b] bg-[#050814]/95 p-5 shadow-[0_24px_60px_-28px_rgba(0,0,128,0.8)]">
-        {!selectedCard ? (
-          <p className="text-sm text-slate-300">
-            Chọn một cầu thủ để xem chi tiết.
-          </p>
-        ) : (
-          <>
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
-              Chi tiết thẻ cầu thủ
+      <aside className="game-panel overflow-hidden p-5 sm:p-6">
+        <div className="game-panel__content">
+          {!selectedCard ? (
+            <p className="game-notice game-notice--muted">
+              Chọn một cầu thủ để xem chi tiết.
             </p>
-            <h3 className="mt-2 text-xl font-semibold text-white">
-              {selectedCard.name}
-            </h3>
-            <div className="mt-2 flex items-center gap-2 text-sm text-slate-300">
-              {selectedCard?.country?.flag ? (
-                <img
-                  src={selectedCard.country.flag}
-                  alt={selectedCard.country.name}
-                  className="h-5 w-7 rounded-sm object-cover"
-                />
-              ) : (
-                <span className="inline-block h-5 w-7 rounded-sm bg-slate-700" />
-              )}
-              <span>{selectedCard?.country?.name || "-"}</span>
-            </div>
-
-            <div className="mt-4 grid gap-2 rounded-2xl border border-[#24306e] bg-black/20 p-4 text-sm text-slate-300">
-              <p>
-                Cấp độ:{" "}
-                <span className="font-semibold text-white">
-                  {selectedCard.level}/36
-                </span>
-              </p>
-              <p>
-                Kinh nghiệm:{" "}
-                <span className="font-semibold text-white">
-                  {selectedCard.exp}
-                </span>{" "}
-                / {selectedCard.requiredExpForNextLevel || "Tối đa"}
-              </p>
-              <div className="h-2 overflow-hidden rounded-full bg-[#1e2b62]">
-                <div
-                  className="h-full rounded-full bg-[#4169ff]"
-                  style={{
-                    width: `${Math.min(100, Number(selectedCard.expProgressPercent || 0))}%`,
-                  }}
-                />
-              </div>
-              <p>
-                Điểm kỹ năng chưa cộng:{" "}
-                <span className="font-semibold text-[#f6d87a]">
-                  {selectedCard.currentPoints}
-                </span>
-              </p>
-            </div>
-
-            <p className="mt-4 rounded-xl border border-[#24306e] bg-black/20 px-4 py-3 text-sm text-slate-300">
-              Cấp độ sẽ tự động tăng khi kinh nghiệm đủ mốc. Bạn chỉ cần dùng
-              điểm kỹ năng chưa cộng để nâng chỉ số.
-            </p>
-
-            <form className="mt-4 space-y-3" onSubmit={handleAllocate}>
-              <p className="text-xs uppercase tracking-[0.16em] text-slate-400">
-                Điều chỉnh chỉ số
-              </p>
-              <p className="text-xs text-slate-400">
-                Mặc định là chỉ số hiện tại của cầu thủ. Nhấn + để tăng, nhấn -
-                để giảm phần đã cộng trước đó.
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                {statMetas
-                  .filter((item) => item.allocatable)
-                  .map((item) => (
-                    <NumberField
-                      key={item.key}
-                      label={item.label}
-                      value={allocate[item.key]}
-                      canAdd={canIncrease(item.key)}
-                      canSub={canDecrease(item.key)}
-                      onAdd={() => adjustAllocate(item.key, 1)}
-                      onSub={() => adjustAllocate(item.key, -1)}
-                      onChange={(value) => updateAllocate(item.key, value)}
-                    />
-                  ))}
-              </div>
-
-              <div className="rounded-xl border border-[#24306e] bg-black/30 px-4 py-3 text-sm text-slate-300">
-                Chênh lệch điểm lần này:{" "}
-                <span className="font-semibold text-[#f6d87a]">
-                  {spendPoints > 0
-                    ? `-${spendPoints}`
-                    : `+${Math.abs(spendPoints)}`}
-                </span>
-                {projected && (
-                  <span className="ml-2 text-slate-400">
-                    (sau cập nhật còn {projected.projectedPoints} điểm)
-                  </span>
+          ) : (
+            <>
+              <p className="game-header-kicker">Player Detail</p>
+              <h3 className="game-title mt-3 text-3xl font-bold text-white">
+                {selectedCard.name}
+              </h3>
+              <div className="mt-2 flex items-center gap-2 text-sm text-slate-300">
+                {selectedCard?.country?.flag ? (
+                  <img
+                    src={selectedCard.country.flag}
+                    alt={selectedCard.country.name}
+                    className="h-5 w-7 rounded-sm object-cover"
+                  />
+                ) : (
+                  <span className="inline-block h-5 w-7 rounded-sm bg-slate-700" />
                 )}
+                <span>{selectedCard?.country?.name || "-"}</span>
               </div>
 
-              {projected?.hasNegativeBonus && (
-                <StateBox
-                  tone="error"
-                  text="Không thể giảm quá phần chỉ số đã cộng trước đó."
-                />
-              )}
-
-              {projected && !projected.hasNegativeBonus && (
-                <div className="rounded-xl border border-[#24306e] bg-black/20 p-4 text-sm text-slate-300">
-                  <p className="font-semibold text-white">
-                    Đã cộng trước đó {"->"} Sau khi đổi
-                  </p>
-                  <p className="mt-2">
-                    Dứt điểm: +{selectedCard.bonusStats.shooting} {"->"} +
-                    {projected.nextBonus.shooting}
-                  </p>
-                  <p>
-                    Chuyền ngắn: +{selectedCard.bonusStats.passing} {"->"} +
-                    {projected.nextBonus.passing}
-                  </p>
-                  <p>
-                    Chuyền dài: +{selectedCard.bonusStats.longPass} {"->"} +
-                    {projected.nextBonus.longPass}
-                  </p>
-                  <p>
-                    Tầm nhìn: +{selectedCard.bonusStats.vision} {"->"} +
-                    {projected.nextBonus.vision}
-                  </p>
-                  <p>
-                    Nhận thức phòng ngự: +
-                    {selectedCard.bonusStats.defensiveAwareness} {"->"} +
-                    {projected.nextBonus.defensiveAwareness}
-                  </p>
-                  <p>
-                    Nhận thức phản công: +
-                    {selectedCard.bonusStats.counterAttackAwareness} {"->"} +
-                    {projected.nextBonus.counterAttackAwareness}
-                  </p>
-                  <p>
-                    Bắt bóng xà: +{selectedCard.bonusStats.crossbarHandling}{" "}
-                    {"->"} +{projected.nextBonus.crossbarHandling}
-                  </p>
-                  <p>
-                    Phản xạ: +{selectedCard.bonusStats.reflexes} {"->"} +
-                    {projected.nextBonus.reflexes}
-                  </p>
-                  <p>
-                    Bắt bóng bổng: +{selectedCard.bonusStats.aerialCatching}{" "}
-                    {"->"} +{projected.nextBonus.aerialCatching}
-                  </p>
-                  <p>
-                    Tranh chấp: +{selectedCard.bonusStats.duels} {"->"} +
-                    {projected.nextBonus.duels}
-                  </p>
-                  <p>
-                    Tốc độ: +{selectedCard.bonusStats.pace} {"->"} +
-                    {projected.nextBonus.pace}
-                  </p>
-                  <p>
-                    Thể chất: +{selectedCard.bonusStats.physical} {"->"} +
-                    {projected.nextBonus.physical}
-                  </p>
-                  <p>
-                    Phòng ngự: +{selectedCard.bonusStats.defending} {"->"} +
-                    {projected.nextBonus.defending}
-                  </p>
-                  <p>
-                    Rê bóng: +{selectedCard.bonusStats.dribbling} {"->"} +
-                    {projected.nextBonus.dribbling}
-                  </p>
-                </div>
-              )}
-
-              <button
-                type="button"
-                onClick={() => setAllocate(buildTargetStats(selectedCard))}
-                className="w-full rounded-xl border border-[#2b397f] bg-[#08113a] px-4 py-2 text-sm text-slate-200 transition hover:border-[#4169ff]"
-              >
-                Trả về chỉ số hiện tại
-              </button>
-
-              <button
-                type="submit"
-                disabled={
-                  actionLoading || spendPoints === 0 || !!projected?.invalid
-                }
-                className="w-full rounded-xl border border-[#4169ff] bg-[#08113a] px-4 py-3 font-semibold text-white transition hover:bg-[#10205f] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {actionLoading ? "Đang lưu..." : "Áp dụng thay đổi chỉ số"}
-              </button>
-            </form>
-
-            <div className="mt-4 rounded-xl border border-[#24306e] bg-black/20 p-4 text-sm text-slate-300">
-              <p className="font-semibold text-white">
-                Toàn bộ chỉ số (gốc / cộng thêm / tổng)
-              </p>
-              {statMetas.map((item, index) => (
-                <p key={item.key} className={index === 0 ? "mt-2" : ""}>
-                  {item.label}: {selectedCard.baseStats[item.key]} /{" "}
-                  {selectedCard.bonusStats[item.key]} /{" "}
-                  {selectedCard.totalStats[item.key]}
+              <div className="mt-4 grid gap-2 rounded-[22px] border border-white/8 bg-black/20 p-4 text-sm text-slate-300">
+                <p>
+                  Cấp độ:{" "}
+                  <span className="font-semibold text-white">
+                    {selectedCard.level}/36
+                  </span>
                 </p>
-              ))}
-              <p className="mt-2 text-[#f6d87a]">
-                Chỉ số tổng quan: {Number(selectedCard.overall || 0).toFixed(1)}
+                <p>
+                  Kinh nghiệm:{" "}
+                  <span className="font-semibold text-white">
+                    {selectedCard.exp}
+                  </span>{" "}
+                  / {selectedCard.requiredExpForNextLevel || "Tối đa"}
+                </p>
+                <div className="game-progress h-2">
+                  <span
+                    style={{
+                      width: `${Math.min(100, Number(selectedCard.expProgressPercent || 0))}%`,
+                    }}
+                  />
+                </div>
+                <p>
+                  Điểm kỹ năng chưa cộng:{" "}
+                  <span className="font-semibold text-[#f6d87a]">
+                    {selectedCard.currentPoints}
+                  </span>
+                </p>
+              </div>
+
+              <p className="game-stat-card mt-4 text-sm text-slate-300">
+                Cấp độ sẽ tự động tăng khi kinh nghiệm đủ mốc. Bạn chỉ cần dùng
+                điểm kỹ năng chưa cộng để nâng chỉ số.
               </p>
-            </div>
-          </>
-        )}
+
+              <form className="mt-4 space-y-3" onSubmit={handleAllocate}>
+                <p className="text-xs uppercase tracking-[0.16em] text-slate-400">
+                  Điều chỉnh chỉ số
+                </p>
+                <p className="text-xs text-slate-400">
+                  Mặc định là chỉ số hiện tại của cầu thủ. Nhấn + để tăng, nhấn
+                  - để giảm phần đã cộng trước đó.
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  {statMetas
+                    .filter((item) => item.allocatable)
+                    .map((item) => (
+                      <NumberField
+                        key={item.key}
+                        label={item.label}
+                        value={allocate[item.key]}
+                        canAdd={canIncrease(item.key)}
+                        canSub={canDecrease(item.key)}
+                        onAdd={() => adjustAllocate(item.key, 1)}
+                        onSub={() => adjustAllocate(item.key, -1)}
+                        onChange={(value) => updateAllocate(item.key, value)}
+                      />
+                    ))}
+                </div>
+
+                <div className="game-stat-card text-sm text-slate-300">
+                  Chênh lệch điểm lần này:{" "}
+                  <span className="font-semibold text-emerald-300">
+                    {spendPoints > 0
+                      ? `-${spendPoints}`
+                      : `+${Math.abs(spendPoints)}`}
+                  </span>
+                  {projected && (
+                    <span className="ml-2 text-slate-400">
+                      (sau cập nhật còn {projected.projectedPoints} điểm)
+                    </span>
+                  )}
+                </div>
+
+                {projected?.hasNegativeBonus && (
+                  <StateBox
+                    tone="error"
+                    text="Không thể giảm quá phần chỉ số đã cộng trước đó."
+                  />
+                )}
+
+                {projected && !projected.hasNegativeBonus && (
+                  <div className="game-scroll rounded-[20px] border border-white/8 bg-black/20 p-4 text-sm text-slate-300 max-h-[280px] overflow-y-auto">
+                    <p className="font-semibold text-white">
+                      Đã cộng trước đó {"->"} Sau khi đổi
+                    </p>
+                    <p className="mt-2">
+                      Dứt điểm: +{selectedCard.bonusStats.shooting} {"->"} +
+                      {projected.nextBonus.shooting}
+                    </p>
+                    <p>
+                      Chuyền ngắn: +{selectedCard.bonusStats.passing} {"->"} +
+                      {projected.nextBonus.passing}
+                    </p>
+                    <p>
+                      Chuyền dài: +{selectedCard.bonusStats.longPass} {"->"} +
+                      {projected.nextBonus.longPass}
+                    </p>
+                    <p>
+                      Tầm nhìn: +{selectedCard.bonusStats.vision} {"->"} +
+                      {projected.nextBonus.vision}
+                    </p>
+                    <p>
+                      Nhận thức phòng ngự: +
+                      {selectedCard.bonusStats.defensiveAwareness} {"->"} +
+                      {projected.nextBonus.defensiveAwareness}
+                    </p>
+                    <p>
+                      Nhận thức phản công: +
+                      {selectedCard.bonusStats.counterAttackAwareness} {"->"} +
+                      {projected.nextBonus.counterAttackAwareness}
+                    </p>
+                    <p>
+                      Bắt bóng xà: +{selectedCard.bonusStats.crossbarHandling}{" "}
+                      {"->"} +{projected.nextBonus.crossbarHandling}
+                    </p>
+                    <p>
+                      Phản xạ: +{selectedCard.bonusStats.reflexes} {"->"} +
+                      {projected.nextBonus.reflexes}
+                    </p>
+                    <p>
+                      Bắt bóng bổng: +{selectedCard.bonusStats.aerialCatching}{" "}
+                      {"->"} +{projected.nextBonus.aerialCatching}
+                    </p>
+                    <p>
+                      Tranh chấp: +{selectedCard.bonusStats.duels} {"->"} +
+                      {projected.nextBonus.duels}
+                    </p>
+                    <p>
+                      Tốc độ: +{selectedCard.bonusStats.pace} {"->"} +
+                      {projected.nextBonus.pace}
+                    </p>
+                    <p>
+                      Thể chất: +{selectedCard.bonusStats.physical} {"->"} +
+                      {projected.nextBonus.physical}
+                    </p>
+                    <p>
+                      Phòng ngự: +{selectedCard.bonusStats.defending} {"->"} +
+                      {projected.nextBonus.defending}
+                    </p>
+                    <p>
+                      Rê bóng: +{selectedCard.bonusStats.dribbling} {"->"} +
+                      {projected.nextBonus.dribbling}
+                    </p>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setAllocate(buildTargetStats(selectedCard))}
+                  className="game-button-secondary w-full"
+                >
+                  Trả về chỉ số hiện tại
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={
+                    actionLoading || spendPoints === 0 || !!projected?.invalid
+                  }
+                  className="game-button-primary w-full"
+                >
+                  {actionLoading ? "Đang lưu..." : "Áp dụng thay đổi chỉ số"}
+                </button>
+              </form>
+
+              <div className="game-stat-card mt-4 text-sm text-slate-300">
+                <p className="font-semibold text-white">
+                  Toàn bộ chỉ số (gốc / cộng thêm / tổng)
+                </p>
+                {statMetas.map((item, index) => (
+                  <p key={item.key} className={index === 0 ? "mt-2" : ""}>
+                    {item.label}: {selectedCard.baseStats[item.key]} /{" "}
+                    {selectedCard.bonusStats[item.key]} /{" "}
+                    {selectedCard.totalStats[item.key]}
+                  </p>
+                ))}
+                <p className="mt-2 text-[#f6d87a]">
+                  Chỉ số tổng quan:{" "}
+                  {Number(selectedCard.overall || 0).toFixed(1)}
+                </p>
+              </div>
+            </>
+          )}
+        </div>
       </aside>
     </section>
   );
@@ -613,15 +617,13 @@ function PlayerManagementPage({ token, onUnauthorized }) {
 function NumberField({ label, value, onChange, onAdd, onSub, canAdd, canSub }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[11px] uppercase tracking-[0.14em] text-slate-400">
-        {label}
-      </span>
+      <span className="game-field-label">{label}</span>
       <div className="grid grid-cols-[40px_1fr_40px] gap-2">
         <button
           type="button"
           onClick={onSub}
           disabled={!canSub}
-          className="rounded-xl border border-[#22306f] bg-[#030712] text-white transition hover:border-[#4169ff] disabled:cursor-not-allowed disabled:opacity-50"
+          className="game-button-ghost rounded-xl px-0 py-0 disabled:opacity-50"
         >
           -
         </button>
@@ -629,13 +631,13 @@ function NumberField({ label, value, onChange, onAdd, onSub, canAdd, canSub }) {
           type="number"
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="w-full rounded-xl border border-[#22306f] bg-[#030712] px-3 py-2 text-center text-sm text-white outline-none transition focus:border-[#4169ff]"
+          className="game-number-input text-center"
         />
         <button
           type="button"
           onClick={onAdd}
           disabled={!canAdd}
-          className="rounded-xl border border-[#22306f] bg-[#030712] text-white transition hover:border-[#4169ff] disabled:cursor-not-allowed disabled:opacity-50"
+          className="game-button-ghost rounded-xl px-0 py-0 disabled:opacity-50"
         >
           +
         </button>
@@ -647,18 +649,14 @@ function NumberField({ label, value, onChange, onAdd, onSub, canAdd, canSub }) {
 function StateBox({ text, tone }) {
   const toneClass =
     tone === "error"
-      ? "border-red-500/30 bg-red-500/10 text-red-300"
+      ? "game-notice--error"
       : tone === "success"
-        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+        ? "game-notice--success"
         : tone === "info"
-          ? "border-[#24306e] bg-black/20 text-slate-300"
-          : "border-slate-500/30 bg-slate-500/10 text-slate-300";
+          ? "game-notice--info"
+          : "game-notice--muted";
 
-  return (
-    <p className={`mt-4 rounded-2xl border px-4 py-4 text-sm ${toneClass}`}>
-      {text}
-    </p>
-  );
+  return <p className={`game-notice mt-4 ${toneClass}`}>{text}</p>;
 }
 
 export default PlayerManagementPage;

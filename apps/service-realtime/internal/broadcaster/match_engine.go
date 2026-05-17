@@ -94,6 +94,7 @@ func (e *MatchEngine) EnsureRunning() {
 func (e *MatchEngine) run() {
 	state := rooms.NewDemoMatchState()
 	state.Duration = matchLength
+	startingKickoffTeamID := state.HomeTeam.ID
 
 	e.mu.Lock()
 	e.state = state
@@ -106,24 +107,63 @@ func (e *MatchEngine) run() {
 	}
 	e.mu.Unlock()
 
-	kickoff := events.MatchEvent{Kind: "kickoff", Message: "Match started"}
+	e.resetKickoff(state, startingKickoffTeamID)
+	kickoff := events.MatchEvent{Kind: "kickoff", TeamID: startingKickoffTeamID, Message: "Match started"}
 	e.broadcastTick(state, 0, []events.MatchEvent{kickoff})
 
 	ticker := time.NewTicker(tickInterval)
 	defer ticker.Stop()
 
 	tick := 0
-	maxTicks := int(matchLength / tickInterval)
+	halfTimeAnnounced := false
+	halfTimeHoldTicks := 0
+	secondHalfKickoffDelayTicks := 0
+	secondHalfKickoffTeamID := state.AwayTeam.ID
 
 	for range ticker.C {
 		tick++
 		e.mu.Lock()
+
+		if halfTimeHoldTicks > 0 {
+			halfTimeHoldTicks--
+			if halfTimeHoldTicks == 0 {
+				secondHalfKickoffDelayTicks = 8
+				tickEvents := []events.MatchEvent{{Kind: "second_half_start", Message: "Second half started"}}
+				e.broadcastTick(state, tick, tickEvents)
+			} else {
+				e.broadcastTick(state, tick, nil)
+			}
+			e.mu.Unlock()
+			continue
+		}
+
+		if secondHalfKickoffDelayTicks > 0 {
+			secondHalfKickoffDelayTicks--
+			if secondHalfKickoffDelayTicks == 0 {
+				e.resetKickoff(state, secondHalfKickoffTeamID)
+				tickEvents := []events.MatchEvent{{Kind: "kickoff", TeamID: secondHalfKickoffTeamID, Message: "Second half kickoff"}}
+				e.broadcastTick(state, tick, tickEvents)
+			} else {
+				e.broadcastTick(state, tick, nil)
+			}
+			e.mu.Unlock()
+			continue
+		}
+
 		state.Elapsed += tickInterval
+		if !halfTimeAnnounced && state.Elapsed >= matchLength/2 {
+			halfTimeAnnounced = true
+			halfTimeHoldTicks = 18
+			e.broadcastTick(state, tick, []events.MatchEvent{{Kind: "half_time", Message: "Half time"}})
+			e.mu.Unlock()
+			continue
+		}
+
 		tickEvents := e.updateState(state)
 		e.broadcastTick(state, tick, tickEvents)
 		e.mu.Unlock()
 
-		if tick >= maxTicks {
+		if state.Elapsed >= matchLength {
 			break
 		}
 	}
@@ -132,7 +172,7 @@ func (e *MatchEngine) run() {
 		Kind:    "match_end",
 		Message: fmt.Sprintf("FT %s %d-%d %s", state.HomeTeam.Name, state.HomeTeam.Score, state.AwayTeam.Score, state.AwayTeam.Name),
 	}
-	e.broadcastTick(state, maxTicks, []events.MatchEvent{endEvent})
+	e.broadcastTick(state, tick, []events.MatchEvent{endEvent})
 
 	e.mu.Lock()
 	e.running = false
@@ -543,7 +583,9 @@ func (e *MatchEngine) handleShot(state *rooms.MatchState, owner *rooms.Player, o
 	}
 	*tickEvents = append(*tickEvents, events.MatchEvent{Kind: "goal", TeamID: owner.TeamID, PlayerID: owner.ID, Message: "Goal scored"})
 
-	e.resetKickoff(state, oppositeTeamID(owner.TeamID, state))
+	kickoffTeamID := oppositeTeamID(owner.TeamID, state)
+	e.resetKickoff(state, kickoffTeamID)
+	*tickEvents = append(*tickEvents, events.MatchEvent{Kind: "kickoff", TeamID: kickoffTeamID, Message: "Kickoff after goal"})
 }
 
 func (e *MatchEngine) handleFoul(defender *rooms.Player, attacker *rooms.Player, tickEvents *[]events.MatchEvent) {

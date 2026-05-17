@@ -154,7 +154,7 @@ function AiMatchPage({ token, onUnauthorized }) {
 
   if (loading) {
     return (
-      <p className="rounded-2xl border border-[#24306e] bg-black/20 px-4 py-4 text-sm text-slate-300">
+      <p className="game-notice game-notice--info">
         Đang tải danh sách 50 màn...
       </p>
     );
@@ -162,58 +162,58 @@ function AiMatchPage({ token, onUnauthorized }) {
 
   if (!selected) {
     return (
-      <p className="rounded-2xl border border-slate-500/30 bg-slate-500/10 px-4 py-4 text-sm text-slate-300">
-        Chưa có dữ liệu màn AI.
-      </p>
+      <p className="game-notice game-notice--muted">Chưa có dữ liệu màn AI.</p>
     );
   }
 
   if (isFighting) {
     return (
       <section className="space-y-4">
-        <div className="rounded-3xl border border-[#1c255b] bg-[#050814]/95 p-4 shadow-[0_24px_60px_-28px_rgba(0,0,128,0.8)] sm:p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
-                Đấu với máy
-              </p>
-              <h2 className="mt-1 font-['Space_Grotesk'] text-2xl font-semibold text-white">
-                Màn {selected.stageNo}
-              </h2>
-              <p className="mt-1 text-sm text-slate-300">
-                Đối thủ: {selected.clubName} • Buff chỉ số +
-                {selected.enemyStatBonus}. Thắng nhận{" "}
-                {Number(selected.rewardMoney || 0).toLocaleString()} tiền +{" "}
-                {selected.rewardExp} EXP.
-              </p>
-            </div>
+        <div className="game-panel game-panel--accent overflow-hidden p-4 sm:p-5">
+          <div className="game-panel__content">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="game-header-kicker">Campaign Battle</p>
+                <h2 className="game-title mt-2 text-3xl font-bold text-white">
+                  Màn {selected.stageNo}
+                </h2>
+                <p className="mt-2 text-sm text-slate-300">
+                  Đối thủ: {selected.clubName} • Buff chỉ số +
+                  {selected.enemyStatBonus}. Thắng nhận{" "}
+                  {Number(selected.rewardMoney || 0).toLocaleString()} tiền +{" "}
+                  {selected.rewardExp} EXP.
+                </p>
+              </div>
 
-            <button
-              type="button"
-              onClick={() => setIsFighting(false)}
-              className="rounded-xl border border-[#2a387e] bg-black/20 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-[#4169ff] hover:bg-white/5"
-            >
-              Quay lại chọn màn
-            </button>
+              <button
+                type="button"
+                onClick={() => setIsFighting(false)}
+                className="game-button-secondary"
+              >
+                Quay lại chọn màn
+              </button>
+            </div>
           </div>
         </div>
 
         <MatchView embedded onMatchEnd={handleMatchEnd} />
 
-        <div className="rounded-3xl border border-[#1c255b] bg-[#050814]/95 p-5 shadow-[0_24px_60px_-28px_rgba(0,0,128,0.8)]">
-          <p className="text-sm text-slate-300">
-            Kết quả trận sẽ được tự động chốt khi nhận event{" "}
-            <span className="font-semibold text-white">match_end</span> từ match
-            engine.
-          </p>
-          <p className="mt-2 text-sm text-slate-300">
-            Trạng thái hiện tại:{" "}
-            <span className="font-semibold text-[#f6d87a]">
-              {submittingResult
-                ? "Đang cập nhật thắng/thua và cộng thưởng..."
-                : "Đang chờ trận kết thúc"}
-            </span>
-          </p>
+        <div className="game-panel overflow-hidden p-5">
+          <div className="game-panel__content">
+            <p className="text-sm text-slate-300">
+              Kết quả trận sẽ được tự động chốt khi nhận event{" "}
+              <span className="font-semibold text-white">match_end</span> từ
+              match engine.
+            </p>
+            <p className="mt-2 text-sm text-slate-300">
+              Trạng thái hiện tại:{" "}
+              <span className="font-semibold text-[#f6d87a]">
+                {submittingResult
+                  ? "Đang cập nhật thắng/thua và cộng thưởng..."
+                  : "Đang chờ trận kết thúc"}
+              </span>
+            </p>
+          </div>
         </div>
       </section>
     );
@@ -221,151 +221,152 @@ function AiMatchPage({ token, onUnauthorized }) {
 
   return (
     <section className="space-y-6">
-      <article className="rounded-3xl border border-[#1c255b] bg-[#050814]/95 p-5 shadow-[0_24px_60px_-28px_rgba(0,0,128,0.8)]">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
-              Đấu với máy
-            </p>
-            <h2 className="mt-2 font-['Space_Grotesk'] text-2xl font-semibold text-white">
-              50 màn campaign theo tiến trình thắng-thua
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-slate-300">
-              Phải thắng màn hiện tại mới mở màn tiếp theo. Mỗi màn có đối thủ
-              CLB random và đội hình 22 cầu thủ với chỉ số tăng dần theo màn.
-            </p>
+      <article className="game-panel game-panel--accent overflow-hidden p-5 sm:p-6">
+        <div className="game-panel__content">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="game-header-kicker">AI Campaign</p>
+              <h2 className="game-title mt-3 text-3xl font-bold text-white">
+                50 màn campaign theo tiến trình thắng-thua
+              </h2>
+              <p className="game-copy mt-3 max-w-2xl text-base">
+                Phải thắng màn hiện tại mới mở màn tiếp theo. Mỗi màn có đối thủ
+                CLB random và đội hình 22 cầu thủ với chỉ số tăng dần theo màn.
+              </p>
+            </div>
+
+            <div className="game-chip">
+              Màn đang chọn:{" "}
+              <span className="font-semibold text-emerald-300">
+                {selected.stageNo}
+              </span>
+            </div>
           </div>
 
-          <div className="rounded-2xl border border-[#24306e] bg-black/20 px-4 py-3 text-sm text-slate-300">
-            Màn đang chọn:{" "}
-            <span className="font-semibold text-[#f6d87a]">
-              {selected.stageNo}
-            </span>
-          </div>
-        </div>
+          {resultMessage && (
+            <p className="game-notice game-notice--success mt-4">
+              {resultMessage}
+            </p>
+          )}
+          {error && (
+            <p className="game-notice game-notice--error mt-4">{error}</p>
+          )}
 
-        {resultMessage && (
-          <p className="mt-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
-            {resultMessage}
-          </p>
-        )}
-        {error && (
-          <p className="mt-4 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-            {error}
-          </p>
-        )}
+          <button
+            type="button"
+            disabled={!selected.isUnlocked || selected.isCleared}
+            onClick={() => {
+              setResultMessage("");
+              setIsFighting(true);
+            }}
+            className="game-button-primary mt-4 w-full disabled:border-slate-700/70 disabled:bg-slate-900/50 disabled:text-slate-400"
+          >
+            {selected.isCleared
+              ? `Màn ${selected.stageNo} đã hoàn thành`
+              : `Vào thi đấu màn ${selected.stageNo}`}
+          </button>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {stages.map((item) => {
-            const active = item.stageNo === selected.stageNo;
-            const locked = !item.isUnlocked;
-            const completed = item.isCleared;
-            const disabled = locked || completed;
-            return (
-              <button
-                key={item.stageNo}
-                type="button"
-                disabled={disabled}
-                onClick={() => setSelectedLevel(item.stageNo)}
-                className={`rounded-2xl border px-4 py-4 text-left transition ${
-                  locked
-                    ? "cursor-not-allowed border-slate-700/70 bg-slate-900/40 text-slate-500"
-                    : completed
-                      ? "cursor-not-allowed border-slate-700/80 bg-slate-900/45 text-slate-500 grayscale"
-                      : active
-                        ? "border-[#3f63ff] bg-[#0c1d69] text-white shadow-[0_18px_34px_-20px_rgba(27,68,255,0.9)] ring-2 ring-[#5376ff]/70"
-                        : "border-[#2c3b80] bg-[#050d30] text-slate-200 hover:border-[#4a6dff] hover:bg-[#0b1a54] hover:text-white"
-                }`}
-              >
-                <p className="text-xs uppercase tracking-[0.14em] opacity-80">
-                  Màn {item.stageNo}
-                </p>
-                <p className="mt-2 text-sm font-semibold">
-                  {Number(item.rewardMoney || 0).toLocaleString()} tiền
-                </p>
-                <p className="mt-1 text-sm">+ {item.rewardExp} EXP / cầu thủ</p>
-                <p className="mt-1 text-xs">
-                  {completed
-                    ? "Đã hoàn thành (khóa)"
-                    : locked
-                      ? "Chưa mở khóa"
-                      : "Sẵn sàng thi đấu"}
-                </p>
-
-                {!disabled && (
-                  <p className="mt-3 inline-flex rounded-lg border border-[#6a86ff]/70 bg-[#1431a6] px-2.5 py-1 text-xs font-semibold tracking-wide text-white">
-                    Chọn màn này
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {stages.map((item) => {
+              const active = item.stageNo === selected.stageNo;
+              const locked = !item.isUnlocked;
+              const completed = item.isCleared;
+              const disabled = locked || completed;
+              return (
+                <button
+                  key={item.stageNo}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => setSelectedLevel(item.stageNo)}
+                  className={`rounded-2xl border px-4 py-4 text-left transition ${
+                    locked
+                      ? "cursor-not-allowed border-slate-700/70 bg-slate-900/40 text-slate-500"
+                      : completed
+                        ? "cursor-not-allowed border-slate-700/80 bg-slate-900/45 text-slate-500 grayscale"
+                        : active
+                          ? "border-emerald-300/50 bg-[linear-gradient(180deg,rgba(14,70,58,0.95),rgba(8,24,36,0.95))] text-white shadow-[0_18px_34px_-20px_rgba(52,211,153,0.62)] ring-2 ring-emerald-200/30"
+                          : "border-white/10 bg-[rgba(8,20,34,0.88)] text-slate-200 hover:border-emerald-300/30 hover:bg-[rgba(11,28,42,0.96)] hover:text-white"
+                  }`}
+                >
+                  <p className="text-xs uppercase tracking-[0.14em] opacity-80">
+                    Màn {item.stageNo}
                   </p>
-                )}
-              </button>
-            );
-          })}
-        </div>
+                  <p className="mt-2 text-sm font-semibold">
+                    {Number(item.rewardMoney || 0).toLocaleString()} tiền
+                  </p>
+                  <p className="mt-1 text-sm">
+                    + {item.rewardExp} EXP / cầu thủ
+                  </p>
+                  <p className="mt-1 text-xs">
+                    {completed
+                      ? "Đã hoàn thành (khóa)"
+                      : locked
+                        ? "Chưa mở khóa"
+                        : "Sẵn sàng thi đấu"}
+                  </p>
 
-        <div className="mt-5 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="rounded-2xl border border-[#24306e] bg-black/20 p-4">
-            <p className="text-xs uppercase tracking-[0.16em] text-[#f6d87a]">
-              Thông tin màn
-            </p>
-            <p className="mt-2 text-lg font-semibold text-white">
-              Màn {selected.stageNo} • {selected.clubName}
-            </p>
-            <p className="mt-2 text-sm text-slate-300">
-              Buff chỉ số đối thủ: +{selected.enemyStatBonus}
-            </p>
-            <p className="mt-1 text-sm text-slate-300">
-              Tiến độ: {selected.wins}/{Math.max(selected.attempts, 1)} trận
-              thắng trong {selected.attempts} lần thử
-            </p>
-
-            <button
-              type="button"
-              disabled={!selected.isUnlocked || selected.isCleared}
-              onClick={() => {
-                setResultMessage("");
-                setIsFighting(true);
-              }}
-              className="mt-4 w-full rounded-xl border border-[#607bff] bg-[linear-gradient(180deg,#1d3fd4_0%,#0e237f_100%)] px-4 py-3.5 text-base font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:border-slate-700/70 disabled:bg-slate-900/50 disabled:text-slate-400"
-            >
-              {selected.isCleared
-                ? `Màn ${selected.stageNo} đã hoàn thành`
-                : `Vào thi đấu màn ${selected.stageNo}`}
-            </button>
-
-            {selected.isCleared && (
-              <p className="mt-2 text-xs text-slate-400">
-                Màn đã qua sẽ được làm xám và không thể bấm lại. Hãy chọn màn
-                chưa hoàn thành.
-              </p>
-            )}
+                  {!disabled && (
+                    <p className="mt-3 inline-flex rounded-lg border border-emerald-300/40 bg-emerald-400/20 px-2.5 py-1 text-xs font-semibold tracking-wide text-emerald-100">
+                      Chọn màn này
+                    </p>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
-          <div className="rounded-2xl border border-[#24306e] bg-black/20 p-4">
-            <p className="text-xs uppercase tracking-[0.16em] text-[#f6d87a]">
-              Đội hình đối thủ (22 cầu thủ)
-            </p>
-            {detailLoading ? (
-              <p className="mt-3 text-sm text-slate-300">
-                Đang tải đội hình đối thủ...
+          <div className="mt-5 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+            <div className="game-stat-card">
+              <p className="game-stat-card__label text-amber-200">
+                Thông tin màn
               </p>
-            ) : (
-              <div className="mt-3 max-h-[340px] space-y-2 overflow-y-auto pr-1">
-                {(selectedDetail?.opponent || []).map((player, idx) => (
-                  <div
-                    key={`${player.name}-${idx}`}
-                    className="rounded-xl border border-[#1d275e] bg-[#08113a]/70 px-3 py-2"
-                  >
-                    <p className="text-sm font-semibold text-white">
-                      {idx + 1}. {player.name} ({player.role})
-                    </p>
-                    <p className="mt-1 text-xs text-slate-300">
-                      S{player.shooting} P{player.passing} Pa{player.pace} Ph
-                      {player.physical} D{player.defending} Dr{player.dribbling}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
+              <p className="mt-2 text-lg font-semibold text-white">
+                Màn {selected.stageNo} • {selected.clubName}
+              </p>
+              <p className="mt-2 text-sm text-slate-300">
+                Buff chỉ số đối thủ: +{selected.enemyStatBonus}
+              </p>
+              <p className="mt-1 text-sm text-slate-300">
+                Tiến độ: {selected.wins}/{Math.max(selected.attempts, 1)} trận
+                thắng trong {selected.attempts} lần thử
+              </p>
+
+              {selected.isCleared && (
+                <p className="mt-2 text-xs text-slate-400">
+                  Màn đã qua sẽ được làm xám và không thể bấm lại. Hãy chọn màn
+                  chưa hoàn thành.
+                </p>
+              )}
+            </div>
+
+            <div className="game-stat-card">
+              <p className="game-stat-card__label text-sky-200">
+                Đội hình đối thủ (22 cầu thủ)
+              </p>
+              {detailLoading ? (
+                <p className="mt-3 text-sm text-slate-300">
+                  Đang tải đội hình đối thủ...
+                </p>
+              ) : (
+                <div className="game-scroll mt-3 max-h-[340px] space-y-2 overflow-y-auto pr-1">
+                  {(selectedDetail?.opponent || []).map((player, idx) => (
+                    <div
+                      key={`${player.name}-${idx}`}
+                      className="rounded-[16px] border border-white/8 bg-black/20 px-3 py-2"
+                    >
+                      <p className="text-sm font-semibold text-white">
+                        {idx + 1}. {player.name} ({player.role})
+                      </p>
+                      <p className="mt-1 text-xs text-slate-300">
+                        S{player.shooting} P{player.passing} Pa{player.pace} Ph
+                        {player.physical} D{player.defending} Dr
+                        {player.dribbling}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </article>

@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const F = { w: 100, h: 64 };
-const SSE_URL =
-  import.meta.env.VITE_MATCH_SSE_URL || "http://localhost:8082/sse/match";
+const MATCH_WS_URL =
+  import.meta.env.VITE_MATCH_WS_URL ||
+  import.meta.env.VITE_WS_URL ||
+  deriveMatchWebSocketURL(import.meta.env.VITE_MATCH_SSE_URL) ||
+  "ws://localhost:8082/ws";
 
 // Per-event display config: label (log), title (popup), color, bg, border, duration(ms)
 const EV = {
@@ -188,7 +191,9 @@ function MatchView({ embedded = false, onMatchEnd }) {
   }, [matchPhase]);
 
   useEffect(() => {
-    const es = new EventSource(SSE_URL);
+    let socket;
+    let reconnectTimer = 0;
+    let closed = false;
 
     const handleEvent = (rawData) => {
       let payload;
@@ -305,6 +310,8 @@ function MatchView({ embedded = false, onMatchEnd }) {
             newFx.push({ id, type: "var", x: 50, y: 32 });
           } else if (e.kind === "goal") {
             newFx.push({ id, type: "goal", x: bx, y: by });
+          } else if (e.kind === "kickoff") {
+            newFx.push({ id, type: "kickoff", x: 50, y: 32 });
           } else if (e.kind === "shot") {
             newFx.push({
               id,
@@ -341,16 +348,36 @@ function MatchView({ embedded = false, onMatchEnd }) {
       }
     };
 
-    es.onopen = () => {
-      setConnState("Live");
-    };
-    es.onerror = () => {
-      setConnState("SSE reconnecting...");
-    };
-    es.addEventListener("match_tick", (event) => handleEvent(event.data));
-    es.onmessage = (event) => handleEvent(event.data);
+    const connect = () => {
+      if (closed) return;
 
-    return () => es.close();
+      socket = new WebSocket(MATCH_WS_URL);
+      socket.onopen = () => {
+        setConnState("Live");
+      };
+      socket.onmessage = (event) => {
+        if (typeof event.data === "string") {
+          handleEvent(event.data);
+        }
+      };
+      socket.onerror = () => {
+        setConnState("Socket reconnecting...");
+        socket?.close();
+      };
+      socket.onclose = () => {
+        if (closed) return;
+        setConnState("Socket reconnecting...");
+        reconnectTimer = window.setTimeout(connect, 1000);
+      };
+    };
+
+    connect();
+
+    return () => {
+      closed = true;
+      if (reconnectTimer) window.clearTimeout(reconnectTimer);
+      socket?.close();
+    };
   }, [onMatchEnd]);
 
   // auto-clear popup after its configured duration
@@ -891,6 +918,70 @@ function MatchView({ embedded = false, onMatchEnd }) {
             })}
           </g>
         );
+      case "kickoff":
+        return (
+          <g key={fx.id}>
+            <circle
+              cx={fx.x}
+              cy={fx.y}
+              r="1.8"
+              fill="none"
+              stroke="#bbf7d0"
+              strokeWidth="0.4"
+            >
+              <animate
+                attributeName="r"
+                values="1.8;6.2;1.8"
+                dur="1.2s"
+                repeatCount="2"
+              />
+              <animate
+                attributeName="opacity"
+                values="0.85;0.15;0.85"
+                dur="1.2s"
+                repeatCount="2"
+              />
+            </circle>
+            <circle
+              cx={fx.x}
+              cy={fx.y}
+              r="3.5"
+              fill="none"
+              stroke="#22c55e"
+              strokeWidth="0.25"
+              opacity="0.7"
+            >
+              <animate
+                attributeName="r"
+                values="3.5;10;3.5"
+                dur="1.4s"
+                repeatCount="2"
+              />
+              <animate
+                attributeName="opacity"
+                values="0.7;0.05;0.7"
+                dur="1.4s"
+                repeatCount="2"
+              />
+            </circle>
+            <text
+              x={fx.x}
+              y={fx.y - 5}
+              textAnchor="middle"
+              fill="#bbf7d0"
+              fontSize="2.8"
+              fontWeight="bold"
+            >
+              GIAO BÓNG
+              <animate
+                attributeName="opacity"
+                values="0;1;1;0"
+                dur="2s"
+                fill="freeze"
+              />
+            </text>
+          </g>
+        );
       case "shot": {
         const norm = Math.max(Math.hypot(fx.vx || 0, fx.vy || 0), 0.1);
         const dx = ((fx.vx || 0) / norm) * (8 + (fx.power || 0) * 2);
@@ -1408,6 +1499,22 @@ function lerp(a, b, t) {
 
 function clamp(v, min, max) {
   return Math.min(max, Math.max(min, v));
+}
+
+function deriveMatchWebSocketURL(rawURL) {
+  if (!rawURL) return "";
+
+  try {
+    const url = new URL(rawURL);
+    if (url.protocol === "http:") url.protocol = "ws:";
+    if (url.protocol === "https:") url.protocol = "wss:";
+    if (url.pathname.endsWith("/sse/match")) {
+      url.pathname = url.pathname.replace(/\/sse\/match$/, "/ws");
+    }
+    return url.toString();
+  } catch {
+    return "";
+  }
 }
 
 function createEmptyTeamStats() {

@@ -9,6 +9,61 @@ import TacticsPage from "./TacticsPage.jsx";
 import { apiRequest } from "./api";
 import { navItems, ROUTES } from "./routes";
 
+const routeMeta = {
+  [ROUTES.club]: {
+    title: "Club Command Center",
+    eyebrow: "Club Ops",
+    description:
+      "Quản lý roster nền, ngân sách và các tuyến nâng cấp của đội hình hiện tại.",
+  },
+  [ROUTES.players]: {
+    title: "Player Lab",
+    eyebrow: "Squad Data",
+    description:
+      "Theo dõi tiến trình thẻ cầu thủ, chỉnh điểm kỹ năng và xem toàn bộ chỉ số phát triển.",
+  },
+  [ROUTES.tactics]: {
+    title: "Tactics Forge",
+    eyebrow: "Match Engine",
+    description:
+      "Tinh chỉnh nhịp độ, áp lực và hồ sơ gameplay để đẩy thẳng sang realtime engine.",
+  },
+  [ROUTES.aiMatch]: {
+    title: "AI Campaign",
+    eyebrow: "Progression",
+    description:
+      "Đánh từng stage, mở khóa màn kế tiếp và farm tiền thưởng cùng EXP toàn đội.",
+  },
+  [ROUTES.pvp]: {
+    title: "Arena Queue",
+    eyebrow: "PvP Hub",
+    description:
+      "Không gian chờ cho matchmaking realtime, xếp hạng và đấu rank nhiều mùa giải.",
+  },
+  [ROUTES.gacha]: {
+    title: "Scout Capsule",
+    eyebrow: "Recruitment",
+    description:
+      "Roll banner mùa giải, theo dõi pity và chốt kết quả hiếm ngay trong phiên hiện tại.",
+  },
+  [ROUTES.admin]: {
+    title: "Admin Foundry",
+    eyebrow: "Back Office",
+    description:
+      "Tạo cầu thủ mới, kiểm tra pool quốc gia và rà soát dữ liệu nguồn cho hệ thống.",
+  },
+};
+
+const navHints = {
+  [ROUTES.club]: "Tổng quan CLB",
+  [ROUTES.players]: "Nâng cấp thẻ",
+  [ROUTES.tactics]: "Preset đội hình",
+  [ROUTES.aiMatch]: "50 stage",
+  [ROUTES.pvp]: "Xếp hạng",
+  [ROUTES.gacha]: "Banner roll",
+  [ROUTES.admin]: "Quản trị dữ liệu",
+};
+
 function MainDashboard({
   token,
   user,
@@ -25,6 +80,10 @@ function MainDashboard({
     () => navItems(Boolean(user?.isAdmin)),
     [user?.isAdmin],
   );
+  const currentMeta = routeMeta[pathname] || routeMeta[ROUTES.club];
+  const clubName = sessionData?.team?.clubName || "Chưa đồng bộ";
+  const budget = Number(sessionData?.team?.budget || 0).toLocaleString();
+  const rankPoint = Number(sessionData?.team?.rankPoint || 0);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,71 +120,124 @@ function MainDashboard({
   }, [onUnauthorized, token]);
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(0,0,128,0.3),transparent_30%),linear-gradient(180deg,#050505_0%,#090d1f_100%)] px-4 py-6 text-slate-100 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <section className="overflow-hidden rounded-3xl border border-[#1c255b] bg-[#050814]/95 shadow-[0_24px_60px_-28px_rgba(0,0,128,0.8)]">
-          <div className="grid gap-5 border-b border-[#1c255b] px-5 py-5 lg:grid-cols-[1.4fr_0.8fr] lg:px-6">
-            <div>
-              <p className="text-xs uppercase tracking-[0.28em] text-slate-400">
-                FIFAM Main Page
-              </p>
-              <h1 className="mt-3 font-['Space_Grotesk'] text-3xl font-bold text-white sm:text-4xl">
-                Trung tâm điều khiển câu lạc bộ sau đăng nhập
-              </h1>
-              <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300 sm:text-base">
-                Mỗi khu chức năng giờ có URL riêng và các màn chính đã bắt đầu
-                lấy dữ liệu thật từ service-core.
-              </p>
+    <main className="app-shell">
+      <div className="app-shell__inner space-y-6">
+        <section className="game-panel game-panel--accent scan-line overflow-hidden">
+          <div className="game-panel__content grid gap-6 px-5 py-6 lg:grid-cols-[1.3fr_0.7fr] lg:px-7 lg:py-7">
+            <div className="space-y-5">
+              <div className="game-header-kicker">
+                <span className="pulse-dot" />
+                FIFAM Live Club Hub
+              </div>
+              <div>
+                <p className="text-sm uppercase tracking-[0.28em] text-cyan-100/70">
+                  {currentMeta.eyebrow}
+                </p>
+                <h1 className="game-header-title text-shadow-soft text-white">
+                  {currentMeta.title}
+                </h1>
+                <p className="game-copy mt-4 max-w-3xl text-base sm:text-lg">
+                  {currentMeta.description} Tất cả module hiện đang chạy trên
+                  route riêng, nên shell này đóng vai trò như game lobby chính
+                  sau đăng nhập.
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="game-stat-card floating-card">
+                  <p className="game-stat-card__label">Manager</p>
+                  <p className="game-stat-card__value">{user?.username}</p>
+                  <p className="game-stat-card__hint">
+                    Vai trò {user?.isAdmin ? "Admin" : "User"}
+                  </p>
+                </div>
+                <div className="game-stat-card">
+                  <p className="game-stat-card__label">Club Budget</p>
+                  <p className="game-stat-card__value">{budget}</p>
+                  <p className="game-stat-card__hint">coins khả dụng</p>
+                </div>
+                <div className="game-stat-card">
+                  <p className="game-stat-card__label">Rank Power</p>
+                  <p className="game-stat-card__value">{rankPoint}</p>
+                  <p className="game-stat-card__hint">điểm tích lũy mùa</p>
+                </div>
+              </div>
+
+              <nav className="game-nav">
+                {items.map((item) => (
+                  <button
+                    key={item.path}
+                    type="button"
+                    data-active={pathname === item.path}
+                    onClick={() => onNavigate(item.path)}
+                    className="game-nav-button min-w-[150px] flex-1"
+                  >
+                    <div className="text-[11px] uppercase tracking-[0.24em] text-slate-400">
+                      {navHints[item.path] || "Module"}
+                    </div>
+                    <div className="mt-2 text-lg font-semibold text-white">
+                      {item.label}
+                    </div>
+                  </button>
+                ))}
+              </nav>
             </div>
 
-            <div className="rounded-2xl border border-[#24306e] bg-black/25 p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
-                Session
-              </p>
-              <p className="mt-2 text-xl font-semibold text-white">
-                {user?.username}
-              </p>
-              <p className="mt-1 text-sm text-slate-300">
-                Vai trò:{" "}
-                <span className="font-semibold text-[#f6d87a]">
-                  {user?.isAdmin ? "Admin" : "User"}
-                </span>
-              </p>
-              <p className="mt-2 text-sm text-slate-300">
-                CLB:{" "}
-                <span className="font-semibold text-white">
-                  {sessionData?.team?.clubName || "Chưa có dữ liệu"}
-                </span>
-              </p>
-              <p className="mt-2 text-xs text-slate-400">
-                URL hiện tại: {pathname}
-              </p>
-              <button
-                type="button"
-                onClick={onLogout}
-                className="mt-4 w-full rounded-xl bg-[#000080] px-4 py-3 font-semibold text-white transition hover:bg-[#1111a8]"
-              >
-                Logout
-              </button>
-            </div>
+            <aside className="space-y-4">
+              <div className="game-panel game-panel--soft overflow-hidden rounded-[24px] border border-white/8 p-4">
+                <div className="game-panel__content">
+                  <p className="game-header-kicker">Session Radar</p>
+                  <div className="mt-4 space-y-3 text-sm text-slate-200">
+                    <div className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/5 px-4 py-3">
+                      <span className="text-slate-400">CLB hiện tại</span>
+                      <strong className="text-white">{clubName}</strong>
+                    </div>
+                    <div className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/5 px-4 py-3">
+                      <span className="text-slate-400">Path</span>
+                      <strong className="text-cyan-100">{pathname}</strong>
+                    </div>
+                    <div className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/5 px-4 py-3">
+                      <span className="text-slate-400">API sync</span>
+                      <strong className="text-emerald-300">
+                        {loadingSession ? "Syncing" : "Ready"}
+                      </strong>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={onLogout}
+                    className="game-button-primary mt-4 w-full"
+                  >
+                    Return To Login
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+                {[
+                  [
+                    "Mission",
+                    "Xoay vòng giữa CLB, tactics, squad và match mà không reload app.",
+                  ],
+                  [
+                    "Reward Loop",
+                    "Campaign AI, gacha và nâng cấp cầu thủ đang nối vào dữ liệu thật.",
+                  ],
+                  [
+                    "Live Ready",
+                    "Shell này đã sẵn cho realtime PvP và event stream sau này.",
+                  ],
+                ].map(([title, text]) => (
+                  <div key={title} className="game-stat-card">
+                    <p className="game-stat-card__label">{title}</p>
+                    <p className="mt-3 text-sm leading-6 text-slate-300">
+                      {text}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </aside>
           </div>
-
-          <nav className="flex flex-wrap gap-3 px-5 py-4 lg:px-6">
-            {items.map((item) => (
-              <button
-                key={item.path}
-                type="button"
-                onClick={() => onNavigate(item.path)}
-                className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${
-                  pathname === item.path
-                    ? "border-[#4169ff] bg-[#000080] text-white shadow-[0_16px_30px_-20px_rgba(0,0,128,0.95)]"
-                    : "border-[#24306e] bg-black/20 text-slate-300 hover:border-[#4169ff] hover:text-white"
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </nav>
         </section>
 
         {loadingSession && (
@@ -217,42 +329,66 @@ function renderRoute(pathname, props) {
 
 function PvpOverview() {
   return (
-    <section className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-      <article className="rounded-3xl border border-[#1c255b] bg-[#050814]/95 p-5 shadow-[0_24px_60px_-28px_rgba(0,0,128,0.8)]">
-        <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
-          Đấu với người
-        </p>
-        <h2 className="mt-2 font-['Space_Grotesk'] text-2xl font-semibold text-white">
-          Chế độ rank với ghép trận tự động
-        </h2>
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-2xl border border-[#24306e] bg-black/20 p-4">
-            <p className="text-sm font-semibold text-white">
-              Hệ thống xếp hạng
-            </p>
-            <p className="mt-2 text-sm leading-6 text-slate-300">
-              Nghiệp dư, bán chuyên, chuyên nghiệp, hạng 3, hạng 2, hạng 1 và
-              siêu sao.
-            </p>
-          </div>
-          <div className="rounded-2xl border border-[#24306e] bg-black/20 p-4">
-            <p className="text-sm font-semibold text-white">
-              Điều kiện thăng hạng
-            </p>
-            <p className="mt-2 text-sm leading-6 text-slate-300">
-              Trong chu kỳ 10 trận, thắng từ 6 trận trở lên sẽ được lên hạng.
-            </p>
+    <section className="grid gap-6 lg:grid-cols-[1.08fr_0.92fr]">
+      <article className="game-panel game-panel--accent overflow-hidden p-5 sm:p-6">
+        <div className="game-panel__content">
+          <p className="game-header-kicker">PvP Arena</p>
+          <h2 className="game-title mt-3 text-3xl font-bold text-white">
+            Queue rank và đối kháng thời gian thực
+          </h2>
+          <p className="game-copy mt-3 max-w-2xl text-base">
+            Phần này đang đóng vai trò lobby cạnh tranh: chọn ladder, đọc luật
+            mùa và chờ hook realtime matchmaking khi backend sẵn sàng.
+          </p>
+
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            {[
+              [
+                "Tier Ladder",
+                "Nghiệp dư đến siêu sao, mỗi 10 trận là một chu kỳ leo hạng.",
+              ],
+              [
+                "Promotion Rule",
+                "Thắng tối thiểu 6/10 trận để đi tiếp lên tier cao hơn.",
+              ],
+              [
+                "Live Matchmaking",
+                "Route đã cố định, có thể nối queue realtime mà không thay shell UI.",
+              ],
+            ].map(([title, text]) => (
+              <div key={title} className="game-stat-card min-h-[150px]">
+                <p className="game-stat-card__label">{title}</p>
+                <p className="mt-3 text-sm leading-6 text-slate-300">{text}</p>
+              </div>
+            ))}
           </div>
         </div>
       </article>
 
-      <aside className="rounded-3xl border border-[#1c255b] bg-[#050814]/95 p-5 shadow-[0_24px_60px_-28px_rgba(0,0,128,0.8)]">
-        <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
-          Queue Status
-        </p>
-        <div className="mt-4 rounded-2xl border border-dashed border-[#2a387e] bg-black/20 px-4 py-5 text-sm text-slate-300">
-          Khu vực này sẵn sàng cho matchmaking realtime. Route riêng đã có để
-          sau này nối matchmaking API mà không cần đổi cấu trúc điều hướng nữa.
+      <aside className="game-panel overflow-hidden p-5 sm:p-6">
+        <div className="game-panel__content space-y-4">
+          <p className="game-header-kicker">Queue Status</p>
+          <div className="game-stat-card">
+            <p className="game-stat-card__label">Current State</p>
+            <p className="mt-3 text-sm leading-6 text-slate-300">
+              Realtime matchmaking chưa được bật, nhưng toàn bộ khu vực queue,
+              rank badge và rule display đã sẵn để nối thẳng vào hub websocket.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+            <div className="game-stat-card">
+              <p className="game-stat-card__label">Expected Flow</p>
+              <p className="mt-2 text-sm text-slate-300">
+                Join queue, match found, sync đội hình, mở match scene.
+              </p>
+            </div>
+            <div className="game-stat-card">
+              <p className="game-stat-card__label">UI Intent</p>
+              <p className="mt-2 text-sm text-slate-300">
+                Giữ cảm giác một game manager online thay vì dashboard CRUD.
+              </p>
+            </div>
+          </div>
         </div>
       </aside>
     </section>
@@ -261,15 +397,9 @@ function PvpOverview() {
 
 function Banner({ text, tone }) {
   const toneClass =
-    tone === "error"
-      ? "border-red-500/30 bg-red-500/10 text-red-300"
-      : "border-[#24306e] bg-black/20 text-slate-300";
+    tone === "error" ? "game-notice--error" : "game-notice--info";
 
-  return (
-    <p className={`rounded-2xl border px-4 py-4 text-sm ${toneClass}`}>
-      {text}
-    </p>
-  );
+  return <p className={`game-notice ${toneClass}`}>{text}</p>;
 }
 
 export default MainDashboard;

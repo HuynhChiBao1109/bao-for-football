@@ -14,6 +14,13 @@
         },
         "Push-Location": true,
         "Pop-Location": true,
-        "Set-Content": true
+        "Set-Content": true,
+        "npx tailwindcss": true,
+        "/^npx --version$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "npm exec": true,
+        "tailwindcss": true
     }
 }

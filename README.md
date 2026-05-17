@@ -86,3 +86,7 @@ cd apps/service-realtime && go run ./cmd/server
 - Thêm chức năng quay gacha các cầu thủ mùa giải đặc biệt ( 50 - 60 ) lần roll sẽ chắc chắn ra 1 cầu thủ trong gói
 
 - tạo 1 admin page để thêm cầu thủ đặc biệt hoặc cầu thủ thường
+
+- Event trong trận
+
+* giao banh khi bắt đầu trận, sau ghi bàn, sang hiệp 2

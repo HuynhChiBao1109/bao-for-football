@@ -186,21 +186,19 @@ function AdminDashboard({
     <main
       className={`text-slate-100 ${
         embedded
-          ? "rounded-3xl border border-[#1c255b] bg-[#050814]/95 p-5 shadow-[0_24px_60px_-28px_rgba(0,0,128,0.8)]"
-          : "min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(0,0,128,0.32),transparent_32%),linear-gradient(180deg,#050505_0%,#090d1f_100%)] px-4 py-6 sm:px-6 lg:px-8"
+          ? "game-panel game-panel--accent rounded-[28px] p-5"
+          : "app-shell"
       }`}
     >
       <div
-        className={`mx-auto grid gap-6 ${embedded ? "max-w-none lg:grid-cols-[1.5fr_0.9fr]" : "max-w-7xl lg:grid-cols-[1.6fr_0.9fr]"}`}
+        className={`${embedded ? "game-panel__content" : "app-shell__inner"} mx-auto grid gap-6 ${embedded ? "max-w-none lg:grid-cols-[1.5fr_0.9fr]" : "max-w-7xl lg:grid-cols-[1.6fr_0.9fr]"}`}
       >
-        <section className="rounded-2xl border border-[#1c255b] bg-[#050814]/95 shadow-[0_24px_60px_-28px_rgba(0,0,128,0.8)]">
-          <div className="border-b border-[#1c255b] px-5 py-4">
+        <section className="game-panel overflow-hidden">
+          <div className="border-b border-white/8 px-5 py-4">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
-                  Admin Dashboard
-                </p>
-                <h1 className="mt-2 font-['Space_Grotesk'] text-2xl font-semibold text-white">
+                <p className="game-header-kicker">Admin Dashboard</p>
+                <h1 className="game-title mt-3 text-3xl font-bold text-white">
                   Quản lý cầu thủ hiện có
                 </h1>
               </div>
@@ -208,7 +206,7 @@ function AdminDashboard({
                 <button
                   type="button"
                   onClick={onLogout}
-                  className="rounded-xl bg-[#000080] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1111a8]"
+                  className="game-button-primary"
                 >
                   Logout
                 </button>
@@ -224,8 +222,8 @@ function AdminDashboard({
           </div>
 
           <div className="overflow-x-auto p-4">
-            <table className="min-w-full overflow-hidden rounded-xl border border-[#1d275e] text-left text-sm">
-              <thead className="bg-[#08113a] text-slate-200">
+            <table className="game-table min-w-full text-left text-sm">
+              <thead className="text-slate-200">
                 <tr>
                   <th className="px-4 py-3 font-medium">Name</th>
                   <th className="px-4 py-3 font-medium">Country</th>
@@ -235,7 +233,7 @@ function AdminDashboard({
                   <th className="px-4 py-3 font-medium">Stats</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#15204e] bg-[#040711]">
+              <tbody>
                 {players.length === 0 && (
                   <tr>
                     <td className="px-4 py-6 text-slate-400" colSpan="6">
@@ -295,12 +293,10 @@ function AdminDashboard({
           </div>
         </section>
 
-        <aside className="rounded-2xl border border-[#1c255b] bg-[#050814]/95 p-5 shadow-[0_24px_60px_-28px_rgba(0,0,128,0.8)]">
+        <aside className="game-panel overflow-hidden p-5">
           <div className="mb-4">
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
-              Create Player
-            </p>
-            <h2 className="mt-2 font-['Space_Grotesk'] text-2xl font-semibold text-white">
+            <p className="game-header-kicker">Create Player</p>
+            <h2 className="game-title mt-3 text-3xl font-bold text-white">
               Form thêm cầu thủ
             </h2>
           </div>
@@ -374,37 +370,29 @@ function AdminDashboard({
               ))}
             </div>
 
-            <div className="rounded-xl border border-[#24306e] bg-black/30 px-4 py-3 text-sm text-slate-300">
+            <div className="game-stat-card text-sm text-slate-300">
               Tổng chỉ số trung bình:{" "}
-              <span className="font-semibold text-[#f6d87a]">
+              <span className="font-semibold text-emerald-300">
                 {statsTotal.toFixed(1)}
               </span>
             </div>
 
             {message && (
-              <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
-                {message}
-              </p>
+              <p className="game-notice game-notice--success">{message}</p>
             )}
-            {error && (
-              <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
-                {error}
-              </p>
-            )}
+            {error && <p className="game-notice game-notice--error">{error}</p>}
 
             <button
               type="submit"
               disabled={loading || !form.countryId}
-              className="w-full rounded-xl bg-[#000080] px-4 py-3 font-semibold text-white transition hover:bg-[#1111a8] disabled:cursor-not-allowed disabled:opacity-60"
+              className="game-button-primary w-full"
             >
               {loading ? "Saving..." : "Add Player"}
             </button>
           </form>
 
-          <div className="mt-5 rounded-xl border border-[#24306e] bg-black/30 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-              Player Detail
-            </p>
+          <div className="game-stat-card mt-5">
+            <p className="game-stat-card__label">Player Detail</p>
             {loadingDetail && (
               <p className="mt-2 text-sm text-slate-300">
                 Đang tải chi tiết...
@@ -461,13 +449,11 @@ function AdminDashboard({
 function Input({ label, value, onChange }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs uppercase tracking-[0.16em] text-slate-400">
-        {label}
-      </span>
+      <span className="game-field-label">{label}</span>
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-xl border border-[#22306f] bg-[#030712] px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#4169ff]"
+        className="game-input"
       />
     </label>
   );
@@ -476,13 +462,11 @@ function Input({ label, value, onChange }) {
 function Select({ label, value, options, onChange }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs uppercase tracking-[0.16em] text-slate-400">
-        {label}
-      </span>
+      <span className="game-field-label">{label}</span>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-xl border border-[#22306f] bg-[#030712] px-3 py-2.5 text-sm text-white outline-none transition focus:border-[#4169ff]"
+        className="game-select"
       >
         {options.map((option) => (
           <option key={option.value || option} value={option.value || option}>
@@ -497,16 +481,14 @@ function Select({ label, value, options, onChange }) {
 function NumberField({ label, value, onChange }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[11px] uppercase tracking-[0.14em] text-slate-400">
-        {label}
-      </span>
+      <span className="game-field-label">{label}</span>
       <input
         type="number"
         min="1"
         max="99"
         value={value}
         onChange={(event) => onChange(Number(event.target.value))}
-        className="w-full rounded-xl border border-[#22306f] bg-[#030712] px-3 py-2 text-sm text-white outline-none transition focus:border-[#4169ff]"
+        className="game-number-input"
       />
     </label>
   );
