@@ -1,21 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from 'react';
 
-import AdminClubCreateCard from "./AdminClubCreateCard.jsx";
-import AdminCountryCreateCard from "./AdminCountryCreateCard.jsx";
-import AdminGachaCreateCard from "./AdminGachaCreateCard.jsx";
-import AdminPlayerCreateCard from "./AdminPlayerCreateCard.jsx";
+import AdminClubCreateCard from './AdminClubCreateCard.jsx';
+import AdminCountryCreateCard from './AdminCountryCreateCard.jsx';
+import AdminGachaCreateCard from './AdminGachaCreateCard.jsx';
+import AdminPlayerCreateCard from './AdminPlayerCreateCard.jsx';
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8081";
-const DEFAULT_AVATAR_URL = "/default-avatar.svg";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081';
+const DEFAULT_AVATAR_URL = '/default-avatar.svg';
 
-function AdminDashboard({
-  token,
-  user,
-  onLogout,
-  onUnauthorized,
-  embedded = false,
-}) {
+function AdminDashboard({ token, user, onLogout, onUnauthorized, embedded = false }) {
   const [players, setPlayers] = useState([]);
   const [countries, setCountries] = useState([]);
   const [clubs, setClubs] = useState([]);
@@ -25,22 +18,22 @@ function AdminDashboard({
   const [loadingCountries, setLoadingCountries] = useState(false);
   const [loadingClubs, setLoadingClubs] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
-  const [nameSearch, setNameSearch] = useState("");
-  const [countryFilter, setCountryFilter] = useState("all");
-  const [clubFilter, setClubFilter] = useState("all");
-  const [debouncedNameSearch, setDebouncedNameSearch] = useState("");
+  const [nameSearch, setNameSearch] = useState('');
+  const [countryFilter, setCountryFilter] = useState('all');
+  const [clubFilter, setClubFilter] = useState('all');
+  const [debouncedNameSearch, setDebouncedNameSearch] = useState('');
   const [skills, setSkills] = useState([]);
   const [skillDraft, setSkillDraft] = useState({
-    name: "",
-    iconUrl: "",
-    buffType: "shooting",
+    name: '',
+    iconUrl: '',
+    buffType: 'shooting',
     buffValue: 3,
   });
-  const [assignSkillName, setAssignSkillName] = useState("");
+  const [assignSkillName, setAssignSkillName] = useState('');
 
   const selectedPlayerStats = useMemo(() => {
     if (!selectedPlayer) {
-      return "";
+      return '';
     }
 
     return [
@@ -64,12 +57,12 @@ function AdminDashboard({
       selectedPlayer.slidingTackle,
       selectedPlayer.dribbling,
       selectedPlayer.curve,
-    ].join("/");
+    ].join('/');
   }, [selectedPlayer]);
 
   const uniqueClubs = useMemo(() => {
-    return Array.from(new Set(clubs.map((club) => club.name).filter(Boolean))).sort(
-      (a, b) => a.localeCompare(b),
+    return Array.from(new Set(clubs.map((club) => club.name).filter(Boolean))).sort((a, b) =>
+      a.localeCompare(b),
     );
   }, [clubs]);
 
@@ -110,7 +103,7 @@ function AdminDashboard({
           onUnauthorized();
           return;
         }
-        throw new Error(data?.error || "Failed to load skills");
+        throw new Error(data?.error || 'Failed to load skills');
       }
       setSkills(Array.isArray(data?.data) ? data.data : []);
     } catch (err) {
@@ -132,7 +125,7 @@ function AdminDashboard({
           onUnauthorized();
           return;
         }
-        throw new Error(data?.error || "Failed to load countries");
+        throw new Error(data?.error || 'Failed to load countries');
       }
 
       setCountries(Array.isArray(data?.data) ? data.data : []);
@@ -149,7 +142,7 @@ function AdminDashboard({
       const response = await fetch(`${API_BASE_URL}/api/v1/auth/clubs`);
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data?.error || "Failed to load clubs");
+        throw new Error(data?.error || 'Failed to load clubs');
       }
 
       setClubs(Array.isArray(data) ? data : []);
@@ -165,22 +158,22 @@ function AdminDashboard({
     try {
       const query = new URLSearchParams();
       if (debouncedNameSearch) {
-        query.set("name", debouncedNameSearch);
+        query.set('name', debouncedNameSearch);
       }
-      if (countryFilter !== "all") {
-        query.set("countryId", String(countryFilter));
+      if (countryFilter !== 'all') {
+        query.set('countryId', String(countryFilter));
       }
-      if (clubFilter !== "all") {
-        query.set("baseClub", clubFilter);
+      if (clubFilter !== 'all') {
+        query.set('baseClub', clubFilter);
       }
 
       const queryString = query.toString();
       const response = await fetch(
-        `${API_BASE_URL}/api/v1/admin/players${queryString ? `?${queryString}` : ""}`,
+        `${API_BASE_URL}/api/v1/admin/players${queryString ? `?${queryString}` : ''}`,
         {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         },
       );
       const data = await response.json();
@@ -189,7 +182,7 @@ function AdminDashboard({
           onUnauthorized();
           return;
         }
-        throw new Error(data?.error || "Failed to load players");
+        throw new Error(data?.error || 'Failed to load players');
       }
 
       const nextPlayers = Array.isArray(data?.data) ? data.data : [];
@@ -204,21 +197,18 @@ function AdminDashboard({
   async function loadPlayerDetail(playerId) {
     setLoadingDetail(true);
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/v1/admin/players/${playerId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/players/${playerId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
-      );
+      });
       const data = await response.json();
       if (!response.ok) {
         if (response.status === 401 || response.status === 403) {
           onUnauthorized();
           return;
         }
-        throw new Error(data?.error || "Failed to load player detail");
+        throw new Error(data?.error || 'Failed to load player detail');
       }
 
       setSelectedPlayer(data?.data || null);
@@ -233,10 +223,10 @@ function AdminDashboard({
     event.preventDefault();
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/admin/skills`, {
-        method: "POST",
+        method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(skillDraft),
       });
@@ -246,12 +236,12 @@ function AdminDashboard({
           onUnauthorized();
           return;
         }
-        throw new Error(data?.error || "Failed to create skill");
+        throw new Error(data?.error || 'Failed to create skill');
       }
 
       setSkillDraft({
-        name: "",
-        iconUrl: "",
+        name: '',
+        iconUrl: '',
         buffType: skillDraft.buffType,
         buffValue: 3,
       });
@@ -271,10 +261,10 @@ function AdminDashboard({
       const response = await fetch(
         `${API_BASE_URL}/api/v1/admin/players/${selectedPlayer.id}/skills`,
         {
-          method: "POST",
+          method: 'POST',
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify({ skillName: assignSkillName }),
         },
@@ -285,7 +275,7 @@ function AdminDashboard({
           onUnauthorized();
           return;
         }
-        throw new Error(data?.error || "Failed to assign skill");
+        throw new Error(data?.error || 'Failed to assign skill');
       }
 
       setSelectedPlayer(data?.data || null);
@@ -298,45 +288,33 @@ function AdminDashboard({
   return (
     <main
       className={`text-slate-100 ${
-        embedded
-          ? "game-panel game-panel--accent rounded-[28px] p-5"
-          : "app-shell"
+        embedded ? 'game-panel game-panel--accent rounded-[28px] p-5' : 'app-shell'
       }`}
     >
       <div
-        className={`${embedded ? "game-panel__content" : "app-shell__inner"} mx-auto grid gap-6 ${embedded ? "max-w-none lg:grid-cols-[1.45fr_0.95fr]" : "max-w-7xl lg:grid-cols-[1.45fr_0.95fr]"}`}
+        className={`${embedded ? 'game-panel__content' : 'app-shell__inner'} mx-auto grid gap-6 ${embedded ? 'max-w-none lg:grid-cols-[1.45fr_0.95fr]' : 'max-w-7xl lg:grid-cols-[1.45fr_0.95fr]'}`}
       >
         <section className="game-panel overflow-hidden">
           <div className="border-b border-white/8 px-5 py-4">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="game-header-kicker">Admin Dashboard</p>
-                <h1 className="game-title mt-3 text-3xl font-bold text-white">
-                  Quản lí cầu thủ
-                </h1>
+                <h1 className="game-title mt-3 text-3xl font-bold text-white">Quản lí cầu thủ</h1>
               </div>
               {!embedded && (
-                <button
-                  type="button"
-                  onClick={onLogout}
-                  className="game-button-primary"
-                >
+                <button type="button" onClick={onLogout} className="game-button-primary">
                   Logout
                 </button>
               )}
             </div>
             <p className="mt-1 text-sm text-slate-400">
-              Logged in as{" "}
-              <span className="font-semibold text-white">
-                {user?.username || "admin"}
-              </span>
+              Logged in as{' '}
+              <span className="font-semibold text-white">{user?.username || 'admin'}</span>
             </p>
           </div>
 
           {loadingPlayers && (
-            <p className="px-5 py-4 text-sm text-slate-300">
-              Đang tải danh sách cầu thủ...
-            </p>
+            <p className="px-5 py-4 text-sm text-slate-300">Đang tải danh sách cầu thủ...</p>
           )}
           {loadingCountries && (
             <p className="px-5 py-4 text-sm text-slate-300">
@@ -344,9 +322,7 @@ function AdminDashboard({
             </p>
           )}
           {loadingClubs && (
-            <p className="px-5 py-4 text-sm text-slate-300">
-              Đang tải danh sách câu lạc bộ...
-            </p>
+            <p className="px-5 py-4 text-sm text-slate-300">Đang tải danh sách câu lạc bộ...</p>
           )}
 
           <div className="overflow-x-auto p-4">
@@ -416,24 +392,16 @@ function AdminDashboard({
                         />
                         <div>
                           <div>{player.name}</div>
-                          <div className="text-xs text-slate-400">
-                            {player.baseClub}
-                          </div>
+                          <div className="text-xs text-slate-400">{player.baseClub}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-slate-200">
-                      {player?.country?.name || player.nationality || "-"}
+                      {player?.country?.name || player.nationality || '-'}
                     </td>
-                    <td className="px-4 py-3 text-slate-200">
-                      {player.season}
-                    </td>
-                    <td className="px-4 py-3 text-slate-200">
-                      {player.sourceType}
-                    </td>
-                    <td className="px-4 py-3 text-slate-200">
-                      {player.specialSkill || "-"}
-                    </td>
+                    <td className="px-4 py-3 text-slate-200">{player.season}</td>
+                    <td className="px-4 py-3 text-slate-200">{player.sourceType}</td>
+                    <td className="px-4 py-3 text-slate-200">{player.specialSkill || '-'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -469,19 +437,11 @@ function AdminDashboard({
             onUnauthorized={onUnauthorized}
           />
 
-          <AdminGachaCreateCard
-            token={token}
-            players={players}
-            onUnauthorized={onUnauthorized}
-          />
+          <AdminGachaCreateCard token={token} players={players} onUnauthorized={onUnauthorized} />
 
           <section className="game-panel overflow-hidden p-5">
             <p className="game-stat-card__label">Player Detail</p>
-            {loadingDetail && (
-              <p className="mt-2 text-sm text-slate-300">
-                Đang tải chi tiết...
-              </p>
-            )}
+            {loadingDetail && <p className="mt-2 text-sm text-slate-300">Đang tải chi tiết...</p>}
             {!loadingDetail && !selectedPlayer && (
               <p className="mt-2 text-sm text-slate-300">
                 Chọn một cầu thủ trong danh sách để xem chi tiết.
@@ -496,12 +456,8 @@ function AdminDashboard({
                     className="h-14 w-14 rounded-full object-cover"
                   />
                   <div>
-                    <div className="font-semibold text-white">
-                      {selectedPlayer.name}
-                    </div>
-                    <div className="text-xs text-slate-400">
-                      {selectedPlayer.baseClub}
-                    </div>
+                    <div className="font-semibold text-white">{selectedPlayer.name}</div>
+                    <div className="text-xs text-slate-400">{selectedPlayer.baseClub}</div>
                   </div>
                 </div>
                 <div>CLB: {selectedPlayer.baseClub}</div>
@@ -518,7 +474,8 @@ function AdminDashboard({
                     <option value="">Select skill</option>
                     {skills.map((skill) => (
                       <option key={skill.id} value={skill.name}>
-                        {skill.name} ({skill.buffType} {skill.buffValue > 0 ? `+${skill.buffValue}` : skill.buffValue})
+                        {skill.name} ({skill.buffType}{' '}
+                        {skill.buffValue > 0 ? `+${skill.buffValue}` : skill.buffValue})
                       </option>
                     ))}
                   </select>
@@ -557,26 +514,26 @@ function AdminDashboard({
                 }
               >
                 {[
-                  "shooting",
-                  "passing",
-                  "longPass",
-                  "vision",
-                  "gkReach",
-                  "attackingAwareness",
-                  "defensiveAwareness",
-                  "gkParrying",
-                  "gkReflex",
-                  "duels",
-                  "standingTackle",
-                  "slidingTackle",
-                  "pace",
-                  "stamina",
-                  "balance",
-                  "technique",
-                  "determination",
-                  "strength",
-                  "dribbling",
-                  "curve",
+                  'shooting',
+                  'passing',
+                  'longPass',
+                  'vision',
+                  'gkReach',
+                  'attackingAwareness',
+                  'defensiveAwareness',
+                  'gkParrying',
+                  'gkReflex',
+                  'duels',
+                  'standingTackle',
+                  'slidingTackle',
+                  'pace',
+                  'stamina',
+                  'balance',
+                  'technique',
+                  'determination',
+                  'strength',
+                  'dribbling',
+                  'curve',
                 ].map((item) => (
                   <option key={item} value={item}>
                     {item}

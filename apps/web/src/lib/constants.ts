@@ -19,13 +19,13 @@ export const STAT_FIELDS = [
   { key: 'gkParrying', label: 'GK Parrying' },
   { key: 'gkReflex', label: 'GK Reflex' },
   { key: 'gkReach', label: 'GK Reach' },
-] as const
+] as const;
 
-export type StatKey = (typeof STAT_FIELDS)[number]['key']
+export type StatKey = (typeof STAT_FIELDS)[number]['key'];
 
-export const STAT_KEYS = STAT_FIELDS.map((f) => f.key) as StatKey[]
+export const STAT_KEYS = STAT_FIELDS.map((f) => f.key) as StatKey[];
 
 export const DEFAULT_STATS = STAT_KEYS.reduce(
   (acc, key) => ({ ...acc, [key]: 0 }),
   {} as Record<StatKey, number>,
-)
+);

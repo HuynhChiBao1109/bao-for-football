@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState } from 'react';
 
-import { apiRequest } from "./api";
+import { apiRequest } from './api';
 
 function GachaPage({ token, sessionData, onUnauthorized }) {
-  const [bannerCode, setBannerCode] = useState("special-season");
+  const [bannerCode, setBannerCode] = useState('special-season');
   const [rolling, setRolling] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const [result, setResult] = useState(null);
   const [history, setHistory] = useState([]);
 
@@ -13,16 +13,16 @@ function GachaPage({ token, sessionData, onUnauthorized }) {
 
   async function rollOnce() {
     if (!userId) {
-      setError("Không tìm thấy user hiện tại để thực hiện roll.");
+      setError('Không tìm thấy user hiện tại để thực hiện roll.');
       return;
     }
 
     setRolling(true);
-    setError("");
+    setError('');
 
     try {
-      const payload = await apiRequest("/api/v1/gacha/roll", {
-        method: "POST",
+      const payload = await apiRequest('/api/v1/gacha/roll', {
+        method: 'POST',
         token,
         body: {
           userId,
@@ -32,9 +32,7 @@ function GachaPage({ token, sessionData, onUnauthorized }) {
 
       const nextResult = payload?.data || null;
       setResult(nextResult);
-      setHistory((current) =>
-        [nextResult, ...current].filter(Boolean).slice(0, 6),
-      );
+      setHistory((current) => [nextResult, ...current].filter(Boolean).slice(0, 6));
     } catch (err) {
       if (err.status === 401 || err.status === 403) {
         onUnauthorized();
@@ -55,8 +53,8 @@ function GachaPage({ token, sessionData, onUnauthorized }) {
             Phòng quay tuyển trạch cầu thủ
           </h2>
           <p className="game-copy mt-3 max-w-2xl text-base">
-            Chọn banner, nổ capsule và xem ngay rarity cùng trạng thái pity của
-            user hiện tại mà không cần rời khỏi game shell.
+            Chọn banner, nổ capsule và xem ngay rarity cùng trạng thái pity của user hiện tại mà
+            không cần rời khỏi game shell.
           </p>
 
           <div className="mt-5 grid gap-4 md:grid-cols-[0.85fr_1.15fr]">
@@ -73,15 +71,11 @@ function GachaPage({ token, sessionData, onUnauthorized }) {
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-[18px] border border-white/8 bg-black/20 px-4 py-3">
                   <p className="game-field-label mb-0">Current User</p>
-                  <p className="mt-2 text-lg font-semibold text-white">
-                    #{userId || "N/A"}
-                  </p>
+                  <p className="mt-2 text-lg font-semibold text-white">#{userId || 'N/A'}</p>
                 </div>
                 <div className="rounded-[18px] border border-white/8 bg-black/20 px-4 py-3">
                   <p className="game-field-label mb-0">Session History</p>
-                  <p className="mt-2 text-lg font-semibold text-white">
-                    {history.length}
-                  </p>
+                  <p className="mt-2 text-lg font-semibold text-white">{history.length}</p>
                 </div>
               </div>
 
@@ -91,52 +85,37 @@ function GachaPage({ token, sessionData, onUnauthorized }) {
                 disabled={rolling || !bannerCode.trim()}
                 className="game-button-primary mt-4 w-full"
               >
-                {rolling ? "Rolling..." : "Roll Player"}
+                {rolling ? 'Rolling...' : 'Roll Player'}
               </button>
 
-              {error && (
-                <p className="game-notice game-notice--error mt-4">{error}</p>
-              )}
+              {error && <p className="game-notice game-notice--error mt-4">{error}</p>}
             </div>
 
             <div className="game-stat-card">
               {!result ? (
                 <p className="rounded-[18px] border border-dashed border-white/12 bg-black/20 px-4 py-10 text-center text-sm text-slate-400">
-                  Chưa có lượt quay nào trong phiên này. Hãy chọn banner rồi
-                  roll để xem kết quả API trả về.
+                  Chưa có lượt quay nào trong phiên này. Hãy chọn banner rồi roll để xem kết quả API
+                  trả về.
                 </p>
               ) : (
                 <div>
-                  <p className="game-stat-card__label text-amber-200">
-                    Latest Roll
-                  </p>
+                  <p className="game-stat-card__label text-amber-200">Latest Roll</p>
                   <h3 className="mt-3 font-['Orbitron'] text-4xl font-bold text-white">
                     {result.rarity}
                   </h3>
-                  <p className="mt-2 text-sm text-slate-300">
-                    Banner: {result.bannerCode}
-                  </p>
+                  <p className="mt-2 text-sm text-slate-300">Banner: {result.bannerCode}</p>
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     <Tile label="Season" value={result.season} />
-                    <Tile
-                      label="Special"
-                      value={result.isSpecial ? "Yes" : "No"}
-                    />
-                    <Tile
-                      label="Pity Triggered"
-                      value={result.isPityTriggered ? "Yes" : "No"}
-                    />
-                    <Tile
-                      label="Total Rolls"
-                      value={String(result.totalRolls)}
-                    />
+                    <Tile label="Special" value={result.isSpecial ? 'Yes' : 'No'} />
+                    <Tile label="Pity Triggered" value={result.isPityTriggered ? 'Yes' : 'No'} />
+                    <Tile label="Total Rolls" value={String(result.totalRolls)} />
                     <Tile
                       label="Rolls Since Special"
                       value={String(result.rollsSinceLastSpecial)}
                     />
                     <Tile
                       label="Next Guaranteed Hint"
-                      value={result.nextRollGuaranteedHint ? "Yes" : "No"}
+                      value={result.nextRollGuaranteedHint ? 'Yes' : 'No'}
                     />
                   </div>
                 </div>
@@ -162,12 +141,8 @@ function GachaPage({ token, sessionData, onUnauthorized }) {
                 className="game-stat-card"
               >
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-base font-semibold text-white">
-                    {item.rarity}
-                  </p>
-                  <p className="text-xs text-slate-400">
-                    Roll #{item.totalRolls}
-                  </p>
+                  <p className="text-base font-semibold text-white">{item.rarity}</p>
+                  <p className="text-xs text-slate-400">Roll #{item.totalRolls}</p>
                 </div>
                 <p className="mt-1 text-sm text-slate-300">
                   {item.bannerCode} • {item.season}

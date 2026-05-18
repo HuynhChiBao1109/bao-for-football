@@ -1,32 +1,32 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useSession } from '../hooks/useSession'
-import { useAuth } from '../hooks/useAuth'
-import { useClubDetail } from '../hooks/useClubDetail'
-import { ROUTES } from '../routes'
-import { Banner } from '../components/ui/Banner'
-import { ClubHeader } from '../components/ui/ClubHeader'
-import { ModuleCard } from '../components/ui/ModuleCard'
-import { queryClient } from '../lib/queryClient'
-import './ClubPage.css'
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useSession } from '../hooks/useSession';
+import { useAuth } from '../hooks/useAuth';
+import { useClubDetail } from '../hooks/useClubDetail';
+import { ROUTES } from '../routes';
+import { Banner } from '../components/ui/Banner';
+import { ClubHeader } from '../components/ui/ClubHeader';
+import { ModuleCard } from '../components/ui/ModuleCard';
+import { queryClient } from '../lib/queryClient';
+import './ClubPage.css';
 
 export function ClubPage() {
-  const { data: sessionData, isLoading: sessionLoading } = useSession()
-  const { setSession } = useAuth()
-  const navigate = useNavigate()
-  const [notice, setNotice] = useState('')
+  const { data: sessionData, isLoading: sessionLoading } = useSession();
+  const { setSession } = useAuth();
+  const navigate = useNavigate();
+  const [notice, setNotice] = useState('');
 
-  const team = sessionData?.team ?? null
-  const clubId = team?.clubId
+  const team = sessionData?.team ?? null;
+  const clubId = team?.clubId;
 
-  const { data: club, isLoading: clubLoading, error: clubError } = useClubDetail(clubId)
+  const { data: club, isLoading: clubLoading, error: clubError } = useClubDetail(clubId);
 
-  const loading = sessionLoading || clubLoading
+  const loading = sessionLoading || clubLoading;
 
   function handleLogout() {
-    setSession(null)
-    queryClient.clear()
-    navigate(ROUTES.login, { replace: true })
+    setSession(null);
+    queryClient.clear();
+    navigate(ROUTES.login, { replace: true });
   }
 
   return (
@@ -54,7 +54,10 @@ export function ClubPage() {
         {loading && <Banner text="Đang tải dữ liệu đội bóng từ service-core..." tone="info" />}
         {clubError && <Banner text={(clubError as Error).message} tone="error" />}
         {!loading && !team && (
-          <Banner text="Tài khoản hiện tại chưa có đội bóng được gán. Hãy chọn CLB khởi đầu để vào game." tone="muted" />
+          <Banner
+            text="Tài khoản hiện tại chưa có đội bóng được gán. Hãy chọn CLB khởi đầu để vào game."
+            tone="muted"
+          />
         )}
 
         {!loading && team && (
@@ -137,7 +140,7 @@ export function ClubPage() {
                     description: 'Sự kiện theo mùa với phần thưởng hấp dẫn.',
                     icon: '🎪',
                     onClick: () => setNotice('Mục Events đang phát triển, vui lòng quay lại sau.'),
-                  }
+                  },
                 ]}
               />
             </div>
@@ -148,5 +151,5 @@ export function ClubPage() {
         )}
       </div>
     </section>
-  )
+  );
 }

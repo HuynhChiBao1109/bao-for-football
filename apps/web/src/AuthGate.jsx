@@ -1,24 +1,23 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8081";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081';
 
-const emptyLogin = { username: "", password: "" };
-const emptyRegister = { username: "", password: "", clubId: 0, clubName: "" };
+const emptyLogin = { username: '', password: '' };
+const emptyRegister = { username: '', password: '', clubId: 0, clubName: '' };
 
 function AuthGate({ onAuthenticated }) {
-  const [tab, setTab] = useState("login");
-  const [loginMode, setLoginMode] = useState("user");
+  const [tab, setTab] = useState('login');
+  const [loginMode, setLoginMode] = useState('user');
   const [loginForm, setLoginForm] = useState(emptyLogin);
   const [registerForm, setRegisterForm] = useState(emptyRegister);
   const [clubs, setClubs] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    setMessage("");
-    setError("");
+    setMessage('');
+    setError('');
   }, [tab]);
 
   useEffect(() => {
@@ -29,7 +28,7 @@ function AuthGate({ onAuthenticated }) {
         const response = await fetch(`${API_BASE_URL}/api/v1/auth/clubs`);
         const data = await response.json();
         if (!response.ok) {
-          throw new Error(data?.error || "Load clubs failed");
+          throw new Error(data?.error || 'Load clubs failed');
         }
 
         if (cancelled) {
@@ -61,20 +60,19 @@ function AuthGate({ onAuthenticated }) {
   async function submitLogin(event) {
     event.preventDefault();
     setLoading(true);
-    setError("");
-    setMessage("");
+    setError('');
+    setMessage('');
 
     try {
-      const endpoint =
-        loginMode === "admin" ? "/admin/login" : "/api/v1/auth/login";
+      const endpoint = loginMode === 'admin' ? '/admin/login' : '/api/v1/auth/login';
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(loginForm),
       });
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data?.error || "Login failed");
+        throw new Error(data?.error || 'Login failed');
       }
 
       onAuthenticated({
@@ -91,24 +89,22 @@ function AuthGate({ onAuthenticated }) {
   async function submitRegister(event) {
     event.preventDefault();
     setLoading(true);
-    setError("");
-    setMessage("");
+    setError('');
+    setMessage('');
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(registerForm),
       });
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data?.error || "Register failed");
+        throw new Error(data?.error || 'Register failed');
       }
 
-      setMessage(
-        "Đăng ký thành công. Bạn có thể đăng nhập ngay với đội hình khởi tạo ban đầu.",
-      );
-      setTab("login");
+      setMessage('Đăng ký thành công. Bạn có thể đăng nhập ngay với đội hình khởi tạo ban đầu.');
+      setTab('login');
       setLoginForm((current) => ({
         ...current,
         username: registerForm.username,
@@ -137,45 +133,39 @@ function AuthGate({ onAuthenticated }) {
               Enter The Stadium
             </h1>
             <p className="game-copy mt-4 max-w-2xl text-base sm:text-lg">
-              Một màn đăng nhập đúng chất web game manager: vào CLB, chọn chế
-              độ, đăng ký đội khởi đầu rồi lao thẳng vào vòng lặp squad,
-              tactics, match và gacha.
+              Một màn đăng nhập đúng chất web game manager: vào CLB, chọn chế độ, đăng ký đội khởi
+              đầu rồi lao thẳng vào vòng lặp squad, tactics, match và gacha.
             </p>
 
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
               {[
                 [
-                  "Account Mode",
-                  "User thường đi qua `/api/v1/auth/login`, admin dùng `/admin/login`.",
+                  'Account Mode',
+                  'User thường đi qua `/api/v1/auth/login`, admin dùng `/admin/login`.',
                 ],
                 [
-                  "Starter Club",
+                  'Starter Club',
                   `Hiện có ${clubs.length || 0} CLB khởi đầu khả dụng để chọn lúc đăng ký.`,
                 ],
                 [
-                  "Game Loop",
-                  "Đăng nhập xong vào thẳng shell điều hướng giống một lobby game bóng đá online.",
+                  'Game Loop',
+                  'Đăng nhập xong vào thẳng shell điều hướng giống một lobby game bóng đá online.',
                 ],
               ].map(([title, desc]) => (
                 <div key={title} className="game-stat-card min-h-[156px]">
                   <p className="game-stat-card__label">{title}</p>
-                  <p className="mt-3 text-sm leading-6 text-slate-300">
-                    {desc}
-                  </p>
+                  <p className="mt-3 text-sm leading-6 text-slate-300">{desc}</p>
                 </div>
               ))}
             </div>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
               {[
-                ["Secure Gate", "JWT guard"],
-                ["Club Draft", "Starter roster"],
-                ["Live Manager", "Realtime-ready shell"],
+                ['Secure Gate', 'JWT guard'],
+                ['Club Draft', 'Starter roster'],
+                ['Live Manager', 'Realtime-ready shell'],
               ].map(([label, value]) => (
-                <div
-                  key={label}
-                  className="game-chip justify-center sm:justify-start"
-                >
+                <div key={label} className="game-chip justify-center sm:justify-start">
                   <strong>{label}</strong>
                   <span>{value}</span>
                 </div>
@@ -188,42 +178,42 @@ function AuthGate({ onAuthenticated }) {
           <div className="game-panel__content">
             <div className="mb-5 flex gap-2 rounded-[20px] border border-white/8 bg-black/20 p-2">
               <button
-                className={buttonTab(tab === "login")}
-                onClick={() => setTab("login")}
+                className={buttonTab(tab === 'login')}
+                onClick={() => setTab('login')}
                 type="button"
               >
                 Login
               </button>
               <button
-                className={buttonTab(tab === "register")}
-                onClick={() => setTab("register")}
+                className={buttonTab(tab === 'register')}
+                onClick={() => setTab('register')}
                 type="button"
               >
                 Register
               </button>
             </div>
 
-            {tab === "login" ? (
+            {tab === 'login' ? (
               <form className="space-y-4" onSubmit={submitLogin}>
                 <div className="grid grid-cols-2 gap-2 rounded-[18px] border border-white/8 bg-black/30 p-1.5">
                   <button
                     type="button"
-                    onClick={() => setLoginMode("user")}
+                    onClick={() => setLoginMode('user')}
                     className={`rounded-[14px] px-3 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] transition ${
-                      loginMode === "user"
-                        ? "bg-emerald-400 text-slate-950 shadow-[0_14px_32px_-20px_rgba(52,211,153,0.9)]"
-                        : "text-slate-300 hover:bg-white/5"
+                      loginMode === 'user'
+                        ? 'bg-emerald-400 text-slate-950 shadow-[0_14px_32px_-20px_rgba(52,211,153,0.9)]'
+                        : 'text-slate-300 hover:bg-white/5'
                     }`}
                   >
                     User Login
                   </button>
                   <button
                     type="button"
-                    onClick={() => setLoginMode("admin")}
+                    onClick={() => setLoginMode('admin')}
                     className={`rounded-[14px] px-3 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] transition ${
-                      loginMode === "admin"
-                        ? "bg-sky-400 text-slate-950 shadow-[0_14px_32px_-20px_rgba(56,189,248,0.88)]"
-                        : "text-slate-300 hover:bg-white/5"
+                      loginMode === 'admin'
+                        ? 'bg-sky-400 text-slate-950 shadow-[0_14px_32px_-20px_rgba(56,189,248,0.88)]'
+                        : 'text-slate-300 hover:bg-white/5'
                     }`}
                   >
                     Admin Login
@@ -232,50 +222,36 @@ function AuthGate({ onAuthenticated }) {
 
                 <div className="rounded-[22px] border border-white/8 bg-black/20 p-4">
                   <p className="game-header-kicker">
-                    {loginMode === "admin"
-                      ? "Back Office Access"
-                      : "Manager Login"}
+                    {loginMode === 'admin' ? 'Back Office Access' : 'Manager Login'}
                   </p>
                   <p className="mt-3 text-sm leading-6 text-slate-300">
-                    {loginMode === "admin"
-                      ? "Chế độ này dành cho quản trị viên tạo dữ liệu cầu thủ và duyệt nguồn quốc gia."
-                      : "Đăng nhập user để vào khu quản lý CLB, tactics, player lab và các mode match."}
+                    {loginMode === 'admin'
+                      ? 'Chế độ này dành cho quản trị viên tạo dữ liệu cầu thủ và duyệt nguồn quốc gia.'
+                      : 'Đăng nhập user để vào khu quản lý CLB, tactics, player lab và các mode match.'}
                   </p>
                 </div>
 
                 <Field
                   label="Username"
                   value={loginForm.username}
-                  onChange={(value) =>
-                    setLoginForm((current) => ({ ...current, username: value }))
-                  }
+                  onChange={(value) => setLoginForm((current) => ({ ...current, username: value }))}
                 />
                 <Field
                   label="Password"
                   type="password"
                   value={loginForm.password}
-                  onChange={(value) =>
-                    setLoginForm((current) => ({ ...current, password: value }))
-                  }
+                  onChange={(value) => setLoginForm((current) => ({ ...current, password: value }))}
                 />
 
-                {message && (
-                  <p className="game-notice game-notice--success">{message}</p>
-                )}
-                {error && (
-                  <p className="game-notice game-notice--error">{error}</p>
-                )}
+                {message && <p className="game-notice game-notice--success">{message}</p>}
+                {error && <p className="game-notice game-notice--error">{error}</p>}
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="game-button-primary w-full"
-                >
+                <button type="submit" disabled={loading} className="game-button-primary w-full">
                   {loading
-                    ? "Logging in..."
-                    : loginMode === "admin"
-                      ? "Login as Admin"
-                      : "Login as User"}
+                    ? 'Logging in...'
+                    : loginMode === 'admin'
+                      ? 'Login as Admin'
+                      : 'Login as User'}
                 </button>
               </form>
             ) : (
@@ -327,19 +303,11 @@ function AuthGate({ onAuthenticated }) {
                   <ClubPreview clubs={clubs} clubId={registerForm.clubId} />
                 ) : null}
 
-                {message && (
-                  <p className="game-notice game-notice--success">{message}</p>
-                )}
-                {error && (
-                  <p className="game-notice game-notice--error">{error}</p>
-                )}
+                {message && <p className="game-notice game-notice--success">{message}</p>}
+                {error && <p className="game-notice game-notice--error">{error}</p>}
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="game-button-primary w-full"
-                >
-                  {loading ? "Registering..." : "Register"}
+                <button type="submit" disabled={loading} className="game-button-primary w-full">
+                  {loading ? 'Registering...' : 'Register'}
                 </button>
               </form>
             )}
@@ -350,7 +318,7 @@ function AuthGate({ onAuthenticated }) {
   );
 }
 
-function Field({ label, type = "text", value, onChange }) {
+function Field({ label, type = 'text', value, onChange }) {
   return (
     <label className="block">
       <span className="game-field-label">{label}</span>
@@ -397,7 +365,7 @@ function ClubPreview({ clubs, clubId }) {
       <p className="game-stat-card__label">Starter Club Preview</p>
       <div className="mt-3 flex items-center gap-3">
         <img
-          src={club.logo || "/default-avatar.svg"}
+          src={club.logo || '/default-avatar.svg'}
           alt={club.name}
           className="h-14 w-14 rounded-2xl bg-white/10 object-contain p-2"
         />
@@ -418,8 +386,8 @@ function ClubPreview({ clubs, clubId }) {
 function buttonTab(active) {
   return `flex-1 rounded-xl px-4 py-3 text-sm font-semibold transition ${
     active
-      ? "bg-white text-slate-950 shadow-[0_18px_34px_-22px_rgba(255,255,255,0.65)]"
-      : "bg-transparent text-slate-400 hover:bg-white/5 hover:text-white"
+      ? 'bg-white text-slate-950 shadow-[0_18px_34px_-22px_rgba(255,255,255,0.65)]'
+      : 'bg-transparent text-slate-400 hover:bg-white/5 hover:text-white'
   }`;
 }
 

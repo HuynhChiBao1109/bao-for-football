@@ -1,18 +1,18 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { apiClient } from '../lib/apiClient'
-import { useAuth } from './useAuth'
-import type { Tactics } from '../types'
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { apiClient } from '../lib/apiClient';
+import { useAuth } from './useAuth';
+import type { Tactics } from '../types';
 
 export function useTactics(tacticsTeamId: string | undefined) {
-  const { token } = useAuth()
+  const { token } = useAuth();
 
   return useQuery<Tactics | null>({
     queryKey: ['tactics', tacticsTeamId],
     queryFn: async () => {
       try {
-        const payload = await apiClient(`/api/v1/tactics/${tacticsTeamId}`, { token })
-        const data = payload?.data
-        if (!data) return null
+        const payload = await apiClient(`/api/v1/tactics/${tacticsTeamId}`, { token });
+        const data = payload?.data;
+        if (!data) return null;
         return {
           formation: data.formation ?? '4-3-3',
           passRatio: Math.round(Number(data.passRatio ?? 0) * 100),
@@ -21,7 +21,10 @@ export function useTactics(tacticsTeamId: string | undefined) {
           mode: data.mode ?? 'casual',
           lineup: Array.isArray(data.lineup)
             ? data.lineup
-                .filter((item: { slotId?: string; position?: string; userPlayerId?: number }) => item?.slotId && item?.position && Number(item?.userPlayerId || 0) > 0)
+                .filter(
+                  (item: { slotId?: string; position?: string; userPlayerId?: number }) =>
+                    item?.slotId && item?.position && Number(item?.userPlayerId || 0) > 0,
+                )
                 .map((item: { slotId: string; position: string; userPlayerId: number }) => ({
                   slotId: String(item.slotId),
                   position: String(item.position),
@@ -34,18 +37,18 @@ export function useTactics(tacticsTeamId: string | undefined) {
             gkBuildUpBias: Number(data.gameplay?.gkBuildUpBias ?? 1),
             tempoScale: Number(data.gameplay?.tempoScale ?? 1.05),
           },
-        } as Tactics
+        } as Tactics;
       } catch (err: unknown) {
-        if ((err as { status?: number }).status === 404) return null
-        throw err
+        if ((err as { status?: number }).status === 404) return null;
+        throw err;
       }
     },
     enabled: Boolean(token && tacticsTeamId),
-  })
+  });
 }
 
 export function useSaveTactics() {
-  const { token } = useAuth()
+  const { token } = useAuth();
 
   return useMutation<Tactics, Error, { teamId: string } & Omit<Tactics, never>>({
     mutationFn: async (body) => {
@@ -68,8 +71,8 @@ export function useSaveTactics() {
             : [],
           gameplay: body.gameplay,
         },
-      })
-      const data = payload?.data
+      });
+      const data = payload?.data;
       return {
         formation: data.formation,
         passRatio: Math.round(Number(data.passRatio ?? 0) * 100),
@@ -78,7 +81,10 @@ export function useSaveTactics() {
         mode: data.mode ?? 'casual',
         lineup: Array.isArray(data.lineup)
           ? data.lineup
-              .filter((item: { slotId?: string; position?: string; userPlayerId?: number }) => item?.slotId && item?.position && Number(item?.userPlayerId || 0) > 0)
+              .filter(
+                (item: { slotId?: string; position?: string; userPlayerId?: number }) =>
+                  item?.slotId && item?.position && Number(item?.userPlayerId || 0) > 0,
+              )
               .map((item: { slotId: string; position: string; userPlayerId: number }) => ({
                 slotId: String(item.slotId),
                 position: String(item.position),
@@ -91,7 +97,7 @@ export function useSaveTactics() {
           gkBuildUpBias: Number(data.gameplay?.gkBuildUpBias ?? 1),
           tempoScale: Number(data.gameplay?.tempoScale ?? 1.05),
         },
-      } as Tactics
+      } as Tactics;
     },
-  })
+  });
 }

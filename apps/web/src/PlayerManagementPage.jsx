@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from 'react';
 
-import { API_BASE_URL, apiRequest } from "./api";
+import { API_BASE_URL, apiRequest } from './api';
 
-const DEFAULT_PLAYER_AVATAR = "/default-avatar.svg";
+const DEFAULT_PLAYER_AVATAR = '/default-avatar.svg';
 
 const defaultAllocate = {
   shooting: 0,
@@ -28,64 +28,64 @@ const defaultAllocate = {
 };
 
 const allocateKeys = [
-  "shooting",
-  "passing",
-  "longPass",
-  "vision",
-  "gkReach",
-  "attackingAwareness",
-  "defensiveAwareness",
-  "gkParrying",
-  "gkReflex",
-  "duels",
-  "pace",
-  "stamina",
-  "balance",
-  "technique",
-  "determination",
-  "strength",
-  "standingTackle",
-  "slidingTackle",
-  "dribbling",
-  "curve",
+  'shooting',
+  'passing',
+  'longPass',
+  'vision',
+  'gkReach',
+  'attackingAwareness',
+  'defensiveAwareness',
+  'gkParrying',
+  'gkReflex',
+  'duels',
+  'pace',
+  'stamina',
+  'balance',
+  'technique',
+  'determination',
+  'strength',
+  'standingTackle',
+  'slidingTackle',
+  'dribbling',
+  'curve',
 ];
 
 const statMetas = [
-  { key: "shooting", label: "Dứt điểm", allocatable: true },
-  { key: "passing", label: "Chuyền ngắn", allocatable: true },
-  { key: "longPass", label: "Chuyền dài", allocatable: true },
-  { key: "vision", label: "Tầm nhìn", allocatable: true },
-  { key: "attackingAwareness", label: "Nhận thức tấn công", allocatable: true },
-  { key: "defensiveAwareness", label: "Nhận thức phòng thủ", allocatable: true },
-  { key: "duels", label: "Tranh chấp", allocatable: true },
-  { key: "pace", label: "Tốc độ", allocatable: true },
-  { key: "stamina", label: "Thể lực", allocatable: true },
-  { key: "balance", label: "Thăng bằng", allocatable: true },
-  { key: "technique", label: "Kỹ thuật", allocatable: true },
-  { key: "determination", label: "Quyết đoán", allocatable: true },
-  { key: "strength", label: "Sức mạnh", allocatable: true },
-  { key: "standingTackle", label: "Tắc bóng", allocatable: true },
-  { key: "slidingTackle", label: "Xoạc bóng", allocatable: true },
-  { key: "dribbling", label: "Rê bóng", allocatable: true },
-  { key: "curve", label: "Sút xoáy", allocatable: true },
-  { key: "gkParrying", label: "GK Parrying (thủ môn)", allocatable: true },
-  { key: "gkReflex", label: "GK Reflex (thủ môn)", allocatable: true },
+  { key: 'shooting', label: 'Dứt điểm', allocatable: true },
+  { key: 'passing', label: 'Chuyền ngắn', allocatable: true },
+  { key: 'longPass', label: 'Chuyền dài', allocatable: true },
+  { key: 'vision', label: 'Tầm nhìn', allocatable: true },
+  { key: 'attackingAwareness', label: 'Nhận thức tấn công', allocatable: true },
+  { key: 'defensiveAwareness', label: 'Nhận thức phòng thủ', allocatable: true },
+  { key: 'duels', label: 'Tranh chấp', allocatable: true },
+  { key: 'pace', label: 'Tốc độ', allocatable: true },
+  { key: 'stamina', label: 'Thể lực', allocatable: true },
+  { key: 'balance', label: 'Thăng bằng', allocatable: true },
+  { key: 'technique', label: 'Kỹ thuật', allocatable: true },
+  { key: 'determination', label: 'Quyết đoán', allocatable: true },
+  { key: 'strength', label: 'Sức mạnh', allocatable: true },
+  { key: 'standingTackle', label: 'Tắc bóng', allocatable: true },
+  { key: 'slidingTackle', label: 'Xoạc bóng', allocatable: true },
+  { key: 'dribbling', label: 'Rê bóng', allocatable: true },
+  { key: 'curve', label: 'Sút xoáy', allocatable: true },
+  { key: 'gkParrying', label: 'GK Parrying (thủ môn)', allocatable: true },
+  { key: 'gkReflex', label: 'GK Reflex (thủ môn)', allocatable: true },
   {
-    key: "gkReach",
-    label: "GK Reach (thủ môn)",
+    key: 'gkReach',
+    label: 'GK Reach (thủ môn)',
     allocatable: true,
   },
 ];
 
 function resolvePlayerAvatarUrl(imageUrl) {
-  const value = String(imageUrl || "").trim();
+  const value = String(imageUrl || '').trim();
   if (!value) {
     return DEFAULT_PLAYER_AVATAR;
   }
   if (/^https?:\/\//i.test(value)) {
     return value;
   }
-  if (value.startsWith("/")) {
+  if (value.startsWith('/')) {
     return `${API_BASE_URL}${value}`;
   }
   return `${API_BASE_URL}/${value}`;
@@ -108,8 +108,7 @@ function buildDeltaPayload(card, targetStats) {
   }
 
   return allocateKeys.reduce((result, key) => {
-    result[key] =
-      Number(targetStats[key] || 0) - Number(card.totalStats[key] || 0);
+    result[key] = Number(targetStats[key] || 0) - Number(card.totalStats[key] || 0);
     return result;
   }, {});
 }
@@ -120,8 +119,8 @@ function PlayerManagementPage({ token, onUnauthorized }) {
   const [allocate, setAllocate] = useState(defaultAllocate);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     loadCards();
@@ -139,10 +138,7 @@ function PlayerManagementPage({ token, onUnauthorized }) {
   }, [selectedCard, allocate]);
 
   const spendPoints = useMemo(() => {
-    return allocateKeys.reduce(
-      (sum, key) => sum + Number(allocateDelta[key] || 0),
-      0,
-    );
+    return allocateKeys.reduce((sum, key) => sum + Number(allocateDelta[key] || 0), 0);
   }, [allocateDelta]);
 
   const projected = useMemo(() => {
@@ -151,21 +147,11 @@ function PlayerManagementPage({ token, onUnauthorized }) {
     }
 
     const nextBonus = {
-      shooting:
-        Number(selectedCard.bonusStats.shooting || 0) +
-        Number(allocateDelta.shooting || 0),
-      passing:
-        Number(selectedCard.bonusStats.passing || 0) +
-        Number(allocateDelta.passing || 0),
-      longPass:
-        Number(selectedCard.bonusStats.longPass || 0) +
-        Number(allocateDelta.longPass || 0),
-      vision:
-        Number(selectedCard.bonusStats.vision || 0) +
-        Number(allocateDelta.vision || 0),
-      gkReach:
-        Number(selectedCard.bonusStats.gkReach || 0) +
-        Number(allocateDelta.gkReach || 0),
+      shooting: Number(selectedCard.bonusStats.shooting || 0) + Number(allocateDelta.shooting || 0),
+      passing: Number(selectedCard.bonusStats.passing || 0) + Number(allocateDelta.passing || 0),
+      longPass: Number(selectedCard.bonusStats.longPass || 0) + Number(allocateDelta.longPass || 0),
+      vision: Number(selectedCard.bonusStats.vision || 0) + Number(allocateDelta.vision || 0),
+      gkReach: Number(selectedCard.bonusStats.gkReach || 0) + Number(allocateDelta.gkReach || 0),
       attackingAwareness:
         Number(selectedCard.bonusStats.attackingAwareness || 0) +
         Number(allocateDelta.attackingAwareness || 0),
@@ -173,32 +159,18 @@ function PlayerManagementPage({ token, onUnauthorized }) {
         Number(selectedCard.bonusStats.defensiveAwareness || 0) +
         Number(allocateDelta.defensiveAwareness || 0),
       gkParrying:
-        Number(selectedCard.bonusStats.gkParrying || 0) +
-        Number(allocateDelta.gkParrying || 0),
-      gkReflex:
-        Number(selectedCard.bonusStats.gkReflex || 0) +
-        Number(allocateDelta.gkReflex || 0),
-      duels:
-        Number(selectedCard.bonusStats.duels || 0) +
-        Number(allocateDelta.duels || 0),
-      pace:
-        Number(selectedCard.bonusStats.pace || 0) +
-        Number(allocateDelta.pace || 0),
-      stamina:
-        Number(selectedCard.bonusStats.stamina || 0) +
-        Number(allocateDelta.stamina || 0),
-      balance:
-        Number(selectedCard.bonusStats.balance || 0) +
-        Number(allocateDelta.balance || 0),
+        Number(selectedCard.bonusStats.gkParrying || 0) + Number(allocateDelta.gkParrying || 0),
+      gkReflex: Number(selectedCard.bonusStats.gkReflex || 0) + Number(allocateDelta.gkReflex || 0),
+      duels: Number(selectedCard.bonusStats.duels || 0) + Number(allocateDelta.duels || 0),
+      pace: Number(selectedCard.bonusStats.pace || 0) + Number(allocateDelta.pace || 0),
+      stamina: Number(selectedCard.bonusStats.stamina || 0) + Number(allocateDelta.stamina || 0),
+      balance: Number(selectedCard.bonusStats.balance || 0) + Number(allocateDelta.balance || 0),
       technique:
-        Number(selectedCard.bonusStats.technique || 0) +
-        Number(allocateDelta.technique || 0),
+        Number(selectedCard.bonusStats.technique || 0) + Number(allocateDelta.technique || 0),
       determination:
         Number(selectedCard.bonusStats.determination || 0) +
         Number(allocateDelta.determination || 0),
-      strength:
-        Number(selectedCard.bonusStats.strength || 0) +
-        Number(allocateDelta.strength || 0),
+      strength: Number(selectedCard.bonusStats.strength || 0) + Number(allocateDelta.strength || 0),
       standingTackle:
         Number(selectedCard.bonusStats.standingTackle || 0) +
         Number(allocateDelta.standingTackle || 0),
@@ -206,16 +178,12 @@ function PlayerManagementPage({ token, onUnauthorized }) {
         Number(selectedCard.bonusStats.slidingTackle || 0) +
         Number(allocateDelta.slidingTackle || 0),
       dribbling:
-        Number(selectedCard.bonusStats.dribbling || 0) +
-        Number(allocateDelta.dribbling || 0),
-      curve:
-        Number(selectedCard.bonusStats.curve || 0) +
-        Number(allocateDelta.curve || 0),
+        Number(selectedCard.bonusStats.dribbling || 0) + Number(allocateDelta.dribbling || 0),
+      curve: Number(selectedCard.bonusStats.curve || 0) + Number(allocateDelta.curve || 0),
     };
 
     const hasNegativeBonus = Object.values(nextBonus).some((item) => item < 0);
-    const projectedPoints =
-      Number(selectedCard.currentPoints || 0) - Number(spendPoints || 0);
+    const projectedPoints = Number(selectedCard.currentPoints || 0) - Number(spendPoints || 0);
 
     return {
       nextBonus,
@@ -231,15 +199,13 @@ function PlayerManagementPage({ token, onUnauthorized }) {
 
   async function loadCards() {
     setLoading(true);
-    setError("");
+    setError('');
     try {
-      const payload = await apiRequest("/api/v1/players", { token });
+      const payload = await apiRequest('/api/v1/players', { token });
       const nextCards = Array.isArray(payload?.data) ? payload.data : [];
       setCards(nextCards);
       if (nextCards.length > 0) {
-        setSelectedId((current) =>
-          current ? current : nextCards[0].userPlayerId,
-        );
+        setSelectedId((current) => (current ? current : nextCards[0].userPlayerId));
       }
     } catch (err) {
       if (err.status === 401 || err.status === 403) {
@@ -259,22 +225,17 @@ function PlayerManagementPage({ token, onUnauthorized }) {
     }
 
     setActionLoading(true);
-    setError("");
-    setMessage("");
+    setError('');
+    setMessage('');
     try {
-      const payload = await apiRequest(
-        `/api/v1/players/${selectedCard.userPlayerId}/allocate`,
-        {
-          method: "POST",
-          token,
-          body: allocateDelta,
-        },
-      );
+      const payload = await apiRequest(`/api/v1/players/${selectedCard.userPlayerId}/allocate`, {
+        method: 'POST',
+        token,
+        body: allocateDelta,
+      });
       const updated = payload?.data;
       setCards((current) =>
-        current.map((card) =>
-          card.userPlayerId === updated.userPlayerId ? updated : card,
-        ),
+        current.map((card) => (card.userPlayerId === updated.userPlayerId ? updated : card)),
       );
       setAllocate(buildTargetStats(updated));
       setMessage(
@@ -303,11 +264,7 @@ function PlayerManagementPage({ token, onUnauthorized }) {
   function adjustAllocate(key, delta) {
     setAllocate((current) => ({
       ...current,
-      [key]: clampAllocateValue(
-        current,
-        key,
-        Number(current[key] || 0) + delta,
-      ),
+      [key]: clampAllocateValue(current, key, Number(current[key] || 0) + delta),
     }));
   }
 
@@ -322,9 +279,7 @@ function PlayerManagementPage({ token, onUnauthorized }) {
         return sum;
       }
       return (
-        sum +
-        (Number(current[itemKey] || 0) -
-          Number(selectedCard.totalStats?.[itemKey] || 0))
+        sum + (Number(current[itemKey] || 0) - Number(selectedCard.totalStats?.[itemKey] || 0))
       );
     }, 0);
 
@@ -368,23 +323,16 @@ function PlayerManagementPage({ token, onUnauthorized }) {
                 Quản lí cầu thủ, cấp độ và chỉ số
               </h2>
               <p className="game-copy mt-3 max-w-2xl text-base">
-                Chọn thẻ cầu thủ, kiểm tra tiến trình level, cộng kỹ năng và xem
-                toàn bộ chỉ số nền/tăng thêm/tổng trong cùng một bảng điều
-                khiển.
+                Chọn thẻ cầu thủ, kiểm tra tiến trình level, cộng kỹ năng và xem toàn bộ chỉ số
+                nền/tăng thêm/tổng trong cùng một bảng điều khiển.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={loadCards}
-              className="game-button-secondary"
-            >
+            <button type="button" onClick={loadCards} className="game-button-secondary">
               Tải lại
             </button>
           </div>
 
-          {loading && (
-            <StateBox tone="info" text="Đang tải danh sách cầu thủ..." />
-          )}
+          {loading && <StateBox tone="info" text="Đang tải danh sách cầu thủ..." />}
           {error && <StateBox tone="error" text={error} />}
           {message && <StateBox tone="success" text={message} />}
 
@@ -408,9 +356,7 @@ function PlayerManagementPage({ token, onUnauthorized }) {
                     <tr
                       key={card.userPlayerId}
                       onClick={() => setSelectedId(card.userPlayerId)}
-                      data-active={
-                        selectedCard?.userPlayerId === card.userPlayerId
-                      }
+                      data-active={selectedCard?.userPlayerId === card.userPlayerId}
                       className="cursor-pointer"
                     >
                       <td className="px-4 py-3 font-medium text-white">
@@ -444,9 +390,7 @@ function PlayerManagementPage({ token, onUnauthorized }) {
                           ) : (
                             <span className="inline-block h-4 w-6 rounded-sm bg-slate-700" />
                           )}
-                          <span>
-                            {card?.country?.code || card?.country?.name || "-"}
-                          </span>
+                          <span>{card?.country?.code || card?.country?.name || '-'}</span>
                         </div>
                       </td>
                       <td className="px-4 py-3 text-slate-200">{card.level}</td>
@@ -465,9 +409,7 @@ function PlayerManagementPage({ token, onUnauthorized }) {
       <aside className="game-panel overflow-hidden p-5 sm:p-6">
         <div className="game-panel__content">
           {!selectedCard ? (
-            <p className="game-notice game-notice--muted">
-              Chọn một cầu thủ để xem chi tiết.
-            </p>
+            <p className="game-notice game-notice--muted">Chọn một cầu thủ để xem chi tiết.</p>
           ) : (
             <>
               <p className="game-header-kicker">Player Detail</p>
@@ -481,9 +423,7 @@ function PlayerManagementPage({ token, onUnauthorized }) {
                     event.currentTarget.src = DEFAULT_PLAYER_AVATAR;
                   }}
                 />
-                <h3 className="game-title text-3xl font-bold text-white">
-                  {selectedCard.name}
-                </h3>
+                <h3 className="game-title text-3xl font-bold text-white">{selectedCard.name}</h3>
               </div>
               <div className="mt-2 flex items-center gap-2 text-sm text-slate-300">
                 {selectedCard?.country?.flag ? (
@@ -495,22 +435,16 @@ function PlayerManagementPage({ token, onUnauthorized }) {
                 ) : (
                   <span className="inline-block h-5 w-7 rounded-sm bg-slate-700" />
                 )}
-                <span>{selectedCard?.country?.name || "-"}</span>
+                <span>{selectedCard?.country?.name || '-'}</span>
               </div>
 
               <div className="mt-4 grid gap-2 rounded-[22px] border border-white/8 bg-black/20 p-4 text-sm text-slate-300">
                 <p>
-                  Cấp độ:{" "}
-                  <span className="font-semibold text-white">
-                    {selectedCard.level}/36
-                  </span>
+                  Cấp độ: <span className="font-semibold text-white">{selectedCard.level}/36</span>
                 </p>
                 <p>
-                  Kinh nghiệm:{" "}
-                  <span className="font-semibold text-white">
-                    {selectedCard.exp}
-                  </span>{" "}
-                  / {selectedCard.requiredExpForNextLevel || "Tối đa"}
+                  Kinh nghiệm: <span className="font-semibold text-white">{selectedCard.exp}</span>{' '}
+                  / {selectedCard.requiredExpForNextLevel || 'Tối đa'}
                 </p>
                 <div className="game-progress h-2">
                   <span
@@ -520,16 +454,14 @@ function PlayerManagementPage({ token, onUnauthorized }) {
                   />
                 </div>
                 <p>
-                  Điểm kỹ năng chưa cộng:{" "}
-                  <span className="font-semibold text-[#f6d87a]">
-                    {selectedCard.currentPoints}
-                  </span>
+                  Điểm kỹ năng chưa cộng:{' '}
+                  <span className="font-semibold text-[#f6d87a]">{selectedCard.currentPoints}</span>
                 </p>
               </div>
 
               <p className="game-stat-card mt-4 text-sm text-slate-300">
-                Cấp độ sẽ tự động tăng khi kinh nghiệm đủ mốc. Bạn chỉ cần dùng
-                điểm kỹ năng chưa cộng để nâng chỉ số.
+                Cấp độ sẽ tự động tăng khi kinh nghiệm đủ mốc. Bạn chỉ cần dùng điểm kỹ năng chưa
+                cộng để nâng chỉ số.
               </p>
 
               <form className="mt-4 space-y-3" onSubmit={handleAllocate}>
@@ -537,8 +469,8 @@ function PlayerManagementPage({ token, onUnauthorized }) {
                   Điều chỉnh chỉ số
                 </p>
                 <p className="text-xs text-slate-400">
-                  Mặc định là chỉ số hiện tại của cầu thủ. Nhấn + để tăng, nhấn
-                  - để giảm phần đã cộng trước đó.
+                  Mặc định là chỉ số hiện tại của cầu thủ. Nhấn + để tăng, nhấn - để giảm phần đã
+                  cộng trước đó.
                 </p>
                 <div className="grid grid-cols-2 gap-3">
                   {statMetas
@@ -558,11 +490,9 @@ function PlayerManagementPage({ token, onUnauthorized }) {
                 </div>
 
                 <div className="game-stat-card text-sm text-slate-300">
-                  Chênh lệch điểm lần này:{" "}
+                  Chênh lệch điểm lần này:{' '}
                   <span className="font-semibold text-emerald-300">
-                    {spendPoints > 0
-                      ? `-${spendPoints}`
-                      : `+${Math.abs(spendPoints)}`}
+                    {spendPoints > 0 ? `-${spendPoints}` : `+${Math.abs(spendPoints)}`}
                   </span>
                   {projected && (
                     <span className="ml-2 text-slate-400">
@@ -572,90 +502,81 @@ function PlayerManagementPage({ token, onUnauthorized }) {
                 </div>
 
                 {projected?.hasNegativeBonus && (
-                  <StateBox
-                    tone="error"
-                    text="Không thể giảm quá phần chỉ số đã cộng trước đó."
-                  />
+                  <StateBox tone="error" text="Không thể giảm quá phần chỉ số đã cộng trước đó." />
                 )}
 
                 {projected && !projected.hasNegativeBonus && (
                   <div className="game-scroll rounded-[20px] border border-white/8 bg-black/20 p-4 text-sm text-slate-300 max-h-[280px] overflow-y-auto">
-                    <p className="font-semibold text-white">
-                      Đã cộng trước đó {"->"} Sau khi đổi
-                    </p>
+                    <p className="font-semibold text-white">Đã cộng trước đó {'->'} Sau khi đổi</p>
                     <p className="mt-2">
-                      Dứt điểm: +{selectedCard.bonusStats.shooting} {"->"} +
+                      Dứt điểm: +{selectedCard.bonusStats.shooting} {'->'} +
                       {projected.nextBonus.shooting}
                     </p>
                     <p>
-                      Chuyền ngắn: +{selectedCard.bonusStats.passing} {"->"} +
+                      Chuyền ngắn: +{selectedCard.bonusStats.passing} {'->'} +
                       {projected.nextBonus.passing}
                     </p>
                     <p>
-                      Chuyền dài: +{selectedCard.bonusStats.longPass} {"->"} +
+                      Chuyền dài: +{selectedCard.bonusStats.longPass} {'->'} +
                       {projected.nextBonus.longPass}
                     </p>
                     <p>
-                      Tầm nhìn: +{selectedCard.bonusStats.vision} {"->"} +
+                      Tầm nhìn: +{selectedCard.bonusStats.vision} {'->'} +
                       {projected.nextBonus.vision}
                     </p>
                     <p>
-                      GK Reach: +{selectedCard.bonusStats.gkReach} {"->"} +
+                      GK Reach: +{selectedCard.bonusStats.gkReach} {'->'} +
                       {projected.nextBonus.gkReach}
                     </p>
                     <p>
-                      Nhận thức tấn công: +
-                      {selectedCard.bonusStats.attackingAwareness} {"->"} +
+                      Nhận thức tấn công: +{selectedCard.bonusStats.attackingAwareness} {'->'} +
                       {projected.nextBonus.attackingAwareness}
                     </p>
                     <p>
-                      Nhận thức phòng thủ: +
-                      {selectedCard.bonusStats.defensiveAwareness} {"->"} +
+                      Nhận thức phòng thủ: +{selectedCard.bonusStats.defensiveAwareness} {'->'} +
                       {projected.nextBonus.defensiveAwareness}
                     </p>
                     <p>
-                      GK Parrying: +{selectedCard.bonusStats.gkParrying} {"->"}{" "}
-                      +{projected.nextBonus.gkParrying}
+                      GK Parrying: +{selectedCard.bonusStats.gkParrying} {'->'} +
+                      {projected.nextBonus.gkParrying}
                     </p>
                     <p>
-                      GK Reflex: +{selectedCard.bonusStats.gkReflex} {"->"} +
+                      GK Reflex: +{selectedCard.bonusStats.gkReflex} {'->'} +
                       {projected.nextBonus.gkReflex}
                     </p>
                     <p>
-                      Tranh chấp: +{selectedCard.bonusStats.duels} {"->"} +
+                      Tranh chấp: +{selectedCard.bonusStats.duels} {'->'} +
                       {projected.nextBonus.duels}
                     </p>
                     <p>
-                      Tốc độ: +{selectedCard.bonusStats.pace} {"->"} +
-                      {projected.nextBonus.pace}
+                      Tốc độ: +{selectedCard.bonusStats.pace} {'->'} +{projected.nextBonus.pace}
                     </p>
                     <p>
-                      Thể lực: +{selectedCard.bonusStats.stamina} {"->"} +
+                      Thể lực: +{selectedCard.bonusStats.stamina} {'->'} +
                       {projected.nextBonus.stamina}
                     </p>
                     <p>
-                      Thăng bằng: +{selectedCard.bonusStats.balance} {"->"} +
+                      Thăng bằng: +{selectedCard.bonusStats.balance} {'->'} +
                       {projected.nextBonus.balance}
                     </p>
                     <p>
-                      Kỹ thuật: +{selectedCard.bonusStats.technique} {"->"} +
+                      Kỹ thuật: +{selectedCard.bonusStats.technique} {'->'} +
                       {projected.nextBonus.technique}
                     </p>
                     <p>
-                      Quyết đoán: +{selectedCard.bonusStats.determination} {"->"} +
+                      Quyết đoán: +{selectedCard.bonusStats.determination} {'->'} +
                       {projected.nextBonus.determination}
                     </p>
                     <p>
-                      Sức mạnh: +{selectedCard.bonusStats.strength} {"->"} +
+                      Sức mạnh: +{selectedCard.bonusStats.strength} {'->'} +
                       {projected.nextBonus.strength}
                     </p>
                     <p>
-                      Rê bóng: +{selectedCard.bonusStats.dribbling} {"->"} +
+                      Rê bóng: +{selectedCard.bonusStats.dribbling} {'->'} +
                       {projected.nextBonus.dribbling}
                     </p>
                     <p>
-                      Sút xoáy: +{selectedCard.bonusStats.curve} {"->"} +
-                      {projected.nextBonus.curve}
+                      Sút xoáy: +{selectedCard.bonusStats.curve} {'->'} +{projected.nextBonus.curve}
                     </p>
                   </div>
                 )}
@@ -670,29 +591,23 @@ function PlayerManagementPage({ token, onUnauthorized }) {
 
                 <button
                   type="submit"
-                  disabled={
-                    actionLoading || spendPoints === 0 || !!projected?.invalid
-                  }
+                  disabled={actionLoading || spendPoints === 0 || !!projected?.invalid}
                   className="game-button-primary w-full"
                 >
-                  {actionLoading ? "Đang lưu..." : "Áp dụng thay đổi chỉ số"}
+                  {actionLoading ? 'Đang lưu...' : 'Áp dụng thay đổi chỉ số'}
                 </button>
               </form>
 
               <div className="game-stat-card mt-4 text-sm text-slate-300">
-                <p className="font-semibold text-white">
-                  Toàn bộ chỉ số (gốc / cộng thêm / tổng)
-                </p>
+                <p className="font-semibold text-white">Toàn bộ chỉ số (gốc / cộng thêm / tổng)</p>
                 {statMetas.map((item, index) => (
-                  <p key={item.key} className={index === 0 ? "mt-2" : ""}>
-                    {item.label}: {selectedCard.baseStats[item.key]} /{" "}
-                    {selectedCard.bonusStats[item.key]} /{" "}
-                    {selectedCard.totalStats[item.key]}
+                  <p key={item.key} className={index === 0 ? 'mt-2' : ''}>
+                    {item.label}: {selectedCard.baseStats[item.key]} /{' '}
+                    {selectedCard.bonusStats[item.key]} / {selectedCard.totalStats[item.key]}
                   </p>
                 ))}
                 <p className="mt-2 text-[#f6d87a]">
-                  Chỉ số tổng quan:{" "}
-                  {Number(selectedCard.overall || 0).toFixed(1)}
+                  Chỉ số tổng quan: {Number(selectedCard.overall || 0).toFixed(1)}
                 </p>
               </div>
             </>
@@ -737,13 +652,13 @@ function NumberField({ label, value, onChange, onAdd, onSub, canAdd, canSub }) {
 
 function StateBox({ text, tone }) {
   const toneClass =
-    tone === "error"
-      ? "game-notice--error"
-      : tone === "success"
-        ? "game-notice--success"
-        : tone === "info"
-          ? "game-notice--info"
-          : "game-notice--muted";
+    tone === 'error'
+      ? 'game-notice--error'
+      : tone === 'success'
+        ? 'game-notice--success'
+        : tone === 'info'
+          ? 'game-notice--info'
+          : 'game-notice--muted';
 
   return <p className={`game-notice mt-4 ${toneClass}`}>{text}</p>;
 }

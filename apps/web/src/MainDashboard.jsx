@@ -1,87 +1,72 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from 'react';
 
-import AdminDashboard from "./AdminDashboard.jsx";
-import AiMatchPage from "./AiMatchPage.jsx";
-import ClubPage from "./ClubPage.jsx";
-import GachaPage from "./GachaPage.jsx";
-import PlayerManagementPage from "./PlayerManagementPage.jsx";
-import TacticsPage from "./TacticsPage.jsx";
-import { apiRequest } from "./api";
-import { navItems, ROUTES } from "./routes";
+import AdminDashboard from './AdminDashboard.jsx';
+import AiMatchPage from './AiMatchPage.jsx';
+import ClubPage from './ClubPage.jsx';
+import GachaPage from './GachaPage.jsx';
+import PlayerManagementPage from './PlayerManagementPage.jsx';
+import TacticsPage from './TacticsPage.jsx';
+import { apiRequest } from './api';
+import { navItems, ROUTES } from './routes';
 
 const routeMeta = {
   [ROUTES.club]: {
-    title: "Club Command Center",
-    eyebrow: "Club Ops",
-    description:
-      "Quản lý roster nền, ngân sách và các tuyến nâng cấp của đội hình hiện tại.",
+    title: 'Club Command Center',
+    eyebrow: 'Club Ops',
+    description: 'Quản lý roster nền, ngân sách và các tuyến nâng cấp của đội hình hiện tại.',
   },
   [ROUTES.players]: {
-    title: "Player Lab",
-    eyebrow: "Squad Data",
+    title: 'Player Lab',
+    eyebrow: 'Squad Data',
     description:
-      "Theo dõi tiến trình thẻ cầu thủ, chỉnh điểm kỹ năng và xem toàn bộ chỉ số phát triển.",
+      'Theo dõi tiến trình thẻ cầu thủ, chỉnh điểm kỹ năng và xem toàn bộ chỉ số phát triển.',
   },
   [ROUTES.tactics]: {
-    title: "Tactics Forge",
-    eyebrow: "Match Engine",
-    description:
-      "Tinh chỉnh nhịp độ, áp lực và hồ sơ gameplay để đẩy thẳng sang realtime engine.",
+    title: 'Tactics Forge',
+    eyebrow: 'Match Engine',
+    description: 'Tinh chỉnh nhịp độ, áp lực và hồ sơ gameplay để đẩy thẳng sang realtime engine.',
   },
   [ROUTES.aiMatch]: {
-    title: "AI Campaign",
-    eyebrow: "Progression",
-    description:
-      "Đánh từng stage, mở khóa màn kế tiếp và farm tiền thưởng cùng EXP toàn đội.",
+    title: 'AI Campaign',
+    eyebrow: 'Progression',
+    description: 'Đánh từng stage, mở khóa màn kế tiếp và farm tiền thưởng cùng EXP toàn đội.',
   },
   [ROUTES.pvp]: {
-    title: "Arena Queue",
-    eyebrow: "PvP Hub",
-    description:
-      "Không gian chờ cho matchmaking realtime, xếp hạng và đấu rank nhiều mùa giải.",
+    title: 'Arena Queue',
+    eyebrow: 'PvP Hub',
+    description: 'Không gian chờ cho matchmaking realtime, xếp hạng và đấu rank nhiều mùa giải.',
   },
   [ROUTES.gacha]: {
-    title: "Scout Capsule",
-    eyebrow: "Recruitment",
+    title: 'Scout Capsule',
+    eyebrow: 'Recruitment',
     description:
-      "Roll banner mùa giải, theo dõi pity và chốt kết quả hiếm ngay trong phiên hiện tại.",
+      'Roll banner mùa giải, theo dõi pity và chốt kết quả hiếm ngay trong phiên hiện tại.',
   },
   [ROUTES.admin]: {
-    title: "Admin Foundry",
-    eyebrow: "Back Office",
-    description:
-      "Tạo cầu thủ mới, kiểm tra pool quốc gia và rà soát dữ liệu nguồn cho hệ thống.",
+    title: 'Admin Foundry',
+    eyebrow: 'Back Office',
+    description: 'Tạo cầu thủ mới, kiểm tra pool quốc gia và rà soát dữ liệu nguồn cho hệ thống.',
   },
 };
 
 const navHints = {
-  [ROUTES.club]: "Tổng quan CLB",
-  [ROUTES.players]: "Nâng cấp thẻ",
-  [ROUTES.tactics]: "Preset đội hình",
-  [ROUTES.aiMatch]: "50 stage",
-  [ROUTES.pvp]: "Xếp hạng",
-  [ROUTES.gacha]: "Banner roll",
-  [ROUTES.admin]: "Quản trị dữ liệu",
+  [ROUTES.club]: 'Tổng quan CLB',
+  [ROUTES.players]: 'Nâng cấp thẻ',
+  [ROUTES.tactics]: 'Preset đội hình',
+  [ROUTES.aiMatch]: '50 stage',
+  [ROUTES.pvp]: 'Xếp hạng',
+  [ROUTES.gacha]: 'Banner roll',
+  [ROUTES.admin]: 'Quản trị dữ liệu',
 };
 
-function MainDashboard({
-  token,
-  user,
-  pathname,
-  onNavigate,
-  onLogout,
-  onUnauthorized,
-}) {
+function MainDashboard({ token, user, pathname, onNavigate, onLogout, onUnauthorized }) {
   const [sessionData, setSessionData] = useState(null);
   const [loadingSession, setLoadingSession] = useState(true);
-  const [sessionError, setSessionError] = useState("");
+  const [sessionError, setSessionError] = useState('');
 
-  const items = useMemo(
-    () => navItems(Boolean(user?.isAdmin)),
-    [user?.isAdmin],
-  );
+  const items = useMemo(() => navItems(Boolean(user?.isAdmin)), [user?.isAdmin]);
   const currentMeta = routeMeta[pathname] || routeMeta[ROUTES.club];
-  const clubName = sessionData?.team?.clubName || "Chưa đồng bộ";
+  const clubName = sessionData?.team?.clubName || 'Chưa đồng bộ';
   const budget = Number(sessionData?.team?.budget || 0).toLocaleString();
   const rankPoint = Number(sessionData?.team?.rankPoint || 0);
 
@@ -90,10 +75,10 @@ function MainDashboard({
 
     async function loadSession() {
       setLoadingSession(true);
-      setSessionError("");
+      setSessionError('');
 
       try {
-        const payload = await apiRequest("/api/v1/auth/me", { token });
+        const payload = await apiRequest('/api/v1/auth/me', { token });
         if (!cancelled) {
           setSessionData(payload?.data || null);
         }
@@ -122,9 +107,7 @@ function MainDashboard({
   return (
     <main className="app-shell">
       <div className="app-shell__inner space-y-6">
-        {loadingSession && (
-          <Banner tone="info" text="Đang tải session hiện tại từ API..." />
-        )}
+        {loadingSession && <Banner tone="info" text="Đang tải session hiện tại từ API..." />}
         {sessionError && <Banner tone="error" text={sessionError} />}
 
         {!loadingSession &&
@@ -166,18 +149,11 @@ function renderRoute(pathname, props) {
   }
 
   if (pathname === ROUTES.players) {
-    return (
-      <PlayerManagementPage
-        token={props.token}
-        onUnauthorized={props.onUnauthorized}
-      />
-    );
+    return <PlayerManagementPage token={props.token} onUnauthorized={props.onUnauthorized} />;
   }
 
   if (pathname === ROUTES.aiMatch) {
-    return (
-      <AiMatchPage token={props.token} onUnauthorized={props.onUnauthorized} />
-    );
+    return <AiMatchPage token={props.token} onUnauthorized={props.onUnauthorized} />;
   }
 
   if (pathname === ROUTES.pvp) {
@@ -219,23 +195,17 @@ function PvpOverview() {
             Queue rank và đối kháng thời gian thực
           </h2>
           <p className="game-copy mt-3 max-w-2xl text-base">
-            Phần này đang đóng vai trò lobby cạnh tranh: chọn ladder, đọc luật
-            mùa và chờ hook realtime matchmaking khi backend sẵn sàng.
+            Phần này đang đóng vai trò lobby cạnh tranh: chọn ladder, đọc luật mùa và chờ hook
+            realtime matchmaking khi backend sẵn sàng.
           </p>
 
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             {[
+              ['Tier Ladder', 'Nghiệp dư đến siêu sao, mỗi 10 trận là một chu kỳ leo hạng.'],
+              ['Promotion Rule', 'Thắng tối thiểu 6/10 trận để đi tiếp lên tier cao hơn.'],
               [
-                "Tier Ladder",
-                "Nghiệp dư đến siêu sao, mỗi 10 trận là một chu kỳ leo hạng.",
-              ],
-              [
-                "Promotion Rule",
-                "Thắng tối thiểu 6/10 trận để đi tiếp lên tier cao hơn.",
-              ],
-              [
-                "Live Matchmaking",
-                "Route đã cố định, có thể nối queue realtime mà không thay shell UI.",
+                'Live Matchmaking',
+                'Route đã cố định, có thể nối queue realtime mà không thay shell UI.',
               ],
             ].map(([title, text]) => (
               <div key={title} className="game-stat-card min-h-[150px]">
@@ -253,8 +223,8 @@ function PvpOverview() {
           <div className="game-stat-card">
             <p className="game-stat-card__label">Current State</p>
             <p className="mt-3 text-sm leading-6 text-slate-300">
-              Realtime matchmaking chưa được bật, nhưng toàn bộ khu vực queue,
-              rank badge và rule display đã sẵn để nối thẳng vào hub websocket.
+              Realtime matchmaking chưa được bật, nhưng toàn bộ khu vực queue, rank badge và rule
+              display đã sẵn để nối thẳng vào hub websocket.
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
@@ -278,8 +248,7 @@ function PvpOverview() {
 }
 
 function Banner({ text, tone }) {
-  const toneClass =
-    tone === "error" ? "game-notice--error" : "game-notice--info";
+  const toneClass = tone === 'error' ? 'game-notice--error' : 'game-notice--info';
 
   return <p className={`game-notice ${toneClass}`}>{text}</p>;
 }

@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from 'react';
 
-import { apiRequest } from "./api";
+import { apiRequest } from './api';
 
 const DEFAULT_FORM = {
-  formation: "4-3-3",
+  formation: '4-3-3',
   passRatio: 58,
   shotRatio: 42,
   pressure: 61,
-  mode: "casual",
+  mode: 'casual',
   gameplay: {
     passSpeedScale: 1.05,
     interceptionRadius: 1.02,
@@ -19,13 +19,13 @@ const DEFAULT_FORM = {
 function TacticsPage({ token, sessionData, user, onUnauthorized }) {
   const tacticsTeamId =
     sessionData?.team?.tacticsTeamId ||
-    (sessionData?.user?.id ? `user-${sessionData.user.id}` : "");
+    (sessionData?.user?.id ? `user-${sessionData.user.id}` : '');
 
   const [form, setForm] = useState(DEFAULT_FORM);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -33,13 +33,13 @@ function TacticsPage({ token, sessionData, user, onUnauthorized }) {
     async function loadTactics() {
       if (!tacticsTeamId) {
         setLoading(false);
-        setError("Không xác định được tacticsTeamId của user hiện tại.");
+        setError('Không xác định được tacticsTeamId của user hiện tại.');
         return;
       }
 
       setLoading(true);
-      setError("");
-      setMessage("");
+      setError('');
+      setMessage('');
 
       try {
         const payload = await apiRequest(`/api/v1/tactics/${tacticsTeamId}`, {
@@ -55,20 +55,15 @@ function TacticsPage({ token, sessionData, user, onUnauthorized }) {
             mode: data.mode || DEFAULT_FORM.mode,
             gameplay: {
               passSpeedScale: Number(
-                data.gameplay?.passSpeedScale ||
-                  DEFAULT_FORM.gameplay.passSpeedScale,
+                data.gameplay?.passSpeedScale || DEFAULT_FORM.gameplay.passSpeedScale,
               ),
               interceptionRadius: Number(
-                data.gameplay?.interceptionRadius ||
-                  DEFAULT_FORM.gameplay.interceptionRadius,
+                data.gameplay?.interceptionRadius || DEFAULT_FORM.gameplay.interceptionRadius,
               ),
               gkBuildUpBias: Number(
-                data.gameplay?.gkBuildUpBias ||
-                  DEFAULT_FORM.gameplay.gkBuildUpBias,
+                data.gameplay?.gkBuildUpBias || DEFAULT_FORM.gameplay.gkBuildUpBias,
               ),
-              tempoScale: Number(
-                data.gameplay?.tempoScale || DEFAULT_FORM.gameplay.tempoScale,
-              ),
+              tempoScale: Number(data.gameplay?.tempoScale || DEFAULT_FORM.gameplay.tempoScale),
             },
           });
         }
@@ -99,20 +94,17 @@ function TacticsPage({ token, sessionData, user, onUnauthorized }) {
     };
   }, [onUnauthorized, tacticsTeamId, token]);
 
-  const total = useMemo(
-    () => form.passRatio + form.shotRatio + form.pressure,
-    [form],
-  );
+  const total = useMemo(() => form.passRatio + form.shotRatio + form.pressure, [form]);
 
   async function submitForm(event) {
     event.preventDefault();
     setSaving(true);
-    setError("");
-    setMessage("");
+    setError('');
+    setMessage('');
 
     try {
-      const payload = await apiRequest("/api/v1/tactics", {
-        method: "POST",
+      const payload = await apiRequest('/api/v1/tactics', {
+        method: 'POST',
         token,
         body: {
           teamId: tacticsTeamId,
@@ -140,26 +132,19 @@ function TacticsPage({ token, sessionData, user, onUnauthorized }) {
           mode: data.mode || DEFAULT_FORM.mode,
           gameplay: {
             passSpeedScale: Number(
-              data.gameplay?.passSpeedScale ||
-                DEFAULT_FORM.gameplay.passSpeedScale,
+              data.gameplay?.passSpeedScale || DEFAULT_FORM.gameplay.passSpeedScale,
             ),
             interceptionRadius: Number(
-              data.gameplay?.interceptionRadius ||
-                DEFAULT_FORM.gameplay.interceptionRadius,
+              data.gameplay?.interceptionRadius || DEFAULT_FORM.gameplay.interceptionRadius,
             ),
             gkBuildUpBias: Number(
-              data.gameplay?.gkBuildUpBias ||
-                DEFAULT_FORM.gameplay.gkBuildUpBias,
+              data.gameplay?.gkBuildUpBias || DEFAULT_FORM.gameplay.gkBuildUpBias,
             ),
-            tempoScale: Number(
-              data.gameplay?.tempoScale || DEFAULT_FORM.gameplay.tempoScale,
-            ),
+            tempoScale: Number(data.gameplay?.tempoScale || DEFAULT_FORM.gameplay.tempoScale),
           },
         });
       }
-      setMessage(
-        "Đã lưu chiến thuật thành công và đẩy sang realtime match engine.",
-      );
+      setMessage('Đã lưu chiến thuật thành công và đẩy sang realtime match engine.');
     } catch (err) {
       if (err.status === 401 || err.status === 403) {
         onUnauthorized();
@@ -182,61 +167,44 @@ function TacticsPage({ token, sessionData, user, onUnauthorized }) {
                 Bảng điều khiển lối chơi đội bóng
               </h2>
               <p className="game-copy mt-3 max-w-2xl text-base">
-                Chỉnh logic triển khai bóng, áp lực và gameplay modifiers như
-                một game manager thực thụ, sau đó lưu thẳng sang service
-                realtime.
+                Chỉnh logic triển khai bóng, áp lực và gameplay modifiers như một game manager thực
+                thụ, sau đó lưu thẳng sang service realtime.
               </p>
             </div>
           </div>
 
           <p className="mt-4 text-sm leading-6 text-slate-300">
-            Tactics Team ID hiện tại:{" "}
-            <span className="font-semibold text-emerald-300">
-              {tacticsTeamId || "N/A"}
-            </span>
-            .{" "}
-            {sessionData?.team?.clubName
-              ? `CLB tham chiếu: ${sessionData.team.clubName}.`
-              : ""}
+            Tactics Team ID hiện tại:{' '}
+            <span className="font-semibold text-emerald-300">{tacticsTeamId || 'N/A'}</span>.{' '}
+            {sessionData?.team?.clubName ? `CLB tham chiếu: ${sessionData.team.clubName}.` : ''}
           </p>
 
           {loading ? (
-            <Notice
-              text="Đang tải config chiến thuật từ server..."
-              tone="info"
-            />
+            <Notice text="Đang tải config chiến thuật từ server..." tone="info" />
           ) : (
             <form className="mt-5 space-y-4" onSubmit={submitForm}>
               <SelectField
                 label="Formation"
                 value={form.formation}
-                options={["4-3-3", "4-4-2"]}
-                onChange={(value) =>
-                  setForm((current) => ({ ...current, formation: value }))
-                }
+                options={['4-3-3', '4-4-2']}
+                onChange={(value) => setForm((current) => ({ ...current, formation: value }))}
               />
 
               <div className="grid gap-4 sm:grid-cols-3">
                 <SliderField
                   label="Pass Ratio"
                   value={form.passRatio}
-                  onChange={(value) =>
-                    setForm((current) => ({ ...current, passRatio: value }))
-                  }
+                  onChange={(value) => setForm((current) => ({ ...current, passRatio: value }))}
                 />
                 <SliderField
                   label="Shot Ratio"
                   value={form.shotRatio}
-                  onChange={(value) =>
-                    setForm((current) => ({ ...current, shotRatio: value }))
-                  }
+                  onChange={(value) => setForm((current) => ({ ...current, shotRatio: value }))}
                 />
                 <SliderField
                   label="Pressure"
                   value={form.pressure}
-                  onChange={(value) =>
-                    setForm((current) => ({ ...current, pressure: value }))
-                  }
+                  onChange={(value) => setForm((current) => ({ ...current, pressure: value }))}
                 />
               </div>
 
@@ -244,10 +212,8 @@ function TacticsPage({ token, sessionData, user, onUnauthorized }) {
                 <SelectField
                   label="Match Mode Profile"
                   value={form.mode}
-                  options={["ranked", "casual", "ai_campaign"]}
-                  onChange={(value) =>
-                    setForm((current) => ({ ...current, mode: value }))
-                  }
+                  options={['ranked', 'casual', 'ai_campaign']}
+                  onChange={(value) => setForm((current) => ({ ...current, mode: value }))}
                 />
 
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -313,19 +279,15 @@ function TacticsPage({ token, sessionData, user, onUnauthorized }) {
               </div>
 
               <div className="game-stat-card">
-                Tổng thiên hướng hiện tại:{" "}
+                Tổng thiên hướng hiện tại:{' '}
                 <span className="font-semibold text-emerald-300">{total}</span>
               </div>
 
               {message && <Notice text={message} tone="success" />}
               {error && <Notice text={error} tone="error" />}
 
-              <button
-                type="submit"
-                disabled={saving}
-                className="game-button-primary w-full"
-              >
-                {saving ? "Saving..." : "Save Tactics"}
+              <button type="submit" disabled={saving} className="game-button-primary w-full">
+                {saving ? 'Saving...' : 'Save Tactics'}
               </button>
             </form>
           )}
@@ -337,26 +299,21 @@ function TacticsPage({ token, sessionData, user, onUnauthorized }) {
           <p className="game-header-kicker">Realtime Sync</p>
           <div className="mt-4 space-y-3 text-sm leading-6 text-slate-300">
             <p className="game-stat-card">
-              Mỗi user sẽ lưu chiến thuật theo tacticsTeamId riêng. Realtime
-              engine tự bind tacticsTeamId vào team slot phù hợp trong trận đang
-              chạy.
+              Mỗi user sẽ lưu chiến thuật theo tacticsTeamId riêng. Realtime engine tự bind
+              tacticsTeamId vào team slot phù hợp trong trận đang chạy.
             </p>
             <p className="game-stat-card">
-              Khi nhấn save, chiến thuật được lưu vào service-core rồi push tiếp
-              sang service-realtime để ảnh hưởng logic trận đấu.
+              Khi nhấn save, chiến thuật được lưu vào service-core rồi push tiếp sang
+              service-realtime để ảnh hưởng logic trận đấu.
             </p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
               <div className="game-stat-card">
                 <p className="game-stat-card__label">Current Profile</p>
-                <p className="mt-2 text-lg font-semibold text-white">
-                  {form.mode}
-                </p>
+                <p className="mt-2 text-lg font-semibold text-white">{form.mode}</p>
               </div>
               <div className="game-stat-card">
                 <p className="game-stat-card__label">Formation</p>
-                <p className="mt-2 text-lg font-semibold text-white">
-                  {form.formation}
-                </p>
+                <p className="mt-2 text-lg font-semibold text-white">{form.formation}</p>
               </div>
             </div>
           </div>
@@ -421,9 +378,7 @@ function ScaledSliderField({ label, value, min, max, step, onChange }) {
       />
       <div className="mt-3 flex items-center justify-between text-sm">
         <span className="text-slate-400">{min.toFixed(2)}</span>
-        <span className="font-semibold text-white">
-          {Number(value).toFixed(2)}
-        </span>
+        <span className="font-semibold text-white">{Number(value).toFixed(2)}</span>
         <span className="text-slate-400">{max.toFixed(2)}</span>
       </div>
     </label>
@@ -432,11 +387,11 @@ function ScaledSliderField({ label, value, min, max, step, onChange }) {
 
 function Notice({ text, tone }) {
   const toneClass =
-    tone === "success"
-      ? "game-notice--success"
-      : tone === "error"
-        ? "game-notice--error"
-        : "game-notice--info";
+    tone === 'success'
+      ? 'game-notice--success'
+      : tone === 'error'
+        ? 'game-notice--error'
+        : 'game-notice--info';
 
   return <p className={`game-notice ${toneClass}`}>{text}</p>;
 }

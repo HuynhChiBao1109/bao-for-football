@@ -1,45 +1,44 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from 'react';
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8081";
-const DEFAULT_AVATAR_URL = "/default-avatar.svg";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081';
+const DEFAULT_AVATAR_URL = '/default-avatar.svg';
 
 const DEFAULT_SESSION_OPTIONS = [
-  { value: "normal", label: "Bình thường" },
-  { value: "special year", label: "Mùa giải đặc biệt" },
-  { value: "moment time", label: "Khoảnh khắc trận đấu" },
+  { value: 'normal', label: 'Bình thường' },
+  { value: 'special year', label: 'Mùa giải đặc biệt' },
+  { value: 'moment time', label: 'Khoảnh khắc trận đấu' },
 ];
 
 const statFields = [
-  { key: "shooting", label: "Dứt điểm" },
-  { key: "passing", label: "Chuyền ngắn" },
-  { key: "longPass", label: "Chuyền dài" },
-  { key: "vision", label: "Tầm nhìn" },
-  { key: "gkReach", label: "GK Reach" },
-  { key: "attackingAwareness", label: "Nhận thức tấn công" },
-  { key: "defensiveAwareness", label: "Nhận thức phòng thủ" },
-  { key: "gkParrying", label: "GK Parrying" },
-  { key: "gkReflex", label: "GK Reflex" },
-  { key: "duels", label: "Tranh chấp" },
-  { key: "pace", label: "Tốc độ" },
-  { key: "stamina", label: "Thể lực" },
-  { key: "balance", label: "Thăng bằng" },
-  { key: "technique", label: "Kỹ thuật" },
-  { key: "determination", label: "Quyết đoán" },
-  { key: "strength", label: "Sức mạnh" },
-  { key: "standingTackle", label: "Tắc bóng" },
-  { key: "slidingTackle", label: "Xoạc bóng" },
-  { key: "dribbling", label: "Rê bóng" },
-  { key: "curve", label: "Sút xoáy" },
+  { key: 'shooting', label: 'Dứt điểm' },
+  { key: 'passing', label: 'Chuyền ngắn' },
+  { key: 'longPass', label: 'Chuyền dài' },
+  { key: 'vision', label: 'Tầm nhìn' },
+  { key: 'gkReach', label: 'GK Reach' },
+  { key: 'attackingAwareness', label: 'Nhận thức tấn công' },
+  { key: 'defensiveAwareness', label: 'Nhận thức phòng thủ' },
+  { key: 'gkParrying', label: 'GK Parrying' },
+  { key: 'gkReflex', label: 'GK Reflex' },
+  { key: 'duels', label: 'Tranh chấp' },
+  { key: 'pace', label: 'Tốc độ' },
+  { key: 'stamina', label: 'Thể lực' },
+  { key: 'balance', label: 'Thăng bằng' },
+  { key: 'technique', label: 'Kỹ thuật' },
+  { key: 'determination', label: 'Quyết đoán' },
+  { key: 'strength', label: 'Sức mạnh' },
+  { key: 'standingTackle', label: 'Tắc bóng' },
+  { key: 'slidingTackle', label: 'Xoạc bóng' },
+  { key: 'dribbling', label: 'Rê bóng' },
+  { key: 'curve', label: 'Sút xoáy' },
 ];
 
 function buildInitialDraft({ session, countries }) {
   return {
-    name: "",
-    countryId: countries[0]?.id ? String(countries[0].id) : "",
-    baseClub: "",
+    name: '',
+    countryId: countries[0]?.id ? String(countries[0].id) : '',
+    baseClub: '',
     session,
-    specialSkill: "",
+    specialSkill: '',
     shooting: 60,
     passing: 60,
     longPass: 60,
@@ -67,40 +66,32 @@ function AdminPlayerCreateCard({
   token,
   title,
   subtitle,
-  defaultSession = "normal",
+  defaultSession = 'normal',
   sessionOptions = DEFAULT_SESSION_OPTIONS,
   countries,
   clubsRefreshToken = 0,
   onCreated,
   onUnauthorized,
 }) {
-  const [form, setForm] = useState(() =>
-    buildInitialDraft({ session: defaultSession, countries }),
-  );
+  const [form, setForm] = useState(() => buildInitialDraft({ session: defaultSession, countries }));
   const [avatarFile, setAvatarFile] = useState(null);
-  const [avatarPreview, setAvatarPreview] = useState("");
+  const [avatarPreview, setAvatarPreview] = useState('');
   const [clubs, setClubs] = useState([]);
   const [clubsLoading, setClubsLoading] = useState(false);
-  const [clubsError, setClubsError] = useState("");
+  const [clubsError, setClubsError] = useState('');
   const [clubsOpen, setClubsOpen] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
   const fileInputRef = useRef(null);
 
   const selectedCountryName = useMemo(() => {
-    return (
-      countries.find((item) => String(item.id) === String(form.countryId))
-        ?.name || ""
-    );
+    return countries.find((item) => String(item.id) === String(form.countryId))?.name || '';
   }, [countries, form.countryId]);
 
   const selectedSessionLabel = useMemo(() => {
-    return (
-      sessionOptions.find((item) => item.value === form.session)?.label ||
-      form.session
-    );
+    return sessionOptions.find((item) => item.value === form.session)?.label || form.session;
   }, [form.session, sessionOptions]);
 
   useEffect(() => {
@@ -108,13 +99,13 @@ function AdminPlayerCreateCard({
 
     async function loadClubs() {
       setClubsLoading(true);
-      setClubsError("");
+      setClubsError('');
 
       try {
         const response = await fetch(`${API_BASE_URL}/api/v1/auth/clubs`);
         const data = await response.json();
         if (!response.ok) {
-          throw new Error(data?.error || "Không thể tải danh sách CLB");
+          throw new Error(data?.error || 'Không thể tải danh sách CLB');
         }
 
         if (active) {
@@ -180,7 +171,7 @@ function AdminPlayerCreateCard({
     setAvatarFile(file);
     setAvatarPreview(URL.createObjectURL(file));
     if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      fileInputRef.current.value = '';
     }
   }
 
@@ -207,7 +198,7 @@ function AdminPlayerCreateCard({
 
   function handleDragOver(event) {
     event.preventDefault();
-    event.dataTransfer.dropEffect = "copy";
+    event.dataTransfer.dropEffect = 'copy';
     setDragActive(true);
   }
 
@@ -240,64 +231,58 @@ function AdminPlayerCreateCard({
       URL.revokeObjectURL(avatarPreview);
     }
     setAvatarFile(null);
-    setAvatarPreview("");
+    setAvatarPreview('');
     if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      fileInputRef.current.value = '';
     }
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
     setLoading(true);
-    setMessage("");
-    setError("");
+    setMessage('');
+    setError('');
 
     try {
       const formData = new FormData();
-      formData.append("name", form.name);
+      formData.append('name', form.name);
       const selectedCountryId = String(Number(form.countryId));
-      formData.append("countryId", selectedCountryId);
-      formData.append("country_id", selectedCountryId);
-      formData.append("baseClub", form.baseClub);
-      formData.append("season", form.session);
-      formData.append("sourceType", form.session);
-      formData.append("specialSkill", form.specialSkill);
-      formData.append("shooting", String(Number(form.shooting)));
-      formData.append("passing", String(Number(form.passing)));
-      formData.append("longPass", String(Number(form.longPass)));
-      formData.append("vision", String(Number(form.vision)));
-      formData.append("gkReach", String(Number(form.gkReach)));
-      formData.append(
-        "attackingAwareness",
-        String(Number(form.attackingAwareness)),
-      );
-      formData.append(
-        "defensiveAwareness",
-        String(Number(form.defensiveAwareness)),
-      );
-      formData.append("gkParrying", String(Number(form.gkParrying)));
-      formData.append("gkReflex", String(Number(form.gkReflex)));
-      formData.append("duels", String(Number(form.duels)));
-      formData.append("pace", String(Number(form.pace)));
-      formData.append("stamina", String(Number(form.stamina)));
-      formData.append("balance", String(Number(form.balance)));
-      formData.append("technique", String(Number(form.technique)));
-      formData.append("determination", String(Number(form.determination)));
-      formData.append("strength", String(Number(form.strength)));
-      formData.append("standingTackle", String(Number(form.standingTackle)));
-      formData.append("slidingTackle", String(Number(form.slidingTackle)));
-      formData.append("dribbling", String(Number(form.dribbling)));
-      formData.append("curve", String(Number(form.curve)));
+      formData.append('countryId', selectedCountryId);
+      formData.append('country_id', selectedCountryId);
+      formData.append('baseClub', form.baseClub);
+      formData.append('season', form.session);
+      formData.append('sourceType', form.session);
+      formData.append('specialSkill', form.specialSkill);
+      formData.append('shooting', String(Number(form.shooting)));
+      formData.append('passing', String(Number(form.passing)));
+      formData.append('longPass', String(Number(form.longPass)));
+      formData.append('vision', String(Number(form.vision)));
+      formData.append('gkReach', String(Number(form.gkReach)));
+      formData.append('attackingAwareness', String(Number(form.attackingAwareness)));
+      formData.append('defensiveAwareness', String(Number(form.defensiveAwareness)));
+      formData.append('gkParrying', String(Number(form.gkParrying)));
+      formData.append('gkReflex', String(Number(form.gkReflex)));
+      formData.append('duels', String(Number(form.duels)));
+      formData.append('pace', String(Number(form.pace)));
+      formData.append('stamina', String(Number(form.stamina)));
+      formData.append('balance', String(Number(form.balance)));
+      formData.append('technique', String(Number(form.technique)));
+      formData.append('determination', String(Number(form.determination)));
+      formData.append('strength', String(Number(form.strength)));
+      formData.append('standingTackle', String(Number(form.standingTackle)));
+      formData.append('slidingTackle', String(Number(form.slidingTackle)));
+      formData.append('dribbling', String(Number(form.dribbling)));
+      formData.append('curve', String(Number(form.curve)));
       if (selectedClub?.id) {
-        formData.append("clubId", String(Number(selectedClub.id)));
-        formData.append("club_id", String(Number(selectedClub.id)));
+        formData.append('clubId', String(Number(selectedClub.id)));
+        formData.append('club_id', String(Number(selectedClub.id)));
       }
       if (avatarFile) {
-        formData.append("avatar", avatarFile);
+        formData.append('avatar', avatarFile);
       }
 
       const response = await fetch(`${API_BASE_URL}/api/v1/admin/players`, {
-        method: "POST",
+        method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -309,13 +294,13 @@ function AdminPlayerCreateCard({
           onUnauthorized();
           return;
         }
-        throw new Error(data?.error || "Không thể tạo cầu thủ");
+        throw new Error(data?.error || 'Không thể tạo cầu thủ');
       }
 
-      setMessage("Đã tạo cầu thủ thành công.");
+      setMessage('Đã tạo cầu thủ thành công.');
       setForm(buildInitialDraft({ session: defaultSession, countries }));
       clearAvatar();
-      if (typeof onCreated === "function") {
+      if (typeof onCreated === 'function') {
         onCreated();
       }
     } catch (err) {
@@ -328,9 +313,7 @@ function AdminPlayerCreateCard({
   return (
     <section className="game-panel overflow-hidden p-5">
       <p className="game-header-kicker">{title}</p>
-      <h2 className="game-title mt-3 text-3xl font-bold text-white">
-        {subtitle}
-      </h2>
+      <h2 className="game-title mt-3 text-3xl font-bold text-white">{subtitle}</h2>
       <div className="mt-3 flex flex-wrap gap-2 text-xs uppercase tracking-[0.22em] text-slate-300">
         <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
           Session: {selectedSessionLabel}
@@ -344,16 +327,12 @@ function AdminPlayerCreateCard({
 
       <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
         <div className="grid gap-3 md:grid-cols-2">
-          <Field
-            label="Name"
-            value={form.name}
-            onChange={(value) => updateField("name", value)}
-          />
+          <Field label="Name" value={form.name} onChange={(value) => updateField('name', value)} />
           <SelectField
             label="Session"
             value={form.session}
             options={sessionOptions}
-            onChange={(value) => updateField("session", value)}
+            onChange={(value) => updateField('session', value)}
           />
           <SelectField
             label="Country"
@@ -362,12 +341,12 @@ function AdminPlayerCreateCard({
               value: String(country.id),
               label: country.name,
             }))}
-            onChange={(value) => updateField("countryId", value)}
+            onChange={(value) => updateField('countryId', value)}
           />
           <Field
             label="Special Skill"
             value={form.specialSkill}
-            onChange={(value) => updateField("specialSkill", value)}
+            onChange={(value) => updateField('specialSkill', value)}
           />
           <ClubSelect
             label="Base Club"
@@ -395,9 +374,7 @@ function AdminPlayerCreateCard({
 
         <div
           className={`rounded-3xl border border-dashed p-4 transition ${
-            dragActive
-              ? "border-cyan-300 bg-cyan-500/10"
-              : "border-white/15 bg-white/5"
+            dragActive ? 'border-cyan-300 bg-cyan-500/10' : 'border-white/15 bg-white/5'
           }`}
           onDragEnter={handleDragEnter}
           onDragOver={handleDragOver}
@@ -407,7 +384,7 @@ function AdminPlayerCreateCard({
           role="button"
           tabIndex={0}
           onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
+            if (event.key === 'Enter' || event.key === ' ') {
               event.preventDefault();
               openFilePicker();
             }
@@ -430,8 +407,8 @@ function AdminPlayerCreateCard({
               <div>
                 <p className="game-field-label">Avatar Upload</p>
                 <p className="mt-1 text-sm leading-6 text-slate-300">
-                  Kéo thả ảnh vào đây hoặc bấm để chọn file. Nếu không upload,
-                  player sẽ lưu với avatar null và FE tự render ảnh mặc định.
+                  Kéo thả ảnh vào đây hoặc bấm để chọn file. Nếu không upload, player sẽ lưu với
+                  avatar null và FE tự render ảnh mặc định.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -458,16 +435,12 @@ function AdminPlayerCreateCard({
                   </button>
                 )}
               </div>
-              {avatarFile && (
-                <p className="text-xs text-slate-400">{avatarFile.name}</p>
-              )}
+              {avatarFile && <p className="text-xs text-slate-400">{avatarFile.name}</p>}
             </div>
           </div>
         </div>
 
-        {message && (
-          <p className="game-notice game-notice--success">{message}</p>
-        )}
+        {message && <p className="game-notice game-notice--success">{message}</p>}
         {error && <p className="game-notice game-notice--error">{error}</p>}
 
         <button
@@ -481,14 +454,14 @@ function AdminPlayerCreateCard({
           }
           className="game-button-primary w-full"
         >
-          {loading ? "Đang tạo..." : "Tạo cầu thủ"}
+          {loading ? 'Đang tạo...' : 'Tạo cầu thủ'}
         </button>
       </form>
     </section>
   );
 }
 
-function Field({ label, value, onChange, type = "text" }) {
+function Field({ label, value, onChange, type = 'text' }) {
   return (
     <label className="block">
       <span className="game-field-label">{label}</span>
@@ -521,16 +494,7 @@ function SelectField({ label, value, options, onChange }) {
   );
 }
 
-function ClubSelect({
-  label,
-  club,
-  clubs,
-  open,
-  loading,
-  error,
-  onToggle,
-  onSelect,
-}) {
+function ClubSelect({ label, club, clubs, open, loading, error, onToggle, onSelect }) {
   return (
     <div className="relative block">
       <span className="game-field-label">{label}</span>
@@ -540,15 +504,15 @@ function ClubSelect({
         className="game-input flex min-h-[56px] w-full items-center gap-3 text-left"
       >
         <img
-          src={club?.logo || "/default-avatar.svg"}
-          alt={club?.name || "Club preview"}
+          src={club?.logo || '/default-avatar.svg'}
+          alt={club?.name || 'Club preview'}
           className="h-10 w-10 rounded-xl bg-white/10 object-contain p-1"
         />
         <span className="flex-1 text-sm text-white">
-          {club?.name || (loading ? "Đang tải CLB..." : "Chọn CLB")}
+          {club?.name || (loading ? 'Đang tải CLB...' : 'Chọn CLB')}
         </span>
         <span className="text-xs uppercase tracking-[0.2em] text-slate-400">
-          {open ? "Close" : "Open"}
+          {open ? 'Close' : 'Open'}
         </span>
       </button>
       {open && (
@@ -559,9 +523,7 @@ function ClubSelect({
             </p>
           )}
           {!error && clubs.length === 0 && !loading && (
-            <p className="px-3 py-4 text-sm text-slate-400">
-              Không có CLB nào để chọn.
-            </p>
+            <p className="px-3 py-4 text-sm text-slate-400">Không có CLB nào để chọn.</p>
           )}
           <div className="grid gap-2">
             {clubs.map((item) => (
@@ -571,22 +533,18 @@ function ClubSelect({
                 onClick={() => onSelect(item)}
                 className={`flex items-center gap-3 rounded-2xl border px-3 py-2 text-left transition ${
                   club?.id === item.id
-                    ? "border-cyan-300/50 bg-cyan-500/10"
-                    : "border-white/10 bg-white/5 hover:bg-white/10"
+                    ? 'border-cyan-300/50 bg-cyan-500/10'
+                    : 'border-white/10 bg-white/5 hover:bg-white/10'
                 }`}
               >
                 <img
-                  src={item.logo || "/default-avatar.svg"}
+                  src={item.logo || '/default-avatar.svg'}
                   alt={item.name}
                   className="h-10 w-10 rounded-xl bg-white/10 object-contain p-1"
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-white">
-                    {item.name}
-                  </p>
-                  <p className="truncate text-xs text-slate-400">
-                    {item.leagueName}
-                  </p>
+                  <p className="truncate text-sm font-semibold text-white">{item.name}</p>
+                  <p className="truncate text-xs text-slate-400">{item.leagueName}</p>
                 </div>
               </button>
             ))}

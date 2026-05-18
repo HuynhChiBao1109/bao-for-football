@@ -1,61 +1,61 @@
-import { Outlet, useNavigate } from 'react-router-dom'
-import { useState, useEffect, useMemo } from 'react'
-import { useAuth } from '../hooks/useAuth'
-import { useSession } from '../hooks/useSession'
-import { useClubs } from '../hooks/useClubs'
-import { ROUTES } from '../routes'
-import { queryClient } from '../lib/queryClient'
-import { apiClient } from '../lib/apiClient'
+import { Outlet, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { useAuth } from '../hooks/useAuth';
+import { useSession } from '../hooks/useSession';
+import { useClubs } from '../hooks/useClubs';
+import { ROUTES } from '../routes';
+import { queryClient } from '../lib/queryClient';
+import { apiClient } from '../lib/apiClient';
 
 export function AppLayout() {
-  const { session, isAdmin } = useAuth()
-  const { data: sessionData } = useSession()
-  const { data: clubs = [], isLoading: clubsLoading } = useClubs()
-  const navigate = useNavigate()
-  const [selectedStarterClubId, setSelectedStarterClubId] = useState<number>(0)
-  const [assigningClub, setAssigningClub] = useState(false)
-  const [assignClubError, setAssignClubError] = useState('')
+  const { session, isAdmin } = useAuth();
+  const { data: sessionData } = useSession();
+  const { data: clubs = [], isLoading: clubsLoading } = useClubs();
+  const navigate = useNavigate();
+  const [selectedStarterClubId, setSelectedStarterClubId] = useState<number>(0);
+  const [assigningClub, setAssigningClub] = useState(false);
+  const [assignClubError, setAssignClubError] = useState('');
 
-  const needsStarterClub = Boolean(session && !isAdmin && !sessionData?.team)
+  const needsStarterClub = Boolean(session && !isAdmin && !sessionData?.team);
 
   useEffect(() => {
     if (!needsStarterClub) {
-      setAssignClubError('')
-      return
+      setAssignClubError('');
+      return;
     }
     if (selectedStarterClubId > 0) {
-      return
+      return;
     }
     if (clubs.length > 0) {
-      setSelectedStarterClubId(clubs[0].id)
+      setSelectedStarterClubId(clubs[0].id);
     }
-  }, [needsStarterClub, clubs, selectedStarterClubId])
+  }, [needsStarterClub, clubs, selectedStarterClubId]);
 
   const selectedStarterClub = useMemo(
     () => clubs.find((club) => club.id === selectedStarterClubId) ?? clubs[0] ?? null,
     [clubs, selectedStarterClubId],
-  )
+  );
 
   async function handleCreateStarterTeam() {
     if (!session?.token || !selectedStarterClub) {
-      return
+      return;
     }
 
-    setAssigningClub(true)
-    setAssignClubError('')
+    setAssigningClub(true);
+    setAssignClubError('');
     try {
       await apiClient('/api/v1/auth/team', {
         method: 'POST',
         token: session.token,
         body: { clubId: selectedStarterClub.id },
-      })
+      });
 
-      await queryClient.invalidateQueries({ queryKey: ['session', session.token] })
-      navigate(ROUTES.club, { replace: true })
+      await queryClient.invalidateQueries({ queryKey: ['session', session.token] });
+      navigate(ROUTES.club, { replace: true });
     } catch (err) {
-      setAssignClubError((err as Error).message)
+      setAssignClubError((err as Error).message);
     } finally {
-      setAssigningClub(false)
+      setAssigningClub(false);
     }
   }
 
@@ -103,16 +103,21 @@ export function AppLayout() {
                       />
                       <div>
                         <p className="font-semibold text-white">{selectedStarterClub.name}</p>
-                        <p className="text-xs text-slate-400">{selectedStarterClub.leagueName || 'Unknown league'}</p>
+                        <p className="text-xs text-slate-400">
+                          {selectedStarterClub.leagueName || 'Unknown league'}
+                        </p>
                         <p className="text-xs text-emerald-300">
-                          Budget khởi đầu: {Number(selectedStarterClub.budget ?? 0).toLocaleString()}
+                          Budget khởi đầu:{' '}
+                          {Number(selectedStarterClub.budget ?? 0).toLocaleString()}
                         </p>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {assignClubError && <p className="game-notice game-notice--error mt-4">{assignClubError}</p>}
+                {assignClubError && (
+                  <p className="game-notice game-notice--error mt-4">{assignClubError}</p>
+                )}
 
                 <button
                   type="button"
@@ -128,5 +133,5 @@ export function AppLayout() {
         )}
       </div>
     </main>
-  )
+  );
 }

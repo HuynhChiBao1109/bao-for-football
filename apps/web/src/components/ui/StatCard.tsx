@@ -1,8 +1,8 @@
 type Props = {
-  label: string
-  value: string | number
-  hint?: string
-}
+  label: string;
+  value: string | number;
+  hint?: string;
+};
 
 export function StatCard({ label, value, hint }: Props) {
   return (
@@ -11,7 +11,7 @@ export function StatCard({ label, value, hint }: Props) {
       <p className="game-stat-card__value">{value}</p>
       {hint && <p className="game-stat-card__hint">{hint}</p>}
     </div>
-  )
+  );
 }
 
 export function InfoTile({ label, value }: { label: string; value: string | number }) {
@@ -20,5 +20,5 @@ export function InfoTile({ label, value }: { label: string; value: string | numb
       <span className="text-slate-400 text-sm">{label}</span>
       <strong className="text-white">{value}</strong>
     </div>
-  )
+  );
 }

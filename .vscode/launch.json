@@ -12,5 +12,16 @@
         "GO111MODULE": "on"
       }
     }, 
+    {
+      "name": "Debug =migrate",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/database/migrate.go",
+      "cwd": "${workspaceFolder}/database",
+      "env": {
+        "GO111MODULE": "on"
+      }
+    }, 
   ]
 }

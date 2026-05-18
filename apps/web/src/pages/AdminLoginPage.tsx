@@ -1,41 +1,41 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../hooks/useAuth'
-import { apiClient } from '../lib/apiClient'
-import { ROUTES } from '../routes'
-import { BrandLogo } from '../components/ui/BrandLogo'
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+import { apiClient } from '../lib/apiClient';
+import { ROUTES } from '../routes';
+import { BrandLogo } from '../components/ui/BrandLogo';
 
 export function AdminLoginPage() {
-  const { session, setSession } = useAuth()
-  const navigate = useNavigate()
+  const { session, setSession } = useAuth();
+  const navigate = useNavigate();
 
-  const [form, setForm] = useState({ username: '', password: '' })
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [form, setForm] = useState({ username: '', password: '' });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (session?.user?.isAdmin) {
-      navigate(ROUTES.admin, { replace: true })
+      navigate(ROUTES.admin, { replace: true });
     } else if (session) {
-      navigate(ROUTES.club, { replace: true })
+      navigate(ROUTES.club, { replace: true });
     }
-  }, [session, navigate])
+  }, [session, navigate]);
 
   async function submitAdminLogin(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
+    e.preventDefault();
+    setLoading(true);
+    setError('');
     try {
       const data = await apiClient('/admin/login', {
         method: 'POST',
         body: form,
-      })
-      setSession({ token: data.token, user: data.user })
-      navigate(ROUTES.admin, { replace: true })
+      });
+      setSession({ token: data.token, user: data.user });
+      navigate(ROUTES.admin, { replace: true });
     } catch (err) {
-      setError((err as Error).message)
+      setError((err as Error).message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
@@ -49,8 +49,12 @@ export function AdminLoginPage() {
               <span className="pulse-dot" />
               Admin Access
             </p>
-            <h1 className="game-title mt-3 text-center text-3xl font-bold text-white sm:text-4xl">Admin Login</h1>
-            <p className="game-copy mt-2 text-center text-sm sm:text-base">Trang đăng nhập riêng cho quản trị viên.</p>
+            <h1 className="game-title mt-3 text-center text-3xl font-bold text-white sm:text-4xl">
+              Admin Login
+            </h1>
+            <p className="game-copy mt-2 text-center text-sm sm:text-base">
+              Trang đăng nhập riêng cho quản trị viên.
+            </p>
 
             <form className="mt-5 space-y-4" onSubmit={submitAdminLogin}>
               <label className="block">
@@ -83,5 +87,5 @@ export function AdminLoginPage() {
         </section>
       </div>
     </main>
-  )
+  );
 }

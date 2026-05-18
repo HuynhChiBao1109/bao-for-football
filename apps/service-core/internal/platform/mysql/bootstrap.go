@@ -420,18 +420,19 @@ func EnsureSeedData(ctx context.Context, db *sql.DB) error {
 	if err := ensureCountries(ctx, db); err != nil {
 		return fmt.Errorf("ensureCountries: %w", err)
 	}
-	if err := ensureDefaultClubs(ctx, db); err != nil {
-		return fmt.Errorf("ensureDefaultClubs: %w", err)
-	}
+	// Club/player seed is now handled by database/migrate.go via API-Sports.
+	// if err := ensureDefaultClubs(ctx, db); err != nil {
+	// 	return fmt.Errorf("ensureDefaultClubs: %w", err)
+	// }
 	if err := backfillCountryRelations(ctx, db); err != nil {
 		return fmt.Errorf("backfillCountryRelations: %w", err)
 	}
-	if err := ensureManUTDPlayers(ctx, db); err != nil {
-		return fmt.Errorf("ensureManUTDPlayers: %w", err)
-	}
-	if err := ensureDefaultPlayers(ctx, db); err != nil {
-		return fmt.Errorf("ensureDefaultPlayers: %w", err)
-	}
+	// if err := ensureManUTDPlayers(ctx, db); err != nil {
+	// 	return fmt.Errorf("ensureManUTDPlayers: %w", err)
+	// }
+	// if err := ensureDefaultPlayers(ctx, db); err != nil {
+	// 	return fmt.Errorf("ensureDefaultPlayers: %w", err)
+	// }
 
 	return nil
 }

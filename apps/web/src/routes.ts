@@ -8,15 +8,15 @@ export const ROUTES = {
   pvp: '/match/pvp',
   gacha: '/gacha',
   admin: '/admin',
-}
+};
 
 export function defaultAuthenticatedRoute(isAdmin: boolean) {
-  return isAdmin ? ROUTES.admin : ROUTES.club
+  return isAdmin ? ROUTES.admin : ROUTES.club;
 }
 
 export function navItems(isAdmin: boolean) {
   if (isAdmin) {
-    return [{ path: ROUTES.admin, label: 'Admin' }]
+    return [{ path: ROUTES.admin, label: 'Admin' }];
   }
 
   return [
@@ -26,5 +26,5 @@ export function navItems(isAdmin: boolean) {
     { path: ROUTES.aiMatch, label: 'Campaign AI' },
     { path: ROUTES.pvp, label: 'PvP' },
     { path: ROUTES.gacha, label: 'Gacha' },
-  ]
+  ];
 }

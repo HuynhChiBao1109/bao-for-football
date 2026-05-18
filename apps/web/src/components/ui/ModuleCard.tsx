@@ -1,23 +1,23 @@
-import React, { useState } from 'react'
-import './ModuleCard.css'
+import React, { useState } from 'react';
+import './ModuleCard.css';
 
 interface ModuleAction {
-  label: string
-  description: string
-  icon: string
-  onClick: () => void
+  label: string;
+  description: string;
+  icon: string;
+  onClick: () => void;
 }
 
 interface ModuleCardProps {
-  title: string
-  subtitle: string
-  icon: string
-  actions: ModuleAction[]
-  column?: 'left' | 'center' | 'right'
+  title: string;
+  subtitle: string;
+  icon: string;
+  actions: ModuleAction[];
+  column?: 'left' | 'center' | 'right';
 }
 
 export function ModuleCard({ title, subtitle, icon, actions, column = 'left' }: ModuleCardProps) {
-  const [isHovered, setIsHovered] = useState(false)
+  const [isHovered, setIsHovered] = useState(false);
 
   return (
     <div
@@ -54,7 +54,7 @@ export function ModuleCard({ title, subtitle, icon, actions, column = 'left' }: 
       {/* Animated border accent */}
       <div className="module-card__border-accent" />
     </div>
-  )
+  );
 }
 
 function ModuleCardAction({
@@ -82,5 +82,5 @@ function ModuleCardAction({
       </div>
       <div className="module-card__action-arrow">→</div>
     </button>
-  )
+  );
 }
