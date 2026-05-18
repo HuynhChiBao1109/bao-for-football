@@ -72,7 +72,9 @@ export function AppLayout() {
                     value={selectedStarterClub?.id ?? 0}
                     onChange={(event) => setSelectedStarterClubId(Number(event.target.value))}
                     className="game-select"
-                    disabled={assignStarterTeamMutation.isPending || clubsLoading || clubs.length === 0}
+                    disabled={
+                      assignStarterTeamMutation.isPending || clubsLoading || clubs.length === 0
+                    }
                   >
                     {clubs.map((club) => (
                       <option key={club.id} value={club.id}>
@@ -112,7 +114,9 @@ export function AppLayout() {
                 <button
                   type="button"
                   onClick={handleCreateStarterTeam}
-                  disabled={!selectedStarterClub || assignStarterTeamMutation.isPending || clubsLoading}
+                  disabled={
+                    !selectedStarterClub || assignStarterTeamMutation.isPending || clubsLoading
+                  }
                   className="game-button-primary mt-5 w-full"
                 >
                   {assignStarterTeamMutation.isPending ? 'Đang tạo team...' : 'Bắt đầu tạo team'}
