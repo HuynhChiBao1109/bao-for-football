@@ -257,9 +257,9 @@ function PlayerFilters({
             className="game-input"
           >
             <option value="">Tất cả</option>
-            {clubNames.map((n) => (
-              <option key={n} value={n}>
-                {n}
+            {SEASON_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
               </option>
             ))}
           </select>
