@@ -120,7 +120,7 @@ export function PlayersPage() {
                       className="cursor-pointer"
                     >
                       <td className="px-4 py-3 font-medium text-white">{card.name}</td>
-                      <td className="px-4 py-3 text-slate-300">{card.nationality ?? '—'}</td>
+                      <td className="px-4 py-3 text-slate-300">{card.country?.name ?? '—'}</td>
                       <td className="px-4 py-3 text-slate-300">{card.level}</td>
                       <td className="px-4 py-3 text-emerald-300">{card.currentPoints}</td>
                     </tr>

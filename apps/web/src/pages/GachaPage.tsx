@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useGachaRoll, useGachaBanners } from '../hooks/useGacha'
+import { useGachaRoll, useGachaBanners, useGachaProgress } from '../hooks/useGacha'
 import { useSession } from '../hooks/useSession'
 import { Banner } from '../components/ui/Banner'
 import { API_BASE_URL } from '../lib/apiClient'
@@ -13,6 +13,7 @@ export function GachaPage() {
   const rollMutation = useGachaRoll()
 
   const [selectedBanner, setSelectedBanner] = useState<GachaBanner | null>(null)
+  const { data: progressData } = useGachaProgress(selectedBanner?.bannerCode ?? null)
   const [result, setResult] = useState<GachaResult | null>(null)
   const [history, setHistory] = useState<GachaResult[]>([])
   const [rollError, setRollError] = useState('')
@@ -90,12 +91,12 @@ export function GachaPage() {
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div className="rounded-[18px] border border-white/8 bg-black/20 px-4 py-3">
-                        <p className="game-field-label mb-0">User</p>
-                        <p className="mt-2 text-lg font-semibold text-white">#{userId ?? 'N/A'}</p>
+                        <p className="game-field-label mb-0">Tổng roll</p>
+                        <p className="mt-2 text-lg font-semibold text-white">{progressData?.totalRolls ?? 0}</p>
                       </div>
                       <div className="rounded-[18px] border border-white/8 bg-black/20 px-4 py-3">
-                        <p className="game-field-label mb-0">Số lần roll</p>
-                        <p className="mt-2 text-lg font-semibold text-white">{history.length}</p>
+                        <p className="game-field-label mb-0">Pity counter</p>
+                        <p className="mt-2 text-lg font-semibold text-white">{progressData?.rollsSinceSpecial ?? 0}</p>
                       </div>
                     </div>
 
@@ -117,15 +118,34 @@ export function GachaPage() {
                         Kết quả lượt quay sẽ hiển thị ở đây.
                       </div>
                     ) : (
-                      <div className="rounded-[18px] border border-amber-400/20 bg-black/20 px-4 py-4 space-y-2">
+                      <div className="rounded-[18px] border border-amber-400/20 bg-black/20 px-4 py-4 space-y-3">
                         <p className="game-stat-card__label text-amber-200">Kết quả</p>
+                        
+                        {/* Player display */}
+                        <div className="bg-black/40 rounded-[12px] p-3">
+                          {result.playerImageUrl && (
+                            <div className="relative h-32 w-full overflow-hidden rounded-[8px] bg-black/30 mb-2">
+                              <img 
+                                src={result.playerImageUrl} 
+                                alt={result.playerName}
+                                className="h-full w-full object-cover"
+                              />
+                            </div>
+                          )}
+                          <p className="text-sm font-semibold text-white truncate">{result.playerName}</p>
+                          <p className="text-xs text-slate-400 mt-1">ID: {result.playerId}</p>
+                        </div>
+
                         <h3 className="font-['Orbitron'] text-3xl font-bold text-white">{result.rarity}</h3>
                         <p className="text-sm text-slate-300">{result.bannerCode} · {result.season}</p>
-                        <div className="grid grid-cols-2 gap-2 mt-3">
+                        <div className="grid grid-cols-2 gap-2 mt-2">
                           <Tile label="Đặc biệt" value={result.isSpecial ? 'Có' : 'Không'} />
                           <Tile label="Pity" value={result.isPityTriggered ? 'Kích hoạt' : 'Chưa'} />
                           <Tile label="Tổng roll" value={String(result.totalRolls)} />
                           <Tile label="Đảm bảo tiếp theo" value={result.nextRollGuaranteedHint ? 'Có' : 'Không'} />
+                        </div>
+                        <div className="pt-2 border-t border-white/8">
+                          <p className="text-xs text-slate-400">Chi phí: <span className="text-amber-300 font-semibold">{result.costDeducted.toLocaleString()}</span></p>
                         </div>
                       </div>
                     )}
@@ -149,10 +169,13 @@ export function GachaPage() {
               {history.map((item, i) => (
                 <div key={`${item.bannerCode}-${item.totalRolls}-${i}`} className="game-stat-card">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-white">{item.rarity}</p>
-                    <p className="text-xs text-slate-400">#{item.totalRolls}</p>
+                    <div>
+                      <p className="text-sm font-semibold text-white">{item.rarity}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{item.playerName}</p>
+                    </div>
+                    <p className="text-xs text-slate-500">#{item.totalRolls}</p>
                   </div>
-                  <p className="mt-0.5 text-xs text-slate-400">{item.bannerCode} · {item.season}</p>
+                  <p className="mt-1 text-xs text-slate-500">{item.bannerCode}</p>
                   {item.isSpecial && <span className="mt-1 inline-block game-chip text-xs text-amber-300 border-amber-400/30">Đặc biệt</span>}
                 </div>
               ))}

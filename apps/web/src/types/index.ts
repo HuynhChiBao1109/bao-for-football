@@ -46,6 +46,7 @@ export type UserPlayerCard = {
   nationality?: string
   avatarUrl?: string
   skills?: SpecialSkill[]
+  country?: Country
 }
 
 // ─── Admin Player ──────────────────────────────────────────────────────────────
@@ -138,6 +139,7 @@ export type GachaBanner = {
 }
 
 export type GachaResult = {
+  userId: number
   rarity: string
   bannerCode: string
   season: string
@@ -146,4 +148,9 @@ export type GachaResult = {
   totalRolls: number
   rollsSinceLastSpecial: number
   nextRollGuaranteedHint: boolean
+  // Player obtained from this roll
+  playerId: number
+  playerName: string
+  playerImageUrl: string
+  costDeducted: number
 }

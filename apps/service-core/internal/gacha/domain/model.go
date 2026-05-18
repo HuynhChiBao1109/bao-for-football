@@ -10,4 +10,9 @@ type RollResult struct {
 	TotalRolls             int    `json:"totalRolls"`
 	RollsSinceLastSpecial  int    `json:"rollsSinceLastSpecial"`
 	NextRollGuaranteedHint bool   `json:"nextRollGuaranteedHint"`
+	// Player obtained from this roll
+	PlayerID     uint64 `json:"playerId"`
+	PlayerName   string `json:"playerName"`
+	PlayerImageURL string `json:"playerImageUrl"`
+	CostDeducted int64  `json:"costDeducted"`
 }
