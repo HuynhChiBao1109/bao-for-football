@@ -11,6 +11,7 @@ import (
 
 type repository interface {
 	CreateBanner(ctx context.Context, input domain.BannerConfig) (domain.BannerConfig, error)
+	ListBanners(ctx context.Context) ([]domain.BannerConfig, error)
 }
 
 type BannerUseCase struct {
@@ -49,4 +50,8 @@ func (u *BannerUseCase) CreateBanner(ctx context.Context, input domain.BannerCon
 	input.StatusLabel = domain.BannerStatusText(input.Status)
 
 	return u.repo.CreateBanner(ctx, input)
+}
+
+func (u *BannerUseCase) ListBanners(ctx context.Context) ([]domain.BannerConfig, error) {
+	return u.repo.ListBanners(ctx)
 }

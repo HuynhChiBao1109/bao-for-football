@@ -99,6 +99,15 @@ func (h *Handler) CreateBanner(c *gin.Context) {
 	})
 }
 
+func (h *Handler) ListBanners(c *gin.Context) {
+	banners, err := h.uc.ListBanners(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": banners})
+}
+
 func isAllowedImageExt(ext string) bool {
 	switch ext {
 	case ".jpg", ".jpeg", ".png", ".webp", ".gif":

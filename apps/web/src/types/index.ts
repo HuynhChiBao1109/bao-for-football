@@ -125,6 +125,18 @@ export type AiStage = {
 
 // ─── Gacha ────────────────────────────────────────────────────────────────────
 
+export type GachaBanner = {
+  id: number
+  bannerCode: string
+  bannerName: string
+  bannerImageUrl: string
+  playerId: number
+  expiredAt?: string
+  status: number
+  statusLabel: string
+  createdAt: string
+}
+
 export type GachaResult = {
   rarity: string
   bannerCode: string

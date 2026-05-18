@@ -146,6 +146,7 @@ func main() {
 	api.GET("/tactics/:teamId", tacticsHandler.Get)
 	api.POST("/tactics", tacticsHandler.Save)
 	api.POST("/gacha/roll", gachaHandler.Roll)
+	api.GET("/gacha/banners", gachaAdminHandler.ListBanners)
 	api.GET("/players", playerHandler.ListMyCards)
 	api.POST("/players/:id/allocate", playerHandler.AllocateStats)
 	api.POST("/matches/start", matchHandler.Start)

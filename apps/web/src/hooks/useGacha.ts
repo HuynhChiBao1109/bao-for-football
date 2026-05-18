@@ -1,7 +1,18 @@
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { apiClient } from '../lib/apiClient'
 import { useAuth } from './useAuth'
-import type { GachaResult } from '../types'
+import type { GachaBanner, GachaResult } from '../types'
+
+export function useGachaBanners() {
+  const { token } = useAuth()
+  return useQuery<GachaBanner[], Error>({
+    queryKey: ['gacha-banners'],
+    queryFn: async () => {
+      const payload = await apiClient('/api/v1/gacha/banners', { token })
+      return (payload?.data as GachaBanner[]) ?? []
+    },
+  })
+}
 
 export function useGachaRoll() {
   const { token } = useAuth()

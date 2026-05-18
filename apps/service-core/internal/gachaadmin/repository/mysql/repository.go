@@ -90,3 +90,49 @@ WHERE expired_at IS NOT NULL
 
 	return nil
 }
+
+func (r *Repository) ListBanners(ctx context.Context) ([]domain.BannerConfig, error) {
+	if r.db == nil {
+		return []domain.BannerConfig{}, nil
+	}
+
+	rows, err := r.db.QueryContext(ctx, `
+SELECT id, banner_code, banner_name, banner_image_data, player_id,
+       expired_at, status, created_at
+FROM gacha_banners
+WHERE status = ?
+ORDER BY created_at DESC`, domain.BannerStatusRunning)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make([]domain.BannerConfig, 0, 16)
+	for rows.Next() {
+		var b domain.BannerConfig
+		var expiredAt sql.NullTime
+		var createdAt sql.NullTime
+		if err := rows.Scan(
+			&b.ID,
+			&b.BannerCode,
+			&b.BannerName,
+			&b.BannerImageURL,
+			&b.PlayerID,
+			&expiredAt,
+			&b.Status,
+			&createdAt,
+		); err != nil {
+			return nil, err
+		}
+		if expiredAt.Valid {
+			t := expiredAt.Time
+			b.ExpiredAt = &t
+		}
+		if createdAt.Valid {
+			b.CreatedAt = createdAt.Time
+		}
+		b.StatusLabel = domain.BannerStatusText(b.Status)
+		out = append(out, b)
+	}
+	return out, rows.Err()
+}
