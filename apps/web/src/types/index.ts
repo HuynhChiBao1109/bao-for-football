@@ -27,6 +27,7 @@ export type Country = {
   id: number
   name: string
   code?: string
+  flag?: string
 }
 
 // ─── Player (user card) ────────────────────────────────────────────────────────
@@ -37,6 +38,10 @@ export type UserPlayerCard = {
   userPlayerId: number
   templateId: number
   name: string
+  imageUrl?: string
+  clubImage?: string
+  baseClub?: string
+  season?: string
   level: number
   currentExp: number
   currentPoints: number

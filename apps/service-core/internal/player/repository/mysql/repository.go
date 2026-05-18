@@ -20,6 +20,8 @@ type rawCard struct {
 	UserPlayerID        uint64
 	PlayerTemplateID    uint64
 	Name                string
+	ImageURL            string
+	ClubImage           string
 	HeightCM            uint16
 	BaseClub            string
 	Season              string
@@ -82,6 +84,8 @@ SELECT
 	up.id,
 	up.player_template_id,
 	pt.name,
+	COALESCE(pt.image_url, ''),
+	COALESCE(cl.logo, ''),
 	pt.height_cm,
 	pt.base_club,
 	pt.season,
@@ -135,6 +139,7 @@ SELECT
 FROM user_players up
 INNER JOIN player_templates pt ON pt.id = up.player_template_id
 LEFT JOIN countries c ON c.id = pt.country_id
+LEFT JOIN clubs cl ON cl.id = pt.club_id
 WHERE up.user_id = ?
 ORDER BY up.level DESC, up.id ASC`, userID)
 	if err != nil {
@@ -168,6 +173,8 @@ SELECT
 	up.id,
 	up.player_template_id,
 	pt.name,
+	COALESCE(pt.image_url, ''),
+	COALESCE(cl.logo, ''),
 	pt.height_cm,
 	pt.base_club,
 	pt.season,
@@ -221,6 +228,7 @@ SELECT
 FROM user_players up
 INNER JOIN player_templates pt ON pt.id = up.player_template_id
 LEFT JOIN countries c ON c.id = pt.country_id
+LEFT JOIN clubs cl ON cl.id = pt.club_id
 WHERE up.user_id = ? AND up.id = ?
 LIMIT 1`, userID, userPlayerID)
 
@@ -392,6 +400,8 @@ func scanRawCard(s scanner) (rawCard, error) {
 		&item.UserPlayerID,
 		&item.PlayerTemplateID,
 		&item.Name,
+		&item.ImageURL,
+		&item.ClubImage,
 		&item.HeightCM,
 		&item.BaseClub,
 		&item.Season,
@@ -545,6 +555,8 @@ func toPlayerCard(item rawCard) domain.PlayerCard {
 		UserPlayerID:     item.UserPlayerID,
 		PlayerTemplateID: item.PlayerTemplateID,
 		Name:             item.Name,
+		ImageURL:         item.ImageURL,
+		ClubImage:        item.ClubImage,
 		HeightCM:         item.HeightCM,
 		BaseClub:         item.BaseClub,
 		Season:           item.Season,

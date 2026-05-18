@@ -1,8 +1,24 @@
 import { useMemo, useState } from 'react'
 import { usePlayerCards, useAllocateStats } from '../hooks/usePlayerCards'
 import { STAT_FIELDS, STAT_KEYS, DEFAULT_STATS, type StatKey } from '../lib/constants'
+import { API_BASE_URL } from '../lib/apiClient'
 import { Banner } from '../components/ui/Banner'
 import type { UserPlayerCard } from '../types'
+
+const DEFAULT_PLAYER_AVATAR = '/default-avatar.svg'
+
+function resolveMediaUrl(value: string | undefined | null): string {
+  const source = String(value || '').trim()
+  if (!source) return ''
+  if (/^https?:\/\//i.test(source)) return source
+  if (source.startsWith('/')) return `${API_BASE_URL}${source}`
+  return `${API_BASE_URL}/${source}`
+}
+
+function resolvePlayerAvatarUrl(card: UserPlayerCard): string {
+  const value = resolveMediaUrl(card.imageUrl || card.avatarUrl)
+  return value || DEFAULT_PLAYER_AVATAR
+}
 
 function buildTargetStats(card: UserPlayerCard | null): Record<StatKey, number> {
   if (!card?.totalStats) return { ...DEFAULT_STATS }
@@ -119,8 +135,55 @@ export function PlayersPage() {
                       data-active={selectedCard?.userPlayerId === card.userPlayerId}
                       className="cursor-pointer"
                     >
-                      <td className="px-4 py-3 font-medium text-white">{card.name}</td>
-                      <td className="px-4 py-3 text-slate-300">{card.country?.name ?? '—'}</td>
+                      <td className="px-4 py-3 font-medium text-white">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={resolvePlayerAvatarUrl(card)}
+                            alt={card.name}
+                            className="h-10 w-10 rounded-full border border-white/20 bg-white/10 object-cover"
+                            loading="lazy"
+                            onError={(event) => {
+                              event.currentTarget.onerror = null
+                              event.currentTarget.src = DEFAULT_PLAYER_AVATAR
+                            }}
+                          />
+                          <div>
+                            <p>{card.name}</p>
+                            <div className="mt-1 flex items-center gap-2 text-xs text-slate-400">
+                              {card.clubImage ? (
+                                <img
+                                  src={resolveMediaUrl(card.clubImage)}
+                                  alt={card.baseClub || 'Club'}
+                                  className="h-4 w-4 rounded-full object-cover"
+                                  onError={(event) => {
+                                    event.currentTarget.style.display = 'none'
+                                  }}
+                                />
+                              ) : (
+                                <span className="inline-block h-4 w-4 rounded-full bg-white/10" />
+                              )}
+                              <span>{card.baseClub || 'N/A'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-slate-300">
+                        <div className="flex items-center gap-2">
+                          {card.country?.flag ? (
+                            <img
+                              src={resolveMediaUrl(card.country.flag)}
+                              alt={card.country?.name || 'Country'}
+                              className="h-4 w-6 rounded-sm object-cover"
+                              onError={(event) => {
+                                event.currentTarget.style.display = 'none'
+                              }}
+                            />
+                          ) : (
+                            <span className="inline-block h-4 w-6 rounded-sm bg-white/10" />
+                          )}
+                          <span>{card.country?.name ?? '—'}</span>
+                        </div>
+                      </td>
                       <td className="px-4 py-3 text-slate-300">{card.level}</td>
                       <td className="px-4 py-3 text-emerald-300">{card.currentPoints}</td>
                     </tr>
@@ -139,13 +202,50 @@ export function PlayersPage() {
           ) : (
             <>
               <div className="flex items-start gap-3">
-                {selectedCard.avatarUrl && (
-                  <img src={selectedCard.avatarUrl} alt={selectedCard.name} className="h-14 w-14 rounded-2xl bg-white/10 object-cover" />
-                )}
+                <img
+                  src={resolvePlayerAvatarUrl(selectedCard)}
+                  alt={selectedCard.name}
+                  className="h-14 w-14 rounded-2xl border border-white/20 bg-white/10 object-cover"
+                  onError={(event) => {
+                    event.currentTarget.onerror = null
+                    event.currentTarget.src = DEFAULT_PLAYER_AVATAR
+                  }}
+                />
                 <div>
-                  <p className="game-header-kicker">Stat Allocator</p>
                   <h3 className="game-title mt-1 text-2xl font-bold text-white">{selectedCard.name}</h3>
                   <p className="text-sm text-slate-400">Cấp {selectedCard.level} · {selectedCard.currentPoints} điểm</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-300">
+                    <div className="flex items-center gap-2">
+                      {selectedCard.clubImage ? (
+                        <img
+                          src={resolveMediaUrl(selectedCard.clubImage)}
+                          alt={selectedCard.baseClub || 'Club'}
+                          className="h-5 w-5 rounded-full object-cover"
+                          onError={(event) => {
+                            event.currentTarget.style.display = 'none'
+                          }}
+                        />
+                      ) : (
+                        <span className="inline-block h-5 w-5 rounded-full bg-white/10" />
+                      )}
+                      <span>{selectedCard.baseClub || 'N/A'}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {selectedCard.country?.flag ? (
+                        <img
+                          src={resolveMediaUrl(selectedCard.country.flag)}
+                          alt={selectedCard.country?.name || 'Country'}
+                          className="h-4 w-6 rounded-sm object-cover"
+                          onError={(event) => {
+                            event.currentTarget.style.display = 'none'
+                          }}
+                        />
+                      ) : (
+                        <span className="inline-block h-4 w-6 rounded-sm bg-white/10" />
+                      )}
+                      <span>{selectedCard.country?.name || '—'}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { apiRequest } from "./api";
+import { API_BASE_URL, apiRequest } from "./api";
+
+const DEFAULT_PLAYER_AVATAR = "/default-avatar.svg";
 
 const defaultAllocate = {
   shooting: 0,
@@ -74,6 +76,20 @@ const statMetas = [
     allocatable: true,
   },
 ];
+
+function resolvePlayerAvatarUrl(imageUrl) {
+  const value = String(imageUrl || "").trim();
+  if (!value) {
+    return DEFAULT_PLAYER_AVATAR;
+  }
+  if (/^https?:\/\//i.test(value)) {
+    return value;
+  }
+  if (value.startsWith("/")) {
+    return `${API_BASE_URL}${value}`;
+  }
+  return `${API_BASE_URL}/${value}`;
+}
 
 function buildTargetStats(card) {
   if (!card?.totalStats) {
@@ -398,9 +414,23 @@ function PlayerManagementPage({ token, onUnauthorized }) {
                       className="cursor-pointer"
                     >
                       <td className="px-4 py-3 font-medium text-white">
-                        <div>{card.name}</div>
-                        <div className="text-xs text-slate-400">
-                          {card.baseClub} • {card.season}
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={resolvePlayerAvatarUrl(card.imageUrl)}
+                            alt={card.name}
+                            className="h-10 w-10 rounded-full border border-white/20 bg-slate-800 object-cover"
+                            loading="lazy"
+                            onError={(event) => {
+                              event.currentTarget.onerror = null;
+                              event.currentTarget.src = DEFAULT_PLAYER_AVATAR;
+                            }}
+                          />
+                          <div>
+                            <div>{card.name}</div>
+                            <div className="text-xs text-slate-400">
+                              {card.baseClub} • {card.season}
+                            </div>
+                          </div>
                         </div>
                       </td>
                       <td className="px-4 py-3 text-slate-200">
@@ -441,9 +471,20 @@ function PlayerManagementPage({ token, onUnauthorized }) {
           ) : (
             <>
               <p className="game-header-kicker">Player Detail</p>
-              <h3 className="game-title mt-3 text-3xl font-bold text-white">
-                {selectedCard.name}
-              </h3>
+              <div className="mt-3 flex items-center gap-4">
+                <img
+                  src={resolvePlayerAvatarUrl(selectedCard.imageUrl)}
+                  alt={selectedCard.name}
+                  className="h-16 w-16 rounded-full border border-white/20 bg-slate-800 object-cover"
+                  onError={(event) => {
+                    event.currentTarget.onerror = null;
+                    event.currentTarget.src = DEFAULT_PLAYER_AVATAR;
+                  }}
+                />
+                <h3 className="game-title text-3xl font-bold text-white">
+                  {selectedCard.name}
+                </h3>
+              </div>
               <div className="mt-2 flex items-center gap-2 text-sm text-slate-300">
                 {selectedCard?.country?.flag ? (
                   <img

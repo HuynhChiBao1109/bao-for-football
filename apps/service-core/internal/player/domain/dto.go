@@ -34,6 +34,8 @@ type PlayerCard struct {
 	UserPlayerID       uint64    `json:"userPlayerId"`
 	PlayerTemplateID   uint64    `json:"playerTemplateId"`
 	Name               string    `json:"name"`
+	ImageURL           string    `json:"imageUrl"`
+	ClubImage          string    `json:"clubImage"`
 	HeightCM           uint16    `json:"heightCM"`
 	BaseClub           string    `json:"baseClub"`
 	Season             string    `json:"season"`
