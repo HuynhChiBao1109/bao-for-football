@@ -84,11 +84,14 @@ cd apps/service-core && go run ./cmd/server
 
 - tạo 1 admin page để thêm cầu thủ đặc biệt hoặc cầu thủ thường
 
-### Thông tin thẻ cầu thủ
+## Thông tin thẻ cầu thủ
 
-1.
+- Tên cầu thủ, avatar, quốc tịch, câu lạc bộ, mùa giải (bình thường hay đặc biệt)
+- Chỉ số cơ bản (không thể chỉnh sửa): Chiều cao, độ dài chân, format body type (dựa trên chiều cao và độ dài chân),
+- Chỉ số kỹ năng (có thể tăng khi lên level): Dứt điểm, chuyền ngắn, chuyền dài, tầm nhìn, GK REACH, nhận thức tấn công, nhận thức phòng thủ, GK parrying, GK reflexes, tranh chấp, tắc bóng, xoạc bóng, tốc độ, thể lực, thăng bằng, kỹ thuật, quyết đoán, sức mạnh, rê bóng, sút xoáy
+- Kỹ năng đặc biệt (admin sẽ thêm vào) và có thể chỉnh sửa: Bao gồm image kỹ năng và hiệu ứng buff chỉ số (ví dụ: +5 tốc độ, +3 dứt điểm, ...)
 
-- Event trong trận
+## Event trong trận
 
 ### giao banh khi bắt đầu trận, sau ghi bàn, sang hiệp 2
 

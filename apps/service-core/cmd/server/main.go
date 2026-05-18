@@ -144,6 +144,9 @@ func main() {
 	admin.GET("/players", playerAdminHandler.List)
 	admin.GET("/players/:id", playerAdminHandler.Detail)
 	admin.POST("/players", playerAdminHandler.Create)
+	admin.GET("/skills", playerAdminHandler.ListSkills)
+	admin.POST("/skills", playerAdminHandler.CreateSkill)
+	admin.POST("/players/:id/skills", playerAdminHandler.AssignSkill)
 	admin.POST("/uploads/image", gachaAdminHandler.UploadImage)
 	admin.POST("/gacha/banners", gachaAdminHandler.CreateBanner)
 

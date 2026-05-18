@@ -13,23 +13,37 @@ type Player struct {
 	Season         string    `json:"season"`
 	SourceType     string    `json:"sourceType"`
 	SpecialSkill   string    `json:"specialSkill"`
+	Skills         []SpecialSkill `json:"skills"`
 	Shooting       int       `json:"shooting"`
 	Passing        int       `json:"passing"`
 	LongPass       int       `json:"longPass"`
 	Vision         int       `json:"vision"`
 	GKReach        int       `json:"gkReach"`
-	CtrAwareness   int       `json:"counterAttackAwareness"`
+	AttAwareness   int       `json:"attackingAwareness"`
+	DefAwareness   int       `json:"defensiveAwareness"`
 	GKParrying     int       `json:"gkParrying"`
 	GKReflex       int       `json:"gkReflex"`
-	GKCatching     int       `json:"gkCatching"`
 	Duels          int       `json:"duels"`
 	Pace           int       `json:"pace"`
-	Physical       int       `json:"physical"`
-	Defending      int       `json:"defending"`
+	Stamina        int       `json:"stamina"`
+	Balance        int       `json:"balance"`
+	Technique      int       `json:"technique"`
+	Determination  int       `json:"determination"`
+	Strength       int       `json:"strength"`
 	StandingTackle int       `json:"standingTackle"`
 	SlidingTackle  int       `json:"slidingTackle"`
 	Dribbling      int       `json:"dribbling"`
+	Curve          int       `json:"curve"`
 	CreatedAt      time.Time `json:"createdAt"`
+}
+
+type SpecialSkill struct {
+	ID        int64     `json:"id"`
+	Name      string    `json:"name"`
+	IconURL   string    `json:"iconUrl"`
+	BuffType  string    `json:"buffType"`
+	BuffValue int       `json:"buffValue"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 type Country struct {
@@ -47,4 +61,10 @@ type Club struct {
 	Country    Country `json:"country"`
 	Budget     int64   `json:"budget"`
 	LeagueName string  `json:"leagueName"`
+}
+
+type PlayerFilter struct {
+	Name      string
+	CountryID *int64
+	BaseClub  string
 }

@@ -8,17 +8,21 @@ const defaultAllocate = {
   longPass: 0,
   vision: 0,
   gkReach: 0,
-  counterAttackAwareness: 0,
+  attackingAwareness: 0,
+  defensiveAwareness: 0,
   gkParrying: 0,
   gkReflex: 0,
-  gkCatching: 0,
   duels: 0,
   pace: 0,
-  physical: 0,
-  defending: 0,
+  stamina: 0,
+  balance: 0,
+  technique: 0,
+  determination: 0,
+  strength: 0,
   standingTackle: 0,
   slidingTackle: 0,
   dribbling: 0,
+  curve: 0,
 };
 
 const allocateKeys = [
@@ -27,17 +31,21 @@ const allocateKeys = [
   "longPass",
   "vision",
   "gkReach",
-  "counterAttackAwareness",
+  "attackingAwareness",
+  "defensiveAwareness",
   "gkParrying",
   "gkReflex",
-  "gkCatching",
   "duels",
   "pace",
-  "physical",
-  "defending",
+  "stamina",
+  "balance",
+  "technique",
+  "determination",
+  "strength",
   "standingTackle",
   "slidingTackle",
   "dribbling",
+  "curve",
 ];
 
 const statMetas = [
@@ -45,21 +53,21 @@ const statMetas = [
   { key: "passing", label: "Chuyền ngắn", allocatable: true },
   { key: "longPass", label: "Chuyền dài", allocatable: true },
   { key: "vision", label: "Tầm nhìn", allocatable: true },
-  {
-    key: "counterAttackAwareness",
-    label: "Nhận thức phản công",
-    allocatable: true,
-  },
+  { key: "attackingAwareness", label: "Nhận thức tấn công", allocatable: true },
+  { key: "defensiveAwareness", label: "Nhận thức phòng thủ", allocatable: true },
   { key: "duels", label: "Tranh chấp", allocatable: true },
   { key: "pace", label: "Tốc độ", allocatable: true },
-  { key: "physical", label: "Thể chất", allocatable: true },
-  { key: "defending", label: "Phòng ngự", allocatable: true },
+  { key: "stamina", label: "Thể lực", allocatable: true },
+  { key: "balance", label: "Thăng bằng", allocatable: true },
+  { key: "technique", label: "Kỹ thuật", allocatable: true },
+  { key: "determination", label: "Quyết đoán", allocatable: true },
+  { key: "strength", label: "Sức mạnh", allocatable: true },
   { key: "standingTackle", label: "Tắc bóng", allocatable: true },
   { key: "slidingTackle", label: "Xoạc bóng", allocatable: true },
   { key: "dribbling", label: "Rê bóng", allocatable: true },
+  { key: "curve", label: "Sút xoáy", allocatable: true },
   { key: "gkParrying", label: "GK Parrying (thủ môn)", allocatable: true },
   { key: "gkReflex", label: "GK Reflex (thủ môn)", allocatable: true },
-  { key: "gkCatching", label: "GK Catching (thủ môn)", allocatable: true },
   {
     key: "gkReach",
     label: "GK Reach (thủ môn)",
@@ -142,30 +150,39 @@ function PlayerManagementPage({ token, onUnauthorized }) {
       gkReach:
         Number(selectedCard.bonusStats.gkReach || 0) +
         Number(allocateDelta.gkReach || 0),
-      counterAttackAwareness:
-        Number(selectedCard.bonusStats.counterAttackAwareness || 0) +
-        Number(allocateDelta.counterAttackAwareness || 0),
+      attackingAwareness:
+        Number(selectedCard.bonusStats.attackingAwareness || 0) +
+        Number(allocateDelta.attackingAwareness || 0),
+      defensiveAwareness:
+        Number(selectedCard.bonusStats.defensiveAwareness || 0) +
+        Number(allocateDelta.defensiveAwareness || 0),
       gkParrying:
         Number(selectedCard.bonusStats.gkParrying || 0) +
         Number(allocateDelta.gkParrying || 0),
       gkReflex:
         Number(selectedCard.bonusStats.gkReflex || 0) +
         Number(allocateDelta.gkReflex || 0),
-      gkCatching:
-        Number(selectedCard.bonusStats.gkCatching || 0) +
-        Number(allocateDelta.gkCatching || 0),
       duels:
         Number(selectedCard.bonusStats.duels || 0) +
         Number(allocateDelta.duels || 0),
       pace:
         Number(selectedCard.bonusStats.pace || 0) +
         Number(allocateDelta.pace || 0),
-      physical:
-        Number(selectedCard.bonusStats.physical || 0) +
-        Number(allocateDelta.physical || 0),
-      defending:
-        Number(selectedCard.bonusStats.defending || 0) +
-        Number(allocateDelta.defending || 0),
+      stamina:
+        Number(selectedCard.bonusStats.stamina || 0) +
+        Number(allocateDelta.stamina || 0),
+      balance:
+        Number(selectedCard.bonusStats.balance || 0) +
+        Number(allocateDelta.balance || 0),
+      technique:
+        Number(selectedCard.bonusStats.technique || 0) +
+        Number(allocateDelta.technique || 0),
+      determination:
+        Number(selectedCard.bonusStats.determination || 0) +
+        Number(allocateDelta.determination || 0),
+      strength:
+        Number(selectedCard.bonusStats.strength || 0) +
+        Number(allocateDelta.strength || 0),
       standingTackle:
         Number(selectedCard.bonusStats.standingTackle || 0) +
         Number(allocateDelta.standingTackle || 0),
@@ -175,6 +192,9 @@ function PlayerManagementPage({ token, onUnauthorized }) {
       dribbling:
         Number(selectedCard.bonusStats.dribbling || 0) +
         Number(allocateDelta.dribbling || 0),
+      curve:
+        Number(selectedCard.bonusStats.curve || 0) +
+        Number(allocateDelta.curve || 0),
     };
 
     const hasNegativeBonus = Object.values(nextBonus).some((item) => item < 0);
@@ -543,9 +563,14 @@ function PlayerManagementPage({ token, onUnauthorized }) {
                       {projected.nextBonus.gkReach}
                     </p>
                     <p>
-                      Nhận thức phản công: +
-                      {selectedCard.bonusStats.counterAttackAwareness} {"->"} +
-                      {projected.nextBonus.counterAttackAwareness}
+                      Nhận thức tấn công: +
+                      {selectedCard.bonusStats.attackingAwareness} {"->"} +
+                      {projected.nextBonus.attackingAwareness}
+                    </p>
+                    <p>
+                      Nhận thức phòng thủ: +
+                      {selectedCard.bonusStats.defensiveAwareness} {"->"} +
+                      {projected.nextBonus.defensiveAwareness}
                     </p>
                     <p>
                       GK Parrying: +{selectedCard.bonusStats.gkParrying} {"->"}{" "}
@@ -556,10 +581,6 @@ function PlayerManagementPage({ token, onUnauthorized }) {
                       {projected.nextBonus.gkReflex}
                     </p>
                     <p>
-                      GK Catching: +{selectedCard.bonusStats.gkCatching} {"->"}{" "}
-                      +{projected.nextBonus.gkCatching}
-                    </p>
-                    <p>
                       Tranh chấp: +{selectedCard.bonusStats.duels} {"->"} +
                       {projected.nextBonus.duels}
                     </p>
@@ -568,16 +589,32 @@ function PlayerManagementPage({ token, onUnauthorized }) {
                       {projected.nextBonus.pace}
                     </p>
                     <p>
-                      Thể chất: +{selectedCard.bonusStats.physical} {"->"} +
-                      {projected.nextBonus.physical}
+                      Thể lực: +{selectedCard.bonusStats.stamina} {"->"} +
+                      {projected.nextBonus.stamina}
                     </p>
                     <p>
-                      Phòng ngự: +{selectedCard.bonusStats.defending} {"->"} +
-                      {projected.nextBonus.defending}
+                      Thăng bằng: +{selectedCard.bonusStats.balance} {"->"} +
+                      {projected.nextBonus.balance}
+                    </p>
+                    <p>
+                      Kỹ thuật: +{selectedCard.bonusStats.technique} {"->"} +
+                      {projected.nextBonus.technique}
+                    </p>
+                    <p>
+                      Quyết đoán: +{selectedCard.bonusStats.determination} {"->"} +
+                      {projected.nextBonus.determination}
+                    </p>
+                    <p>
+                      Sức mạnh: +{selectedCard.bonusStats.strength} {"->"} +
+                      {projected.nextBonus.strength}
                     </p>
                     <p>
                       Rê bóng: +{selectedCard.bonusStats.dribbling} {"->"} +
                       {projected.nextBonus.dribbling}
+                    </p>
+                    <p>
+                      Sút xoáy: +{selectedCard.bonusStats.curve} {"->"} +
+                      {projected.nextBonus.curve}
                     </p>
                   </div>
                 )}

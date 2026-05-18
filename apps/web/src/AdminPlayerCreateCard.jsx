@@ -10,17 +10,21 @@ const statFields = [
   { key: "longPass", label: "Chuyền dài" },
   { key: "vision", label: "Tầm nhìn" },
   { key: "gkReach", label: "GK Reach" },
-  { key: "counterAttackAwareness", label: "Nhận thức phản công" },
+  { key: "attackingAwareness", label: "Nhận thức tấn công" },
+  { key: "defensiveAwareness", label: "Nhận thức phòng thủ" },
   { key: "gkParrying", label: "GK Parrying" },
   { key: "gkReflex", label: "GK Reflex" },
-  { key: "gkCatching", label: "GK Catching" },
   { key: "duels", label: "Tranh chấp" },
   { key: "pace", label: "Tốc độ" },
-  { key: "physical", label: "Thể chất" },
-  { key: "defending", label: "Phòng ngự" },
+  { key: "stamina", label: "Thể lực" },
+  { key: "balance", label: "Thăng bằng" },
+  { key: "technique", label: "Kỹ thuật" },
+  { key: "determination", label: "Quyết đoán" },
+  { key: "strength", label: "Sức mạnh" },
   { key: "standingTackle", label: "Tắc bóng" },
   { key: "slidingTackle", label: "Xoạc bóng" },
   { key: "dribbling", label: "Rê bóng" },
+  { key: "curve", label: "Sút xoáy" },
 ];
 
 function buildInitialDraft({ season, sourceType, countries }) {
@@ -36,17 +40,21 @@ function buildInitialDraft({ season, sourceType, countries }) {
     longPass: 60,
     vision: 60,
     gkReach: 60,
-    counterAttackAwareness: 60,
+    attackingAwareness: 60,
+    defensiveAwareness: 60,
     gkParrying: 60,
     gkReflex: 60,
-    gkCatching: 60,
     duels: 60,
     pace: 60,
-    physical: 60,
-    defending: 60,
+    stamina: 60,
+    balance: 60,
+    technique: 60,
+    determination: 60,
+    strength: 60,
     standingTackle: 60,
     slidingTackle: 60,
     dribbling: 60,
+    curve: 60,
   };
 }
 
@@ -246,19 +254,26 @@ function AdminPlayerCreateCard({
       formData.append("vision", String(Number(form.vision)));
       formData.append("gkReach", String(Number(form.gkReach)));
       formData.append(
-        "counterAttackAwareness",
-        String(Number(form.counterAttackAwareness)),
+        "attackingAwareness",
+        String(Number(form.attackingAwareness)),
+      );
+      formData.append(
+        "defensiveAwareness",
+        String(Number(form.defensiveAwareness)),
       );
       formData.append("gkParrying", String(Number(form.gkParrying)));
       formData.append("gkReflex", String(Number(form.gkReflex)));
-      formData.append("gkCatching", String(Number(form.gkCatching)));
       formData.append("duels", String(Number(form.duels)));
       formData.append("pace", String(Number(form.pace)));
-      formData.append("physical", String(Number(form.physical)));
-      formData.append("defending", String(Number(form.defending)));
+      formData.append("stamina", String(Number(form.stamina)));
+      formData.append("balance", String(Number(form.balance)));
+      formData.append("technique", String(Number(form.technique)));
+      formData.append("determination", String(Number(form.determination)));
+      formData.append("strength", String(Number(form.strength)));
       formData.append("standingTackle", String(Number(form.standingTackle)));
       formData.append("slidingTackle", String(Number(form.slidingTackle)));
       formData.append("dribbling", String(Number(form.dribbling)));
+      formData.append("curve", String(Number(form.curve)));
       if (avatarFile) {
         formData.append("avatar", avatarFile);
       }

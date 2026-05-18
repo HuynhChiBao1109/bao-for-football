@@ -24,23 +24,28 @@ type allocateStatsRequest struct {
 	LongPass               int `json:"longPass"`
 	Vision                 int `json:"vision"`
 	GKReach                int `json:"gkReach"`
-	CounterAttackAwareness int `json:"counterAttackAwareness"`
+	AttackingAwareness     int `json:"attackingAwareness"`
+	DefensiveAwareness     int `json:"defensiveAwareness"`
 	GKParrying             int `json:"gkParrying"`
 	GKReflex               int `json:"gkReflex"`
-	GKCatching             int `json:"gkCatching"`
 
 	// Backward-compatibility aliases for older clients.
-	DefensiveAwareness int `json:"defensiveAwareness"`
+	CounterAttackAwareness int `json:"counterAttackAwareness"`
 	CrossbarHandling   int `json:"crossbarHandling"`
 	Reflexes           int `json:"reflexes"`
-	AerialCatching     int `json:"aerialCatching"`
 	Duels              int `json:"duels"`
 	Pace               int `json:"pace"`
+	Stamina            int `json:"stamina"`
+	Balance            int `json:"balance"`
+	Technique          int `json:"technique"`
+	Determination      int `json:"determination"`
+	Strength           int `json:"strength"`
 	Physical           int `json:"physical"`
 	Defending          int `json:"defending"`
 	StandingTackle     int `json:"standingTackle"`
 	SlidingTackle      int `json:"slidingTackle"`
 	Dribbling          int `json:"dribbling"`
+	Curve              int `json:"curve"`
 }
 
 func (h *Handler) ListMyCards(c *gin.Context) {
@@ -83,18 +88,22 @@ func (h *Handler) AllocateStats(c *gin.Context) {
 		Passing:                req.Passing,
 		LongPass:               req.LongPass,
 		Vision:                 req.Vision,
-		GKReach:                firstNonZero(req.GKReach, req.DefensiveAwareness),
-		CounterAttackAwareness: req.CounterAttackAwareness,
+		GKReach:                firstNonZero(req.GKReach, req.DefensiveAwareness, req.Defending),
+		AttackingAwareness:     firstNonZero(req.AttackingAwareness, req.CounterAttackAwareness),
+		DefensiveAwareness:     firstNonZero(req.DefensiveAwareness, req.Defending),
 		GKParrying:             firstNonZero(req.GKParrying, req.CrossbarHandling),
 		GKReflex:               firstNonZero(req.GKReflex, req.Reflexes),
-		GKCatching:             firstNonZero(req.GKCatching, req.AerialCatching),
 		Duels:                  req.Duels,
 		Pace:                   req.Pace,
-		Physical:               req.Physical,
-		Defending:              req.Defending,
+		Stamina:                req.Stamina,
+		Balance:                req.Balance,
+		Technique:              req.Technique,
+		Determination:          req.Determination,
+		Strength:               firstNonZero(req.Strength, req.Physical),
 		StandingTackle:         req.StandingTackle,
 		SlidingTackle:          req.SlidingTackle,
 		Dribbling:              req.Dribbling,
+		Curve:                  req.Curve,
 	})
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -121,9 +130,11 @@ func getAuthUserID(c *gin.Context) (uint64, bool) {
 	return userID, true
 }
 
-func firstNonZero(primary int, fallback int) int {
-	if primary != 0 {
-		return primary
+func firstNonZero(values ...int) int {
+	for _, value := range values {
+		if value != 0 {
+			return value
+		}
 	}
-	return fallback
+	return 0
 }

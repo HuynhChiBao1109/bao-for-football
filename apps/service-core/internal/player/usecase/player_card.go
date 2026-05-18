@@ -90,17 +90,21 @@ func (u *PlayerCardUseCase) AllocateStats(ctx context.Context, userID uint64, us
 			input.LongPass +
 			input.Vision +
 			input.GKReach +
-			input.CounterAttackAwareness +
+			input.AttackingAwareness +
+			input.DefensiveAwareness +
 			input.GKParrying +
 			input.GKReflex +
-			input.GKCatching +
 			input.Duels +
 			input.Pace +
-			input.Physical +
-			input.Defending +
+			input.Stamina +
+			input.Balance +
+			input.Technique +
+			input.Determination +
+			input.Strength +
 			input.StandingTackle +
 			input.SlidingTackle +
-			input.Dribbling,
+			input.Dribbling +
+			input.Curve,
 	)
 	if delta == 0 {
 		return domain.PlayerCard{}, errors.New("no stats changes")
@@ -126,17 +130,21 @@ func (u *PlayerCardUseCase) AllocateStats(ctx context.Context, userID uint64, us
 		{name: "longPass", base: card.BonusStats.LongPass, delta: input.LongPass},
 		{name: "vision", base: card.BonusStats.Vision, delta: input.Vision},
 		{name: "gkReach", base: card.BonusStats.GKReach, delta: input.GKReach},
-		{name: "counterAttackAwareness", base: card.BonusStats.CounterAttackAwareness, delta: input.CounterAttackAwareness},
+		{name: "attackingAwareness", base: card.BonusStats.AttackingAwareness, delta: input.AttackingAwareness},
+		{name: "defensiveAwareness", base: card.BonusStats.DefensiveAwareness, delta: input.DefensiveAwareness},
 		{name: "gkParrying", base: card.BonusStats.GKParrying, delta: input.GKParrying},
 		{name: "gkReflex", base: card.BonusStats.GKReflex, delta: input.GKReflex},
-		{name: "gkCatching", base: card.BonusStats.GKCatching, delta: input.GKCatching},
 		{name: "duels", base: card.BonusStats.Duels, delta: input.Duels},
 		{name: "pace", base: card.BonusStats.Pace, delta: input.Pace},
-		{name: "physical", base: card.BonusStats.Physical, delta: input.Physical},
-		{name: "defending", base: card.BonusStats.Defending, delta: input.Defending},
+		{name: "stamina", base: card.BonusStats.Stamina, delta: input.Stamina},
+		{name: "balance", base: card.BonusStats.Balance, delta: input.Balance},
+		{name: "technique", base: card.BonusStats.Technique, delta: input.Technique},
+		{name: "determination", base: card.BonusStats.Determination, delta: input.Determination},
+		{name: "strength", base: card.BonusStats.Strength, delta: input.Strength},
 		{name: "standingTackle", base: card.BonusStats.StandingTackle, delta: input.StandingTackle},
 		{name: "slidingTackle", base: card.BonusStats.SlidingTackle, delta: input.SlidingTackle},
 		{name: "dribbling", base: card.BonusStats.Dribbling, delta: input.Dribbling},
+		{name: "curve", base: card.BonusStats.Curve, delta: input.Curve},
 	} {
 		if item.base+item.delta < 0 {
 			return domain.PlayerCard{}, errors.New(item.name + " cannot be below 0")

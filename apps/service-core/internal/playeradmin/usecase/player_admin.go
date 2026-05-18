@@ -9,8 +9,11 @@ import (
 )
 
 type repository interface {
-	List(ctx context.Context) ([]domain.Player, error)
+	List(ctx context.Context, filter domain.PlayerFilter) ([]domain.Player, error)
 	GetByID(ctx context.Context, id int64) (domain.Player, error)
+	ListSkills(ctx context.Context) ([]domain.SpecialSkill, error)
+	CreateSkill(ctx context.Context, input domain.SpecialSkill) (domain.SpecialSkill, error)
+	AssignSkillToPlayer(ctx context.Context, playerID int64, skillName string) (domain.Player, error)
 	ListCountries(ctx context.Context) ([]domain.Country, error)
 	CreateCountry(ctx context.Context, input domain.Country) (domain.Country, error)
 	CreateClub(ctx context.Context, input domain.Club) (domain.Club, error)
@@ -25,8 +28,11 @@ func NewPlayerAdminUseCase(repo repository) *PlayerAdminUseCase {
 	return &PlayerAdminUseCase{repo: repo}
 }
 
-func (u *PlayerAdminUseCase) List(ctx context.Context) ([]domain.Player, error) {
-	return u.repo.List(ctx)
+func (u *PlayerAdminUseCase) List(ctx context.Context, filter domain.PlayerFilter) ([]domain.Player, error) {
+	filter.Name = strings.TrimSpace(filter.Name)
+	filter.BaseClub = strings.TrimSpace(filter.BaseClub)
+
+	return u.repo.List(ctx, filter)
 }
 
 func (u *PlayerAdminUseCase) GetByID(ctx context.Context, id int64) (domain.Player, error) {
@@ -35,6 +41,51 @@ func (u *PlayerAdminUseCase) GetByID(ctx context.Context, id int64) (domain.Play
 	}
 
 	return u.repo.GetByID(ctx, id)
+}
+
+func (u *PlayerAdminUseCase) ListSkills(ctx context.Context) ([]domain.SpecialSkill, error) {
+	return u.repo.ListSkills(ctx)
+}
+
+func (u *PlayerAdminUseCase) CreateSkill(ctx context.Context, input domain.SpecialSkill) (domain.SpecialSkill, error) {
+	input.Name = strings.TrimSpace(input.Name)
+	input.IconURL = strings.TrimSpace(input.IconURL)
+	input.BuffType = strings.TrimSpace(input.BuffType)
+
+	if input.Name == "" {
+		return domain.SpecialSkill{}, errors.New("skill name is required")
+	}
+	if input.BuffType == "" {
+		return domain.SpecialSkill{}, errors.New("buffType is required")
+	}
+	if input.BuffValue == 0 {
+		return domain.SpecialSkill{}, errors.New("buffValue must not be 0")
+	}
+
+	validBuffTypes := map[string]struct{}{
+		"shooting": {}, "passing": {}, "longPass": {}, "vision": {}, "gkReach": {},
+		"attackingAwareness": {}, "defensiveAwareness": {}, "gkParrying": {}, "gkReflex": {},
+		"duels": {}, "standingTackle": {}, "slidingTackle": {}, "pace": {}, "stamina": {},
+		"balance": {}, "technique": {}, "determination": {}, "strength": {}, "dribbling": {}, "curve": {},
+	}
+	if _, ok := validBuffTypes[input.BuffType]; !ok {
+		return domain.SpecialSkill{}, errors.New("buffType is invalid")
+	}
+
+	return u.repo.CreateSkill(ctx, input)
+}
+
+func (u *PlayerAdminUseCase) AssignSkillToPlayer(ctx context.Context, playerID int64, skillName string) (domain.Player, error) {
+	if playerID <= 0 {
+		return domain.Player{}, errors.New("player id is invalid")
+	}
+
+	skillName = strings.TrimSpace(skillName)
+	if skillName == "" {
+		return domain.Player{}, errors.New("skillName is required")
+	}
+
+	return u.repo.AssignSkillToPlayer(ctx, playerID, skillName)
 }
 
 func (u *PlayerAdminUseCase) ListCountries(ctx context.Context) ([]domain.Country, error) {
@@ -112,28 +163,40 @@ func (u *PlayerAdminUseCase) Create(ctx context.Context, input domain.Player) (d
 		input.Vision = input.Passing
 	}
 	if input.GKReach == 0 {
-		input.GKReach = input.Defending
+		input.GKReach = input.DefAwareness
 	}
-	if input.CtrAwareness == 0 {
-		input.CtrAwareness = input.Vision
+	if input.AttAwareness == 0 {
+		input.AttAwareness = input.Vision
 	}
 	if input.GKParrying == 0 {
-		input.GKParrying = input.Defending
+		input.GKParrying = input.DefAwareness
 	}
 	if input.GKReflex == 0 {
-		input.GKReflex = input.Defending
-	}
-	if input.GKCatching == 0 {
-		input.GKCatching = input.Physical
+		input.GKReflex = input.DefAwareness
 	}
 	if input.Duels == 0 {
-		input.Duels = input.Physical
+		input.Duels = input.Strength
+	}
+	if input.Stamina == 0 {
+		input.Stamina = input.Pace
+	}
+	if input.Balance == 0 {
+		input.Balance = input.Dribbling
+	}
+	if input.Technique == 0 {
+		input.Technique = input.Dribbling
+	}
+	if input.Determination == 0 {
+		input.Determination = input.AttAwareness
 	}
 	if input.StandingTackle == 0 {
-		input.StandingTackle = input.Defending
+		input.StandingTackle = input.DefAwareness
 	}
 	if input.SlidingTackle == 0 {
-		input.SlidingTackle = input.Defending
+		input.SlidingTackle = input.DefAwareness
+	}
+	if input.Curve == 0 {
+		input.Curve = input.Passing
 	}
 
 	for _, stat := range []struct {
@@ -145,17 +208,21 @@ func (u *PlayerAdminUseCase) Create(ctx context.Context, input domain.Player) (d
 		{"longPass", input.LongPass},
 		{"vision", input.Vision},
 		{"gkReach", input.GKReach},
-		{"counterAttackAwareness", input.CtrAwareness},
+		{"attackingAwareness", input.AttAwareness},
+		{"defensiveAwareness", input.DefAwareness},
 		{"gkParrying", input.GKParrying},
 		{"gkReflex", input.GKReflex},
-		{"gkCatching", input.GKCatching},
 		{"duels", input.Duels},
 		{"pace", input.Pace},
-		{"physical", input.Physical},
-		{"defending", input.Defending},
+		{"stamina", input.Stamina},
+		{"balance", input.Balance},
+		{"technique", input.Technique},
+		{"determination", input.Determination},
+		{"strength", input.Strength},
 		{"standingTackle", input.StandingTackle},
 		{"slidingTackle", input.SlidingTackle},
 		{"dribbling", input.Dribbling},
+		{"curve", input.Curve},
 	} {
 		if stat.value < 1 || stat.value > 99 {
 			return domain.Player{}, errors.New(stat.name + " must be between 1 and 99")

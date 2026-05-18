@@ -1,22 +1,26 @@
 package domain
 
 type CardStats struct {
-	Shooting               int `json:"shooting"`
-	Passing                int `json:"passing"`
-	LongPass               int `json:"longPass"`
-	Vision                 int `json:"vision"`
-	GKReach                int `json:"gkReach"`
-	CounterAttackAwareness int `json:"counterAttackAwareness"`
-	GKParrying             int `json:"gkParrying"`
-	GKReflex               int `json:"gkReflex"`
-	GKCatching             int `json:"gkCatching"`
-	Duels                  int `json:"duels"`
-	Pace                   int `json:"pace"`
-	Physical               int `json:"physical"`
-	Defending              int `json:"defending"`
-	StandingTackle         int `json:"standingTackle"`
-	SlidingTackle          int `json:"slidingTackle"`
-	Dribbling              int `json:"dribbling"`
+	Shooting           int `json:"shooting"`
+	Passing            int `json:"passing"`
+	LongPass           int `json:"longPass"`
+	Vision             int `json:"vision"`
+	GKReach            int `json:"gkReach"`
+	AttackingAwareness int `json:"attackingAwareness"`
+	DefensiveAwareness int `json:"defensiveAwareness"`
+	GKParrying         int `json:"gkParrying"`
+	GKReflex           int `json:"gkReflex"`
+	Duels              int `json:"duels"`
+	Pace               int `json:"pace"`
+	Stamina            int `json:"stamina"`
+	Balance            int `json:"balance"`
+	Technique          int `json:"technique"`
+	Determination      int `json:"determination"`
+	Strength           int `json:"strength"`
+	StandingTackle     int `json:"standingTackle"`
+	SlidingTackle      int `json:"slidingTackle"`
+	Dribbling          int `json:"dribbling"`
+	Curve              int `json:"curve"`
 }
 
 type Country struct {
@@ -47,20 +51,24 @@ type PlayerCard struct {
 }
 
 type AllocateStatsInput struct {
-	Shooting               int `json:"shooting"`
-	Passing                int `json:"passing"`
-	LongPass               int `json:"longPass"`
-	Vision                 int `json:"vision"`
-	GKReach                int `json:"gkReach"`
-	CounterAttackAwareness int `json:"counterAttackAwareness"`
-	GKParrying             int `json:"gkParrying"`
-	GKReflex               int `json:"gkReflex"`
-	GKCatching             int `json:"gkCatching"`
-	Duels                  int `json:"duels"`
-	Pace                   int `json:"pace"`
-	Physical               int `json:"physical"`
-	Defending              int `json:"defending"`
-	StandingTackle         int `json:"standingTackle"`
-	SlidingTackle          int `json:"slidingTackle"`
-	Dribbling              int `json:"dribbling"`
+	Shooting           int `json:"shooting"`
+	Passing            int `json:"passing"`
+	LongPass           int `json:"longPass"`
+	Vision             int `json:"vision"`
+	GKReach            int `json:"gkReach"`
+	AttackingAwareness int `json:"attackingAwareness"`
+	DefensiveAwareness int `json:"defensiveAwareness"`
+	GKParrying         int `json:"gkParrying"`
+	GKReflex           int `json:"gkReflex"`
+	Duels              int `json:"duels"`
+	Pace               int `json:"pace"`
+	Stamina            int `json:"stamina"`
+	Balance            int `json:"balance"`
+	Technique          int `json:"technique"`
+	Determination      int `json:"determination"`
+	Strength           int `json:"strength"`
+	StandingTackle     int `json:"standingTackle"`
+	SlidingTackle      int `json:"slidingTackle"`
+	Dribbling          int `json:"dribbling"`
+	Curve              int `json:"curve"`
 }

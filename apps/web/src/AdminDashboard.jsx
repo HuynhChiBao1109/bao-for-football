@@ -18,11 +18,25 @@ function AdminDashboard({
 }) {
   const [players, setPlayers] = useState([]);
   const [countries, setCountries] = useState([]);
+  const [clubs, setClubs] = useState([]);
   const [clubsRefreshToken, setClubsRefreshToken] = useState(0);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [loadingPlayers, setLoadingPlayers] = useState(false);
   const [loadingCountries, setLoadingCountries] = useState(false);
+  const [loadingClubs, setLoadingClubs] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [nameSearch, setNameSearch] = useState("");
+  const [countryFilter, setCountryFilter] = useState("all");
+  const [clubFilter, setClubFilter] = useState("all");
+  const [debouncedNameSearch, setDebouncedNameSearch] = useState("");
+  const [skills, setSkills] = useState([]);
+  const [skillDraft, setSkillDraft] = useState({
+    name: "",
+    iconUrl: "",
+    buffType: "shooting",
+    buffValue: 3,
+  });
+  const [assignSkillName, setAssignSkillName] = useState("");
 
   const selectedPlayerStats = useMemo(() => {
     if (!selectedPlayer) {
@@ -35,24 +49,74 @@ function AdminDashboard({
       selectedPlayer.longPass,
       selectedPlayer.vision,
       selectedPlayer.gkReach,
-      selectedPlayer.counterAttackAwareness,
+      selectedPlayer.attackingAwareness,
+      selectedPlayer.defensiveAwareness,
       selectedPlayer.gkParrying,
       selectedPlayer.gkReflex,
-      selectedPlayer.gkCatching,
       selectedPlayer.duels,
       selectedPlayer.pace,
-      selectedPlayer.physical,
-      selectedPlayer.defending,
+      selectedPlayer.stamina,
+      selectedPlayer.balance,
+      selectedPlayer.technique,
+      selectedPlayer.determination,
+      selectedPlayer.strength,
       selectedPlayer.standingTackle,
       selectedPlayer.slidingTackle,
       selectedPlayer.dribbling,
+      selectedPlayer.curve,
     ].join("/");
   }, [selectedPlayer]);
 
+  const uniqueClubs = useMemo(() => {
+    return Array.from(new Set(clubs.map((club) => club.name).filter(Boolean))).sort(
+      (a, b) => a.localeCompare(b),
+    );
+  }, [clubs]);
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      setDebouncedNameSearch(nameSearch.trim());
+    }, 300);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [nameSearch]);
+
+  useEffect(() => {
+    loadCountries();
+    loadClubs();
+    loadSkills();
+  }, []);
+
   useEffect(() => {
     loadPlayers();
-    loadCountries();
-  }, []);
+  }, [debouncedNameSearch, countryFilter, clubFilter]);
+
+  useEffect(() => {
+    loadClubs();
+  }, [clubsRefreshToken]);
+
+  async function loadSkills() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/skills`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          onUnauthorized();
+          return;
+        }
+        throw new Error(data?.error || "Failed to load skills");
+      }
+      setSkills(Array.isArray(data?.data) ? data.data : []);
+    } catch (err) {
+      console.error(err);
+    }
+  }
 
   async function loadCountries() {
     setLoadingCountries(true);
@@ -79,14 +143,46 @@ function AdminDashboard({
     }
   }
 
+  async function loadClubs() {
+    setLoadingClubs(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/clubs`);
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.error || "Failed to load clubs");
+      }
+
+      setClubs(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingClubs(false);
+    }
+  }
+
   async function loadPlayers() {
     setLoadingPlayers(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/admin/players`, {
+      const query = new URLSearchParams();
+      if (debouncedNameSearch) {
+        query.set("name", debouncedNameSearch);
+      }
+      if (countryFilter !== "all") {
+        query.set("countryId", String(countryFilter));
+      }
+      if (clubFilter !== "all") {
+        query.set("baseClub", clubFilter);
+      }
+
+      const queryString = query.toString();
+      const response = await fetch(
+        `${API_BASE_URL}/api/v1/admin/players${queryString ? `?${queryString}` : ""}`,
+        {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      });
+        },
+      );
       const data = await response.json();
       if (!response.ok) {
         if (response.status === 401 || response.status === 403) {
@@ -130,6 +226,72 @@ function AdminDashboard({
       console.error(err);
     } finally {
       setLoadingDetail(false);
+    }
+  }
+
+  async function createSkill(event) {
+    event.preventDefault();
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/skills`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(skillDraft),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          onUnauthorized();
+          return;
+        }
+        throw new Error(data?.error || "Failed to create skill");
+      }
+
+      setSkillDraft({
+        name: "",
+        iconUrl: "",
+        buffType: skillDraft.buffType,
+        buffValue: 3,
+      });
+      await loadSkills();
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function assignSkillToSelectedPlayer(event) {
+    event.preventDefault();
+    if (!selectedPlayer?.id || !assignSkillName) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/v1/admin/players/${selectedPlayer.id}/skills`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ skillName: assignSkillName }),
+        },
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          onUnauthorized();
+          return;
+        }
+        throw new Error(data?.error || "Failed to assign skill");
+      }
+
+      setSelectedPlayer(data?.data || null);
+      await loadPlayers();
+    } catch (err) {
+      console.error(err);
     }
   }
 
@@ -181,8 +343,46 @@ function AdminDashboard({
               Đang tải danh sách quốc gia cho form tạo cầu thủ...
             </p>
           )}
+          {loadingClubs && (
+            <p className="px-5 py-4 text-sm text-slate-300">
+              Đang tải danh sách câu lạc bộ...
+            </p>
+          )}
 
           <div className="overflow-x-auto p-4">
+            <div className="mb-4 grid gap-3 md:grid-cols-3">
+              <input
+                type="text"
+                placeholder="Search by player name"
+                value={nameSearch}
+                onChange={(event) => setNameSearch(event.target.value)}
+                className="game-input"
+              />
+              <select
+                value={countryFilter}
+                onChange={(event) => setCountryFilter(event.target.value)}
+                className="game-input"
+              >
+                <option value="all">All countries</option>
+                {countries.map((country) => (
+                  <option key={country.id} value={country.id}>
+                    {country.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={clubFilter}
+                onChange={(event) => setClubFilter(event.target.value)}
+                className="game-input"
+              >
+                <option value="all">All clubs</option>
+                {uniqueClubs.map((clubName) => (
+                  <option key={clubName} value={clubName}>
+                    {clubName}
+                  </option>
+                ))}
+              </select>
+            </div>
             <table className="game-table min-w-full text-left text-sm">
               <thead className="text-slate-200">
                 <tr>
@@ -197,7 +397,7 @@ function AdminDashboard({
                 {players.length === 0 && (
                   <tr>
                     <td className="px-4 py-6 text-slate-400" colSpan="5">
-                      Chưa có cầu thủ nào trong hệ thống.
+                      Không có cầu thủ phù hợp với bộ lọc hiện tại.
                     </td>
                   </tr>
                 )}
@@ -320,8 +520,99 @@ function AdminDashboard({
                 </div>
                 <div>CLB: {selectedPlayer.baseClub}</div>
                 <div>Stats: {selectedPlayerStats}</div>
+                <form className="mt-2 space-y-2" onSubmit={assignSkillToSelectedPlayer}>
+                  <p className="text-xs uppercase tracking-[0.16em] text-slate-400">
+                    Add Special Skill
+                  </p>
+                  <select
+                    value={assignSkillName}
+                    onChange={(event) => setAssignSkillName(event.target.value)}
+                    className="game-input"
+                  >
+                    <option value="">Select skill</option>
+                    {skills.map((skill) => (
+                      <option key={skill.id} value={skill.name}>
+                        {skill.name} ({skill.buffType} {skill.buffValue > 0 ? `+${skill.buffValue}` : skill.buffValue})
+                      </option>
+                    ))}
+                  </select>
+                  <button type="submit" className="game-button-secondary w-full">
+                    Add skill to player
+                  </button>
+                </form>
               </div>
             )}
+          </section>
+
+          <section className="game-panel overflow-hidden p-5">
+            <p className="game-stat-card__label">Special Skill Catalog</p>
+            <form className="mt-3 space-y-2" onSubmit={createSkill}>
+              <input
+                className="game-input"
+                placeholder="Skill name"
+                value={skillDraft.name}
+                onChange={(event) =>
+                  setSkillDraft((current) => ({ ...current, name: event.target.value }))
+                }
+              />
+              <input
+                className="game-input"
+                placeholder="Icon URL (optional)"
+                value={skillDraft.iconUrl}
+                onChange={(event) =>
+                  setSkillDraft((current) => ({ ...current, iconUrl: event.target.value }))
+                }
+              />
+              <select
+                className="game-input"
+                value={skillDraft.buffType}
+                onChange={(event) =>
+                  setSkillDraft((current) => ({ ...current, buffType: event.target.value }))
+                }
+              >
+                {[
+                  "shooting",
+                  "passing",
+                  "longPass",
+                  "vision",
+                  "gkReach",
+                  "attackingAwareness",
+                  "defensiveAwareness",
+                  "gkParrying",
+                  "gkReflex",
+                  "duels",
+                  "standingTackle",
+                  "slidingTackle",
+                  "pace",
+                  "stamina",
+                  "balance",
+                  "technique",
+                  "determination",
+                  "strength",
+                  "dribbling",
+                  "curve",
+                ].map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+              <input
+                className="game-input"
+                type="number"
+                placeholder="Buff value"
+                value={skillDraft.buffValue}
+                onChange={(event) =>
+                  setSkillDraft((current) => ({
+                    ...current,
+                    buffValue: Number(event.target.value || 0),
+                  }))
+                }
+              />
+              <button type="submit" className="game-button-primary w-full">
+                Create skill
+              </button>
+            </form>
           </section>
         </aside>
       </div>

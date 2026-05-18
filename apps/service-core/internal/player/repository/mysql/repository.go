@@ -35,33 +35,41 @@ type rawCard struct {
 	BaseLongPass        int
 	BaseVision          int
 	BaseGKReach         int
-	BaseCtrAwareness    int
+	BaseAttAwareness    int
+	BaseDefAwareness    int
 	BaseGKParrying      int
 	BaseGKReflex        int
-	BaseGKCatching      int
 	BaseDuels           int
 	BasePace            int
-	BasePhysical        int
-	BaseDefending       int
+	BaseStamina         int
+	BaseBalance         int
+	BaseTechnique       int
+	BaseDetermination   int
+	BaseStrength        int
 	BaseStandingTackle  int
 	BaseSlidingTackle   int
 	BaseDribbling       int
+	BaseCurve           int
 	BonusShooting       int
 	BonusPassing        int
 	BonusLongPass       int
 	BonusVision         int
 	BonusGKReach        int
-	BonusCtrAware       int
+	BonusAttAwareness   int
+	BonusDefAwareness   int
 	BonusGKParrying     int
 	BonusGKReflex       int
-	BonusGKCatching     int
 	BonusDuels          int
 	BonusPace           int
-	BonusPhysical       int
-	BonusDefending      int
+	BonusStamina        int
+	BonusBalance        int
+	BonusTechnique      int
+	BonusDetermination  int
+	BonusStrength       int
 	BonusStandingTackle int
 	BonusSlidingTackle  int
 	BonusDribbling      int
+	BonusCurve          int
 }
 
 func (r *Repository) ListByUserID(ctx context.Context, userID uint64) ([]domain.PlayerCard, error) {
@@ -90,32 +98,40 @@ SELECT
 	pt.base_vision,
 	pt.base_gk_reach,
 	pt.base_counter_attack_awareness,
+	pt.base_defending,
 	pt.base_gk_parrying,
 	pt.base_gk_reflex,
-	pt.base_gk_catching,
 	pt.base_duels,
 	pt.base_pace,
+	pt.base_stamina,
+	pt.base_balance,
+	pt.base_technique,
+	pt.base_determination,
 	pt.base_physical,
-	pt.base_defending,
 	pt.base_standing_tackle,
 	pt.base_sliding_tackle,
 	pt.base_dribbling,
+	pt.base_curve,
 	up.bonus_shooting,
 	up.bonus_passing,
 	up.bonus_long_pass,
 	up.bonus_vision,
 	up.bonus_gk_reach,
 	up.bonus_counter_attack_awareness,
+	up.bonus_defending,
 	up.bonus_gk_parrying,
 	up.bonus_gk_reflex,
-	up.bonus_gk_catching,
 	up.bonus_duels,
 	up.bonus_pace,
+	up.bonus_stamina,
+	up.bonus_balance,
+	up.bonus_technique,
+	up.bonus_determination,
 	up.bonus_physical,
-	up.bonus_defending,
 	up.bonus_standing_tackle,
 	up.bonus_sliding_tackle,
-	up.bonus_dribbling
+	up.bonus_dribbling,
+	up.bonus_curve
 FROM user_players up
 INNER JOIN player_templates pt ON pt.id = up.player_template_id
 LEFT JOIN countries c ON c.id = pt.country_id
@@ -168,32 +184,40 @@ SELECT
 	pt.base_vision,
 	pt.base_gk_reach,
 	pt.base_counter_attack_awareness,
+	pt.base_defending,
 	pt.base_gk_parrying,
 	pt.base_gk_reflex,
-	pt.base_gk_catching,
 	pt.base_duels,
 	pt.base_pace,
+	pt.base_stamina,
+	pt.base_balance,
+	pt.base_technique,
+	pt.base_determination,
 	pt.base_physical,
-	pt.base_defending,
 	pt.base_standing_tackle,
 	pt.base_sliding_tackle,
 	pt.base_dribbling,
+	pt.base_curve,
 	up.bonus_shooting,
 	up.bonus_passing,
 	up.bonus_long_pass,
 	up.bonus_vision,
 	up.bonus_gk_reach,
 	up.bonus_counter_attack_awareness,
+	up.bonus_defending,
 	up.bonus_gk_parrying,
 	up.bonus_gk_reflex,
-	up.bonus_gk_catching,
 	up.bonus_duels,
 	up.bonus_pace,
+	up.bonus_stamina,
+	up.bonus_balance,
+	up.bonus_technique,
+	up.bonus_determination,
 	up.bonus_physical,
-	up.bonus_defending,
 	up.bonus_standing_tackle,
 	up.bonus_sliding_tackle,
-	up.bonus_dribbling
+	up.bonus_dribbling,
+	up.bonus_curve
 FROM user_players up
 INNER JOIN player_templates pt ON pt.id = up.player_template_id
 LEFT JOIN countries c ON c.id = pt.country_id
@@ -253,16 +277,20 @@ SET bonus_shooting = bonus_shooting + ?,
 	bonus_vision = bonus_vision + ?,
 	bonus_gk_reach = bonus_gk_reach + ?,
 	bonus_counter_attack_awareness = bonus_counter_attack_awareness + ?,
+	bonus_defending = bonus_defending + ?,
 	bonus_gk_parrying = bonus_gk_parrying + ?,
 	bonus_gk_reflex = bonus_gk_reflex + ?,
-	bonus_gk_catching = bonus_gk_catching + ?,
 	bonus_duels = bonus_duels + ?,
 	bonus_pace = bonus_pace + ?,
+	bonus_stamina = bonus_stamina + ?,
+	bonus_balance = bonus_balance + ?,
+	bonus_technique = bonus_technique + ?,
+	bonus_determination = bonus_determination + ?,
 	bonus_physical = bonus_physical + ?,
-	bonus_defending = bonus_defending + ?,
 	bonus_standing_tackle = bonus_standing_tackle + ?,
 	bonus_sliding_tackle = bonus_sliding_tackle + ?,
 	bonus_dribbling = bonus_dribbling + ?,
+	bonus_curve = bonus_curve + ?,
 	current_points = current_points - ?
 WHERE id = ?
 	AND user_id = ?
@@ -272,16 +300,20 @@ WHERE id = ?
 	AND bonus_vision + ? >= 0
 	AND bonus_gk_reach + ? >= 0
 	AND bonus_counter_attack_awareness + ? >= 0
+	AND bonus_defending + ? >= 0
 	AND bonus_gk_parrying + ? >= 0
 	AND bonus_gk_reflex + ? >= 0
-	AND bonus_gk_catching + ? >= 0
 	AND bonus_duels + ? >= 0
 	AND bonus_pace + ? >= 0
+	AND bonus_stamina + ? >= 0
+	AND bonus_balance + ? >= 0
+	AND bonus_technique + ? >= 0
+	AND bonus_determination + ? >= 0
 	AND bonus_physical + ? >= 0
-	AND bonus_defending + ? >= 0
 	AND bonus_standing_tackle + ? >= 0
 	AND bonus_sliding_tackle + ? >= 0
-	AND bonus_dribbling + ? >= 0`
+	AND bonus_dribbling + ? >= 0
+	AND bonus_curve + ? >= 0`
 
 	args := []any{
 		input.Shooting,
@@ -289,17 +321,21 @@ WHERE id = ?
 		input.LongPass,
 		input.Vision,
 		input.GKReach,
-		input.CounterAttackAwareness,
+		input.AttackingAwareness,
+		input.DefensiveAwareness,
 		input.GKParrying,
 		input.GKReflex,
-		input.GKCatching,
 		input.Duels,
 		input.Pace,
-		input.Physical,
-		input.Defending,
+		input.Stamina,
+		input.Balance,
+		input.Technique,
+		input.Determination,
+		input.Strength,
 		input.StandingTackle,
 		input.SlidingTackle,
 		input.Dribbling,
+		input.Curve,
 		deltaPoints,
 		userPlayerID,
 		userID,
@@ -308,17 +344,21 @@ WHERE id = ?
 		input.LongPass,
 		input.Vision,
 		input.GKReach,
-		input.CounterAttackAwareness,
+		input.AttackingAwareness,
+		input.DefensiveAwareness,
 		input.GKParrying,
 		input.GKReflex,
-		input.GKCatching,
 		input.Duels,
 		input.Pace,
-		input.Physical,
-		input.Defending,
+		input.Stamina,
+		input.Balance,
+		input.Technique,
+		input.Determination,
+		input.Strength,
 		input.StandingTackle,
 		input.SlidingTackle,
 		input.Dribbling,
+		input.Curve,
 	}
 
 	if deltaPoints > 0 {
@@ -367,33 +407,41 @@ func scanRawCard(s scanner) (rawCard, error) {
 		&item.BaseLongPass,
 		&item.BaseVision,
 		&item.BaseGKReach,
-		&item.BaseCtrAwareness,
+		&item.BaseAttAwareness,
+		&item.BaseDefAwareness,
 		&item.BaseGKParrying,
 		&item.BaseGKReflex,
-		&item.BaseGKCatching,
 		&item.BaseDuels,
 		&item.BasePace,
-		&item.BasePhysical,
-		&item.BaseDefending,
+		&item.BaseStamina,
+		&item.BaseBalance,
+		&item.BaseTechnique,
+		&item.BaseDetermination,
+		&item.BaseStrength,
 		&item.BaseStandingTackle,
 		&item.BaseSlidingTackle,
 		&item.BaseDribbling,
+		&item.BaseCurve,
 		&item.BonusShooting,
 		&item.BonusPassing,
 		&item.BonusLongPass,
 		&item.BonusVision,
 		&item.BonusGKReach,
-		&item.BonusCtrAware,
+		&item.BonusAttAwareness,
+		&item.BonusDefAwareness,
 		&item.BonusGKParrying,
 		&item.BonusGKReflex,
-		&item.BonusGKCatching,
 		&item.BonusDuels,
 		&item.BonusPace,
-		&item.BonusPhysical,
-		&item.BonusDefending,
+		&item.BonusStamina,
+		&item.BonusBalance,
+		&item.BonusTechnique,
+		&item.BonusDetermination,
+		&item.BonusStrength,
 		&item.BonusStandingTackle,
 		&item.BonusSlidingTackle,
 		&item.BonusDribbling,
+		&item.BonusCurve,
 	)
 	if err != nil {
 		return rawCard{}, err
@@ -408,17 +456,21 @@ func toPlayerCard(item rawCard) domain.PlayerCard {
 		LongPass:               item.BaseLongPass,
 		Vision:                 item.BaseVision,
 		GKReach:                item.BaseGKReach,
-		CounterAttackAwareness: item.BaseCtrAwareness,
+		AttackingAwareness:     item.BaseAttAwareness,
+		DefensiveAwareness:     item.BaseDefAwareness,
 		GKParrying:             item.BaseGKParrying,
 		GKReflex:               item.BaseGKReflex,
-		GKCatching:             item.BaseGKCatching,
 		Duels:                  item.BaseDuels,
 		Pace:                   item.BasePace,
-		Physical:               item.BasePhysical,
-		Defending:              item.BaseDefending,
+		Stamina:                item.BaseStamina,
+		Balance:                item.BaseBalance,
+		Technique:              item.BaseTechnique,
+		Determination:          item.BaseDetermination,
+		Strength:               item.BaseStrength,
 		StandingTackle:         item.BaseStandingTackle,
 		SlidingTackle:          item.BaseSlidingTackle,
 		Dribbling:              item.BaseDribbling,
+		Curve:                  item.BaseCurve,
 	}
 
 	bonus := domain.CardStats{
@@ -427,17 +479,21 @@ func toPlayerCard(item rawCard) domain.PlayerCard {
 		LongPass:               item.BonusLongPass,
 		Vision:                 item.BonusVision,
 		GKReach:                item.BonusGKReach,
-		CounterAttackAwareness: item.BonusCtrAware,
+		AttackingAwareness:     item.BonusAttAwareness,
+		DefensiveAwareness:     item.BonusDefAwareness,
 		GKParrying:             item.BonusGKParrying,
 		GKReflex:               item.BonusGKReflex,
-		GKCatching:             item.BonusGKCatching,
 		Duels:                  item.BonusDuels,
 		Pace:                   item.BonusPace,
-		Physical:               item.BonusPhysical,
-		Defending:              item.BonusDefending,
+		Stamina:                item.BonusStamina,
+		Balance:                item.BonusBalance,
+		Technique:              item.BonusTechnique,
+		Determination:          item.BonusDetermination,
+		Strength:               item.BonusStrength,
 		StandingTackle:         item.BonusStandingTackle,
 		SlidingTackle:          item.BonusSlidingTackle,
 		Dribbling:              item.BonusDribbling,
+		Curve:                  item.BonusCurve,
 	}
 
 	total := domain.CardStats{
@@ -446,17 +502,21 @@ func toPlayerCard(item rawCard) domain.PlayerCard {
 		LongPass:               base.LongPass + bonus.LongPass,
 		Vision:                 base.Vision + bonus.Vision,
 		GKReach:                base.GKReach + bonus.GKReach,
-		CounterAttackAwareness: base.CounterAttackAwareness + bonus.CounterAttackAwareness,
+		AttackingAwareness:     base.AttackingAwareness + bonus.AttackingAwareness,
+		DefensiveAwareness:     base.DefensiveAwareness + bonus.DefensiveAwareness,
 		GKParrying:             base.GKParrying + bonus.GKParrying,
 		GKReflex:               base.GKReflex + bonus.GKReflex,
-		GKCatching:             base.GKCatching + bonus.GKCatching,
 		Duels:                  base.Duels + bonus.Duels,
 		Pace:                   base.Pace + bonus.Pace,
-		Physical:               base.Physical + bonus.Physical,
-		Defending:              base.Defending + bonus.Defending,
+		Stamina:                base.Stamina + bonus.Stamina,
+		Balance:                base.Balance + bonus.Balance,
+		Technique:              base.Technique + bonus.Technique,
+		Determination:          base.Determination + bonus.Determination,
+		Strength:               base.Strength + bonus.Strength,
 		StandingTackle:         base.StandingTackle + bonus.StandingTackle,
 		SlidingTackle:          base.SlidingTackle + bonus.SlidingTackle,
 		Dribbling:              base.Dribbling + bonus.Dribbling,
+		Curve:                  base.Curve + bonus.Curve,
 	}
 	overall := float64(
 		total.Shooting+
@@ -464,18 +524,22 @@ func toPlayerCard(item rawCard) domain.PlayerCard {
 			total.LongPass+
 			total.Vision+
 			total.GKReach+
-			total.CounterAttackAwareness+
+			total.AttackingAwareness+
+			total.DefensiveAwareness+
 			total.GKParrying+
 			total.GKReflex+
-			total.GKCatching+
 			total.Duels+
 			total.Pace+
-			total.Physical+
-			total.Defending+
+			total.Stamina+
+			total.Balance+
+			total.Technique+
+			total.Determination+
+			total.Strength+
 			total.StandingTackle+
 			total.SlidingTackle+
-			total.Dribbling,
-	) / 16.0
+			total.Dribbling+
+			total.Curve,
+	) / 20.0
 
 	return domain.PlayerCard{
 		UserPlayerID:     item.UserPlayerID,

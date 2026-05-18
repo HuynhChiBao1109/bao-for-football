@@ -396,16 +396,20 @@ INSERT INTO player_templates (
 	base_vision,
 	base_gk_reach,
 	base_counter_attack_awareness,
+	base_defending,
 	base_gk_parrying,
 	base_gk_reflex,
-	base_gk_catching,
 	base_duels,
   base_pace,
+  base_stamina,
+  base_balance,
+  base_technique,
+  base_determination,
   base_physical,
-  base_defending,
 	base_standing_tackle,
 	base_sliding_tackle,
-  base_dribbling
+  base_dribbling,
+  base_curve
 )
 SELECT
   ap.name,
@@ -421,16 +425,20 @@ SELECT
 	ap.vision,
 	ap.gk_reach,
 	ap.counter_attack_awareness,
+	ap.defending,
 	ap.gk_parrying,
 	ap.gk_reflex,
-	ap.gk_catching,
 	ap.duels,
   ap.pace,
+  ap.stamina,
+  ap.balance,
+  ap.technique,
+  ap.determination,
   ap.physical,
-  ap.defending,
 	ap.standing_tackle,
 	ap.sliding_tackle,
-  ap.dribbling
+  ap.dribbling,
+  ap.curve
 FROM admin_players ap
 LEFT JOIN player_templates pt
   ON pt.name = ap.name

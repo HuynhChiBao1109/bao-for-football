@@ -88,17 +88,21 @@ type migrationAdminPlayer struct {
 	LongPass       uint8             `gorm:"not null;default:60;column:long_pass"`
 	Vision         uint8             `gorm:"not null;default:60;column:vision"`
 	GKReach        uint8             `gorm:"not null;default:60;column:gk_reach"`
-	CtrAwareness   uint8             `gorm:"not null;default:60;column:counter_attack_awareness"`
+	AttAwareness   uint8             `gorm:"not null;default:60;column:counter_attack_awareness"`
+	DefAwareness   uint8             `gorm:"not null;default:60;column:defending"`
 	GKParrying     uint8             `gorm:"not null;default:60;column:gk_parrying"`
 	GKReflex       uint8             `gorm:"not null;default:60;column:gk_reflex"`
-	GKCatching     uint8             `gorm:"not null;default:60;column:gk_catching"`
 	Duels          uint8             `gorm:"not null;default:60;column:duels"`
 	Pace           uint8             `gorm:"not null;column:pace"`
-	Physical       uint8             `gorm:"not null;column:physical"`
-	Defending      uint8             `gorm:"not null;column:defending"`
+	Stamina        uint8             `gorm:"not null;default:60;column:stamina"`
+	Balance        uint8             `gorm:"not null;default:60;column:balance"`
+	Technique      uint8             `gorm:"not null;default:60;column:technique"`
+	Determination  uint8             `gorm:"not null;default:60;column:determination"`
+	Strength       uint8             `gorm:"not null;column:physical"`
 	StandingTackle uint8             `gorm:"not null;default:60;column:standing_tackle"`
 	SlidingTackle  uint8             `gorm:"not null;default:60;column:sliding_tackle"`
 	Dribbling      uint8             `gorm:"not null;column:dribbling"`
+	Curve          uint8             `gorm:"not null;default:60;column:curve"`
 	CreatedAt      time.Time         `gorm:"column:created_at"`
 	Country        *migrationCountry `gorm:"foreignKey:CountryID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 }
@@ -121,17 +125,21 @@ type migrationPlayerTemplate struct {
 	BaseLongPass       int               `gorm:"not null;default:1;column:base_long_pass"`
 	BaseVision         int               `gorm:"not null;default:1;column:base_vision"`
 	BaseGKReach        int               `gorm:"not null;default:1;column:base_gk_reach"`
-	BaseCtrAware       int               `gorm:"not null;default:1;column:base_counter_attack_awareness"`
+	BaseAttAware       int               `gorm:"not null;default:1;column:base_counter_attack_awareness"`
+	BaseDefAware       int               `gorm:"not null;default:1;column:base_defending"`
 	BaseGKParrying     int               `gorm:"not null;default:1;column:base_gk_parrying"`
 	BaseGKReflex       int               `gorm:"not null;default:1;column:base_gk_reflex"`
-	BaseGKCatching     int               `gorm:"not null;default:1;column:base_gk_catching"`
 	BaseDuels          int               `gorm:"not null;default:1;column:base_duels"`
 	BasePace           int               `gorm:"not null;default:1;column:base_pace"`
-	BasePhysical       int               `gorm:"not null;default:1;column:base_physical"`
-	BaseDefending      int               `gorm:"not null;default:1;column:base_defending"`
+	BaseStamina        int               `gorm:"not null;default:1;column:base_stamina"`
+	BaseBalance        int               `gorm:"not null;default:1;column:base_balance"`
+	BaseTechnique      int               `gorm:"not null;default:1;column:base_technique"`
+	BaseDetermination  int               `gorm:"not null;default:1;column:base_determination"`
+	BaseStrength       int               `gorm:"not null;default:1;column:base_physical"`
 	BaseStandingTackle int               `gorm:"not null;default:1;column:base_standing_tackle"`
 	BaseSlidingTackle  int               `gorm:"not null;default:1;column:base_sliding_tackle"`
 	BaseDribbling      int               `gorm:"not null;default:1;column:base_dribbling"`
+	BaseCurve          int               `gorm:"not null;default:1;column:base_curve"`
 	CreatedAt          time.Time         `gorm:"column:created_at"`
 	UpdatedAt          time.Time         `gorm:"column:updated_at"`
 	Country            *migrationCountry `gorm:"foreignKey:CountryID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
@@ -153,17 +161,21 @@ type migrationUserPlayer struct {
 	BonusLongPass       int                     `gorm:"not null;default:0;column:bonus_long_pass"`
 	BonusVision         int                     `gorm:"not null;default:0;column:bonus_vision"`
 	BonusGKReach        int                     `gorm:"not null;default:0;column:bonus_gk_reach"`
-	BonusCtrAware       int                     `gorm:"not null;default:0;column:bonus_counter_attack_awareness"`
+	BonusAttAware       int                     `gorm:"not null;default:0;column:bonus_counter_attack_awareness"`
+	BonusDefAware       int                     `gorm:"not null;default:0;column:bonus_defending"`
 	BonusGKParrying     int                     `gorm:"not null;default:0;column:bonus_gk_parrying"`
 	BonusGKReflex       int                     `gorm:"not null;default:0;column:bonus_gk_reflex"`
-	BonusGKCatching     int                     `gorm:"not null;default:0;column:bonus_gk_catching"`
 	BonusDuels          int                     `gorm:"not null;default:0;column:bonus_duels"`
 	BonusPace           int                     `gorm:"not null;default:0;column:bonus_pace"`
-	BonusPhysical       int                     `gorm:"not null;default:0;column:bonus_physical"`
-	BonusDefending      int                     `gorm:"not null;default:0;column:bonus_defending"`
+	BonusStamina        int                     `gorm:"not null;default:0;column:bonus_stamina"`
+	BonusBalance        int                     `gorm:"not null;default:0;column:bonus_balance"`
+	BonusTechnique      int                     `gorm:"not null;default:0;column:bonus_technique"`
+	BonusDetermination  int                     `gorm:"not null;default:0;column:bonus_determination"`
+	BonusStrength       int                     `gorm:"not null;default:0;column:bonus_physical"`
 	BonusStandingTackle int                     `gorm:"not null;default:0;column:bonus_standing_tackle"`
 	BonusSlidingTackle  int                     `gorm:"not null;default:0;column:bonus_sliding_tackle"`
 	BonusDribbling      int                     `gorm:"not null;default:0;column:bonus_dribbling"`
+	BonusCurve          int                     `gorm:"not null;default:0;column:bonus_curve"`
 	ObtainedAt          time.Time               `gorm:"column:obtained_at"`
 	CreatedAt           time.Time               `gorm:"column:created_at"`
 	UpdatedAt           time.Time               `gorm:"column:updated_at"`
@@ -178,7 +190,7 @@ type migrationSkill struct {
 	ID        uint64    `gorm:"primaryKey;autoIncrement;column:id"`
 	Name      string    `gorm:"type:varchar(120);not null;uniqueIndex:uk_skills_name;column:name"`
 	IconURL   string    `gorm:"type:varchar(500);column:icon_url"`
-	BuffType  string    `gorm:"type:enum('shooting','passing','longPass','vision','defensiveAwareness','counterAttackAwareness','crossbarHandling','reflexes','aerialCatching','gkReach','gkParrying','gkReflex','gkCatching','duels','pace','physical','defending','standingTackle','slidingTackle','dribbling');not null;column:buff_type"`
+	BuffType  string    `gorm:"type:enum('shooting','passing','longPass','vision','gkReach','attackingAwareness','defensiveAwareness','gkParrying','gkReflex','duels','standingTackle','slidingTackle','pace','stamina','balance','technique','determination','strength','dribbling','curve');not null;column:buff_type"`
 	BuffValue int       `gorm:"not null;default:1;column:buff_value"`
 	CreatedAt time.Time `gorm:"column:created_at"`
 	UpdatedAt time.Time `gorm:"column:updated_at"`
@@ -186,6 +198,17 @@ type migrationSkill struct {
 
 func (migrationSkill) TableName() string {
 	return "skills"
+}
+
+type migrationAdminPlayerSkill struct {
+	ID       uint64    `gorm:"primaryKey;autoIncrement;column:id"`
+	PlayerID uint64    `gorm:"not null;index:idx_admin_player_skills_player_id;uniqueIndex:uk_admin_player_skills_player_skill,priority:1;column:player_id"`
+	SkillID  uint64    `gorm:"not null;index:idx_admin_player_skills_skill_id;uniqueIndex:uk_admin_player_skills_player_skill,priority:2;column:skill_id"`
+	CreatedAt time.Time `gorm:"column:created_at"`
+}
+
+func (migrationAdminPlayerSkill) TableName() string {
+	return "admin_player_skills"
 }
 
 type migrationGachaLog struct {
@@ -367,6 +390,7 @@ func AutoMigrate(ctx context.Context, db *gorm.DB) error {
 		&migrationAdminPlayer{},
 		&migrationPlayerTemplate{},
 		&migrationSkill{},
+		&migrationAdminPlayerSkill{},
 		&migrationUser{},
 		&migrationTeam{},
 		&migrationUserPlayer{},
@@ -678,14 +702,18 @@ WHERE source_type = 'normal' AND base_club = ?`, club.Name).Scan(&existingCount)
 			ctrAwareness := boundedStat(56 + ((globalIdx + 8) % 18))
 			gkParrying := boundedStat(54 + ((globalIdx + 10) % 18))
 			gkReflex := boundedStat(58 + ((globalIdx + 11) % 18))
-			gkCatching := boundedStat(57 + ((globalIdx + 13) % 18))
+			defAwareness := boundedStat(54 + ((globalIdx + 12) % 18))
 			duels := boundedStat(59 + ((globalIdx + 14) % 18))
 			pace := boundedStat(57 + ((globalIdx + 6) % 18))
-			physical := boundedStat(55 + ((globalIdx + 9) % 18))
-			defending := boundedStat(54 + ((globalIdx + 12) % 18))
+			stamina := boundedStat(56 + ((globalIdx + 9) % 18))
+			balance := boundedStat(55 + ((globalIdx + 10) % 18))
+			technique := boundedStat(57 + ((globalIdx + 11) % 18))
+			determination := boundedStat(56 + ((globalIdx + 8) % 18))
+			strength := boundedStat(55 + ((globalIdx + 13) % 18))
 			standingTackle := boundedStat(56 + ((globalIdx + 16) % 18))
 			slidingTackle := boundedStat(55 + ((globalIdx + 17) % 18))
 			dribbling := boundedStat(59 + ((globalIdx + 15) % 18))
+			curve := boundedStat(56 + ((globalIdx + 5) % 18))
 
 			_, err = db.ExecContext(ctx, `
 INSERT INTO admin_players (
@@ -702,17 +730,21 @@ INSERT INTO admin_players (
   vision,
 	gk_reach,
 	counter_attack_awareness,
+	defending,
 	gk_parrying,
 	gk_reflex,
-	gk_catching,
 	duels,
   pace,
+  stamina,
+  balance,
+  technique,
+  determination,
   physical,
-  defending,
 	  standing_tackle,
 	  sliding_tackle,
-  dribbling
-) VALUES (?, ?, ?, ?, 'Normal', 'normal', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  dribbling,
+  curve
+) VALUES (?, ?, ?, ?, 'Normal', 'normal', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 				name,
 				countryID,
 				country.Name,
@@ -723,16 +755,20 @@ INSERT INTO admin_players (
 				vision,
 				gkReach,
 				ctrAwareness,
+				defAwareness,
 				gkParrying,
 				gkReflex,
-				gkCatching,
 				duels,
 				pace,
-				physical,
-				defending,
+				stamina,
+				balance,
+				technique,
+				determination,
+				strength,
 				standingTackle,
 				slidingTackle,
 				dribbling,
+				curve,
 			)
 			if err != nil {
 				return err

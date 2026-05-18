@@ -37,23 +37,40 @@ type createPlayerRequest struct {
 	LongPass     int    `json:"longPass" form:"longPass"`
 	Vision       int    `json:"vision" form:"vision"`
 	GKReach      int    `json:"gkReach" form:"gkReach"`
-	CtrAwareness int    `json:"counterAttackAwareness" form:"counterAttackAwareness"`
+	AttAwareness int    `json:"attackingAwareness" form:"attackingAwareness"`
+	DefAwareness int    `json:"defensiveAwareness" form:"defensiveAwareness"`
 	GKParrying   int    `json:"gkParrying" form:"gkParrying"`
 	GKReflex     int    `json:"gkReflex" form:"gkReflex"`
-	GKCatching   int    `json:"gkCatching" form:"gkCatching"`
 
 	// Backward-compatibility aliases for older admin clients.
-	DefAwareness   int `json:"defensiveAwareness" form:"defensiveAwareness"`
+	CtrAwareness   int `json:"counterAttackAwareness" form:"counterAttackAwareness"`
 	Crossbar       int `json:"crossbarHandling" form:"crossbarHandling"`
 	Reflexes       int `json:"reflexes" form:"reflexes"`
-	AerialCatch    int `json:"aerialCatching" form:"aerialCatching"`
+	GKCatching     int `json:"gkCatching" form:"gkCatching"`
 	Duels          int `json:"duels" form:"duels"`
 	Pace           int `json:"pace" form:"pace"`
+	Stamina        int `json:"stamina" form:"stamina"`
+	Balance        int `json:"balance" form:"balance"`
+	Technique      int `json:"technique" form:"technique"`
+	Determination  int `json:"determination" form:"determination"`
+	Strength       int `json:"strength" form:"strength"`
 	Physical       int `json:"physical" form:"physical"`
 	Defending      int `json:"defending" form:"defending"`
 	StandingTackle int `json:"standingTackle" form:"standingTackle"`
 	SlidingTackle  int `json:"slidingTackle" form:"slidingTackle"`
 	Dribbling      int `json:"dribbling" form:"dribbling"`
+	Curve          int `json:"curve" form:"curve"`
+}
+
+type createSkillRequest struct {
+	Name      string `json:"name" form:"name"`
+	IconURL   string `json:"iconUrl" form:"iconUrl"`
+	BuffType  string `json:"buffType" form:"buffType"`
+	BuffValue int    `json:"buffValue" form:"buffValue"`
+}
+
+type assignSkillRequest struct {
+	SkillName string `json:"skillName" form:"skillName"`
 }
 
 type createCountryRequest struct {
@@ -124,13 +141,81 @@ func (h *Handler) CreateClub(c *gin.Context) {
 }
 
 func (h *Handler) List(c *gin.Context) {
-	players, err := h.uc.List(c.Request.Context())
+	var countryIDPtr *int64
+	countryIDQuery := strings.TrimSpace(c.Query("countryId"))
+	if countryIDQuery != "" {
+		countryID, err := strconv.ParseInt(countryIDQuery, 10, 64)
+		if err != nil || countryID <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "countryId must be a positive integer"})
+			return
+		}
+		countryIDPtr = &countryID
+	}
+
+	players, err := h.uc.List(c.Request.Context(), domain.PlayerFilter{
+		Name:      c.Query("name"),
+		CountryID: countryIDPtr,
+		BaseClub:  c.Query("baseClub"),
+	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": players})
+}
+
+func (h *Handler) ListSkills(c *gin.Context) {
+	skills, err := h.uc.ListSkills(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": skills})
+}
+
+func (h *Handler) CreateSkill(c *gin.Context) {
+	var req createSkillRequest
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	created, err := h.uc.CreateSkill(c.Request.Context(), domain.SpecialSkill{
+		Name:      req.Name,
+		IconURL:   req.IconURL,
+		BuffType:  req.BuffType,
+		BuffValue: req.BuffValue,
+	})
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "skill created", "data": created})
+}
+
+func (h *Handler) AssignSkill(c *gin.Context) {
+	playerID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || playerID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	var req assignSkillRequest
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	updated, err := h.uc.AssignSkillToPlayer(c.Request.Context(), playerID, req.SkillName)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "skill assigned", "data": updated})
 }
 
 func (h *Handler) Detail(c *gin.Context) {
@@ -177,18 +262,22 @@ func (h *Handler) Create(c *gin.Context) {
 		Passing:        req.Passing,
 		LongPass:       req.LongPass,
 		Vision:         req.Vision,
-		GKReach:        firstNonZero(req.GKReach, req.DefAwareness),
-		CtrAwareness:   req.CtrAwareness,
+		GKReach:        firstNonZero(req.GKReach, req.DefAwareness, req.Defending),
+		AttAwareness:   firstNonZero(req.AttAwareness, req.CtrAwareness),
+		DefAwareness:   firstNonZero(req.DefAwareness, req.Defending),
 		GKParrying:     firstNonZero(req.GKParrying, req.Crossbar),
 		GKReflex:       firstNonZero(req.GKReflex, req.Reflexes),
-		GKCatching:     firstNonZero(req.GKCatching, req.AerialCatch),
 		Duels:          req.Duels,
 		Pace:           req.Pace,
-		Physical:       req.Physical,
-		Defending:      req.Defending,
+		Stamina:        req.Stamina,
+		Balance:        req.Balance,
+		Technique:      req.Technique,
+		Determination:  req.Determination,
+		Strength:       firstNonZero(req.Strength, req.Physical),
 		StandingTackle: req.StandingTackle,
 		SlidingTackle:  req.SlidingTackle,
 		Dribbling:      req.Dribbling,
+		Curve:          req.Curve,
 	})
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -237,11 +326,13 @@ func (h *Handler) saveAvatarIfPresent(c *gin.Context) (string, error) {
 	return buildPublicURL(c, "/uploads/image/"+fileName), nil
 }
 
-func firstNonZero(primary int, fallback int) int {
-	if primary != 0 {
-		return primary
+func firstNonZero(values ...int) int {
+	for _, value := range values {
+		if value != 0 {
+			return value
+		}
 	}
-	return fallback
+	return 0
 }
 
 func stringToPtr(value string) *string {
