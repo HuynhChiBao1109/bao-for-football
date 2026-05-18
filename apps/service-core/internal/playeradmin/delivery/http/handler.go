@@ -28,7 +28,6 @@ type createPlayerRequest struct {
 	Name         string `json:"name" form:"name"`
 	CountryID    int64  `json:"countryId" form:"countryId"`
 	ClubID       int64  `json:"clubId" form:"clubId"`
-	Avatar       string `json:"avatar" form:"avatar"`
 	BaseClub     string `json:"baseClub" form:"baseClub"`
 	Season       string `json:"season" form:"season"`
 	SourceType   string `json:"sourceType" form:"sourceType"`
@@ -240,20 +239,24 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 
+	if countryID, ok := parseFormInt64(c, "countryId", "country_id"); ok {
+		req.CountryID = countryID
+	}
+	if clubID, ok := parseFormInt64(c, "clubId", "club_id"); ok {
+		req.ClubID = clubID
+	}
+
 	avatarURL, err := h.saveAvatarIfPresent(c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
-	}
-	if avatarURL != "" {
-		req.Avatar = avatarURL
 	}
 
 	created, err := h.uc.Create(c.Request.Context(), domain.Player{
 		Name:           req.Name,
 		CountryID:      req.CountryID,
 		ClubID:         req.ClubID,
-		Avatar:         stringToPtr(req.Avatar),
+		Avatar:         stringToPtr(avatarURL),
 		BaseClub:       req.BaseClub,
 		Season:         req.Season,
 		SourceType:     req.SourceType,
@@ -341,6 +344,22 @@ func stringToPtr(value string) *string {
 		return nil
 	}
 	return &trimmed
+}
+
+func parseFormInt64(c *gin.Context, keys ...string) (int64, bool) {
+	for _, key := range keys {
+		value := strings.TrimSpace(c.PostForm(key))
+		if value == "" {
+			continue
+		}
+
+		parsed, err := strconv.ParseInt(value, 10, 64)
+		if err == nil {
+			return parsed, true
+		}
+	}
+
+	return 0, false
 }
 
 func isAllowedImageExt(ext string) bool {

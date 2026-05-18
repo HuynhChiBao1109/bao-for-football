@@ -30,6 +30,7 @@ type createBannerRequest struct {
 	BannerImageURL  string `json:"bannerImageUrl"`
 	BannerImageData string `json:"bannerImageData"`
 	PlayerID        int64  `json:"playerId"`
+	TimeEnd         string `json:"timeEnd"`
 }
 
 func (h *Handler) UploadImage(c *gin.Context) {
@@ -74,11 +75,18 @@ func (h *Handler) CreateBanner(c *gin.Context) {
 		return
 	}
 
+	expiredAt, err := time.Parse(time.RFC3339, strings.TrimSpace(req.TimeEnd))
+	if err != nil || expiredAt.IsZero() {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "timeEnd is required and must be RFC3339"})
+		return
+	}
+
 	created, err := h.uc.CreateBanner(c.Request.Context(), domain.BannerConfig{
 		BannerCode:     req.BannerCode,
 		BannerName:     req.BannerName,
 		BannerImageURL: firstNonEmpty(req.BannerImageURL, req.BannerImageData),
 		PlayerID:       req.PlayerID,
+		ExpiredAt:      &expiredAt,
 	})
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

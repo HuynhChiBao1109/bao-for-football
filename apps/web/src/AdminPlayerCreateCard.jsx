@@ -4,6 +4,12 @@ const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8081";
 const DEFAULT_AVATAR_URL = "/default-avatar.svg";
 
+const DEFAULT_SESSION_OPTIONS = [
+  { value: "normal", label: "Bình thường" },
+  { value: "special year", label: "Mùa giải đặc biệt" },
+  { value: "moment time", label: "Khoảnh khắc trận đấu" },
+];
+
 const statFields = [
   { key: "shooting", label: "Dứt điểm" },
   { key: "passing", label: "Chuyền ngắn" },
@@ -27,13 +33,12 @@ const statFields = [
   { key: "curve", label: "Sút xoáy" },
 ];
 
-function buildInitialDraft({ season, sourceType, countries }) {
+function buildInitialDraft({ session, countries }) {
   return {
     name: "",
     countryId: countries[0]?.id ? String(countries[0].id) : "",
     baseClub: "",
-    season,
-    sourceType,
+    session,
     specialSkill: "",
     shooting: 60,
     passing: 60,
@@ -62,15 +67,15 @@ function AdminPlayerCreateCard({
   token,
   title,
   subtitle,
-  season,
-  sourceType,
+  defaultSession = "normal",
+  sessionOptions = DEFAULT_SESSION_OPTIONS,
   countries,
   clubsRefreshToken = 0,
   onCreated,
   onUnauthorized,
 }) {
   const [form, setForm] = useState(() =>
-    buildInitialDraft({ season, sourceType, countries }),
+    buildInitialDraft({ session: defaultSession, countries }),
   );
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState("");
@@ -90,6 +95,13 @@ function AdminPlayerCreateCard({
         ?.name || ""
     );
   }, [countries, form.countryId]);
+
+  const selectedSessionLabel = useMemo(() => {
+    return (
+      sessionOptions.find((item) => item.value === form.session)?.label ||
+      form.session
+    );
+  }, [form.session, sessionOptions]);
 
   useEffect(() => {
     let active = true;
@@ -243,10 +255,12 @@ function AdminPlayerCreateCard({
     try {
       const formData = new FormData();
       formData.append("name", form.name);
-      formData.append("countryId", String(Number(form.countryId)));
+      const selectedCountryId = String(Number(form.countryId));
+      formData.append("countryId", selectedCountryId);
+      formData.append("country_id", selectedCountryId);
       formData.append("baseClub", form.baseClub);
-      formData.append("season", season);
-      formData.append("sourceType", sourceType);
+      formData.append("season", form.session);
+      formData.append("sourceType", form.session);
       formData.append("specialSkill", form.specialSkill);
       formData.append("shooting", String(Number(form.shooting)));
       formData.append("passing", String(Number(form.passing)));
@@ -274,6 +288,10 @@ function AdminPlayerCreateCard({
       formData.append("slidingTackle", String(Number(form.slidingTackle)));
       formData.append("dribbling", String(Number(form.dribbling)));
       formData.append("curve", String(Number(form.curve)));
+      if (selectedClub?.id) {
+        formData.append("clubId", String(Number(selectedClub.id)));
+        formData.append("club_id", String(Number(selectedClub.id)));
+      }
       if (avatarFile) {
         formData.append("avatar", avatarFile);
       }
@@ -295,7 +313,7 @@ function AdminPlayerCreateCard({
       }
 
       setMessage("Đã tạo cầu thủ thành công.");
-      setForm(buildInitialDraft({ season, sourceType, countries }));
+      setForm(buildInitialDraft({ session: defaultSession, countries }));
       clearAvatar();
       if (typeof onCreated === "function") {
         onCreated();
@@ -315,10 +333,7 @@ function AdminPlayerCreateCard({
       </h2>
       <div className="mt-3 flex flex-wrap gap-2 text-xs uppercase tracking-[0.22em] text-slate-300">
         <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
-          Season: {season}
-        </span>
-        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
-          Source: {sourceType}
+          Session: {selectedSessionLabel}
         </span>
         {selectedCountryName && (
           <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
@@ -333,6 +348,12 @@ function AdminPlayerCreateCard({
             label="Name"
             value={form.name}
             onChange={(value) => updateField("name", value)}
+          />
+          <SelectField
+            label="Session"
+            value={form.session}
+            options={sessionOptions}
+            onChange={(value) => updateField("session", value)}
           />
           <SelectField
             label="Country"
@@ -455,7 +476,8 @@ function AdminPlayerCreateCard({
             loading ||
             !form.name.trim() ||
             !form.baseClub.trim() ||
-            !form.countryId
+            !form.countryId ||
+            !form.session
           }
           className="game-button-primary w-full"
         >

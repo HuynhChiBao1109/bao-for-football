@@ -3,6 +3,7 @@ import { useAdminPlayers, useAdminPlayer, useCreateAdminPlayer } from '../hooks/
 import { useAdminSkills, useCreateSkill, useAssignSkill } from '../hooks/useAdminSkills'
 import { useCountries } from '../hooks/useCountries'
 import { useClubs } from '../hooks/useClubs'
+import { useAuth } from '../hooks/useAuth'
 import { STAT_FIELDS } from '../lib/constants'
 import { Banner } from '../components/ui/Banner'
 import { API_BASE_URL } from '../lib/apiClient'
@@ -11,6 +12,7 @@ import type { AdminPlayer, AdminPlayerFilter } from '../types'
 // ─── Admin Page ───────────────────────────────────────────────────────────────
 
 export function AdminPage() {
+  const { token } = useAuth()
   const [filter, setFilter] = useState<AdminPlayerFilter>({})
   const [nameInput, setNameInput] = useState('')
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -73,8 +75,13 @@ export function AdminPage() {
 
       {/* Create player form */}
       <section className="grid gap-6 lg:grid-cols-2">
-        <CreatePlayerCard countries={countries} onCreated={refetch} title="Tạo cầu thủ mùa thường" season="2024" sourceType="base" />
-        <CreatePlayerCard countries={countries} onCreated={refetch} title="Tạo cầu thủ đặc biệt (Gacha)" season="2024-special" sourceType="gacha_special" />
+        <CreatePlayerCard countries={countries} onCreated={refetch} title="Tạo cầu thủ mùa thường" defaultSeason="normal" sourceType="base" />
+        <CreatePlayerCard countries={countries} onCreated={refetch} title="Tạo cầu thủ đặc biệt (Gacha)" defaultSeason="special year" sourceType="gacha_special" />
+      </section>
+
+      {/* Create gacha banner form */}
+      <section>
+        <GachaBannerCard token={token} players={players} onCreated={refetch} />
       </section>
     </div>
   )
@@ -286,22 +293,164 @@ function SkillCatalog({ skills, onCreated }: { skills: { id: number; name: strin
   )
 }
 
+// ─── Gacha Banner Form ───────────────────────────────────────────────────────
+
+function GachaBannerCard({ token, players, onCreated }: { token: string; players: AdminPlayer[]; onCreated: () => void }) {
+  const [playerId, setPlayerId] = useState<number>(0)
+  const [timeEnd, setTimeEnd] = useState('')
+  const [bannerFile, setBannerFile] = useState<File | null>(null)
+  const [bannerPreview, setBannerPreview] = useState('')
+  const [msg, setMsg] = useState('')
+  const [err, setErr] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const selectedPlayer = players.find((player) => player.id === playerId) || null
+
+  async function uploadBannerImage() {
+    if (!bannerFile) return ''
+
+    const formData = new FormData()
+    formData.append('image', bannerFile)
+
+    const response = await fetch(`${API_BASE_URL}/api/v1/admin/uploads/image`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    })
+    const data = await response.json()
+    if (!response.ok) {
+      throw new Error(data?.error || 'Không thể upload ảnh banner')
+    }
+
+    return data?.data?.url || ''
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setMsg('')
+    setErr('')
+    setLoading(true)
+
+    try {
+      if (!playerId) throw new Error('Vui lòng chọn cầu thủ')
+      if (!timeEnd) throw new Error('Vui lòng chọn timeEnd')
+      if (!bannerFile) throw new Error('Vui lòng chọn banner image')
+
+      const expiresAt = new Date(timeEnd)
+      if (Number.isNaN(expiresAt.getTime())) {
+        throw new Error('timeEnd không hợp lệ')
+      }
+
+      const bannerImageUrl = await uploadBannerImage()
+      const payload = {
+        bannerCode: `gacha-${playerId}-${Date.now()}`,
+        bannerName: `${selectedPlayer?.name || 'Player'} Banner`,
+        playerId,
+        bannerImageUrl,
+        timeEnd: expiresAt.toISOString(),
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/gacha/banners`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data?.error || 'Không thể tạo banner gacha')
+      }
+
+      setMsg('Đã tạo banner gacha thành công.')
+      setPlayerId(0)
+      setTimeEnd('')
+      setBannerFile(null)
+      if (bannerPreview) URL.revokeObjectURL(bannerPreview)
+      setBannerPreview('')
+      onCreated()
+    } catch (error) {
+      setErr((error as Error).message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="game-panel game-panel--soft overflow-hidden p-5">
+      <div className="game-panel__content">
+        <p className="game-header-kicker">Gacha Admin</p>
+        <h3 className="game-title mt-2 text-xl font-bold text-white">Tạo banner gacha</h3>
+        <p className="mt-2 text-sm text-slate-400">Chọn cầu thủ, upload banner image và đặt thời gian hết hạn.</p>
+
+        <form onSubmit={handleSubmit} className="mt-4 space-y-3">
+          <label className="block">
+            <span className="game-field-label">Cầu thủ</span>
+            <select value={String(playerId || '')} onChange={(e) => setPlayerId(Number(e.target.value))} className="game-input">
+              <option value="">Chọn cầu thủ</option>
+              {players.map((player) => (
+                <option key={player.id} value={player.id}>
+                  {player.name} ({player.baseClub})
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="game-field-label">Time End</span>
+            <input type="datetime-local" value={timeEnd} onChange={(e) => setTimeEnd(e.target.value)} className="game-input" />
+          </label>
+
+          <label className="block">
+            <span className="game-field-label">Banner Image</span>
+            <input type="file" accept="image/*" onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (!file) return
+              if (bannerPreview) URL.revokeObjectURL(bannerPreview)
+              setBannerFile(file)
+              setBannerPreview(URL.createObjectURL(file))
+            }} className="game-input" />
+          </label>
+
+          {bannerPreview && <img src={bannerPreview} alt="banner preview" className="h-40 w-full rounded-2xl object-cover" />}
+          {msg && <Banner text={msg} tone="success" />}
+          {err && <Banner text={err} tone="error" />}
+
+          <button type="submit" disabled={loading || !playerId || !timeEnd || !bannerFile} className="game-button-primary w-full">
+            {loading ? 'Đang tạo...' : 'Tạo banner gacha'}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 // ─── Create Player Form ───────────────────────────────────────────────────────
 
 const STAT_DEFAULTS: Record<string, number> = Object.fromEntries(STAT_FIELDS.map(({ key }) => [key, 60]))
 
-function CreatePlayerCard({ countries, onCreated, title, season, sourceType }: {
+const SEASON_OPTIONS = [
+  { value: 'normal', label: 'Bình thường (Normal)' },
+  { value: 'special year', label: 'Mùa giải đặc biệt (Special Year)' },
+  { value: 'special match', label: 'Trận đấu đặc biệt (Special Match)' },
+  { value: 'moment time', label: 'Khoảnh khắc trận đấu (Moment Time)' },
+]
+
+function CreatePlayerCard({ countries, onCreated, title, defaultSeason, sourceType }: {
   countries: { id: number; name: string }[]
   onCreated: () => void
   title: string
-  season: string
+  defaultSeason: string
   sourceType: string
 }) {
   const createMutation = useCreateAdminPlayer()
   const { data: clubs = [] } = useClubs()
 
   const [form, setForm] = useState<Record<string, string | number>>({
-    name: '', countryId: countries[0]?.id ?? '', baseClub: '', season, sourceType, specialSkill: '', ...STAT_DEFAULTS,
+    name: '', countryId: countries[0]?.id ?? '', clubId: '', season: defaultSeason, sourceType, specialSkill: '', ...STAT_DEFAULTS,
   })
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState('')
@@ -364,11 +513,18 @@ function CreatePlayerCard({ countries, onCreated, title, season, sourceType }: {
             <select value={String(form.countryId)} onChange={(e) => setForm((p) => ({ ...p, countryId: e.target.value }))} className="game-input">
               {countries.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
-            <select value={String(form.baseClub)} onChange={(e) => setForm((p) => ({ ...p, baseClub: e.target.value }))} className="game-input">
+            <select value={String(form.clubId)} onChange={(e) => setForm((p) => ({ ...p, clubId: e.target.value }))} className="game-input">
               <option value="">Chọn CLB gốc</option>
-              {clubs.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
+              {clubs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
+
+          <label className="block">
+            <span className="game-field-label">Mùa (Season)</span>
+            <select value={String(form.season)} onChange={(e) => setForm((p) => ({ ...p, season: e.target.value }))} className="game-input">
+              {SEASON_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+            </select>
+          </label>
 
           <div className="grid grid-cols-2 gap-2">
             {STAT_FIELDS.map(({ key, label }) => (

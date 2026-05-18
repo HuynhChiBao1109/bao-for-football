@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"time"
 
 	aihttp "fifam/apps/service-core/internal/ai/delivery/http"
 	aimysql "fifam/apps/service-core/internal/ai/repository/mysql"
@@ -89,6 +90,19 @@ func main() {
 	gachaAdminRepo := gachaadminmysql.NewRepository(db)
 	gachaAdminUC := gachaadminusecase.NewBannerUseCase(gachaAdminRepo)
 	gachaAdminHandler := gachaadminhttp.NewHandler(gachaAdminUC)
+	if db != nil {
+		go func() {
+			ticker := time.NewTicker(time.Minute)
+			defer ticker.Stop()
+			ctx := context.Background()
+			for {
+				if err := gachaAdminRepo.SyncExpiredBanners(ctx); err != nil {
+					log.Printf("gacha banner expiry sync warning: %v", err)
+				}
+				<-ticker.C
+			}
+		}()
+	}
 
 	playerAdminRepo := playeradminmysql.NewRepository(db)
 	playerAdminUC := playeradminusecase.NewPlayerAdminUseCase(playerAdminRepo)

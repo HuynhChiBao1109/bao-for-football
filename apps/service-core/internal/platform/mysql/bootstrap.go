@@ -195,6 +195,8 @@ type migrationGachaBanner struct {
 	BannerCode      string    `gorm:"type:varchar(80);not null;uniqueIndex:uk_gacha_banners_banner_code;column:banner_code"`
 	BannerName      string    `gorm:"type:varchar(120);not null;column:banner_name"`
 	BannerImageData string    `gorm:"type:longtext;not null;column:banner_image_data"`
+	ExpiredAt       *time.Time `gorm:"column:expired_at"`
+	Status          int       `gorm:"not null;default:1;column:status"`
 	PlayerID        int64     `gorm:"not null;index:idx_gacha_banners_player_id;column:player_id"`
 	CreatedAt       time.Time `gorm:"column:created_at"`
 	UpdatedAt       time.Time `gorm:"column:updated_at"`
@@ -374,6 +376,12 @@ func AutoMigrate(ctx context.Context, db *gorm.DB) error {
 		return err
 	}
 	if err := ensureTeamSchema(ctx, sqlDB); err != nil {
+		return err
+	}
+	if err := ensureGachaBannerSchema(ctx, sqlDB); err != nil {
+		return err
+	}
+	if err := ensureGachaBannerSchema(ctx, sqlDB); err != nil {
 		return err
 	}
 	if err := ensurePlayerTemplateSchema(ctx, sqlDB); err != nil {
@@ -751,6 +759,47 @@ SET budget = 360000000`); err != nil {
 	if _, err := db.ExecContext(ctx, `
 ALTER TABLE teams
 MODIFY COLUMN budget bigint NOT NULL DEFAULT 360000000`); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func ensureGachaBannerSchema(ctx context.Context, db *sql.DB) error {
+	bannerTableExists, err := hasTable(ctx, db, "gacha_banners")
+	if err != nil {
+		return err
+	}
+	if !bannerTableExists {
+		return nil
+	}
+
+	expiredAtExists, err := hasColumn(ctx, db, "gacha_banners", "expired_at")
+	if err != nil {
+		return err
+	}
+	if !expiredAtExists {
+		if _, err := db.ExecContext(ctx, `ALTER TABLE gacha_banners ADD COLUMN expired_at datetime NULL AFTER banner_image_data`); err != nil {
+			return err
+		}
+	}
+
+	statusExists, err := hasColumn(ctx, db, "gacha_banners", "status")
+	if err != nil {
+		return err
+	}
+	if !statusExists {
+		if _, err := db.ExecContext(ctx, `ALTER TABLE gacha_banners ADD COLUMN status int NOT NULL DEFAULT 1 AFTER expired_at`); err != nil {
+			return err
+		}
+	}
+
+	if _, err := db.ExecContext(ctx, `
+UPDATE gacha_banners
+SET status = 4
+WHERE expired_at IS NOT NULL
+  AND expired_at <= CURRENT_TIMESTAMP
+  AND status <> 4`); err != nil {
 		return err
 	}
 

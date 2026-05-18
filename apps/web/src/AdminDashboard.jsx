@@ -445,21 +445,7 @@ function AdminDashboard({
           <AdminPlayerCreateCard
             token={token}
             title="Create Player"
-            subtitle="Tạo cầu thủ thường"
-            season="Normal"
-            sourceType="normal"
-            countries={countries}
-            clubsRefreshToken={clubsRefreshToken}
-            onCreated={loadPlayers}
-            onUnauthorized={onUnauthorized}
-          />
-
-          <AdminPlayerCreateCard
-            token={token}
-            title="Create Special Player"
-            subtitle="Tạo cầu thủ mùa đặc biệt cho gacha"
-            season="Special"
-            sourceType="gacha"
+            subtitle="Tạo cầu thủ với session lựa chọn"
             countries={countries}
             clubsRefreshToken={clubsRefreshToken}
             onCreated={loadPlayers}
