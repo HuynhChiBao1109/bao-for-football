@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { usePlayerCards, useAllocateStats } from '../hooks/usePlayerCards';
 import { STAT_FIELDS, STAT_KEYS, DEFAULT_STATS, type StatKey } from '../lib/constants';
 import { API_BASE_URL } from '../lib/apiClient';
-import { Banner } from '../components/ui/Banner';
+import { Banner } from '../components/feedback';
 import type { UserPlayerCard } from '../types';
 
 const DEFAULT_PLAYER_AVATAR = '/default-avatar.svg';

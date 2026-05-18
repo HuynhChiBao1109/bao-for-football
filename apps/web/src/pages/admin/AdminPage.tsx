@@ -6,22 +6,34 @@ import {
   useCreateAdminPlayer,
   useDeleteAdminPlayer,
   useUpdateAdminPlayer,
-} from '../hooks/useAdminPlayers';
+} from '../../hooks/useAdminPlayers';
 import {
   useAdminSkills,
   useCreateSkill,
   useAssignSkill,
   useRemoveSkill,
-} from '../hooks/useAdminSkills';
-import { useCountries } from '../hooks/useCountries';
-import { useClubs } from '../hooks/useClubs';
-import { useAuth } from '../hooks/useAuth';
-import { STAT_FIELDS } from '../lib/constants';
-import { Banner } from '../components/ui/Banner';
-import { API_BASE_URL } from '../lib/apiClient';
-import { queryClient } from '../lib/queryClient';
-import { ROUTES } from '../routes';
-import type { AdminPlayer, AdminPlayerFilter } from '../types';
+} from '../../hooks/useAdminSkills';
+import { useCountries } from '../../hooks/useCountries';
+import { useClubs } from '../../hooks/useClubs';
+import { useAuth } from '../../hooks/useAuth';
+import { STAT_FIELDS } from '../../lib/constants';
+import { Banner } from '../../components/feedback';
+import { API_BASE_URL } from '../../lib/apiClient';
+import { queryClient } from '../../lib/queryClient';
+import { ROUTES } from '../../routes';
+import {
+  PLAYER_POSITION_OPTIONS,
+  PLAYER_SEASON_OPTIONS,
+  PlayerPosition,
+  PlayerSeason,
+} from '../../enums/player';
+import type { AdminPlayer, AdminPlayerFilter } from '../../types';
+
+type PositionDraft = {
+  position: PlayerPosition;
+  description: string;
+  effect: number;
+};
 
 function calcOverall(source: Record<string, unknown>) {
   const values = STAT_FIELDS.map(({ key }) => Number(source[key] ?? 0)).filter((value) =>
@@ -171,7 +183,7 @@ export function AdminPage() {
           countries={countries}
           onCreated={handleRefreshPlayers}
           title="Tạo cầu thủ"
-          defaultSeason="special year"
+          defaultSeason={PlayerSeason.SpecialYear}
           sourceType="gacha_special"
         />
       </section>
@@ -257,7 +269,7 @@ function PlayerFilters({
             className="game-input"
           >
             <option value="">Tất cả</option>
-            {SEASON_OPTIONS.map((opt) => (
+            {PLAYER_SEASON_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
@@ -366,8 +378,8 @@ function PlayerDetail({
   const [positions, setPositions] = useState<
     Array<{ position: string; description: string; effect: number }>
   >([]);
-  const [positionDraft, setPositionDraft] = useState({
-    position: 'CF',
+  const [positionDraft, setPositionDraft] = useState<PositionDraft>({
+    position: PlayerPosition.CF,
     description: '',
     effect: 1,
   });
@@ -569,7 +581,7 @@ function PlayerDetail({
             onChange={(e) => setForm((p) => ({ ...p, season: e.target.value }))}
             className="game-input"
           >
-            {SEASON_OPTIONS.map((opt) => (
+            {PLAYER_SEASON_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
@@ -590,10 +602,12 @@ function PlayerDetail({
           <div className="grid gap-2 sm:grid-cols-[1fr_110px_1fr_auto]">
             <select
               value={positionDraft.position}
-              onChange={(e) => setPositionDraft((p) => ({ ...p, position: e.target.value }))}
+              onChange={(e) =>
+                setPositionDraft((p) => ({ ...p, position: e.target.value as PlayerPosition }))
+              }
               className="game-input"
             >
-              {POSITION_OPTIONS.map((pos) => (
+              {PLAYER_POSITION_OPTIONS.map((pos) => (
                 <option key={pos} value={pos}>
                   {pos}
                 </option>
@@ -1031,34 +1045,6 @@ const STAT_DEFAULTS: Record<string, number> = Object.fromEntries(
   STAT_FIELDS.map(({ key }) => [key, 60]),
 );
 
-const SEASON_OPTIONS = [
-  { value: 'normal', label: 'Bình thường (Normal)' },
-  { value: 'special year', label: 'Mùa giải đặc biệt (Special Year)' },
-  { value: 'special match', label: 'Trận đấu đặc biệt (Special Match)' },
-  { value: 'moment time', label: 'Khoảnh khắc trận đấu (Moment Time)' },
-];
-
-const POSITION_OPTIONS = [
-  'GK',
-  'LB',
-  'CB',
-  'RB',
-  'LWB',
-  'RWB',
-  'CDM',
-  'CM',
-  'CAM',
-  'LMF',
-  'RMF',
-  'DMF',
-  'CMF',
-  'AMF',
-  'CF',
-  'LW',
-  'RW',
-  'SS',
-];
-
 function CreatePlayerCard({
   countries,
   onCreated,
@@ -1091,8 +1077,8 @@ function CreatePlayerCard({
   const [positions, setPositions] = useState<
     Array<{ position: string; description: string; effect: number }>
   >([]);
-  const [positionDraft, setPositionDraft] = useState({
-    position: 'CF',
+  const [positionDraft, setPositionDraft] = useState<PositionDraft>({
+    position: PlayerPosition.CF,
     description: '',
     effect: 1,
   });
@@ -1123,7 +1109,7 @@ function CreatePlayerCard({
         ...STAT_DEFAULTS,
       }));
       setPositions([]);
-      setPositionDraft({ position: 'CF', description: '', effect: 1 });
+      setPositionDraft({ position: PlayerPosition.CF, description: '', effect: 1 });
       setAvatarFile(null);
       setAvatarPreview('');
       onCreated();
@@ -1209,7 +1195,7 @@ function CreatePlayerCard({
               onChange={(e) => setForm((p) => ({ ...p, season: e.target.value }))}
               className="game-input"
             >
-              {SEASON_OPTIONS.map((opt) => (
+              {PLAYER_SEASON_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
@@ -1222,10 +1208,12 @@ function CreatePlayerCard({
             <div className="grid gap-2 sm:grid-cols-[1fr_110px_1fr_auto]">
               <select
                 value={positionDraft.position}
-                onChange={(e) => setPositionDraft((p) => ({ ...p, position: e.target.value }))}
+                onChange={(e) =>
+                  setPositionDraft((p) => ({ ...p, position: e.target.value as PlayerPosition }))
+                }
                 className="game-input"
               >
-                {POSITION_OPTIONS.map((pos) => (
+                {PLAYER_POSITION_OPTIONS.map((pos) => (
                   <option key={pos} value={pos}>
                     {pos}
                   </option>

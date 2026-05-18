@@ -3,14 +3,13 @@ import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-
 import { useAuth } from './hooks/useAuth';
 import { AppLayout } from './layouts/AppLayout';
 import { LoginPage } from './pages/LoginPage';
-import { AdminLoginPage } from './pages/AdminLoginPage.tsx';
+import { AdminLoginPage, AdminPage } from './pages/admin';
 import { ClubPage } from './pages/ClubPage';
 import { PlayersPage } from './pages/PlayersPage';
 import { TacticsPage } from './pages/TacticsPage';
 import { GachaPage } from './pages/GachaPage';
 import { AiMatchPage } from './pages/AiMatchPage';
 import { PvpPage } from './pages/PvpPage';
-import { AdminPage } from './pages/AdminPage';
 import { ROUTES } from './routes';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {

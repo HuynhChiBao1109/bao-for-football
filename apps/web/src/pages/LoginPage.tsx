@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { apiClient } from '../lib/apiClient';
 import { defaultAuthenticatedRoute } from '../routes';
-import { BrandLogo } from '../components/ui/BrandLogo';
+import { BrandLogo } from '../components/auth';
+import { AuthTab } from '../enums/auth';
 
 export function LoginPage() {
   const { setSession, session } = useAuth();
@@ -14,7 +15,7 @@ export function LoginPage() {
       navigate(defaultAuthenticatedRoute(Boolean(session.user?.isAdmin)), { replace: true });
   }, [session, navigate]);
 
-  const [tab, setTab] = useState<'login' | 'register'>('login');
+  const [tab, setTab] = useState<AuthTab>(AuthTab.Login);
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [registerForm, setRegisterForm] = useState({ username: '', password: '' });
   const [loading, setLoading] = useState(false);
@@ -48,7 +49,7 @@ export function LoginPage() {
     try {
       await apiClient('/api/v1/auth/register', { method: 'POST', body: registerForm });
       setMessage('Đăng ký thành công. Bạn có thể đăng nhập ngay.');
-      setTab('login');
+      setTab(AuthTab.Login);
       setLoginForm((prev) => ({ ...prev, username: registerForm.username }));
     } catch (err: unknown) {
       setError((err as Error).message);
@@ -64,32 +65,32 @@ export function LoginPage() {
           <div className="game-panel__content">
             <BrandLogo className="justify-center" compact />
             <h1 className="game-title mt-4 text-center text-3xl font-bold text-white sm:text-4xl">
-              {tab === 'login' ? 'User Login' : 'Create Account'}
+              {tab === AuthTab.Login ? 'User Login' : 'Create Account'}
             </h1>
             <p className="game-copy mt-2 text-center text-sm sm:text-base">
-              {tab === 'login'
+              {tab === AuthTab.Login
                 ? 'Đăng nhập để vào game dashboard.'
                 : 'Tạo tài khoản mới và chọn câu lạc bộ khởi đầu.'}
             </p>
 
             <div className="mt-5 flex gap-2 rounded-[20px] border border-white/8 bg-black/20 p-2">
               <button
-                className={tabClass(tab === 'login')}
-                onClick={() => setTab('login')}
+                className={tabClass(tab === AuthTab.Login)}
+                onClick={() => setTab(AuthTab.Login)}
                 type="button"
               >
                 Login
               </button>
               <button
-                className={tabClass(tab === 'register')}
-                onClick={() => setTab('register')}
+                className={tabClass(tab === AuthTab.Register)}
+                onClick={() => setTab(AuthTab.Register)}
                 type="button"
               >
                 Register
               </button>
             </div>
 
-            {tab === 'login' ? (
+            {tab === AuthTab.Login ? (
               <form className="mt-4 space-y-4" onSubmit={submitLogin}>
                 <Field
                   label="Username"

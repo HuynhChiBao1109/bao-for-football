@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
-import { apiClient } from '../lib/apiClient';
-import { ROUTES } from '../routes';
-import { BrandLogo } from '../components/ui/BrandLogo';
+import { useAuth } from '../../hooks/useAuth';
+import { apiClient } from '../../lib/apiClient';
+import { ROUTES } from '../../routes';
+import { BrandLogo } from '../../components/auth';
 
 export function AdminLoginPage() {
   const { session, setSession } = useAuth();

@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useGachaRoll, useGachaBanners, useGachaProgress } from '../hooks/useGacha';
 import { useSession } from '../hooks/useSession';
-import { Banner } from '../components/ui/Banner';
+import { Banner } from '../components/feedback';
 import { API_BASE_URL } from '../lib/apiClient';
+import { GachaBannerStatus } from '../enums/gacha';
 import type { GachaBanner, GachaResult } from '../types';
 
 export function GachaPage() {
@@ -287,7 +288,9 @@ function BannerCard({
         )}
         <div
           className={`absolute top-2 right-2 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-            banner.status === 1 ? 'bg-emerald-500/90 text-white' : 'bg-slate-500/80 text-white'
+            banner.status === GachaBannerStatus.Active
+              ? 'bg-emerald-500/90 text-white'
+              : 'bg-slate-500/80 text-white'
           }`}
         >
           {banner.statusLabel}

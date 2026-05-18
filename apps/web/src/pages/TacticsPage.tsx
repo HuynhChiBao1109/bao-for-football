@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTactics, useSaveTactics } from '../hooks/useTactics';
 import { useSession } from '../hooks/useSession';
 import { usePlayerCards } from '../hooks/usePlayerCards';
-import { Banner } from '../components/ui/Banner';
+import { Banner } from '../components/feedback';
 import { API_BASE_URL } from '../lib/apiClient';
+import { MatchMode } from '../enums/match';
 import type { Tactics } from '../types';
 import type { UserPlayerCard } from '../types';
 
@@ -12,7 +13,7 @@ const DEFAULT_TACTICS: Tactics = {
   passRatio: 58,
   shotRatio: 42,
   pressure: 61,
-  mode: 'casual',
+  mode: MatchMode.Casual,
   gameplay: {
     passSpeedScale: 1.05,
     interceptionRadius: 1.02,

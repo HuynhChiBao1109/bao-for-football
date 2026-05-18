@@ -4,7 +4,7 @@ import { useSession } from '../hooks/useSession';
 import { useAuth } from '../hooks/useAuth';
 import { useClubDetail } from '../hooks/useClubDetail';
 import { ROUTES } from '../routes';
-import { Banner } from '../components/ui/Banner';
+import { Banner } from '../components/feedback';
 import { ClubHeader } from '../components/ui/ClubHeader';
 import { ModuleCard } from '../components/ui/ModuleCard';
 import { queryClient } from '../lib/queryClient';

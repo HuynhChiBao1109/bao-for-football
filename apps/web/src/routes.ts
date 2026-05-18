@@ -1,14 +1,16 @@
+import { AppRoute } from './enums/routes';
+
 export const ROUTES = {
-  login: '/login',
-  adminLogin: '/admin/login',
-  club: '/club',
-  players: '/players',
-  tactics: '/tactics',
-  aiMatch: '/match/ai',
-  pvp: '/match/pvp',
-  gacha: '/gacha',
-  admin: '/admin',
-};
+  login: AppRoute.Login,
+  adminLogin: AppRoute.AdminLogin,
+  club: AppRoute.Club,
+  players: AppRoute.Players,
+  tactics: AppRoute.Tactics,
+  aiMatch: AppRoute.AiMatch,
+  pvp: AppRoute.Pvp,
+  gacha: AppRoute.Gacha,
+  admin: AppRoute.Admin,
+} as const;
 
 export function defaultAuthenticatedRoute(isAdmin: boolean) {
   return isAdmin ? ROUTES.admin : ROUTES.club;

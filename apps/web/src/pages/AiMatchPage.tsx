@@ -5,8 +5,9 @@ import {
   useStartMatch,
   useFinalizeMatch,
 } from '../hooks/useAiCampaign';
-import { Banner } from '../components/ui/Banner';
-import MatchView from '../MatchView.jsx';
+import { Banner } from '../components/feedback';
+import { MatchMode } from '../enums/match';
+import MatchView from '../MatchView';
 import type { AiStage } from '../types';
 
 export function AiMatchPage() {
@@ -33,7 +34,7 @@ export function AiMatchPage() {
     try {
       const matchId = await startMatch.mutateAsync({
         awayClubName: selected.clubName,
-        mode: 'ai_campaign',
+        mode: MatchMode.AiCampaign,
         stageNo: selected.stageNo,
       });
       setActiveMatchID(matchId);
