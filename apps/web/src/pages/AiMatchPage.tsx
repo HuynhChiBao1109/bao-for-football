@@ -119,19 +119,6 @@ export function AiMatchPage() {
           </div>
         </div>
       </article>
-
-      {stageDetail && (
-        <aside className="game-panel overflow-hidden p-5">
-          <div className="game-panel__content">
-            <p className="game-header-kicker">Stage Detail — Màn {stageDetail.stageNo}</p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              <InfoTile label="Đối thủ" value={stageDetail.clubName} />
-              <InfoTile label="Buff chỉ số" value={`+${stageDetail.enemyStatBonus}`} />
-              <InfoTile label="Phần thưởng" value={`${Number(stageDetail.rewardMoney ?? 0).toLocaleString()} tiền · ${stageDetail.rewardExp} EXP`} />
-            </div>
-          </div>
-        </aside>
-      )}
     </section>
   )
 }

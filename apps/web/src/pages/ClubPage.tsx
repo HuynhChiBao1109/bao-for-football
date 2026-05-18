@@ -108,7 +108,7 @@ export function ClubPage() {
                 actions={[
                   {
                     label: 'Gacha',
-                    description: 'Roll banner cầu thủ trực tiếp với tài khoản hiện tại.',
+                    description: 'Roll banner',
                     icon: '✨',
                     onClick: () => navigate(ROUTES.gacha),
                   },
@@ -123,25 +123,7 @@ export function ClubPage() {
                     description: 'Sự kiện theo mùa với phần thưởng hấp dẫn.',
                     icon: '🎪',
                     onClick: () => setNotice('Mục Events đang phát triển, vui lòng quay lại sau.'),
-                  },
-                  {
-                    label: 'Gacha',
-                    description: 'Roll banner cầu thủ trực tiếp với tài khoản hiện tại.',
-                    icon: '✨',
-                    onClick: () => navigate(ROUTES.gacha),
-                  },
-                  {
-                    label: 'Shop',
-                    description: 'Mua bán vật phẩm và nâng cấp trang bị cho đội.',
-                    icon: '🛒',
-                    onClick: () => setNotice('Mục Mua sắm đang phát triển, vui lòng quay lại sau.'),
-                  },
-                  {
-                    label: 'Events',
-                    description: 'Sự kiện theo mùa với phần thưởng hấp dẫn.',
-                    icon: '🎪',
-                    onClick: () => setNotice('Mục Events đang phát triển, vui lòng quay lại sau.'),
-                  },
+                  }
                 ]}
               />
             </div>
