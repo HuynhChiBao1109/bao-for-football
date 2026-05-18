@@ -37,18 +37,6 @@ npm run dev
 cd apps/service-core && go run ./cmd/server
 ```
 
-## API Endpoints
-
-- `GET /health`
-- `GET /api/v1/clubs/:id` (service-core)
-- `GET /ws` (service-core)
-- `GET /sse/match` (service-core)
-- `POST /api/v1/tactics` (service-core, auto-push to in-process match engine)
-- `POST /api/v1/gacha/roll` (service-core, 90/10 + pity 51)
-- `GET /api/v1/ai/stages` (service-core, danh sách 50 màn + trạng thái khóa/mở)
-- `GET /api/v1/ai/stages/:stageNo` (service-core, chi tiết màn + đội hình 22 cầu thủ đối thủ)
-- `POST /api/v1/ai/stages/:stageNo/result` (service-core, cập nhật kết quả thắng/thua để mở màn mới)
-
 ### Feature
 
 - Đăng ký, đăng nhập , khi mới tạo account sẽ được chọn đội bóng, đặt tên CLB => bao gồm 22 thẻ cầu thủ mùa thường, tối đa 1 user có thể có 50 cầu thủ

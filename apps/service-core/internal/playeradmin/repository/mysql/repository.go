@@ -57,34 +57,37 @@ whereClauses := make([]string, 0, 3)
 	args := make([]any, 0, 3)
 
 	if filter.Name != "" {
-		whereClauses = append(whereClauses, "LOWER(ap.name) LIKE ?")
+		whereClauses = append(whereClauses, "LOWER(pt.name) LIKE ?")
 		args = append(args, "%"+strings.ToLower(filter.Name)+"%")
 	}
 	if filter.CountryID != nil {
-		whereClauses = append(whereClauses, "ap.country_id = ?")
+		whereClauses = append(whereClauses, "pt.country_id = ?")
 		args = append(args, *filter.CountryID)
 	}
 	if filter.BaseClub != "" {
-		whereClauses = append(whereClauses, "ap.base_club = ?")
+		whereClauses = append(whereClauses, "pt.base_club = ?")
 		args = append(args, filter.BaseClub)
 	}
 
 	query := `
-SELECT ap.id, ap.name, ap.country_id, ap.avatar,
+SELECT pt.id, pt.name, pt.country_id, pt.club_id, pt.image_url,
 	COALESCE(c.id, 0) AS country_row_id,
 	COALESCE(c.name, ''),
 	COALESCE(c.code, ''),
 	COALESCE(c.flag, ''),
-	COALESCE(c.name, ap.nationality) AS nationality,
-	ap.base_club, ap.season, ap.source_type,
-	ap.shooting, ap.passing, ap.long_pass, ap.vision, ap.gk_reach, ap.counter_attack_awareness, ap.defending, ap.gk_parrying, ap.gk_reflex, ap.duels, ap.pace, ap.stamina, ap.balance, ap.technique, ap.determination, ap.physical, ap.standing_tackle, ap.sliding_tackle, ap.dribbling, ap.curve, ap.created_at
-FROM admin_players ap
-LEFT JOIN countries c ON c.id = ap.country_id
+	COALESCE(cl.id, 0) AS club_row_id,
+	COALESCE(cl.name, pt.base_club),
+	COALESCE(cl.logo, ''),
+	pt.base_club, pt.season,
+	pt.base_shooting, pt.base_passing, pt.base_long_pass, pt.base_vision, pt.base_gk_reach, pt.base_counter_attack_awareness, pt.base_defending, pt.base_gk_parrying, pt.base_gk_reflex, pt.base_duels, pt.base_pace, pt.base_stamina, pt.base_balance, pt.base_technique, pt.base_determination, pt.base_physical, pt.base_standing_tackle, pt.base_sliding_tackle, pt.base_dribbling, pt.base_curve, pt.created_at
+FROM player_templates pt
+LEFT JOIN countries c ON c.id = pt.country_id
+LEFT JOIN clubs cl ON cl.id = pt.club_id
 `
 	if len(whereClauses) > 0 {
 		query += " WHERE " + strings.Join(whereClauses, " AND ")
 	}
-	query += " ORDER BY ap.id DESC"
+	query += " ORDER BY pt.id DESC"
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -97,21 +100,24 @@ LEFT JOIN countries c ON c.id = ap.country_id
 	for rows.Next() {
 		var p domain.Player
 		var countryRowID int64
+		var clubRowID int64
 		var avatar sql.NullString
 		var createdAt sql.NullTime
 		if err := rows.Scan(
 			&p.ID,
 			&p.Name,
 			&p.CountryID,
+			&p.ClubID,
 			&avatar,
 			&countryRowID,
 			&p.Country.Name,
 			&p.Country.Code,
 			&p.Country.Flag,
-			&p.Nationality,
+			&clubRowID,
+			&p.Club.Name,
+			&p.Club.Logo,
 			&p.BaseClub,
 			&p.Season,
-			&p.SourceType,
 			&p.Shooting,
 			&p.Passing,
 			&p.LongPass,
@@ -146,6 +152,9 @@ LEFT JOIN countries c ON c.id = ap.country_id
 		if countryRowID > 0 {
 			p.Country.ID = countryRowID
 		}
+		if clubRowID > 0 {
+			p.Club.ID = clubRowID
+		}
 		players = append(players, p)
 		playerIDs = append(playerIDs, p.ID)
 	}
@@ -177,36 +186,42 @@ func (r *Repository) GetByID(ctx context.Context, id int64) (domain.Player, erro
 	}
 
 	row := r.db.QueryRowContext(ctx, `
-SELECT ap.id, ap.name, ap.country_id, ap.avatar,
+SELECT pt.id, pt.name, pt.country_id, pt.club_id, pt.image_url,
 	COALESCE(c.id, 0) AS country_row_id,
 	COALESCE(c.name, ''),
 	COALESCE(c.code, ''),
 	COALESCE(c.flag, ''),
-	COALESCE(c.name, ap.nationality) AS nationality,
-	ap.base_club, ap.season, ap.source_type,
-	ap.shooting, ap.passing, ap.long_pass, ap.vision, ap.gk_reach, ap.counter_attack_awareness, ap.defending, ap.gk_parrying, ap.gk_reflex, ap.duels, ap.pace, ap.stamina, ap.balance, ap.technique, ap.determination, ap.physical, ap.standing_tackle, ap.sliding_tackle, ap.dribbling, ap.curve, ap.created_at
-FROM admin_players ap
-LEFT JOIN countries c ON c.id = ap.country_id
-WHERE ap.id = ?
+  COALESCE(cl.id, 0) AS club_row_id,
+	COALESCE(cl.name, pt.base_club),
+	COALESCE(cl.logo, ''),
+	pt.base_club, pt.season,
+	pt.base_shooting, pt.base_passing, pt.base_long_pass, pt.base_vision, pt.base_gk_reach, pt.base_counter_attack_awareness, pt.base_defending, pt.base_gk_parrying, pt.base_gk_reflex, pt.base_duels, pt.base_pace, pt.base_stamina, pt.base_balance, pt.base_technique, pt.base_determination, pt.base_physical, pt.base_standing_tackle, pt.base_sliding_tackle, pt.base_dribbling, pt.base_curve, pt.created_at
+FROM player_templates pt
+LEFT JOIN countries c ON c.id = pt.country_id
+LEFT JOIN clubs cl ON cl.id = pt.club_id
+WHERE pt.id = ?
 LIMIT 1`, id)
 
 	var p domain.Player
 	var countryRowID int64
+	var clubRowID int64
 	var avatar sql.NullString
 	var createdAt sql.NullTime
 	if err := row.Scan(
 		&p.ID,
 		&p.Name,
 		&p.CountryID,
+		&p.ClubID,
 		&avatar,
 		&countryRowID,
 		&p.Country.Name,
 		&p.Country.Code,
 		&p.Country.Flag,
-		&p.Nationality,
+		&clubRowID,
+		&p.Club.Name,
+		&p.Club.Logo,
 		&p.BaseClub,
 		&p.Season,
-		&p.SourceType,
 		&p.Shooting,
 		&p.Passing,
 		&p.LongPass,
@@ -244,6 +259,9 @@ LIMIT 1`, id)
 
 	if countryRowID > 0 {
 		p.Country.ID = countryRowID
+	}
+	if clubRowID > 0 {
+		p.Club.ID = clubRowID
 	}
 
 	tmp := []domain.Player{p}
@@ -331,8 +349,8 @@ func (r *Repository) CreateClub(ctx context.Context, input domain.Club) (domain.
 	}
 
 	result, err := r.db.ExecContext(ctx, `
-INSERT INTO clubs (name, logo, country_id, budget, league_name)
-VALUES (?, ?, ?, ?, ?)`, input.Name, input.Logo, input.CountryID, input.Budget, input.LeagueName)
+INSERT INTO clubs (name, logo, country_id, league_name)
+VALUES (?, ?, ?, ?)`, input.Name, input.Logo, input.CountryID, input.LeagueName)
 	if err != nil {
 		return domain.Club{}, err
 	}
@@ -353,7 +371,6 @@ func (r *Repository) Create(ctx context.Context, input domain.Player) (domain.Pl
 		defer r.memMu.Unlock()
 		input.ID = r.nextID
 		r.nextID++
-		input.Nationality = input.Country.Name
 		r.memData = append([]domain.Player{input}, r.memData...)
 		return input, nil
 	}
@@ -374,22 +391,34 @@ LIMIT 1`, input.CountryID)
 			}
 			return domain.Player{}, err
 		}
-		input.Nationality = input.Country.Name
+	}
+
+	if input.ClubID > 0 {
+		clubRow := r.db.QueryRowContext(ctx, `
+SELECT id, name, COALESCE(logo, '')
+FROM clubs
+WHERE id = ?
+LIMIT 1`, input.ClubID)
+		if err := clubRow.Scan(&input.Club.ID, &input.Club.Name, &input.Club.Logo); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return domain.Player{}, errors.New("club not found")
+			}
+			return domain.Player{}, err
+		}
+		input.BaseClub = input.Club.Name
 	}
 
 	result, err := r.db.ExecContext(ctx, `
-INSERT INTO admin_players (
-  name, country_id, avatar, nationality, base_club, season, source_type, special_skill,
-	shooting, passing, long_pass, vision, gk_reach, counter_attack_awareness, defending, gk_parrying, gk_reflex, duels, pace, stamina, balance, technique, determination, physical, standing_tackle, sliding_tackle, dribbling, curve
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+INSERT INTO player_templates (
+  name, height_cm, country_id, club_id, base_club, season, image_url,
+	base_shooting, base_passing, base_long_pass, base_vision, base_gk_reach, base_counter_attack_awareness, base_defending, base_gk_parrying, base_gk_reflex, base_duels, base_pace, base_stamina, base_balance, base_technique, base_determination, base_physical, base_standing_tackle, base_sliding_tackle, base_dribbling, base_curve
+) VALUES (?, 170, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
 		input.Name,
 		input.CountryID,
-		avatarValue(input.Avatar),
-		input.Nationality,
+		input.ClubID,
 		input.BaseClub,
 		input.Season,
-		input.SourceType,
-		"",
+		avatarValue(input.Avatar),
 		input.Shooting,
 		input.Passing,
 		input.LongPass,
@@ -420,10 +449,6 @@ INSERT INTO admin_players (
 		return domain.Player{}, err
 	}
 	input.ID = id
-
-	if err := r.attachSkillsByNames(ctx, input.ID, input.SpecialSkill); err != nil {
-		return domain.Player{}, err
-	}
 
 	if loaded, err := r.GetByID(ctx, input.ID); err == nil {
 		return loaded, nil
@@ -508,7 +533,7 @@ func (r *Repository) AssignSkillToPlayer(ctx context.Context, playerID int64, sk
 	}
 
 	var existingPlayerID int64
-	if err := r.db.QueryRowContext(ctx, `SELECT id FROM admin_players WHERE id = ? LIMIT 1`, playerID).Scan(&existingPlayerID); err != nil {
+	if err := r.db.QueryRowContext(ctx, `SELECT id FROM player_templates WHERE id = ? LIMIT 1`, playerID).Scan(&existingPlayerID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return domain.Player{}, errors.New("player not found")
 		}
@@ -516,7 +541,7 @@ func (r *Repository) AssignSkillToPlayer(ctx context.Context, playerID int64, sk
 	}
 
 	if _, err := r.db.ExecContext(ctx, `
-INSERT IGNORE INTO admin_player_skills (player_id, skill_id)
+INSERT IGNORE INTO player_skills (player_id, skill_id)
 VALUES (?, ?)`, playerID, existingSkillID); err != nil {
 		return domain.Player{}, err
 	}
@@ -535,17 +560,17 @@ func (r *Repository) ensureTable(ctx context.Context) error {
 		}
 
 		queries := []string{
-			`CREATE TABLE IF NOT EXISTS admin_player_skills (
+			`CREATE TABLE IF NOT EXISTS player_skills (
 				id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 				player_id BIGINT UNSIGNED NOT NULL,
 				skill_id BIGINT UNSIGNED NOT NULL,
 				created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 				PRIMARY KEY (id),
-				UNIQUE KEY uk_admin_player_skills_player_skill (player_id, skill_id),
-				KEY idx_admin_player_skills_player_id (player_id),
-				KEY idx_admin_player_skills_skill_id (skill_id),
-				CONSTRAINT fk_admin_player_skills_player FOREIGN KEY (player_id) REFERENCES admin_players(id) ON DELETE CASCADE,
-				CONSTRAINT fk_admin_player_skills_skill FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
+				UNIQUE KEY uk_player_skills_player_skill (player_id, skill_id),
+				KEY idx_player_skills_player_id (player_id),
+				KEY idx_player_skills_skill_id (skill_id),
+				CONSTRAINT fk_player_skills_player FOREIGN KEY (player_id) REFERENCES player_templates(id) ON DELETE CASCADE,
+				CONSTRAINT fk_player_skills_skill FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
 			) ENGINE=InnoDB`,
 		}
 
@@ -555,8 +580,6 @@ func (r *Repository) ensureTable(ctx context.Context) error {
 				return
 			}
 		}
-
-		r.ensureErr = r.backfillSpecialSkillsToRelation(ctx)
 	})
 
 	return r.ensureErr
@@ -578,11 +601,11 @@ func (r *Repository) loadPlayerSkills(ctx context.Context, players *[]domain.Pla
 	}
 
 	query := fmt.Sprintf(`
-SELECT aps.player_id, s.id, s.name, COALESCE(s.icon_url, ''), s.buff_type, s.buff_value, s.created_at
-FROM admin_player_skills aps
-INNER JOIN skills s ON s.id = aps.skill_id
-WHERE aps.player_id IN (%s)
-ORDER BY aps.player_id ASC, s.name ASC`, strings.Join(placeholders, ","))
+SELECT ps.player_id, s.id, s.name, COALESCE(s.icon_url, ''), s.buff_type, s.buff_value, s.created_at
+FROM player_skills ps
+INNER JOIN skills s ON s.id = ps.skill_id
+WHERE ps.player_id IN (%s)
+ORDER BY ps.player_id ASC, s.name ASC`, strings.Join(placeholders, ","))
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -618,53 +641,6 @@ ORDER BY aps.player_id ASC, s.name ASC`, strings.Join(placeholders, ","))
 	}
 
 	return nil
-}
-
-func (r *Repository) attachSkillsByNames(ctx context.Context, playerID int64, specialSkillText string) error {
-	names := parseSkillNames(specialSkillText)
-	if len(names) == 0 {
-		return nil
-	}
-
-	for _, name := range names {
-		var skillID int64
-		if err := r.db.QueryRowContext(ctx, `SELECT id FROM skills WHERE name = ? LIMIT 1`, name).Scan(&skillID); err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				continue
-			}
-			return err
-		}
-
-		if _, err := r.db.ExecContext(ctx, `INSERT IGNORE INTO admin_player_skills (player_id, skill_id) VALUES (?, ?)`, playerID, skillID); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (r *Repository) backfillSpecialSkillsToRelation(ctx context.Context) error {
-	rows, err := r.db.QueryContext(ctx, `
-SELECT id, special_skill
-FROM admin_players
-WHERE COALESCE(TRIM(special_skill), '') <> ''`)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var playerID int64
-		var specialSkill string
-		if err := rows.Scan(&playerID, &specialSkill); err != nil {
-			return err
-		}
-		if err := r.attachSkillsByNames(ctx, playerID, specialSkill); err != nil {
-			return err
-		}
-	}
-
-	return rows.Err()
 }
 
 func parseSkillNames(raw string) []string {

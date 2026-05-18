@@ -124,6 +124,7 @@ func main() {
 	api := router.Group("/api/v1")
 	api.Use(authmiddleware.RequireJWT(authUC, false))
 	api.GET("/auth/me", authHandler.Me)
+	api.POST("/auth/team", authHandler.AssignClub)
 	api.GET("/clubs/:id", clubHandler.GetClubByID)
 	api.GET("/ai/stages", aiHandler.ListStages)
 	api.GET("/ai/stages/:stageNo", aiHandler.GetStageDetail)

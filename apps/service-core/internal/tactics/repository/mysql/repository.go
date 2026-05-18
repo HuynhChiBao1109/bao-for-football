@@ -185,20 +185,20 @@ LIMIT 11`, userID)
 
 	fallbackRows, err := r.db.QueryContext(ctx, `
 SELECT
-  ap.id,
-  LEAST(99, GREATEST(1, ap.pace)) AS pace,
-  LEAST(99, GREATEST(1, ap.passing)) AS passing,
-  LEAST(99, GREATEST(1, ap.long_pass)) AS long_pass,
-  LEAST(99, GREATEST(1, ap.vision)) AS vision,
-  LEAST(99, GREATEST(1, ap.shooting)) AS shooting,
-  LEAST(99, GREATEST(1, ap.defending)) AS defending,
-	LEAST(99, GREATEST(1, ap.standing_tackle)) AS standing_tackle,
-	LEAST(99, GREATEST(1, ap.sliding_tackle)) AS sliding_tackle,
-  LEAST(99, GREATEST(1, ROUND((ap.physical + ap.dribbling + ap.passing) / 3, 0))) AS mental
+  pt.id,
+  LEAST(99, GREATEST(1, pt.base_pace)) AS pace,
+  LEAST(99, GREATEST(1, pt.base_passing)) AS passing,
+  LEAST(99, GREATEST(1, pt.base_long_pass)) AS long_pass,
+  LEAST(99, GREATEST(1, pt.base_vision)) AS vision,
+  LEAST(99, GREATEST(1, pt.base_shooting)) AS shooting,
+  LEAST(99, GREATEST(1, pt.base_defending)) AS defending,
+	LEAST(99, GREATEST(1, pt.base_standing_tackle)) AS standing_tackle,
+	LEAST(99, GREATEST(1, pt.base_sliding_tackle)) AS sliding_tackle,
+  LEAST(99, GREATEST(1, ROUND((pt.base_physical + pt.base_dribbling + pt.base_passing) / 3, 0))) AS mental
 FROM teams t
-INNER JOIN admin_players ap ON ap.base_club = t.club_name
-WHERE t.user_id = ?
-ORDER BY ap.id ASC
+INNER JOIN player_templates pt ON pt.base_club = t.club_name
+WHERE t.user_id = ? AND pt.season = 'normal'
+ORDER BY pt.id ASC
 LIMIT 11`, userID)
 	if err != nil {
 		return nil, err

@@ -27,6 +27,7 @@ func NewHandler(uc *playeradminusecase.PlayerAdminUseCase) *Handler {
 type createPlayerRequest struct {
 	Name         string `json:"name" form:"name"`
 	CountryID    int64  `json:"countryId" form:"countryId"`
+	ClubID       int64  `json:"clubId" form:"clubId"`
 	Avatar       string `json:"avatar" form:"avatar"`
 	BaseClub     string `json:"baseClub" form:"baseClub"`
 	Season       string `json:"season" form:"season"`
@@ -83,7 +84,6 @@ type createClubRequest struct {
 	Name       string `json:"name" form:"name"`
 	Logo       string `json:"logo" form:"logo"`
 	CountryID  int64  `json:"countryId" form:"countryId"`
-	Budget     int64  `json:"budget" form:"budget"`
 	LeagueName string `json:"leagueName" form:"leagueName"`
 }
 
@@ -129,7 +129,6 @@ func (h *Handler) CreateClub(c *gin.Context) {
 		Name:       req.Name,
 		Logo:       req.Logo,
 		CountryID:  &countryID,
-		Budget:     req.Budget,
 		LeagueName: req.LeagueName,
 	})
 	if err != nil {
@@ -253,6 +252,7 @@ func (h *Handler) Create(c *gin.Context) {
 	created, err := h.uc.Create(c.Request.Context(), domain.Player{
 		Name:           req.Name,
 		CountryID:      req.CountryID,
+		ClubID:         req.ClubID,
 		Avatar:         stringToPtr(req.Avatar),
 		BaseClub:       req.BaseClub,
 		Season:         req.Season,

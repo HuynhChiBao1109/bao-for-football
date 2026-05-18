@@ -18,7 +18,6 @@ type migrationClub struct {
 	Name       string            `gorm:"type:varchar(120);not null;uniqueIndex:uk_clubs_name;column:name"`
 	Logo       string            `gorm:"type:varchar(500);not null;default:'';column:logo"`
 	CountryID  *uint64           `gorm:"index:idx_clubs_country_id;column:country_id"`
-	Budget     int64             `gorm:"not null;default:0;column:budget"`
 	LeagueName string            `gorm:"type:varchar(120);not null;column:league_name"`
 	CreatedAt  time.Time         `gorm:"column:created_at"`
 	UpdatedAt  time.Time         `gorm:"column:updated_at"`
@@ -45,15 +44,14 @@ func (migrationUser) TableName() string {
 }
 
 type migrationTeam struct {
-	ID        uint64         `gorm:"primaryKey;autoIncrement;column:id"`
-	UserID    uint64         `gorm:"not null;uniqueIndex:uk_teams_user_id;column:user_id"`
-	ClubID    *uint64        `gorm:"index:idx_teams_club_id;column:club_id"`
-	ClubName  string         `gorm:"type:varchar(100);not null;column:club_name"`
-	Budget    int64          `gorm:"not null;default:0;column:budget"`
-	RankPoint int            `gorm:"not null;default:0;column:rank_point"`
-	CreatedAt time.Time      `gorm:"column:created_at"`
-	UpdatedAt time.Time      `gorm:"column:updated_at"`
-	Club      *migrationClub `gorm:"foreignKey:ClubID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	ID        uint64    `gorm:"primaryKey;autoIncrement;column:id"`
+	UserID    uint64    `gorm:"not null;uniqueIndex:uk_teams_user_id;column:user_id"`
+	ClubName  string    `gorm:"type:varchar(100);not null;column:club_name"`
+	Image     string    `gorm:"type:varchar(500);not null;default:'';column:image"`
+	Budget    int64     `gorm:"not null;default:360000000;column:budget"`
+	RankPoint int       `gorm:"not null;default:0;column:rank_point"`
+	CreatedAt time.Time `gorm:"column:created_at"`
+	UpdatedAt time.Time `gorm:"column:updated_at"`
 }
 
 func (migrationTeam) TableName() string {
@@ -73,52 +71,14 @@ func (migrationCountry) TableName() string {
 	return "countries"
 }
 
-type migrationAdminPlayer struct {
-	ID             uint64            `gorm:"primaryKey;autoIncrement;column:id"`
-	Name           string            `gorm:"type:varchar(120);not null;column:name"`
-	CountryID      *uint64           `gorm:"index:idx_admin_players_country_id;column:country_id"`
-	Avatar         string            `gorm:"type:varchar(500);column:avatar"`
-	Nationality    string            `gorm:"type:varchar(80);not null;column:nationality"`
-	BaseClub       string            `gorm:"type:varchar(120);not null;column:base_club"`
-	Season         string            `gorm:"type:enum('Normal','Special');not null;default:Normal;index:idx_admin_players_season;column:season"`
-	SourceType     string            `gorm:"type:enum('normal','gacha');not null;default:normal;index:idx_admin_players_source_type;column:source_type"`
-	SpecialSkill   string            `gorm:"type:varchar(120);not null;default:'';column:special_skill"`
-	Shooting       uint8             `gorm:"not null;column:shooting"`
-	Passing        uint8             `gorm:"not null;column:passing"`
-	LongPass       uint8             `gorm:"not null;default:60;column:long_pass"`
-	Vision         uint8             `gorm:"not null;default:60;column:vision"`
-	GKReach        uint8             `gorm:"not null;default:60;column:gk_reach"`
-	AttAwareness   uint8             `gorm:"not null;default:60;column:counter_attack_awareness"`
-	DefAwareness   uint8             `gorm:"not null;default:60;column:defending"`
-	GKParrying     uint8             `gorm:"not null;default:60;column:gk_parrying"`
-	GKReflex       uint8             `gorm:"not null;default:60;column:gk_reflex"`
-	Duels          uint8             `gorm:"not null;default:60;column:duels"`
-	Pace           uint8             `gorm:"not null;column:pace"`
-	Stamina        uint8             `gorm:"not null;default:60;column:stamina"`
-	Balance        uint8             `gorm:"not null;default:60;column:balance"`
-	Technique      uint8             `gorm:"not null;default:60;column:technique"`
-	Determination  uint8             `gorm:"not null;default:60;column:determination"`
-	Strength       uint8             `gorm:"not null;column:physical"`
-	StandingTackle uint8             `gorm:"not null;default:60;column:standing_tackle"`
-	SlidingTackle  uint8             `gorm:"not null;default:60;column:sliding_tackle"`
-	Dribbling      uint8             `gorm:"not null;column:dribbling"`
-	Curve          uint8             `gorm:"not null;default:60;column:curve"`
-	CreatedAt      time.Time         `gorm:"column:created_at"`
-	Country        *migrationCountry `gorm:"foreignKey:CountryID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
-}
-
-func (migrationAdminPlayer) TableName() string {
-	return "admin_players"
-}
-
 type migrationPlayerTemplate struct {
 	ID                 uint64            `gorm:"primaryKey;autoIncrement;column:id"`
 	Name               string            `gorm:"type:varchar(120);not null;index:idx_player_templates_name;column:name"`
 	HeightCM           uint16            `gorm:"not null;column:height_cm"`
 	CountryID          *uint64           `gorm:"index:idx_player_templates_country_id;column:country_id"`
-	Nationality        string            `gorm:"type:varchar(80);not null;column:nationality"`
+	ClubID             *uint64           `gorm:"index:idx_player_templates_club_id;column:club_id"`
 	BaseClub           string            `gorm:"type:varchar(120);not null;column:base_club"`
-	Season             string            `gorm:"type:enum('Normal','Special');not null;default:Normal;index:idx_player_templates_season;column:season"`
+	Season             string            `gorm:"type:enum('normal','special year','special match','moment time');not null;default:normal;index:idx_player_templates_season;column:season"`
 	ImageURL           string            `gorm:"type:varchar(500);column:image_url"`
 	BaseShooting       int               `gorm:"not null;default:1;column:base_shooting"`
 	BasePassing        int               `gorm:"not null;default:1;column:base_passing"`
@@ -143,6 +103,7 @@ type migrationPlayerTemplate struct {
 	CreatedAt          time.Time         `gorm:"column:created_at"`
 	UpdatedAt          time.Time         `gorm:"column:updated_at"`
 	Country            *migrationCountry `gorm:"foreignKey:CountryID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	Club               *migrationClub    `gorm:"foreignKey:ClubID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 }
 
 func (migrationPlayerTemplate) TableName() string {
@@ -200,15 +161,15 @@ func (migrationSkill) TableName() string {
 	return "skills"
 }
 
-type migrationAdminPlayerSkill struct {
+type migrationPlayerSkill struct {
 	ID       uint64    `gorm:"primaryKey;autoIncrement;column:id"`
-	PlayerID uint64    `gorm:"not null;index:idx_admin_player_skills_player_id;uniqueIndex:uk_admin_player_skills_player_skill,priority:1;column:player_id"`
-	SkillID  uint64    `gorm:"not null;index:idx_admin_player_skills_skill_id;uniqueIndex:uk_admin_player_skills_player_skill,priority:2;column:skill_id"`
+	PlayerID uint64    `gorm:"not null;index:idx_player_skills_player_id;uniqueIndex:uk_player_skills_player_skill,priority:1;column:player_id"`
+	SkillID  uint64    `gorm:"not null;index:idx_player_skills_skill_id;uniqueIndex:uk_player_skills_player_skill,priority:2;column:skill_id"`
 	CreatedAt time.Time `gorm:"column:created_at"`
 }
 
-func (migrationAdminPlayerSkill) TableName() string {
-	return "admin_player_skills"
+func (migrationPlayerSkill) TableName() string {
+	return "player_skills"
 }
 
 type migrationGachaLog struct {
@@ -229,18 +190,18 @@ func (migrationGachaLog) TableName() string {
 	return "gacha_logs"
 }
 
-type migrationAdminGachaBanner struct {
+type migrationGachaBanner struct {
 	ID              uint64    `gorm:"primaryKey;autoIncrement;column:id"`
-	BannerCode      string    `gorm:"type:varchar(80);not null;uniqueIndex:uk_admin_gacha_banners_banner_code;column:banner_code"`
+	BannerCode      string    `gorm:"type:varchar(80);not null;uniqueIndex:uk_gacha_banners_banner_code;column:banner_code"`
 	BannerName      string    `gorm:"type:varchar(120);not null;column:banner_name"`
 	BannerImageData string    `gorm:"type:longtext;not null;column:banner_image_data"`
-	PlayerID        int64     `gorm:"not null;index:idx_admin_gacha_banners_player_id;column:player_id"`
+	PlayerID        int64     `gorm:"not null;index:idx_gacha_banners_player_id;column:player_id"`
 	CreatedAt       time.Time `gorm:"column:created_at"`
 	UpdatedAt       time.Time `gorm:"column:updated_at"`
 }
 
-func (migrationAdminGachaBanner) TableName() string {
-	return "admin_gacha_banners"
+func (migrationGachaBanner) TableName() string {
+	return "gacha_banners"
 }
 
 type migrationTeamTactics struct {
@@ -327,19 +288,18 @@ type defaultClub struct {
 	Logo        string
 	CountryName string
 	CountryCode string
-	Budget      int64
 	LeagueName  string
 }
 
 var fallbackSeededClubs = []defaultClub{
-	{ID: 1, Name: "Manchester United", Logo: "https://media.api-sports.io/football/teams/33.png", CountryName: "England", CountryCode: "GB-ENG", Budget: 120000000, LeagueName: "Premier League"},
-	{ID: 2, Name: "Manchester City", Logo: "https://media.api-sports.io/football/teams/50.png", CountryName: "England", CountryCode: "GB-ENG", Budget: 118000000, LeagueName: "Premier League"},
-	{ID: 3, Name: "Liverpool", Logo: "https://media.api-sports.io/football/teams/40.png", CountryName: "England", CountryCode: "GB-ENG", Budget: 116000000, LeagueName: "Premier League"},
-	{ID: 4, Name: "Chelsea", Logo: "https://media.api-sports.io/football/teams/49.png", CountryName: "England", CountryCode: "GB-ENG", Budget: 114000000, LeagueName: "Premier League"},
-	{ID: 5, Name: "Arsenal", Logo: "https://media.api-sports.io/football/teams/42.png", CountryName: "England", CountryCode: "GB-ENG", Budget: 112000000, LeagueName: "Premier League"},
-	{ID: 6, Name: "Tottenham Hotspur", Logo: "https://media.api-sports.io/football/teams/47.png", CountryName: "England", CountryCode: "GB-ENG", Budget: 110000000, LeagueName: "Premier League"},
-	{ID: 7, Name: "Newcastle United", Logo: "https://media.api-sports.io/football/teams/34.png", CountryName: "England", CountryCode: "GB-ENG", Budget: 108000000, LeagueName: "Premier League"},
-	{ID: 8, Name: "Aston Villa", Logo: "https://media.api-sports.io/football/teams/66.png", CountryName: "England", CountryCode: "GB-ENG", Budget: 106000000, LeagueName: "Premier League"},
+	{ID: 1, Name: "Manchester United", Logo: "https://media.api-sports.io/football/teams/33.png", CountryName: "England", CountryCode: "GB-ENG", LeagueName: "Premier League"},
+	{ID: 2, Name: "Manchester City", Logo: "https://media.api-sports.io/football/teams/50.png", CountryName: "England", CountryCode: "GB-ENG", LeagueName: "Premier League"},
+	{ID: 3, Name: "Liverpool", Logo: "https://media.api-sports.io/football/teams/40.png", CountryName: "England", CountryCode: "GB-ENG", LeagueName: "Premier League"},
+	{ID: 4, Name: "Chelsea", Logo: "https://media.api-sports.io/football/teams/49.png", CountryName: "England", CountryCode: "GB-ENG", LeagueName: "Premier League"},
+	{ID: 5, Name: "Arsenal", Logo: "https://media.api-sports.io/football/teams/42.png", CountryName: "England", CountryCode: "GB-ENG", LeagueName: "Premier League"},
+	{ID: 6, Name: "Tottenham Hotspur", Logo: "https://media.api-sports.io/football/teams/47.png", CountryName: "England", CountryCode: "GB-ENG", LeagueName: "Premier League"},
+	{ID: 7, Name: "Newcastle United", Logo: "https://media.api-sports.io/football/teams/34.png", CountryName: "England", CountryCode: "GB-ENG", LeagueName: "Premier League"},
+	{ID: 8, Name: "Aston Villa", Logo: "https://media.api-sports.io/football/teams/66.png", CountryName: "England", CountryCode: "GB-ENG", LeagueName: "Premier League"},
 }
 
 type defaultCountry struct {
@@ -380,22 +340,28 @@ func AutoMigrate(ctx context.Context, db *gorm.DB) error {
 		return err
 	}
 
+	if err := ensureLegacyTableRenames(ctx, sqlDB); err != nil {
+		return err
+	}
+
 	if err := ensureClubSchema(ctx, sqlDB); err != nil {
+		return err
+	}
+	if err := ensureTeamSchema(ctx, sqlDB); err != nil {
 		return err
 	}
 
 	if err := db.WithContext(ctx).Set("gorm:table_options", "ENGINE=InnoDB").AutoMigrate(
 		&migrationClub{},
 		&migrationCountry{},
-		&migrationAdminPlayer{},
 		&migrationPlayerTemplate{},
 		&migrationSkill{},
-		&migrationAdminPlayerSkill{},
+		&migrationPlayerSkill{},
 		&migrationUser{},
 		&migrationTeam{},
 		&migrationUserPlayer{},
 		&migrationGachaLog{},
-		&migrationAdminGachaBanner{},
+		&migrationGachaBanner{},
 		&migrationTeamTactics{},
 		&migrationAIUserStage{},
 		&migrationMatch{},
@@ -405,6 +371,12 @@ func AutoMigrate(ctx context.Context, db *gorm.DB) error {
 	}
 
 	if err := ensureClubSchema(ctx, sqlDB); err != nil {
+		return err
+	}
+	if err := ensureTeamSchema(ctx, sqlDB); err != nil {
+		return err
+	}
+	if err := ensurePlayerTemplateSchema(ctx, sqlDB); err != nil {
 		return err
 	}
 
@@ -500,10 +472,6 @@ func ensureGoalkeeperColumnRenames(ctx context.Context, db *sql.DB) error {
 		newColumn  string
 		definition string
 	}{
-		{"admin_players", "defensive_awareness", "gk_reach", "TINYINT UNSIGNED NOT NULL DEFAULT 60"},
-		{"admin_players", "crossbar_handling", "gk_parrying", "TINYINT UNSIGNED NOT NULL DEFAULT 60"},
-		{"admin_players", "reflexes", "gk_reflex", "TINYINT UNSIGNED NOT NULL DEFAULT 60"},
-		{"admin_players", "aerial_catching", "gk_catching", "TINYINT UNSIGNED NOT NULL DEFAULT 60"},
 		{"player_templates", "base_defensive_awareness", "base_gk_reach", "INT NOT NULL DEFAULT 1"},
 		{"player_templates", "base_crossbar_handling", "base_gk_parrying", "INT NOT NULL DEFAULT 1"},
 		{"player_templates", "base_reflexes", "base_gk_reflex", "INT NOT NULL DEFAULT 1"},
@@ -562,6 +530,106 @@ WHERE table_schema = DATABASE()
 	return count > 0, nil
 }
 
+func hasTable(ctx context.Context, db *sql.DB, tableName string) (bool, error) {
+	var count int
+	err := db.QueryRowContext(ctx, `
+SELECT COUNT(*)
+FROM information_schema.tables
+WHERE table_schema = DATABASE()
+  AND table_name = ?`, tableName).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}
+
+func ensureLegacyTableRenames(ctx context.Context, db *sql.DB) error {
+	legacyMappings := []struct {
+		oldName string
+		newName string
+	}{
+		{oldName: "admin_gacha_banners", newName: "gacha_banners"},
+		{oldName: "admin_player_skills", newName: "player_skills"},
+	}
+
+	for _, mapping := range legacyMappings {
+		oldExists, err := hasTable(ctx, db, mapping.oldName)
+		if err != nil {
+			return err
+		}
+		if !oldExists {
+			continue
+		}
+
+		newExists, err := hasTable(ctx, db, mapping.newName)
+		if err != nil {
+			return err
+		}
+		if newExists {
+			continue
+		}
+
+		if _, err := db.ExecContext(ctx, fmt.Sprintf("RENAME TABLE %s TO %s", mapping.oldName, mapping.newName)); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func ensurePlayerTemplateSchema(ctx context.Context, db *sql.DB) error {
+	clubIDExists, err := hasColumn(ctx, db, "player_templates", "club_id")
+	if err != nil {
+		return err
+	}
+	if !clubIDExists {
+		if _, err := db.ExecContext(ctx, `ALTER TABLE player_templates ADD COLUMN club_id bigint unsigned NULL AFTER country_id`); err != nil {
+			return err
+		}
+	}
+
+	if _, err := db.ExecContext(ctx, `
+UPDATE player_templates pt
+INNER JOIN clubs c ON c.name = pt.base_club
+SET pt.club_id = c.id
+WHERE pt.club_id IS NULL`); err != nil {
+		return err
+	}
+
+	if _, err := db.ExecContext(ctx, `
+UPDATE player_templates
+SET season = 'normal'
+WHERE season IN ('Normal', 'NORMAL')`); err != nil {
+		return err
+	}
+	if _, err := db.ExecContext(ctx, `
+UPDATE player_templates
+SET season = 'special year'
+WHERE season IN ('Special', 'SPECIAL')`); err != nil {
+		return err
+	}
+
+	nationalityExists, err := hasColumn(ctx, db, "player_templates", "nationality")
+	if err != nil {
+		return err
+	}
+	if nationalityExists {
+		if _, err := db.ExecContext(ctx, `
+UPDATE player_templates pt
+INNER JOIN countries c ON c.name = pt.nationality
+SET pt.country_id = c.id
+WHERE pt.country_id IS NULL`); err != nil {
+			return err
+		}
+		if _, err := db.ExecContext(ctx, `ALTER TABLE player_templates DROP COLUMN nationality`); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func ensureClubSchema(ctx context.Context, db *sql.DB) error {
 	logoExists, err := hasColumn(ctx, db, "clubs", "logo")
 	if err != nil {
@@ -593,6 +661,99 @@ func ensureClubSchema(ctx context.Context, db *sql.DB) error {
 		}
 	}
 
+	budgetExists, err := hasColumn(ctx, db, "clubs", "budget")
+	if err != nil {
+		return err
+	}
+	if budgetExists {
+		if _, err := db.ExecContext(ctx, `ALTER TABLE clubs DROP COLUMN budget`); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func ensureTeamSchema(ctx context.Context, db *sql.DB) error {
+	teamsExists, err := hasTable(ctx, db, "teams")
+	if err != nil {
+		return err
+	}
+	if !teamsExists {
+		return nil
+	}
+
+	imageExists, err := hasColumn(ctx, db, "teams", "image")
+	if err != nil {
+		return err
+	}
+	if !imageExists {
+		if _, err := db.ExecContext(ctx, `ALTER TABLE teams ADD COLUMN image varchar(500) NOT NULL DEFAULT '' AFTER club_name`); err != nil {
+			return err
+		}
+	}
+
+	if _, err := db.ExecContext(ctx, `
+UPDATE teams t
+LEFT JOIN clubs c ON c.name = t.club_name
+SET t.image = COALESCE(c.logo, '')
+WHERE t.image = ''`); err != nil {
+		return err
+	}
+
+	clubIDExists, err := hasColumn(ctx, db, "teams", "club_id")
+	if err != nil {
+		return err
+	}
+	if clubIDExists {
+		rows, err := db.QueryContext(ctx, `
+SELECT CONSTRAINT_NAME
+FROM information_schema.KEY_COLUMN_USAGE
+WHERE TABLE_SCHEMA = DATABASE()
+  AND TABLE_NAME = 'teams'
+  AND COLUMN_NAME = 'club_id'
+  AND REFERENCED_TABLE_NAME IS NOT NULL`)
+		if err != nil {
+			return err
+		}
+		constraints := make([]string, 0, 2)
+		for rows.Next() {
+			var constraintName string
+			if err := rows.Scan(&constraintName); err != nil {
+				rows.Close()
+				return err
+			}
+			constraints = append(constraints, constraintName)
+		}
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			return err
+		}
+		rows.Close()
+
+		for _, constraintName := range constraints {
+			if _, err := db.ExecContext(ctx, fmt.Sprintf("ALTER TABLE teams DROP FOREIGN KEY %s", constraintName)); err != nil {
+				return err
+			}
+		}
+
+		if _, err := db.ExecContext(ctx, `ALTER TABLE teams DROP COLUMN club_id`); err != nil {
+			return err
+		}
+	}
+
+	if _, err := db.ExecContext(ctx, `
+UPDATE teams
+SET budget = 360000000`); err != nil {
+		return err
+	}
+
+	if _, err := db.ExecContext(ctx, `
+ALTER TABLE teams
+MODIFY COLUMN budget bigint NOT NULL DEFAULT 360000000`); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -609,13 +770,12 @@ func ensureDefaultClubs(ctx context.Context, db *sql.DB) error {
 		}
 
 		_, err = db.ExecContext(ctx, `
-INSERT IGNORE INTO clubs (id, name, logo, country_id, budget, league_name)
-VALUES (?, ?, ?, ?, ?, ?)`,
+INSERT IGNORE INTO clubs (id, name, logo, country_id, league_name)
+VALUES (?, ?, ?, ?, ?)`,
 			club.ID,
 			club.Name,
 			club.Logo,
 			countryID,
-			club.Budget,
 			club.LeagueName,
 		)
 		if err != nil {
@@ -648,20 +808,18 @@ VALUES (?, ?, ?)`,
 }
 
 func backfillCountryRelations(ctx context.Context, db *sql.DB) error {
-	if _, err := db.ExecContext(ctx, `
-UPDATE admin_players ap
-INNER JOIN countries c ON c.name = ap.nationality
-SET ap.country_id = c.id
-WHERE ap.country_id IS NULL`); err != nil {
+	nationalityExists, err := hasColumn(ctx, db, "player_templates", "nationality")
+	if err != nil {
 		return err
 	}
-
-	if _, err := db.ExecContext(ctx, `
+	if nationalityExists {
+		if _, err := db.ExecContext(ctx, `
 UPDATE player_templates pt
 INNER JOIN countries c ON c.name = pt.nationality
 SET pt.country_id = c.id
 WHERE pt.country_id IS NULL`); err != nil {
-		return err
+			return err
+		}
 	}
 
 	return nil
@@ -677,8 +835,8 @@ func ensureDefaultPlayers(ctx context.Context, db *sql.DB) error {
 		var existingCount int
 		err := db.QueryRowContext(ctx, `
 SELECT COUNT(*)
-FROM admin_players
-WHERE source_type = 'normal' AND base_club = ?`, club.Name).Scan(&existingCount)
+FROM player_templates
+WHERE season = 'normal' AND base_club = ?`, club.Name).Scan(&existingCount)
 		if err != nil {
 			return err
 		}
@@ -716,38 +874,38 @@ WHERE source_type = 'normal' AND base_club = ?`, club.Name).Scan(&existingCount)
 			curve := boundedStat(56 + ((globalIdx + 5) % 18))
 
 			_, err = db.ExecContext(ctx, `
-INSERT INTO admin_players (
+INSERT INTO player_templates (
   name,
+	height_cm,
 	country_id,
-  nationality,
+	club_id,
   base_club,
   season,
-  source_type,
-  special_skill,
-  shooting,
-  passing,
-  long_pass,
-  vision,
-	gk_reach,
-	counter_attack_awareness,
-	defending,
-	gk_parrying,
-	gk_reflex,
-	duels,
-  pace,
-  stamina,
-  balance,
-  technique,
-  determination,
-  physical,
-	  standing_tackle,
-	  sliding_tackle,
-  dribbling,
-  curve
-) VALUES (?, ?, ?, ?, 'Normal', 'normal', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+	image_url,
+	base_shooting,
+	base_passing,
+	base_long_pass,
+	base_vision,
+	base_gk_reach,
+	base_counter_attack_awareness,
+	base_defending,
+	base_gk_parrying,
+	base_gk_reflex,
+	base_duels,
+	base_pace,
+	base_stamina,
+	base_balance,
+	base_technique,
+	base_determination,
+	base_physical,
+	base_standing_tackle,
+	base_sliding_tackle,
+	base_dribbling,
+	base_curve
+) VALUES (?, 170, ?, ?, ?, 'normal', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
 				name,
 				countryID,
-				country.Name,
+				club.ID,
 				club.Name,
 				shooting,
 				passing,
@@ -889,7 +1047,6 @@ func loadSeededClubs() ([]defaultClub, error) {
 				Logo:        strings.TrimSpace(rawClub.Team.Logo),
 				CountryName: strings.TrimSpace(rawClub.Team.Country),
 				CountryCode: "GB-ENG",
-				Budget:      clubBudgetFor(name),
 				LeagueName:  "Premier League",
 			})
 		}
@@ -920,29 +1077,6 @@ func normalizeClubName(name string) string {
 		return "AFC Bournemouth"
 	default:
 		return strings.TrimSpace(name)
-	}
-}
-
-func clubBudgetFor(name string) int64 {
-	switch name {
-	case "Manchester United":
-		return 120000000
-	case "Manchester City":
-		return 118000000
-	case "Liverpool":
-		return 116000000
-	case "Chelsea":
-		return 114000000
-	case "Arsenal":
-		return 112000000
-	case "Tottenham Hotspur":
-		return 110000000
-	case "Newcastle United":
-		return 108000000
-	case "Aston Villa":
-		return 106000000
-	default:
-		return 100000000
 	}
 }
 

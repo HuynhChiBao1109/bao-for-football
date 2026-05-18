@@ -55,18 +55,11 @@ func (u *AuthUseCase) ListRegistrationClubs(ctx context.Context) ([]domain.ClubO
 	return u.repo.ListRegistrationClubs(ctx)
 }
 
-func (u *AuthUseCase) Register(ctx context.Context, username, password, clubName string, clubID int64) (UserInfo, error) {
+func (u *AuthUseCase) Register(ctx context.Context, username, password string) (UserInfo, error) {
 	username = strings.TrimSpace(username)
 	password = strings.TrimSpace(password)
-	clubName = strings.TrimSpace(clubName)
 	if username == "" || password == "" {
 		return UserInfo{}, errors.New("username and password are required")
-	}
-	if clubName == "" {
-		return UserInfo{}, errors.New("clubName is required")
-	}
-	if len(clubName) > 100 {
-		return UserInfo{}, errors.New("clubName must be at most 100 characters")
 	}
 	if len(password) < 4 {
 		return UserInfo{}, errors.New("password must be at least 4 characters")
@@ -75,39 +68,53 @@ func (u *AuthUseCase) Register(ctx context.Context, username, password, clubName
 		return UserInfo{}, errors.New("reserved username")
 	}
 
-	clubs, err := u.repo.ListRegistrationClubs(ctx)
-	if err != nil {
-		return UserInfo{}, err
-	}
-	if len(clubs) == 0 {
-		return UserInfo{}, errors.New("no clubs available for registration")
-	}
-
-	if clubID == 0 {
-		clubID = clubs[0].ID
-	}
-
-	clubExists := false
-	for _, club := range clubs {
-		if club.ID == clubID {
-			clubExists = true
-			break
-		}
-	}
-	if !clubExists {
-		return UserInfo{}, errors.New("invalid clubId")
-	}
-
 	user, err := u.repo.Create(ctx, username, password)
 	if err != nil {
 		return UserInfo{}, err
 	}
 
-	if err := u.repo.AssignClubToUser(ctx, user.ID, clubID, clubName); err != nil {
-		return UserInfo{}, err
+	return UserInfo{ID: user.ID, Username: user.Username, IsAdmin: false}, nil
+}
+
+func (u *AuthUseCase) AssignClub(ctx context.Context, userID uint64, clubID int64) (*domain.TeamAssignment, error) {
+	if userID == 0 {
+		return nil, errors.New("userId is required")
+	}
+	if clubID <= 0 {
+		return nil, errors.New("clubId is required")
 	}
 
-	return UserInfo{ID: user.ID, Username: user.Username, IsAdmin: false}, nil
+	clubs, err := u.repo.ListRegistrationClubs(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if len(clubs) == 0 {
+		return nil, errors.New("no clubs available")
+	}
+
+	var selected *domain.ClubOption
+	for i := range clubs {
+		if clubs[i].ID == clubID {
+			selected = &clubs[i]
+			break
+		}
+	}
+	if selected == nil {
+		return nil, errors.New("invalid clubId")
+	}
+
+	if err := u.repo.AssignClubToUser(ctx, userID, clubID, selected.Name); err != nil {
+		return nil, err
+	}
+
+	team, err := u.repo.GetTeamAssignment(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if team != nil {
+		team.TacticsTeamID = buildTacticsTeamID(userID)
+	}
+	return team, nil
 }
 
 func (u *AuthUseCase) Login(ctx context.Context, username, password string) (TokenPair, UserInfo, error) {

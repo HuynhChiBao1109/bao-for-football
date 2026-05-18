@@ -13,6 +13,7 @@ type TeamAssignment struct {
 	UserID        uint64 `json:"userId"`
 	ClubID        *int64 `json:"clubId,omitempty"`
 	ClubName      string `json:"clubName"`
+	Image         string `json:"image"`
 	Budget        int64  `json:"budget"`
 	RankPoint     int    `json:"rankPoint"`
 	TacticsTeamID string `json:"tacticsTeamId"`

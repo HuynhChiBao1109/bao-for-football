@@ -23,7 +23,7 @@ func (r *Repository) CreateBanner(ctx context.Context, input domain.BannerConfig
 	}
 
 	result, err := r.db.ExecContext(ctx, `
-INSERT INTO admin_gacha_banners (
+INSERT INTO gacha_banners (
   banner_code,
   banner_name,
   banner_image_data,

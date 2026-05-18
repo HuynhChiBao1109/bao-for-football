@@ -28,6 +28,10 @@ type loginRequest struct {
 	Password string `json:"password"`
 }
 
+type assignClubRequest struct {
+	ClubID int64 `json:"clubId"`
+}
+
 func (h *Handler) Register(c *gin.Context) {
 	var req registerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -35,7 +39,7 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	user, err := h.uc.Register(c.Request.Context(), req.Username, req.Password, req.ClubName, req.ClubID)
+	user, err := h.uc.Register(c.Request.Context(), req.Username, req.Password)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -109,6 +113,34 @@ func (h *Handler) Me(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": session})
+}
+
+func (h *Handler) AssignClub(c *gin.Context) {
+	userIDValue, exists := c.Get("authUserID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing auth user"})
+		return
+	}
+
+	userID, ok := userIDValue.(uint64)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid auth user"})
+		return
+	}
+
+	var req assignClubRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	team, err := h.uc.AssignClub(c.Request.Context(), userID, req.ClubID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "club assigned", "data": team})
 }
 
 func toString(value any) string {

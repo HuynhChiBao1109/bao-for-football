@@ -6,9 +6,10 @@ type Player struct {
 	ID             int64     `json:"id"`
 	Name           string    `json:"name"`
 	CountryID      int64     `json:"countryId"`
+	ClubID         int64     `json:"clubId"`
 	Country        Country   `json:"country"`
+	Club           Club      `json:"club"`
 	Avatar         *string   `json:"avatar"`
-	Nationality    string    `json:"nationality"`
 	BaseClub       string    `json:"baseClub"`
 	Season         string    `json:"season"`
 	SourceType     string    `json:"sourceType"`

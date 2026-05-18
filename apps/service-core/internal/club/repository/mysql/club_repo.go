@@ -8,6 +8,8 @@ import (
 	"fifam/apps/service-core/internal/club/domain"
 )
 
+const defaultClubBudget int64 = 360000000
+
 type Repository struct {
 	db *sql.DB
 }
@@ -23,7 +25,7 @@ func (r *Repository) GetByID(ctx context.Context, id int64) (*domain.Club, error
 			Name:       "Manchester United",
 			Logo:       "https://media.api-sports.io/football/teams/33.png",
 			CountryID:  nil,
-			Budget:     120000000,
+			Budget:     defaultClubBudget,
 			LeagueName: "Premier League",
 		}, nil
 	}
@@ -31,7 +33,7 @@ func (r *Repository) GetByID(ctx context.Context, id int64) (*domain.Club, error
 	club := &domain.Club{}
 	var countryID sql.NullInt64
 	query := `
-SELECT id, name, logo, country_id, budget, league_name
+	SELECT id, name, logo, country_id, league_name
 FROM clubs
 WHERE id = ?
 LIMIT 1`
@@ -41,7 +43,6 @@ LIMIT 1`
 		&club.Name,
 		&club.Logo,
 		&countryID,
-		&club.Budget,
 		&club.LeagueName,
 	)
 	if err != nil {
@@ -54,6 +55,7 @@ LIMIT 1`
 		value := countryID.Int64
 		club.CountryID = &value
 	}
+	club.Budget = defaultClubBudget
 
 	return club, nil
 }

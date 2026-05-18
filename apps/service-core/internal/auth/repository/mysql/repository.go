@@ -14,6 +14,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const defaultTeamBudget int64 = 360000000
+
 type Repository struct {
 	db         *sql.DB
 	ensureOnce sync.Once
@@ -47,7 +49,7 @@ func (r *Repository) ListRegistrationClubs(ctx context.Context) ([]domain.ClubOp
 	}
 
 	rows, err := r.db.QueryContext(ctx, `
-SELECT c.id, c.name, c.logo, c.country_id, c.budget, c.league_name
+SELECT c.id, c.name, c.logo, c.country_id, c.league_name
 FROM clubs c
 ORDER BY c.id ASC`)
 	if err != nil {
@@ -64,11 +66,11 @@ ORDER BY c.id ASC`)
 			&club.Name,
 			&club.Logo,
 			&countryID,
-			&club.Budget,
 			&club.LeagueName,
 		); err != nil {
 			return nil, err
 		}
+		club.Budget = defaultTeamBudget
 		if countryID.Valid {
 			value := countryID.Int64
 			club.CountryID = &value
@@ -143,6 +145,7 @@ func (r *Repository) GetTeamAssignment(ctx context.Context, userID uint64) (*dom
 			UserID:    userID,
 			ClubID:    &clubID,
 			ClubName:  club.Name,
+			Image:     club.Logo,
 			Budget:    club.Budget,
 			RankPoint: 0,
 		}, nil
@@ -153,15 +156,16 @@ func (r *Repository) GetTeamAssignment(ctx context.Context, userID uint64) (*dom
 	}
 
 	var team domain.TeamAssignment
-	var clubID sql.NullInt64
 	err := r.db.QueryRowContext(ctx, `
-SELECT user_id, club_id, club_name, budget, rank_point
-FROM teams
-WHERE user_id = ?
+SELECT t.user_id, c.id, t.club_name, t.image, t.budget, t.rank_point
+FROM teams t
+LEFT JOIN clubs c ON c.name = t.club_name
+WHERE t.user_id = ?
 LIMIT 1`, userID).Scan(
 		&team.UserID,
-		&clubID,
+		&team.ClubID,
 		&team.ClubName,
+		&team.Image,
 		&team.Budget,
 		&team.RankPoint,
 	)
@@ -171,11 +175,6 @@ LIMIT 1`, userID).Scan(
 		}
 		return nil, err
 	}
-	if clubID.Valid {
-		value := clubID.Int64
-		team.ClubID = &value
-	}
-
 	return &team, nil
 }
 
@@ -253,12 +252,12 @@ func (r *Repository) AssignClubToUser(ctx context.Context, userID uint64, clubID
 	defer tx.Rollback()
 
 	var starterClubName string
-	var budget int64
+	var starterClubLogo string
 	err = tx.QueryRowContext(ctx, `
-SELECT name, budget
+SELECT name, logo
 FROM clubs
 WHERE id = ?
-LIMIT 1`, clubID).Scan(&starterClubName, &budget)
+LIMIT 1`, clubID).Scan(&starterClubName, &starterClubLogo)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return fmt.Errorf("club id %d not found", clubID)
@@ -270,16 +269,16 @@ LIMIT 1`, clubID).Scan(&starterClubName, &budget)
 	}
 
 	_, err = tx.ExecContext(ctx, `
-INSERT INTO teams (user_id, club_id, club_name, budget, rank_point)
+INSERT INTO teams (user_id, club_name, image, budget, rank_point)
 VALUES (?, ?, ?, ?, 0)
 ON DUPLICATE KEY UPDATE
-  club_id = VALUES(club_id),
   club_name = VALUES(club_name),
+  image = VALUES(image),
   budget = VALUES(budget)`,
 		userID,
-		clubID,
 		clubName,
-		budget,
+		starterClubLogo,
+		defaultTeamBudget,
 	)
 	if err != nil {
 		return err
@@ -305,15 +304,11 @@ WHERE user_id = ?`, userID).Scan(&ownedCount)
 		return nil
 	}
 
-	if err := syncPlayerTemplatesFromAdmin(ctx, tx, starterClubName); err != nil {
-		return err
-	}
-
 	var availableCount int
 	err = tx.QueryRowContext(ctx, `
 SELECT COUNT(*)
 FROM player_templates
-WHERE base_club = ? AND season = 'Normal'`, starterClubName).Scan(&availableCount)
+WHERE base_club = ? AND season = 'normal'`, starterClubName).Scan(&availableCount)
 	if err != nil {
 		return err
 	}
@@ -344,27 +339,32 @@ INSERT INTO user_players (
 	bonus_vision,
 	bonus_gk_reach,
 	bonus_counter_attack_awareness,
+	bonus_defending,
 	bonus_gk_parrying,
 	bonus_gk_reflex,
-	bonus_gk_catching,
 	bonus_duels,
   bonus_pace,
+  bonus_stamina,
+  bonus_balance,
+  bonus_technique,
+  bonus_determination,
   bonus_physical,
-  bonus_defending,
 	bonus_standing_tackle,
 	bonus_sliding_tackle,
   bonus_dribbling,
+  bonus_curve,
   obtained_at
 )
-SELECT ?, pt.id, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, CURRENT_TIMESTAMP
+SELECT ?, pt.id, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, CURRENT_TIMESTAMP
 FROM player_templates pt
 LEFT JOIN user_players up
   ON up.user_id = ? AND up.player_template_id = pt.id
 WHERE pt.base_club = ?
-  AND pt.season = 'Normal'
+  AND pt.season = 'normal'
   AND up.id IS NULL
 ORDER BY pt.id ASC
 LIMIT ?`, userID, userID, starterClubName, assignCount)
+
 	if err != nil {
 		return err
 	}
@@ -380,86 +380,15 @@ LIMIT ?`, userID, userID, starterClubName, assignCount)
 	return nil
 }
 
-func syncPlayerTemplatesFromAdmin(ctx context.Context, tx *sql.Tx, starterClubName string) error {
-	_, err := tx.ExecContext(ctx, `
-INSERT INTO player_templates (
-  name,
-  height_cm,
-	country_id,
-  nationality,
-  base_club,
-  season,
-  image_url,
-  base_shooting,
-  base_passing,
-	base_long_pass,
-	base_vision,
-	base_gk_reach,
-	base_counter_attack_awareness,
-	base_defending,
-	base_gk_parrying,
-	base_gk_reflex,
-	base_duels,
-  base_pace,
-  base_stamina,
-  base_balance,
-  base_technique,
-  base_determination,
-  base_physical,
-	base_standing_tackle,
-	base_sliding_tackle,
-  base_dribbling,
-  base_curve
-)
-SELECT
-  ap.name,
-  170,
-	ap.country_id,
-  ap.nationality,
-  ap.base_club,
-  ap.season,
-  '',
-  ap.shooting,
-  ap.passing,
-	ap.long_pass,
-	ap.vision,
-	ap.gk_reach,
-	ap.counter_attack_awareness,
-	ap.defending,
-	ap.gk_parrying,
-	ap.gk_reflex,
-	ap.duels,
-  ap.pace,
-  ap.stamina,
-  ap.balance,
-  ap.technique,
-  ap.determination,
-  ap.physical,
-	ap.standing_tackle,
-	ap.sliding_tackle,
-  ap.dribbling,
-  ap.curve
-FROM admin_players ap
-LEFT JOIN player_templates pt
-  ON pt.name = ap.name
- AND pt.base_club = ap.base_club
- AND pt.season = ap.season
-WHERE ap.source_type = 'normal'
-  AND ap.base_club = ?
-  AND pt.id IS NULL
-ORDER BY ap.id ASC`, starterClubName)
-	return err
-}
-
 func defaultClubs() []domain.ClubOption {
 	return []domain.ClubOption{
-		{ID: 1, Name: "Manchester United", Logo: "https://media.api-sports.io/football/teams/33.png", Budget: 120000000, LeagueName: "Premier League"},
-		{ID: 2, Name: "Manchester City", Logo: "https://media.api-sports.io/football/teams/50.png", Budget: 118000000, LeagueName: "Premier League"},
-		{ID: 3, Name: "Liverpool", Logo: "https://media.api-sports.io/football/teams/40.png", Budget: 116000000, LeagueName: "Premier League"},
-		{ID: 4, Name: "Chelsea", Logo: "https://media.api-sports.io/football/teams/49.png", Budget: 114000000, LeagueName: "Premier League"},
-		{ID: 5, Name: "Arsenal", Logo: "https://media.api-sports.io/football/teams/42.png", Budget: 112000000, LeagueName: "Premier League"},
-		{ID: 6, Name: "Tottenham Hotspur", Logo: "https://media.api-sports.io/football/teams/47.png", Budget: 110000000, LeagueName: "Premier League"},
-		{ID: 7, Name: "Newcastle United", Logo: "https://media.api-sports.io/football/teams/34.png", Budget: 108000000, LeagueName: "Premier League"},
-		{ID: 8, Name: "Aston Villa", Logo: "https://media.api-sports.io/football/teams/66.png", Budget: 106000000, LeagueName: "Premier League"},
+		{ID: 1, Name: "Manchester United", Logo: "https://media.api-sports.io/football/teams/33.png", Budget: defaultTeamBudget, LeagueName: "Premier League"},
+		{ID: 2, Name: "Manchester City", Logo: "https://media.api-sports.io/football/teams/50.png", Budget: defaultTeamBudget, LeagueName: "Premier League"},
+		{ID: 3, Name: "Liverpool", Logo: "https://media.api-sports.io/football/teams/40.png", Budget: defaultTeamBudget, LeagueName: "Premier League"},
+		{ID: 4, Name: "Chelsea", Logo: "https://media.api-sports.io/football/teams/49.png", Budget: defaultTeamBudget, LeagueName: "Premier League"},
+		{ID: 5, Name: "Arsenal", Logo: "https://media.api-sports.io/football/teams/42.png", Budget: defaultTeamBudget, LeagueName: "Premier League"},
+		{ID: 6, Name: "Tottenham Hotspur", Logo: "https://media.api-sports.io/football/teams/47.png", Budget: defaultTeamBudget, LeagueName: "Premier League"},
+		{ID: 7, Name: "Newcastle United", Logo: "https://media.api-sports.io/football/teams/34.png", Budget: defaultTeamBudget, LeagueName: "Premier League"},
+		{ID: 8, Name: "Aston Villa", Logo: "https://media.api-sports.io/football/teams/66.png", Budget: defaultTeamBudget, LeagueName: "Premier League"},
 	}
 }

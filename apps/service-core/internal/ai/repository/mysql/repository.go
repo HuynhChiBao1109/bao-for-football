@@ -200,11 +200,11 @@ func (r *Repository) GetStageDetail(ctx context.Context, userID uint64, stageNo 
 	opponent := make([]domain.OpponentPlayer, 0, 22)
 	if r.db != nil {
 		rows, err := r.db.QueryContext(ctx, `
-SELECT name, shooting, passing, pace, physical, defending, dribbling
-FROM admin_players
-WHERE source_type = 'normal' AND base_club = ?
+SELECT name, base_shooting, base_passing, base_pace, base_physical, base_defending, base_dribbling
+FROM player_templates
+WHERE club_id = ? AND season = 'normal'
 ORDER BY id ASC
-LIMIT 22`, target.ClubName)
+LIMIT 22`, target.ClubID)
 		if err != nil {
 			return nil, err
 		}

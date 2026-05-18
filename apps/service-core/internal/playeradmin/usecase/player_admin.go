@@ -118,9 +118,6 @@ func (u *PlayerAdminUseCase) CreateClub(ctx context.Context, input domain.Club) 
 	if input.LeagueName == "" {
 		return domain.Club{}, errors.New("leagueName is required")
 	}
-	if input.Budget < 0 {
-		return domain.Club{}, errors.New("budget must be non-negative")
-	}
 
 	return u.repo.CreateClub(ctx, input)
 }
@@ -146,15 +143,19 @@ func (u *PlayerAdminUseCase) Create(ctx context.Context, input domain.Player) (d
 	if input.CountryID <= 0 {
 		return domain.Player{}, errors.New("countryId is required")
 	}
-	if input.BaseClub == "" {
-		return domain.Player{}, errors.New("baseClub is required")
+	if input.ClubID <= 0 {
+		return domain.Player{}, errors.New("clubId is required")
 	}
-	if input.Season != "Normal" && input.Season != "Special" {
-		return domain.Player{}, errors.New("season must be Normal or Special")
+	validSeason := map[string]struct{}{
+		"normal":        {},
+		"special year":  {},
+		"special match": {},
+		"moment time":   {},
 	}
-	if input.SourceType != "normal" && input.SourceType != "gacha" {
-		return domain.Player{}, errors.New("sourceType must be normal or gacha")
+	if _, ok := validSeason[strings.ToLower(input.Season)]; !ok {
+		return domain.Player{}, errors.New("season must be one of: normal, special year, special match, moment time")
 	}
+	input.Season = strings.ToLower(input.Season)
 
 	if input.LongPass == 0 {
 		input.LongPass = input.Passing
