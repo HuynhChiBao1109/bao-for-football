@@ -227,6 +227,19 @@ function PlayerDetail({ playerId, skills, onSkillAssigned }: { playerId: number;
         </div>
       )}
 
+      {player.positions && player.positions.length > 0 && (
+        <div>
+          <p className="game-field-label">Position Profiles</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {player.positions.map((item) => (
+              <span key={`${item.position}-${item.effect}`} className="game-chip text-xs text-amber-200 border-amber-400/30">
+                {item.position} x{Number(item.effect || 0).toFixed(2)}{item.description ? ` · ${item.description}` : ''}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleAssign} className="space-y-2">
         <p className="game-field-label">Gán kỹ năng</p>
         <div className="flex gap-2">
@@ -439,6 +452,8 @@ const SEASON_OPTIONS = [
   { value: 'moment time', label: 'Khoảnh khắc trận đấu (Moment Time)' },
 ]
 
+const POSITION_OPTIONS = ['GK', 'LB', 'CB', 'RB', 'CDM', 'CM', 'CAM', 'LW', 'RW', 'LMF', 'RMF', 'LWB', 'RWB', 'DMF', 'CMF', 'AMF', 'CF']
+
 function CreatePlayerCard({ countries, onCreated, title, defaultSeason, sourceType }: {
   countries: { id: number; name: string }[]
   onCreated: () => void
@@ -456,6 +471,8 @@ function CreatePlayerCard({ countries, onCreated, title, defaultSeason, sourceTy
   const [avatarPreview, setAvatarPreview] = useState('')
   const [msg, setMsg] = useState('')
   const [err, setErr] = useState('')
+  const [positions, setPositions] = useState<Array<{ position: string; description: string; effect: number }>>([])
+  const [positionDraft, setPositionDraft] = useState({ position: 'CF', description: '', effect: 1 })
 
   function handleFile(file: File) {
     if (avatarPreview) URL.revokeObjectURL(avatarPreview)
@@ -470,12 +487,15 @@ function CreatePlayerCard({ countries, onCreated, title, defaultSeason, sourceTy
 
     const fd = new FormData()
     Object.entries(form).forEach(([k, v]) => fd.append(k, String(v)))
+    fd.append('positions', JSON.stringify(positions))
     if (avatarFile) fd.append('avatar', avatarFile)
 
     try {
       await createMutation.mutateAsync(fd)
       setMsg(`Đã tạo cầu thủ "${form.name}" thành công.`)
       setForm((prev) => ({ ...prev, name: '', specialSkill: '', ...STAT_DEFAULTS }))
+      setPositions([])
+      setPositionDraft({ position: 'CF', description: '', effect: 1 })
       setAvatarFile(null)
       setAvatarPreview('')
       onCreated()
@@ -525,6 +545,60 @@ function CreatePlayerCard({ countries, onCreated, title, defaultSeason, sourceTy
               {SEASON_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
             </select>
           </label>
+
+          <div className="rounded-[12px] border border-white/10 bg-black/20 p-3 space-y-2">
+            <p className="game-field-label">Position + Effect (0 &lt; effect &lt;= 1)</p>
+            <div className="grid gap-2 sm:grid-cols-[1fr_110px_1fr_auto]">
+              <select value={positionDraft.position} onChange={(e) => setPositionDraft((p) => ({ ...p, position: e.target.value }))} className="game-input">
+                {POSITION_OPTIONS.map((pos) => <option key={pos} value={pos}>{pos}</option>)}
+              </select>
+              <input
+                type="number"
+                min={0.1}
+                max={1}
+                step={0.05}
+                value={positionDraft.effect}
+                onChange={(e) => setPositionDraft((p) => ({ ...p, effect: Number(e.target.value) }))}
+                className="game-input"
+              />
+              <input
+                value={positionDraft.description}
+                onChange={(e) => setPositionDraft((p) => ({ ...p, description: e.target.value }))}
+                className="game-input"
+                placeholder="Description"
+              />
+              <button
+                type="button"
+                className="game-button-secondary"
+                onClick={() => {
+                  const effect = Math.max(0.1, Math.min(1, Number(positionDraft.effect || 0)))
+                  setPositions((prev) => {
+                    const next = prev.filter((item) => item.position !== positionDraft.position)
+                    next.push({ position: positionDraft.position, description: positionDraft.description.trim(), effect })
+                    return next
+                  })
+                }}
+              >
+                Add
+              </button>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {positions.length === 0 && <span className="text-xs text-slate-400">Không chọn sẽ auto infer 1 position mặc định.</span>}
+              {positions.map((item) => (
+                <span key={item.position} className="game-chip text-xs">
+                  {item.position} x{item.effect.toFixed(2)}{item.description ? ` · ${item.description}` : ''}
+                  <button
+                    type="button"
+                    className="ml-2 text-red-300"
+                    onClick={() => setPositions((prev) => prev.filter((p) => p.position !== item.position))}
+                  >
+                    x
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
 
           <div className="grid grid-cols-2 gap-2">
             {STAT_FIELDS.map(({ key, label }) => (

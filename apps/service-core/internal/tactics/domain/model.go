@@ -3,15 +3,22 @@ package domain
 import "time"
 
 type Config struct {
-	TeamID    string    `json:"teamId"`
-	Formation string    `json:"formation"`
-	PassRatio float64   `json:"passRatio"`
-	ShotRatio float64   `json:"shotRatio"`
-	Pressure  float64   `json:"pressure"`
-	Mode      string    `json:"mode,omitempty"`
-	Gameplay  Gameplay  `json:"gameplay,omitempty"`
-	Players   []Player  `json:"players,omitempty"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	TeamID    string       `json:"teamId"`
+	Formation string       `json:"formation"`
+	PassRatio float64      `json:"passRatio"`
+	ShotRatio float64      `json:"shotRatio"`
+	Pressure  float64      `json:"pressure"`
+	Mode      string       `json:"mode,omitempty"`
+	Gameplay  Gameplay     `json:"gameplay,omitempty"`
+	Lineup    []LineupSlot `json:"lineup,omitempty"`
+	Players   []Player     `json:"players,omitempty"`
+	UpdatedAt time.Time    `json:"updatedAt"`
+}
+
+type LineupSlot struct {
+	SlotID       string `json:"slotId"`
+	Position     string `json:"position"`
+	UserPlayerID uint64 `json:"userPlayerId"`
 }
 
 type Gameplay struct {

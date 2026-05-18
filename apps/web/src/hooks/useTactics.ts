@@ -19,6 +19,15 @@ export function useTactics(tacticsTeamId: string | undefined) {
           shotRatio: Math.round(Number(data.shotRatio ?? 0) * 100),
           pressure: Math.round(Number(data.pressure ?? 0) * 100),
           mode: data.mode ?? 'casual',
+          lineup: Array.isArray(data.lineup)
+            ? data.lineup
+                .filter((item: { slotId?: string; position?: string; userPlayerId?: number }) => item?.slotId && item?.position && Number(item?.userPlayerId || 0) > 0)
+                .map((item: { slotId: string; position: string; userPlayerId: number }) => ({
+                  slotId: String(item.slotId),
+                  position: String(item.position),
+                  userPlayerId: Number(item.userPlayerId),
+                }))
+            : [],
           gameplay: {
             passSpeedScale: Number(data.gameplay?.passSpeedScale ?? 1.05),
             interceptionRadius: Number(data.gameplay?.interceptionRadius ?? 1.02),
@@ -50,6 +59,13 @@ export function useSaveTactics() {
           shotRatio: Number(body.shotRatio),
           pressure: Number(body.pressure),
           mode: body.mode,
+          lineup: Array.isArray(body.lineup)
+            ? body.lineup.map((item) => ({
+                slotId: item.slotId,
+                position: item.position,
+                userPlayerId: Number(item.userPlayerId),
+              }))
+            : [],
           gameplay: body.gameplay,
         },
       })
@@ -60,6 +76,15 @@ export function useSaveTactics() {
         shotRatio: Math.round(Number(data.shotRatio ?? 0) * 100),
         pressure: Math.round(Number(data.pressure ?? 0) * 100),
         mode: data.mode ?? 'casual',
+        lineup: Array.isArray(data.lineup)
+          ? data.lineup
+              .filter((item: { slotId?: string; position?: string; userPlayerId?: number }) => item?.slotId && item?.position && Number(item?.userPlayerId || 0) > 0)
+              .map((item: { slotId: string; position: string; userPlayerId: number }) => ({
+                slotId: String(item.slotId),
+                position: String(item.position),
+                userPlayerId: Number(item.userPlayerId),
+              }))
+          : [],
         gameplay: {
           passSpeedScale: Number(data.gameplay?.passSpeedScale ?? 1.05),
           interceptionRadius: Number(data.gameplay?.interceptionRadius ?? 1.02),

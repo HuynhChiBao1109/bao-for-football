@@ -25,7 +25,12 @@ type saveRequest struct {
 	ShotRatio float64 `json:"shotRatio"`
 	Pressure  float64 `json:"pressure"`
 	Mode      string  `json:"mode"`
-	Gameplay  struct {
+	Lineup    []struct {
+		SlotID       string `json:"slotId"`
+		Position     string `json:"position"`
+		UserPlayerID uint64 `json:"userPlayerId"`
+	} `json:"lineup"`
+	Gameplay struct {
 		PassSpeedScale     float64 `json:"passSpeedScale"`
 		InterceptionRadius float64 `json:"interceptionRadius"`
 		GKBuildUpBias      float64 `json:"gkBuildUpBias"`
@@ -47,6 +52,7 @@ func (h *Handler) Save(c *gin.Context) {
 		ShotRatio: req.ShotRatio,
 		Pressure:  req.Pressure,
 		Mode:      req.Mode,
+		Lineup:    mapLineup(req.Lineup),
 		Gameplay: domain.Gameplay{
 			PassSpeedScale:     req.Gameplay.PassSpeedScale,
 			InterceptionRadius: req.Gameplay.InterceptionRadius,
@@ -63,6 +69,27 @@ func (h *Handler) Save(c *gin.Context) {
 		"message": "tactics saved and pushed to match engine",
 		"data":    saved,
 	})
+}
+
+func mapLineup(input []struct {
+	SlotID       string `json:"slotId"`
+	Position     string `json:"position"`
+	UserPlayerID uint64 `json:"userPlayerId"`
+}) []domain.LineupSlot {
+	if len(input) == 0 {
+		return nil
+	}
+
+	out := make([]domain.LineupSlot, 0, len(input))
+	for _, item := range input {
+		out = append(out, domain.LineupSlot{
+			SlotID:       item.SlotID,
+			Position:     item.Position,
+			UserPlayerID: item.UserPlayerID,
+		})
+	}
+
+	return out
 }
 
 func (h *Handler) Get(c *gin.Context) {

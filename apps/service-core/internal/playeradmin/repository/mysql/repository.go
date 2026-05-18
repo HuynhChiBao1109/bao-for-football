@@ -53,7 +53,7 @@ func (r *Repository) List(ctx context.Context, filter domain.PlayerFilter) ([]do
 		return nil, err
 	}
 
-whereClauses := make([]string, 0, 3)
+	whereClauses := make([]string, 0, 3)
 	args := make([]any, 0, 3)
 
 	if filter.Name != "" {
@@ -165,6 +165,9 @@ LEFT JOIN clubs cl ON cl.id = pt.club_id
 	if err := r.loadPlayerSkills(ctx, &players, playerIDs); err != nil {
 		return nil, err
 	}
+	if err := r.loadPlayerPositions(ctx, &players, playerIDs); err != nil {
+		return nil, err
+	}
 
 	return players, nil
 }
@@ -266,6 +269,12 @@ LIMIT 1`, id)
 
 	tmp := []domain.Player{p}
 	if err := r.loadPlayerSkills(ctx, &tmp, []int64{p.ID}); err != nil {
+		return domain.Player{}, err
+	}
+	if len(tmp) > 0 {
+		p = tmp[0]
+	}
+	if err := r.loadPlayerPositions(ctx, &tmp, []int64{p.ID}); err != nil {
 		return domain.Player{}, err
 	}
 	if len(tmp) > 0 {
@@ -412,7 +421,7 @@ LIMIT 1`, input.ClubID)
 INSERT INTO player_templates (
   name, height_cm, country_id, club_id, base_club, season, image_url,
 	base_shooting, base_passing, base_long_pass, base_vision, base_gk_reach, base_counter_attack_awareness, base_defending, base_gk_parrying, base_gk_reflex, base_duels, base_pace, base_stamina, base_balance, base_technique, base_determination, base_physical, base_standing_tackle, base_sliding_tackle, base_dribbling, base_curve
-) VALUES (?, 170, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
+) VALUES (?, 170, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		input.Name,
 		input.CountryID,
 		input.ClubID,
@@ -449,6 +458,10 @@ INSERT INTO player_templates (
 		return domain.Player{}, err
 	}
 	input.ID = id
+
+	if err := r.upsertPlayerPositions(ctx, input.ID, input.Positions); err != nil {
+		return domain.Player{}, err
+	}
 
 	if loaded, err := r.GetByID(ctx, input.ID); err == nil {
 		return loaded, nil
@@ -572,6 +585,19 @@ func (r *Repository) ensureTable(ctx context.Context) error {
 				CONSTRAINT fk_player_skills_player FOREIGN KEY (player_id) REFERENCES player_templates(id) ON DELETE CASCADE,
 				CONSTRAINT fk_player_skills_skill FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
 			) ENGINE=InnoDB`,
+			`CREATE TABLE IF NOT EXISTS position_players (
+				id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+				player_template_id BIGINT UNSIGNED NOT NULL,
+				position VARCHAR(10) NOT NULL,
+				description VARCHAR(255) NOT NULL DEFAULT '',
+				effect DECIMAL(4,2) NOT NULL DEFAULT 1.00,
+				created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+				PRIMARY KEY (id),
+				UNIQUE KEY uk_position_players_template_position (player_template_id, position),
+				KEY idx_position_players_template_id (player_template_id),
+				CONSTRAINT fk_position_players_template FOREIGN KEY (player_template_id) REFERENCES player_templates(id) ON DELETE CASCADE
+			) ENGINE=InnoDB`,
 		}
 
 		for _, query := range queries {
@@ -583,6 +609,108 @@ func (r *Repository) ensureTable(ctx context.Context) error {
 	})
 
 	return r.ensureErr
+}
+
+func (r *Repository) upsertPlayerPositions(ctx context.Context, playerID int64, positions []domain.PositionProfile) error {
+	if r.db == nil || playerID <= 0 {
+		return nil
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	if _, err = tx.ExecContext(ctx, `DELETE FROM position_players WHERE player_template_id = ?`, playerID); err != nil {
+		return err
+	}
+
+	for _, item := range positions {
+		position := strings.ToUpper(strings.TrimSpace(item.Position))
+		if position == "" {
+			continue
+		}
+		effect := item.Effect
+		if effect < 0 {
+			effect = 0
+		}
+		if effect > 1 {
+			effect = 1
+		}
+		description := strings.TrimSpace(item.Description)
+
+		if _, err = tx.ExecContext(ctx, `
+INSERT INTO position_players (player_template_id, position, description, effect)
+VALUES (?, ?, ?, ?)`, playerID, position, description, effect); err != nil {
+			return err
+		}
+	}
+
+	err = tx.Commit()
+	return err
+}
+
+func (r *Repository) loadPlayerPositions(ctx context.Context, players *[]domain.Player, playerIDs []int64) error {
+	if players == nil {
+		return nil
+	}
+	if len(*players) == 0 || len(playerIDs) == 0 || r.db == nil {
+		return nil
+	}
+
+	placeholders := make([]string, 0, len(playerIDs))
+	args := make([]any, 0, len(playerIDs))
+	for _, id := range playerIDs {
+		placeholders = append(placeholders, "?")
+		args = append(args, id)
+	}
+
+	query := fmt.Sprintf(`
+SELECT player_template_id, position, description, effect
+FROM position_players
+WHERE player_template_id IN (%s)
+ORDER BY player_template_id ASC, effect DESC`, strings.Join(placeholders, ","))
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "doesn't exist") {
+			return nil
+		}
+		return err
+	}
+	defer rows.Close()
+
+	posMap := make(map[int64][]domain.PositionProfile, len(playerIDs))
+	for rows.Next() {
+		var playerID int64
+		var item domain.PositionProfile
+		if err := rows.Scan(&playerID, &item.Position, &item.Description, &item.Effect); err != nil {
+			return err
+		}
+		item.Position = strings.ToUpper(strings.TrimSpace(item.Position))
+		if item.Effect < 0 {
+			item.Effect = 0
+		}
+		if item.Effect > 1 {
+			item.Effect = 1
+		}
+		posMap[playerID] = append(posMap[playerID], item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	for i := range *players {
+		(*players)[i].Positions = posMap[(*players)[i].ID]
+	}
+
+	return nil
 }
 
 func (r *Repository) loadPlayerSkills(ctx context.Context, players *[]domain.Player, playerIDs []int64) error {

@@ -133,3 +133,7 @@ Tùy thuộc vào vị trí (Tọa độ X, Y) xảy ra va chạm trên sa bàn:
   1.  Trận đấu tạm dừng $\rightarrow$ Hiển thị icon VAR trên màn hình.
   2.  Event log thông báo: _"Trọng tài đang kiểm tra VAR..."_
   3.  Sau 3 giây delay, đưa ra quyết định cuối cùng (Bẻ còi hủy phạt đền/thẻ phạt hoặc giữ nguyên quyết định).
+
+
+## Position cầu thủ
+- GK, LB, CB, RB, CDM, CM, CAM, LW, RW, LMF, RMF, LWB, RWB, DMF, CMF, AMF, CF

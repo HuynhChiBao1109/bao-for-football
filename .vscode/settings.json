@@ -25,6 +25,7 @@
         "npm run dev": true,
         "New-Item": true,
         "Out-Null": true,
-        "Copy-Item": true
+        "Copy-Item": true,
+        "npx tsc": true
     }
 }

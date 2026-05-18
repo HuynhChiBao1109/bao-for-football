@@ -162,9 +162,9 @@ func (migrationSkill) TableName() string {
 }
 
 type migrationPlayerSkill struct {
-	ID       uint64    `gorm:"primaryKey;autoIncrement;column:id"`
-	PlayerID uint64    `gorm:"not null;index:idx_player_skills_player_id;uniqueIndex:uk_player_skills_player_skill,priority:1;column:player_id"`
-	SkillID  uint64    `gorm:"not null;index:idx_player_skills_skill_id;uniqueIndex:uk_player_skills_player_skill,priority:2;column:skill_id"`
+	ID        uint64    `gorm:"primaryKey;autoIncrement;column:id"`
+	PlayerID  uint64    `gorm:"not null;index:idx_player_skills_player_id;uniqueIndex:uk_player_skills_player_skill,priority:1;column:player_id"`
+	SkillID   uint64    `gorm:"not null;index:idx_player_skills_skill_id;uniqueIndex:uk_player_skills_player_skill,priority:2;column:skill_id"`
 	CreatedAt time.Time `gorm:"column:created_at"`
 }
 
@@ -191,15 +191,15 @@ func (migrationGachaLog) TableName() string {
 }
 
 type migrationGachaBanner struct {
-	ID              uint64    `gorm:"primaryKey;autoIncrement;column:id"`
-	BannerCode      string    `gorm:"type:varchar(80);not null;uniqueIndex:uk_gacha_banners_banner_code;column:banner_code"`
-	BannerName      string    `gorm:"type:varchar(120);not null;column:banner_name"`
-	BannerImageData string    `gorm:"type:longtext;not null;column:banner_image_data"`
+	ID              uint64     `gorm:"primaryKey;autoIncrement;column:id"`
+	BannerCode      string     `gorm:"type:varchar(80);not null;uniqueIndex:uk_gacha_banners_banner_code;column:banner_code"`
+	BannerName      string     `gorm:"type:varchar(120);not null;column:banner_name"`
+	BannerImageData string     `gorm:"type:longtext;not null;column:banner_image_data"`
 	ExpiredAt       *time.Time `gorm:"column:expired_at"`
-	Status          int       `gorm:"not null;default:1;column:status"`
-	PlayerID        int64     `gorm:"not null;index:idx_gacha_banners_player_id;column:player_id"`
-	CreatedAt       time.Time `gorm:"column:created_at"`
-	UpdatedAt       time.Time `gorm:"column:updated_at"`
+	Status          int        `gorm:"not null;default:1;column:status"`
+	PlayerID        int64      `gorm:"not null;index:idx_gacha_banners_player_id;column:player_id"`
+	CreatedAt       time.Time  `gorm:"column:created_at"`
+	UpdatedAt       time.Time  `gorm:"column:updated_at"`
 }
 
 func (migrationGachaBanner) TableName() string {
@@ -219,6 +219,20 @@ type migrationTeamTactics struct {
 
 func (migrationTeamTactics) TableName() string {
 	return "team_tactics"
+}
+
+type migrationPositionPlayer struct {
+	ID               uint64    `gorm:"primaryKey;autoIncrement;column:id"`
+	PlayerTemplateID uint64    `gorm:"not null;index:idx_position_players_template_id;uniqueIndex:uk_position_players_template_position,priority:1;column:player_template_id"`
+	Position         string    `gorm:"type:varchar(10);not null;uniqueIndex:uk_position_players_template_position,priority:2;column:position"`
+	Description      string    `gorm:"type:varchar(255);not null;default:'';column:description"`
+	Effect           float64   `gorm:"type:decimal(4,2);not null;default:1.00;column:effect"`
+	CreatedAt        time.Time `gorm:"column:created_at"`
+	UpdatedAt        time.Time `gorm:"column:updated_at"`
+}
+
+func (migrationPositionPlayer) TableName() string {
+	return "position_players"
 }
 
 type migrationAIUserStage struct {
@@ -357,6 +371,7 @@ func AutoMigrate(ctx context.Context, db *gorm.DB) error {
 		&migrationClub{},
 		&migrationCountry{},
 		&migrationPlayerTemplate{},
+		&migrationPositionPlayer{},
 		&migrationSkill{},
 		&migrationPlayerSkill{},
 		&migrationUser{},
@@ -387,6 +402,9 @@ func AutoMigrate(ctx context.Context, db *gorm.DB) error {
 	if err := ensurePlayerTemplateSchema(ctx, sqlDB); err != nil {
 		return err
 	}
+	if err := ensurePositionPlayerBackfill(ctx, sqlDB); err != nil {
+		return err
+	}
 
 	return ensureTriggers(ctx, sqlDB)
 }
@@ -413,6 +431,44 @@ func EnsureSeedData(ctx context.Context, db *sql.DB) error {
 	}
 
 	return nil
+}
+
+func ensurePositionPlayerBackfill(ctx context.Context, db *sql.DB) error {
+	if db == nil {
+		return nil
+	}
+
+	_, err := db.ExecContext(ctx, `
+INSERT INTO position_players (player_template_id, position, description, effect)
+SELECT
+	pt.id,
+	CASE
+		WHEN (pt.base_gk_reach + pt.base_gk_parrying + pt.base_gk_reflex) >= GREATEST(
+			(pt.base_defending + pt.base_standing_tackle + pt.base_sliding_tackle + pt.base_physical),
+			(pt.base_shooting + pt.base_counter_attack_awareness + pt.base_pace),
+			(pt.base_passing + pt.base_long_pass + pt.base_vision + pt.base_stamina),
+			(pt.base_pace + pt.base_dribbling + pt.base_curve)
+		) THEN 'GK'
+		WHEN (pt.base_defending + pt.base_standing_tackle + pt.base_sliding_tackle + pt.base_physical) >= GREATEST(
+			(pt.base_shooting + pt.base_counter_attack_awareness + pt.base_pace),
+			(pt.base_passing + pt.base_long_pass + pt.base_vision + pt.base_stamina),
+			(pt.base_pace + pt.base_dribbling + pt.base_curve)
+		) THEN 'CB'
+		WHEN (pt.base_shooting + pt.base_counter_attack_awareness + pt.base_pace) >= GREATEST(
+			(pt.base_passing + pt.base_long_pass + pt.base_vision + pt.base_stamina),
+			(pt.base_pace + pt.base_dribbling + pt.base_curve)
+		) THEN 'CF'
+		WHEN (pt.base_passing + pt.base_long_pass + pt.base_vision + pt.base_stamina) >= (pt.base_pace + pt.base_dribbling + pt.base_curve)
+			THEN 'CM'
+		ELSE 'LW'
+	END AS position,
+	'Auto migrated primary position' AS description,
+	1.00 AS effect
+FROM player_templates pt
+LEFT JOIN position_players pp ON pp.player_template_id = pt.id
+WHERE pp.id IS NULL`)
+
+	return err
 }
 
 func ensureTriggers(ctx context.Context, db *sql.DB) error {
@@ -951,7 +1007,7 @@ INSERT INTO player_templates (
 	base_sliding_tackle,
 	base_dribbling,
 	base_curve
-) VALUES (?, 170, ?, ?, ?, 'normal', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` ,
+) VALUES (?, 170, ?, ?, ?, 'normal', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 				name,
 				countryID,
 				club.ID,

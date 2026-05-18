@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+	"strings"
 
 	"fifam/apps/service-core/internal/player/domain"
 )
@@ -72,6 +74,13 @@ type rawCard struct {
 	BonusSlidingTackle  int
 	BonusDribbling      int
 	BonusCurve          int
+}
+
+type rawPositionProfile struct {
+	PlayerTemplateID uint64
+	Position         string
+	Description      string
+	Effect           float64
 }
 
 func (r *Repository) ListByUserID(ctx context.Context, userID uint64) ([]domain.PlayerCard, error) {
@@ -160,6 +169,12 @@ ORDER BY up.level DESC, up.id ASC`, userID)
 		return nil, err
 	}
 
+	profilesByTemplate, err := r.loadPositionProfilesByTemplateIDs(ctx, uniqueTemplateIDs(out))
+	if err != nil {
+		return nil, err
+	}
+	attachPositionProfiles(out, profilesByTemplate)
+
 	return out, nil
 }
 
@@ -240,7 +255,16 @@ LIMIT 1`, userID, userPlayerID)
 		return domain.PlayerCard{}, err
 	}
 
-	return toPlayerCard(item), nil
+	card := toPlayerCard(item)
+	profilesByTemplate, err := r.loadPositionProfilesByTemplateIDs(ctx, []uint64{card.PlayerTemplateID})
+	if err != nil {
+		return domain.PlayerCard{}, err
+	}
+	if items, ok := profilesByTemplate[card.PlayerTemplateID]; ok {
+		card.Positions = items
+	}
+
+	return card, nil
 }
 
 func (r *Repository) LevelUp(ctx context.Context, userID uint64, userPlayerID uint64, requiredExp uint32, grantPoints uint32) error {
@@ -461,72 +485,72 @@ func scanRawCard(s scanner) (rawCard, error) {
 
 func toPlayerCard(item rawCard) domain.PlayerCard {
 	base := domain.CardStats{
-		Shooting:               item.BaseShooting,
-		Passing:                item.BasePassing,
-		LongPass:               item.BaseLongPass,
-		Vision:                 item.BaseVision,
-		GKReach:                item.BaseGKReach,
-		AttackingAwareness:     item.BaseAttAwareness,
-		DefensiveAwareness:     item.BaseDefAwareness,
-		GKParrying:             item.BaseGKParrying,
-		GKReflex:               item.BaseGKReflex,
-		Duels:                  item.BaseDuels,
-		Pace:                   item.BasePace,
-		Stamina:                item.BaseStamina,
-		Balance:                item.BaseBalance,
-		Technique:              item.BaseTechnique,
-		Determination:          item.BaseDetermination,
-		Strength:               item.BaseStrength,
-		StandingTackle:         item.BaseStandingTackle,
-		SlidingTackle:          item.BaseSlidingTackle,
-		Dribbling:              item.BaseDribbling,
-		Curve:                  item.BaseCurve,
+		Shooting:           item.BaseShooting,
+		Passing:            item.BasePassing,
+		LongPass:           item.BaseLongPass,
+		Vision:             item.BaseVision,
+		GKReach:            item.BaseGKReach,
+		AttackingAwareness: item.BaseAttAwareness,
+		DefensiveAwareness: item.BaseDefAwareness,
+		GKParrying:         item.BaseGKParrying,
+		GKReflex:           item.BaseGKReflex,
+		Duels:              item.BaseDuels,
+		Pace:               item.BasePace,
+		Stamina:            item.BaseStamina,
+		Balance:            item.BaseBalance,
+		Technique:          item.BaseTechnique,
+		Determination:      item.BaseDetermination,
+		Strength:           item.BaseStrength,
+		StandingTackle:     item.BaseStandingTackle,
+		SlidingTackle:      item.BaseSlidingTackle,
+		Dribbling:          item.BaseDribbling,
+		Curve:              item.BaseCurve,
 	}
 
 	bonus := domain.CardStats{
-		Shooting:               item.BonusShooting,
-		Passing:                item.BonusPassing,
-		LongPass:               item.BonusLongPass,
-		Vision:                 item.BonusVision,
-		GKReach:                item.BonusGKReach,
-		AttackingAwareness:     item.BonusAttAwareness,
-		DefensiveAwareness:     item.BonusDefAwareness,
-		GKParrying:             item.BonusGKParrying,
-		GKReflex:               item.BonusGKReflex,
-		Duels:                  item.BonusDuels,
-		Pace:                   item.BonusPace,
-		Stamina:                item.BonusStamina,
-		Balance:                item.BonusBalance,
-		Technique:              item.BonusTechnique,
-		Determination:          item.BonusDetermination,
-		Strength:               item.BonusStrength,
-		StandingTackle:         item.BonusStandingTackle,
-		SlidingTackle:          item.BonusSlidingTackle,
-		Dribbling:              item.BonusDribbling,
-		Curve:                  item.BonusCurve,
+		Shooting:           item.BonusShooting,
+		Passing:            item.BonusPassing,
+		LongPass:           item.BonusLongPass,
+		Vision:             item.BonusVision,
+		GKReach:            item.BonusGKReach,
+		AttackingAwareness: item.BonusAttAwareness,
+		DefensiveAwareness: item.BonusDefAwareness,
+		GKParrying:         item.BonusGKParrying,
+		GKReflex:           item.BonusGKReflex,
+		Duels:              item.BonusDuels,
+		Pace:               item.BonusPace,
+		Stamina:            item.BonusStamina,
+		Balance:            item.BonusBalance,
+		Technique:          item.BonusTechnique,
+		Determination:      item.BonusDetermination,
+		Strength:           item.BonusStrength,
+		StandingTackle:     item.BonusStandingTackle,
+		SlidingTackle:      item.BonusSlidingTackle,
+		Dribbling:          item.BonusDribbling,
+		Curve:              item.BonusCurve,
 	}
 
 	total := domain.CardStats{
-		Shooting:               base.Shooting + bonus.Shooting,
-		Passing:                base.Passing + bonus.Passing,
-		LongPass:               base.LongPass + bonus.LongPass,
-		Vision:                 base.Vision + bonus.Vision,
-		GKReach:                base.GKReach + bonus.GKReach,
-		AttackingAwareness:     base.AttackingAwareness + bonus.AttackingAwareness,
-		DefensiveAwareness:     base.DefensiveAwareness + bonus.DefensiveAwareness,
-		GKParrying:             base.GKParrying + bonus.GKParrying,
-		GKReflex:               base.GKReflex + bonus.GKReflex,
-		Duels:                  base.Duels + bonus.Duels,
-		Pace:                   base.Pace + bonus.Pace,
-		Stamina:                base.Stamina + bonus.Stamina,
-		Balance:                base.Balance + bonus.Balance,
-		Technique:              base.Technique + bonus.Technique,
-		Determination:          base.Determination + bonus.Determination,
-		Strength:               base.Strength + bonus.Strength,
-		StandingTackle:         base.StandingTackle + bonus.StandingTackle,
-		SlidingTackle:          base.SlidingTackle + bonus.SlidingTackle,
-		Dribbling:              base.Dribbling + bonus.Dribbling,
-		Curve:                  base.Curve + bonus.Curve,
+		Shooting:           base.Shooting + bonus.Shooting,
+		Passing:            base.Passing + bonus.Passing,
+		LongPass:           base.LongPass + bonus.LongPass,
+		Vision:             base.Vision + bonus.Vision,
+		GKReach:            base.GKReach + bonus.GKReach,
+		AttackingAwareness: base.AttackingAwareness + bonus.AttackingAwareness,
+		DefensiveAwareness: base.DefensiveAwareness + bonus.DefensiveAwareness,
+		GKParrying:         base.GKParrying + bonus.GKParrying,
+		GKReflex:           base.GKReflex + bonus.GKReflex,
+		Duels:              base.Duels + bonus.Duels,
+		Pace:               base.Pace + bonus.Pace,
+		Stamina:            base.Stamina + bonus.Stamina,
+		Balance:            base.Balance + bonus.Balance,
+		Technique:          base.Technique + bonus.Technique,
+		Determination:      base.Determination + bonus.Determination,
+		Strength:           base.Strength + bonus.Strength,
+		StandingTackle:     base.StandingTackle + bonus.StandingTackle,
+		SlidingTackle:      base.SlidingTackle + bonus.SlidingTackle,
+		Dribbling:          base.Dribbling + bonus.Dribbling,
+		Curve:              base.Curve + bonus.Curve,
 	}
 	overall := float64(
 		total.Shooting+
@@ -573,5 +597,92 @@ func toPlayerCard(item rawCard) domain.PlayerCard {
 		BonusStats: bonus,
 		TotalStats: total,
 		Overall:    overall,
+	}
+}
+
+func (r *Repository) loadPositionProfilesByTemplateIDs(ctx context.Context, templateIDs []uint64) (map[uint64][]domain.PositionProfile, error) {
+	result := make(map[uint64][]domain.PositionProfile)
+	if len(templateIDs) == 0 || r.db == nil {
+		return result, nil
+	}
+
+	query := fmt.Sprintf(`
+SELECT player_template_id, position, description, effect
+FROM position_players
+WHERE player_template_id IN (%s)
+ORDER BY player_template_id ASC, effect DESC`, placeholders(len(templateIDs)))
+
+	args := make([]any, 0, len(templateIDs))
+	for _, id := range templateIDs {
+		args = append(args, id)
+	}
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "doesn't exist") {
+			return result, nil
+		}
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var item rawPositionProfile
+		if err := rows.Scan(&item.PlayerTemplateID, &item.Position, &item.Description, &item.Effect); err != nil {
+			return nil, err
+		}
+		result[item.PlayerTemplateID] = append(result[item.PlayerTemplateID], domain.PositionProfile{
+			Position:    strings.ToUpper(strings.TrimSpace(item.Position)),
+			Description: item.Description,
+			Effect:      clampEffect(item.Effect),
+		})
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func placeholders(n int) string {
+	if n <= 0 {
+		return ""
+	}
+	out := make([]string, n)
+	for i := 0; i < n; i += 1 {
+		out[i] = "?"
+	}
+	return strings.Join(out, ",")
+}
+
+func clampEffect(value float64) float64 {
+	if value < 0 {
+		return 0
+	}
+	if value > 1 {
+		return 1
+	}
+	return value
+}
+
+func uniqueTemplateIDs(cards []domain.PlayerCard) []uint64 {
+	seen := make(map[uint64]struct{}, len(cards))
+	out := make([]uint64, 0, len(cards))
+	for _, card := range cards {
+		if _, ok := seen[card.PlayerTemplateID]; ok {
+			continue
+		}
+		seen[card.PlayerTemplateID] = struct{}{}
+		out = append(out, card.PlayerTemplateID)
+	}
+	return out
+}
+
+func attachPositionProfiles(cards []domain.PlayerCard, profilesByTemplate map[uint64][]domain.PositionProfile) {
+	for idx := range cards {
+		if items, ok := profilesByTemplate[cards[idx].PlayerTemplateID]; ok {
+			cards[idx].Positions = items
+		}
 	}
 }

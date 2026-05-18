@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"fifam/apps/service-core/internal/playeradmin/domain"
@@ -22,6 +23,11 @@ type repository interface {
 
 type PlayerAdminUseCase struct {
 	repo repository
+}
+
+var allowedPositions = map[string]struct{}{
+	"GK": {}, "LB": {}, "CB": {}, "RB": {}, "CDM": {}, "CM": {}, "CAM": {}, "LW": {}, "RW": {},
+	"LMF": {}, "RMF": {}, "LWB": {}, "RWB": {}, "DMF": {}, "CMF": {}, "AMF": {}, "CF": {},
 }
 
 func NewPlayerAdminUseCase(repo repository) *PlayerAdminUseCase {
@@ -230,5 +236,66 @@ func (u *PlayerAdminUseCase) Create(ctx context.Context, input domain.Player) (d
 		}
 	}
 
+	normalizedPositions := make([]domain.PositionProfile, 0, len(input.Positions))
+	seen := make(map[string]struct{}, len(input.Positions))
+	for _, item := range input.Positions {
+		position := strings.ToUpper(strings.TrimSpace(item.Position))
+		if position == "" {
+			continue
+		}
+		if _, ok := allowedPositions[position]; !ok {
+			return domain.Player{}, fmt.Errorf("position %s is invalid", position)
+		}
+		if _, exists := seen[position]; exists {
+			continue
+		}
+		effect := item.Effect
+		if effect <= 0 || effect > 1 {
+			return domain.Player{}, fmt.Errorf("effect for %s must be > 0 and <= 1", position)
+		}
+		seen[position] = struct{}{}
+		normalizedPositions = append(normalizedPositions, domain.PositionProfile{
+			Position:    position,
+			Description: strings.TrimSpace(item.Description),
+			Effect:      effect,
+		})
+	}
+
+	if len(normalizedPositions) == 0 {
+		normalizedPositions = append(normalizedPositions, inferDefaultPosition(input))
+	}
+	input.Positions = normalizedPositions
+
 	return u.repo.Create(ctx, input)
+}
+
+func inferDefaultPosition(input domain.Player) domain.PositionProfile {
+	type candidate struct {
+		position string
+		score    int
+	}
+
+	candidates := []candidate{
+		{position: "GK", score: input.GKReach + input.GKParrying + input.GKReflex},
+		{position: "CB", score: input.DefAwareness + input.StandingTackle + input.SlidingTackle + input.Strength},
+		{position: "CF", score: input.Shooting + input.AttAwareness + input.Pace},
+		{position: "CM", score: input.Passing + input.LongPass + input.Vision + input.Stamina},
+		{position: "LW", score: input.Pace + input.Dribbling + input.Curve},
+		{position: "RW", score: input.Pace + input.Dribbling + input.Curve},
+		{position: "LB", score: input.DefAwareness + input.Pace + input.Stamina},
+		{position: "RB", score: input.DefAwareness + input.Pace + input.Stamina},
+	}
+
+	best := candidates[0]
+	for _, item := range candidates[1:] {
+		if item.score > best.score {
+			best = item
+		}
+	}
+
+	return domain.PositionProfile{
+		Position:    best.position,
+		Description: "Auto inferred from base stats",
+		Effect:      1,
+	}
 }

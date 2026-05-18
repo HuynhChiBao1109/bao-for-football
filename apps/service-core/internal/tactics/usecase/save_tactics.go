@@ -106,6 +106,20 @@ func (u *SaveTacticsUseCase) Execute(ctx context.Context, cfg domain.Config) (do
 		profile.TempoScale = cfg.Gameplay.TempoScale
 	}
 
+	lineup := make([]domain.LineupSlot, 0, len(cfg.Lineup))
+	for _, item := range cfg.Lineup {
+		slotID := strings.ToLower(strings.TrimSpace(item.SlotID))
+		position := strings.ToUpper(strings.TrimSpace(item.Position))
+		if slotID == "" || position == "" {
+			continue
+		}
+		lineup = append(lineup, domain.LineupSlot{
+			SlotID:       slotID,
+			Position:     position,
+			UserPlayerID: item.UserPlayerID,
+		})
+	}
+
 	normalized := domain.Config{
 		TeamID:    cfg.TeamID,
 		Formation: cfg.Formation,
@@ -114,6 +128,7 @@ func (u *SaveTacticsUseCase) Execute(ctx context.Context, cfg domain.Config) (do
 		Pressure:  cfg.Pressure / 100.0,
 		Mode:      mode,
 		Gameplay:  profile,
+		Lineup:    lineup,
 	}
 
 	players, err := u.repo.LoadRealtimePlayers(ctx, cfg.TeamID)

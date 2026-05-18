@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -32,6 +33,7 @@ type createPlayerRequest struct {
 	Season       string `json:"season" form:"season"`
 	SourceType   string `json:"sourceType" form:"sourceType"`
 	SpecialSkill string `json:"specialSkill" form:"specialSkill"`
+	Positions    string `json:"positions" form:"positions"`
 	Shooting     int    `json:"shooting" form:"shooting"`
 	Passing      int    `json:"passing" form:"passing"`
 	LongPass     int    `json:"longPass" form:"longPass"`
@@ -281,6 +283,7 @@ func (h *Handler) Create(c *gin.Context) {
 		SlidingTackle:  req.SlidingTackle,
 		Dribbling:      req.Dribbling,
 		Curve:          req.Curve,
+		Positions:      parsePositionProfiles(req.Positions),
 	})
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -291,6 +294,47 @@ func (h *Handler) Create(c *gin.Context) {
 		"message": "player added to catalog",
 		"data":    created,
 	})
+}
+
+func parsePositionProfiles(raw string) []domain.PositionProfile {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return nil
+	}
+
+	type payload struct {
+		Position    string  `json:"position"`
+		Description string  `json:"description"`
+		Effect      float64 `json:"effect"`
+	}
+
+	var input []payload
+	if err := json.Unmarshal([]byte(trimmed), &input); err != nil {
+		return nil
+	}
+
+	out := make([]domain.PositionProfile, 0, len(input))
+	for _, item := range input {
+		position := strings.ToUpper(strings.TrimSpace(item.Position))
+		if position == "" {
+			continue
+		}
+		description := strings.TrimSpace(item.Description)
+		effect := item.Effect
+		if effect <= 0 {
+			effect = 0.5
+		}
+		if effect > 1 {
+			effect = 1
+		}
+		out = append(out, domain.PositionProfile{
+			Position:    position,
+			Description: description,
+			Effect:      effect,
+		})
+	}
+
+	return out
 }
 
 func (h *Handler) saveAvatarIfPresent(c *gin.Context) (string, error) {

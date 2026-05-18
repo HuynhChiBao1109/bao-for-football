@@ -52,6 +52,11 @@ export type UserPlayerCard = {
   avatarUrl?: string
   skills?: SpecialSkill[]
   country?: Country
+  positions?: Array<{
+    position: string
+    description?: string
+    effect: number
+  }>
 }
 
 // ─── Admin Player ──────────────────────────────────────────────────────────────
@@ -68,6 +73,11 @@ export type AdminPlayer = {
   sourceType: string
   specialSkill?: string
   skills?: SpecialSkill[]
+  positions?: Array<{
+    position: string
+    description?: string
+    effect: number
+  }>
 } & Partial<PlayerStats>
 
 export type AdminPlayerFilter = {
@@ -114,6 +124,11 @@ export type Tactics = {
   shotRatio: number
   pressure: number
   mode: string
+  lineup?: Array<{
+    slotId: string
+    position: string
+    userPlayerId: number
+  }>
   gameplay: TacticsGameplay
 }
 
