@@ -19,8 +19,17 @@ export type Club = {
   id: number;
   name: string;
   logo?: string;
+  leagueId?: number;
   leagueName?: string;
   budget?: number;
+};
+
+export type League = {
+  id: number;
+  name: string;
+  countryId?: number;
+  country?: Country;
+  logo?: string;
 };
 
 export type Country = {
@@ -54,7 +63,6 @@ export type UserPlayerCard = {
   country?: Country;
   positions?: Array<{
     position: string;
-    description?: string;
     effect: number;
   }>;
 };
@@ -76,7 +84,6 @@ export type AdminPlayer = {
   skills?: SpecialSkill[];
   positions?: Array<{
     position: string;
-    description?: string;
     effect: number;
   }>;
 } & Partial<PlayerStats>;

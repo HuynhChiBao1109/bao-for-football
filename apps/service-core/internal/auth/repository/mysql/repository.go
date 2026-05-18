@@ -49,8 +49,9 @@ func (r *Repository) ListRegistrationClubs(ctx context.Context) ([]domain.ClubOp
 	}
 
 	rows, err := r.db.QueryContext(ctx, `
-SELECT c.id, c.name, c.logo, c.country_id, c.league_name
+SELECT c.id, c.name, c.logo, c.country_id, c.league_id, COALESCE(l.name, '')
 FROM clubs c
+LEFT JOIN leagues l ON l.id = c.league_id
 ORDER BY c.id ASC`)
 	if err != nil {
 		return nil, err
@@ -61,11 +62,13 @@ ORDER BY c.id ASC`)
 	for rows.Next() {
 		var club domain.ClubOption
 		var countryID sql.NullInt64
+		var leagueID sql.NullInt64
 		if err := rows.Scan(
 			&club.ID,
 			&club.Name,
 			&club.Logo,
 			&countryID,
+			&leagueID,
 			&club.LeagueName,
 		); err != nil {
 			return nil, err
@@ -74,6 +77,10 @@ ORDER BY c.id ASC`)
 		if countryID.Valid {
 			value := countryID.Int64
 			club.CountryID = &value
+		}
+		if leagueID.Valid {
+			value := leagueID.Int64
+			club.LeagueID = &value
 		}
 		clubs = append(clubs, club)
 	}

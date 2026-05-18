@@ -25,6 +25,7 @@ func (r *Repository) GetByID(ctx context.Context, id int64) (*domain.Club, error
 			Name:       "Manchester United",
 			Logo:       "https://media.api-sports.io/football/teams/33.png",
 			CountryID:  nil,
+			LeagueID:   nil,
 			Budget:     defaultClubBudget,
 			LeagueName: "Premier League",
 		}, nil
@@ -32,9 +33,11 @@ func (r *Repository) GetByID(ctx context.Context, id int64) (*domain.Club, error
 
 	club := &domain.Club{}
 	var countryID sql.NullInt64
+	var leagueID sql.NullInt64
 	query := `
-	SELECT id, name, logo, country_id, league_name
+	SELECT c.id, c.name, c.logo, c.country_id, c.league_id, COALESCE(l.name, '')
 FROM clubs
+LEFT JOIN leagues l ON l.id = clubs.league_id
 WHERE id = ?
 LIMIT 1`
 
@@ -43,6 +46,7 @@ LIMIT 1`
 		&club.Name,
 		&club.Logo,
 		&countryID,
+		&leagueID,
 		&club.LeagueName,
 	)
 	if err != nil {
@@ -54,6 +58,10 @@ LIMIT 1`
 	if countryID.Valid {
 		value := countryID.Int64
 		club.CountryID = &value
+	}
+	if leagueID.Valid {
+		value := leagueID.Int64
+		club.LeagueID = &value
 	}
 	club.Budget = defaultClubBudget
 

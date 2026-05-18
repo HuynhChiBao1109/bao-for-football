@@ -79,7 +79,6 @@ type rawCard struct {
 type rawPositionProfile struct {
 	PlayerTemplateID uint64
 	Position         string
-	Description      string
 	Effect           float64
 }
 
@@ -607,8 +606,8 @@ func (r *Repository) loadPositionProfilesByTemplateIDs(ctx context.Context, temp
 	}
 
 	query := fmt.Sprintf(`
-SELECT player_template_id, position, description, effect
-FROM position_players
+SELECT player_template_id, position, effect
+FROM player_positions
 WHERE player_template_id IN (%s)
 ORDER BY player_template_id ASC, effect DESC`, placeholders(len(templateIDs)))
 
@@ -628,13 +627,12 @@ ORDER BY player_template_id ASC, effect DESC`, placeholders(len(templateIDs)))
 
 	for rows.Next() {
 		var item rawPositionProfile
-		if err := rows.Scan(&item.PlayerTemplateID, &item.Position, &item.Description, &item.Effect); err != nil {
+		if err := rows.Scan(&item.PlayerTemplateID, &item.Position, &item.Effect); err != nil {
 			return nil, err
 		}
 		result[item.PlayerTemplateID] = append(result[item.PlayerTemplateID], domain.PositionProfile{
-			Position:    strings.ToUpper(strings.TrimSpace(item.Position)),
-			Description: item.Description,
-			Effect:      clampEffect(item.Effect),
+			Position: strings.ToUpper(strings.TrimSpace(item.Position)),
+			Effect:   clampEffect(item.Effect),
 		})
 	}
 

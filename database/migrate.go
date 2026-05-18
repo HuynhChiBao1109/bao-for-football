@@ -289,20 +289,25 @@ func upsertClub(ctx context.Context, db *sql.DB, club clubSeed) error {
 		return err
 	}
 
+	leagueID, err := resolveOrCreateLeague(ctx, db, club.LeagueName, countryID)
+	if err != nil {
+		return err
+	}
+
 	_, err = db.ExecContext(ctx, `
-INSERT INTO clubs (id, name, logo, country_id, league_name, created_at, updated_at)
+INSERT INTO clubs (id, name, logo, country_id, league_id, created_at, updated_at)
 VALUES (?, ?, ?, ?, ?, NOW(), NOW())
 ON DUPLICATE KEY UPDATE
   name = VALUES(name),
   logo = VALUES(logo),
   country_id = VALUES(country_id),
-  league_name = VALUES(league_name),
+  league_id = VALUES(league_id),
   updated_at = NOW()`,
 		club.ID,
 		club.Name,
 		club.Logo,
 		countryID,
-		club.LeagueName,
+		leagueID,
 	)
 	return err
 }
@@ -475,15 +480,13 @@ func upsertPrimaryPosition(ctx context.Context, db *sql.DB, playerTemplateID int
 	}
 
 	_, err := db.ExecContext(ctx, `
-INSERT INTO position_players (player_template_id, position, description, effect, created_at, updated_at)
-VALUES (?, ?, ?, 1.00, NOW(), NOW())
+INSERT INTO player_positions (player_template_id, position, effect, created_at, updated_at)
+VALUES (?, ?, 1.00, NOW(), NOW())
 ON DUPLICATE KEY UPDATE
-  description = VALUES(description),
   effect = VALUES(effect),
   updated_at = NOW()`,
 		playerTemplateID,
 		position,
-		"Primary position from API squad",
 	)
 	return err
 }
@@ -522,6 +525,41 @@ func resolveOrCreateCountry(ctx context.Context, db *sql.DB, countryName string)
 	res, err := db.ExecContext(ctx, `
 INSERT INTO countries (name, code, flag, created_at, updated_at)
 VALUES (?, ?, '', NOW(), NOW())`, name, code)
+	if err != nil {
+		return nil, err
+	}
+
+	newID, err := res.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+	cast := uint64(newID)
+	return &cast, nil
+}
+
+func resolveOrCreateLeague(ctx context.Context, db *sql.DB, leagueName string, countryID *uint64) (*uint64, error) {
+	name := strings.TrimSpace(leagueName)
+	if name == "" {
+		return nil, nil
+	}
+
+	var id uint64
+	err := db.QueryRowContext(ctx, `
+SELECT id
+FROM leagues
+WHERE name = ?
+  AND ((country_id IS NULL AND ? IS NULL) OR country_id = ?)
+LIMIT 1`, name, countryID, countryID).Scan(&id)
+	if err == nil {
+		return &id, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
+	}
+
+	res, err := db.ExecContext(ctx, `
+INSERT INTO leagues (name, country_id, logo, created_at, updated_at)
+VALUES (?, ?, '', NOW(), NOW())`, name, countryID)
 	if err != nil {
 		return nil, err
 	}

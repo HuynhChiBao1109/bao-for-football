@@ -5,11 +5,17 @@ import {
   useAdminPlayer,
   useDeleteAdminPlayer,
   useUpdateAdminPlayer,
+  useAdminLeagues,
+  useCreateLeague,
+  useUpdateLeague as useUpdateAdminLeague,
+  useDeleteLeague,
+  useUploadAdminImage,
 } from '../../hooks/admin';
 import { useAdminSkills, useCreateSkill, useAssignSkill, useRemoveSkill } from '../../hooks/admin';
 import { useCountries } from '../../hooks/useCountries';
 import { useClubs } from '../../hooks/useClubs';
 import { useAuth } from '../../hooks/useAuth';
+import { API_BASE_URL } from '../../lib/apiClient';
 import { STAT_FIELDS } from '../../lib/constants';
 import { CreatePlayerCard, GachaBannerCard } from '../../components/admin';
 import { Banner } from '../../components/feedback';
@@ -21,12 +27,17 @@ import {
   PlayerPosition,
   PlayerSeason,
 } from '../../enums/player';
-import type { AdminPlayer, AdminPlayerFilter } from '../../types';
+import type { AdminPlayer, AdminPlayerFilter, League } from '../../types';
 
 type PositionDraft = {
   position: PlayerPosition;
-  description: string;
   effect: number;
+};
+
+type LeagueDraft = {
+  name: string;
+  countryId: number | '';
+  logo: string;
 };
 
 function calcOverall(source: Record<string, unknown>) {
@@ -56,6 +67,7 @@ export function AdminPage() {
   } = useAdminPlayers(filter, hasLoadedPlayers);
   const { data: countries = [] } = useCountries();
   const { data: clubs = [] } = useClubs();
+  const { data: leagues = [], refetch: refetchLeagues } = useAdminLeagues();
   const { data: skills = [], refetch: refetchSkills } = useAdminSkills();
 
   function handleNameChange(value: string) {
@@ -168,6 +180,16 @@ export function AdminPage() {
           )}
           <SkillCatalog skills={skills} onCreated={refetchSkills} />
         </div>
+      </section>
+
+      <section>
+        <LeagueCatalog
+          leagues={leagues}
+          countries={countries}
+          onChanged={() => {
+            refetchLeagues();
+          }}
+        />
       </section>
 
       {/* Create player form */}
@@ -369,12 +391,9 @@ function PlayerDetail({
   const [msg, setMsg] = useState('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState('');
-  const [positions, setPositions] = useState<
-    Array<{ position: string; description: string; effect: number }>
-  >([]);
+  const [positions, setPositions] = useState<Array<{ position: string; effect: number }>>([]);
   const [positionDraft, setPositionDraft] = useState<PositionDraft>({
     position: PlayerPosition.CF,
-    description: '',
     effect: 1,
   });
   const [form, setForm] = useState<Record<string, string | number>>({
@@ -401,7 +420,6 @@ function PlayerDetail({
     setPositions(
       (player.positions ?? []).map((item) => ({
         position: item.position,
-        description: item.description ?? '',
         effect: Number(item.effect ?? 1),
       })),
     );
@@ -593,7 +611,7 @@ function PlayerDetail({
 
         <div className="rounded-[12px] border border-white/10 bg-black/20 p-3 space-y-2">
           <p className="game-field-label">Position Profiles</p>
-          <div className="grid gap-2 sm:grid-cols-[1fr_110px_1fr_auto]">
+          <div className="grid gap-2 sm:grid-cols-[1fr_110px_auto]">
             <select
               value={positionDraft.position}
               onChange={(e) =>
@@ -621,12 +639,6 @@ function PlayerDetail({
               }
               className="game-input"
             />
-            <input
-              value={positionDraft.description}
-              onChange={(e) => setPositionDraft((p) => ({ ...p, description: e.target.value }))}
-              className="game-input"
-              placeholder="Description"
-            />
             <button
               type="button"
               className="game-button-secondary"
@@ -636,7 +648,6 @@ function PlayerDetail({
                   const next = prev.filter((item) => item.position !== positionDraft.position);
                   next.push({
                     position: positionDraft.position,
-                    description: positionDraft.description.trim(),
                     effect,
                   });
                   return next;
@@ -654,7 +665,6 @@ function PlayerDetail({
                 className="game-chip text-xs text-amber-200 border-amber-400/30"
               >
                 {item.position} x{Number(item.effect || 0).toFixed(2)}
-                {item.description ? ` · ${item.description}` : ''}
                 <button
                   type="button"
                   className="ml-2 text-red-300"
@@ -757,6 +767,269 @@ function PlayerDetail({
         </div>
         {msg && <p className="text-xs text-emerald-300">{msg}</p>}
       </form>
+    </div>
+  );
+}
+
+function LeagueCatalog({
+  leagues,
+  countries,
+  onChanged,
+}: {
+  leagues: League[];
+  countries: { id: number; name: string }[];
+  onChanged: () => void;
+}) {
+  const createMutation = useCreateLeague();
+  const updateMutation = useUpdateAdminLeague();
+  const deleteMutation = useDeleteLeague();
+  const uploadImageMutation = useUploadAdminImage();
+  const [selectedLeagueId, setSelectedLeagueId] = useState<number | null>(null);
+  const [draft, setDraft] = useState<LeagueDraft>({
+    name: '',
+    countryId: countries[0]?.id ?? '',
+    logo: '',
+  });
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState('');
+  const [msg, setMsg] = useState('');
+
+  useEffect(() => {
+    if (!selectedLeagueId) return;
+    const selected = leagues.find((league) => league.id === selectedLeagueId);
+    if (!selected) return;
+    if (logoPreview) {
+      URL.revokeObjectURL(logoPreview);
+    }
+    setDraft({
+      name: selected.name ?? '',
+      countryId: selected.countryId ?? '',
+      logo: selected.logo ?? '',
+    });
+    setLogoFile(null);
+    setLogoPreview('');
+  }, [leagues, selectedLeagueId]);
+
+  function resetDraft() {
+    if (logoPreview) {
+      URL.revokeObjectURL(logoPreview);
+    }
+    setSelectedLeagueId(null);
+    setDraft({
+      name: '',
+      countryId: countries[0]?.id ?? '',
+      logo: '',
+    });
+    setLogoFile(null);
+    setLogoPreview('');
+  }
+
+  useEffect(() => {
+    return () => {
+      if (logoPreview) {
+        URL.revokeObjectURL(logoPreview);
+      }
+    };
+  }, [logoPreview]);
+
+  function resolveLeagueLogoSrc(logo?: string) {
+    if (!logo) return '';
+    return logo.startsWith('http') ? logo : `${API_BASE_URL}${logo}`;
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setMsg('');
+
+    try {
+      if (!draft.countryId) {
+        throw new Error('Chọn quốc gia cho giải đấu.');
+      }
+
+      const logoURL = logoFile ? await uploadImageMutation.mutateAsync(logoFile) : draft.logo;
+
+      if (selectedLeagueId) {
+        await updateMutation.mutateAsync({
+          leagueId: selectedLeagueId,
+          name: draft.name,
+          countryId: Number(draft.countryId),
+          logo: logoURL,
+        });
+        setMsg('Đã cập nhật giải đấu.');
+      } else {
+        await createMutation.mutateAsync({
+          name: draft.name,
+          countryId: Number(draft.countryId),
+          logo: logoURL,
+        });
+        setMsg('Đã tạo giải đấu.');
+      }
+
+      resetDraft();
+      onChanged();
+    } catch (error) {
+      setMsg((error as Error).message);
+    }
+  }
+
+  async function handleDelete(leagueId: number) {
+    const ok = window.confirm('Xóa giải đấu này?');
+    if (!ok) return;
+
+    setMsg('');
+    try {
+      await deleteMutation.mutateAsync({ leagueId });
+      setMsg('Đã xóa giải đấu.');
+      if (selectedLeagueId === leagueId) {
+        resetDraft();
+      }
+      onChanged();
+    } catch (error) {
+      setMsg((error as Error).message);
+    }
+  }
+
+  return (
+    <div className="game-stat-card space-y-4">
+      <div>
+        <p className="game-header-kicker">League Admin</p>
+        <h3 className="game-title mt-2 text-xl font-bold text-white">CRUD giải đấu</h3>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {leagues.map((league) => (
+          <button
+            key={league.id}
+            type="button"
+            className={`game-chip text-xs ${selectedLeagueId === league.id ? 'border-emerald-400/40 text-emerald-200' : ''}`}
+            onClick={() => setSelectedLeagueId(league.id)}
+          >
+            {league.logo && (
+              <img
+                src={resolveLeagueLogoSrc(league.logo)}
+                alt={league.name}
+                className="mr-2 inline-block h-5 w-5 rounded-full object-cover"
+              />
+            )}
+            {league.name}
+            {league.country?.name ? ` · ${league.country.name}` : ''}
+          </button>
+        ))}
+        {leagues.length === 0 && (
+          <p className="text-sm text-slate-400">Chưa có giải đấu nào trong hệ thống.</p>
+        )}
+      </div>
+
+      <form onSubmit={handleSubmit} className="grid gap-3 lg:grid-cols-[1fr_220px_1fr_auto_auto]">
+        <label className="block">
+          <span className="game-field-label">Tên giải đấu</span>
+          <input
+            value={draft.name}
+            onChange={(e) => setDraft((prev) => ({ ...prev, name: e.target.value }))}
+            className="game-input"
+            placeholder="Premier League"
+            required
+          />
+        </label>
+
+        <label className="block">
+          <span className="game-field-label">Quốc gia</span>
+          <select
+            value={String(draft.countryId)}
+            onChange={(e) =>
+              setDraft((prev) => ({
+                ...prev,
+                countryId: e.target.value ? Number(e.target.value) : '',
+              }))
+            }
+            className="game-input"
+            required
+          >
+            <option value="" disabled>
+              Chọn quốc gia
+            </option>
+            {countries.map((country) => (
+              <option key={country.id} value={country.id}>
+                {country.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="game-field-label">Logo giải đấu</span>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => {
+              const file = e.target.files?.[0] ?? null;
+              if (logoPreview) {
+                URL.revokeObjectURL(logoPreview);
+              }
+              setLogoFile(file);
+              setLogoPreview(file ? URL.createObjectURL(file) : '');
+            }}
+            className="game-input"
+          />
+        </label>
+
+        <div className="flex items-center gap-3">
+          {logoPreview || draft.logo ? (
+            <img
+              src={logoPreview || resolveLeagueLogoSrc(draft.logo)}
+              alt="league logo preview"
+              className="h-16 w-16 rounded-2xl border border-white/10 object-cover"
+            />
+          ) : (
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-dashed border-white/20 text-xs text-slate-400">
+              Chưa có logo
+            </div>
+          )}
+          <input
+            value={draft.logo}
+            onChange={(e) => setDraft((prev) => ({ ...prev, logo: e.target.value }))}
+            className="game-input"
+            placeholder="Hoặc nhập URL logo"
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={
+            createMutation.isPending || updateMutation.isPending || uploadImageMutation.isPending
+          }
+          className="game-button-secondary"
+        >
+          {selectedLeagueId
+            ? updateMutation.isPending
+              ? 'Đang lưu...'
+              : uploadImageMutation.isPending
+                ? 'Đang upload...'
+                : 'Cập nhật'
+            : createMutation.isPending
+              ? 'Đang tạo...'
+              : uploadImageMutation.isPending
+                ? 'Đang upload...'
+                : 'Tạo mới'}
+        </button>
+
+        <button type="button" className="game-button-ghost" onClick={resetDraft}>
+          Reset
+        </button>
+      </form>
+
+      {selectedLeagueId && (
+        <button
+          type="button"
+          className="game-button-ghost border-red-400/30 text-red-300"
+          onClick={() => handleDelete(selectedLeagueId)}
+          disabled={deleteMutation.isPending}
+        >
+          {deleteMutation.isPending ? 'Đang xóa...' : 'Xóa league đã chọn'}
+        </button>
+      )}
+
+      {msg && <p className="text-xs text-emerald-300">{msg}</p>}
     </div>
   );
 }

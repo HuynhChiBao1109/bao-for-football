@@ -648,7 +648,7 @@ func (r *Repository) loadPositionEffects(ctx context.Context, templateIDs []uint
 
 	query := fmt.Sprintf(`
 SELECT player_template_id, position, effect
-FROM position_players
+FROM player_positions
 WHERE player_template_id IN (%s)`, placeholders(len(templateIDs)))
 
 	args := make([]any, 0, len(templateIDs))

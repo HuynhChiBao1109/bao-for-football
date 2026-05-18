@@ -20,13 +20,15 @@ type Repository struct {
 	memData       []domain.Player
 	memCountries  []domain.Country
 	memClubs      []domain.Club
+	memLeagues    []domain.League
 	nextID        int64
 	nextCountryID int64
 	nextClubID    int64
+	nextLeagueID  int64
 }
 
 func NewRepository(db *sql.DB) *Repository {
-	return &Repository{db: db, nextID: 1, nextCountryID: 1, nextClubID: 1}
+	return &Repository{db: db, nextID: 1, nextCountryID: 1, nextClubID: 1, nextLeagueID: 1}
 }
 
 func (r *Repository) List(ctx context.Context, filter domain.PlayerFilter) ([]domain.Player, error) {
@@ -343,12 +345,143 @@ VALUES (?, ?, ?)`, input.Name, input.Code, input.Flag)
 	return input, nil
 }
 
+func (r *Repository) ListLeagues(ctx context.Context) ([]domain.League, error) {
+	if r.db == nil {
+		r.memMu.Lock()
+		defer r.memMu.Unlock()
+		out := make([]domain.League, len(r.memLeagues))
+		copy(out, r.memLeagues)
+		return out, nil
+	}
+
+	rows, err := r.db.QueryContext(ctx, `
+SELECT l.id, l.name, l.country_id, COALESCE(c.name, ''), COALESCE(c.code, ''), COALESCE(c.flag, ''), COALESCE(l.logo, '')
+FROM leagues l
+LEFT JOIN countries c ON c.id = l.country_id
+ORDER BY l.name ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make([]domain.League, 0, 32)
+	for rows.Next() {
+		var item domain.League
+		var countryID sql.NullInt64
+		if err := rows.Scan(&item.ID, &item.Name, &countryID, &item.Country.Name, &item.Country.Code, &item.Country.Flag, &item.Logo); err != nil {
+			return nil, err
+		}
+		if countryID.Valid {
+			value := countryID.Int64
+			item.CountryID = &value
+			item.Country.ID = value
+		}
+		out = append(out, item)
+	}
+
+	return out, rows.Err()
+}
+
+func (r *Repository) CreateLeague(ctx context.Context, input domain.League) (domain.League, error) {
+	if r.db == nil {
+		r.memMu.Lock()
+		defer r.memMu.Unlock()
+		input.ID = r.nextLeagueID
+		r.nextLeagueID++
+		r.memLeagues = append([]domain.League{input}, r.memLeagues...)
+		return input, nil
+	}
+
+	result, err := r.db.ExecContext(ctx, `
+INSERT INTO leagues (name, country_id, logo)
+VALUES (?, ?, ?)`, input.Name, input.CountryID, input.Logo)
+	if err != nil {
+		return domain.League{}, err
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return domain.League{}, err
+	}
+	input.ID = id
+	return input, nil
+}
+
+func (r *Repository) UpdateLeague(ctx context.Context, id int64, input domain.League) (domain.League, error) {
+	if r.db == nil {
+		r.memMu.Lock()
+		defer r.memMu.Unlock()
+		for index, item := range r.memLeagues {
+			if item.ID == id {
+				input.ID = id
+				r.memLeagues[index] = input
+				return input, nil
+			}
+		}
+		return domain.League{}, errors.New("league not found")
+	}
+
+	result, err := r.db.ExecContext(ctx, `
+UPDATE leagues
+SET name = ?, country_id = ?, logo = ?, updated_at = CURRENT_TIMESTAMP
+WHERE id = ?`, input.Name, input.CountryID, input.Logo, id)
+	if err != nil {
+		return domain.League{}, err
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return domain.League{}, err
+	}
+	if affected == 0 {
+		return domain.League{}, errors.New("league not found")
+	}
+	input.ID = id
+	return input, nil
+}
+
+func (r *Repository) DeleteLeague(ctx context.Context, id int64) error {
+	if r.db == nil {
+		r.memMu.Lock()
+		defer r.memMu.Unlock()
+		for index, item := range r.memLeagues {
+			if item.ID == id {
+				r.memLeagues = append(r.memLeagues[:index], r.memLeagues[index+1:]...)
+				return nil
+			}
+		}
+		return errors.New("league not found")
+	}
+
+	result, err := r.db.ExecContext(ctx, `DELETE FROM leagues WHERE id = ?`, id)
+	if err != nil {
+		return err
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return errors.New("league not found")
+	}
+	return nil
+}
+
 func (r *Repository) CreateClub(ctx context.Context, input domain.Club) (domain.Club, error) {
 	if r.db == nil {
 		r.memMu.Lock()
 		defer r.memMu.Unlock()
 		input.ID = r.nextClubID
 		r.nextClubID++
+		if input.LeagueID != nil {
+			for _, league := range r.memLeagues {
+				if league.ID == *input.LeagueID {
+					copyLeague := league
+					input.League = &copyLeague
+					input.LeagueName = league.Name
+					break
+				}
+			}
+		}
 		r.memClubs = append([]domain.Club{input}, r.memClubs...)
 		return input, nil
 	}
@@ -358,8 +491,8 @@ func (r *Repository) CreateClub(ctx context.Context, input domain.Club) (domain.
 	}
 
 	result, err := r.db.ExecContext(ctx, `
-INSERT INTO clubs (name, logo, country_id, league_name)
-VALUES (?, ?, ?, ?)`, input.Name, input.Logo, input.CountryID, input.LeagueName)
+INSERT INTO clubs (name, logo, country_id, league_id)
+VALUES (?, ?, ?, ?)`, input.Name, input.Logo, input.CountryID, input.LeagueID)
 	if err != nil {
 		return domain.Club{}, err
 	}
@@ -369,6 +502,13 @@ VALUES (?, ?, ?, ?)`, input.Name, input.Logo, input.CountryID, input.LeagueName)
 		return domain.Club{}, err
 	}
 	input.ID = id
+	if input.LeagueID != nil {
+		league := domain.League{ID: *input.LeagueID}
+		if err := r.db.QueryRowContext(ctx, `SELECT name, COALESCE(logo, '') FROM leagues WHERE id = ? LIMIT 1`, *input.LeagueID).Scan(&league.Name, &league.Logo); err == nil {
+			input.League = &league
+			input.LeagueName = league.Name
+		}
+	}
 	return input, nil
 }
 
@@ -776,18 +916,28 @@ func (r *Repository) ensureTable(ctx context.Context) error {
 				CONSTRAINT fk_player_skills_player FOREIGN KEY (player_id) REFERENCES player_templates(id) ON DELETE CASCADE,
 				CONSTRAINT fk_player_skills_skill FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
 			) ENGINE=InnoDB`,
-			`CREATE TABLE IF NOT EXISTS position_players (
+			`CREATE TABLE IF NOT EXISTS leagues (
+				id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+				name VARCHAR(120) NOT NULL,
+				country_id BIGINT UNSIGNED NULL,
+				logo VARCHAR(500) NOT NULL DEFAULT '',
+				created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+				updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+				PRIMARY KEY (id),
+				UNIQUE KEY uk_leagues_country_name (country_id, name),
+				KEY idx_leagues_country_id (country_id)
+			) ENGINE=InnoDB`,
+			`CREATE TABLE IF NOT EXISTS player_positions (
 				id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 				player_template_id BIGINT UNSIGNED NOT NULL,
 				position VARCHAR(10) NOT NULL,
-				description VARCHAR(255) NOT NULL DEFAULT '',
 				effect DECIMAL(4,2) NOT NULL DEFAULT 1.00,
 				created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 				updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 				PRIMARY KEY (id),
-				UNIQUE KEY uk_position_players_template_position (player_template_id, position),
-				KEY idx_position_players_template_id (player_template_id),
-				CONSTRAINT fk_position_players_template FOREIGN KEY (player_template_id) REFERENCES player_templates(id) ON DELETE CASCADE
+				UNIQUE KEY uk_player_positions_template_position (player_template_id, position),
+				KEY idx_player_positions_template_id (player_template_id),
+				CONSTRAINT fk_player_positions_template FOREIGN KEY (player_template_id) REFERENCES player_templates(id) ON DELETE CASCADE
 			) ENGINE=InnoDB`,
 		}
 
@@ -817,7 +967,7 @@ func (r *Repository) upsertPlayerPositions(ctx context.Context, playerID int64, 
 		}
 	}()
 
-	if _, err = tx.ExecContext(ctx, `DELETE FROM position_players WHERE player_template_id = ?`, playerID); err != nil {
+	if _, err = tx.ExecContext(ctx, `DELETE FROM player_positions WHERE player_template_id = ?`, playerID); err != nil {
 		return err
 	}
 
@@ -833,11 +983,9 @@ func (r *Repository) upsertPlayerPositions(ctx context.Context, playerID int64, 
 		if effect > 1 {
 			effect = 1
 		}
-		description := strings.TrimSpace(item.Description)
-
 		if _, err = tx.ExecContext(ctx, `
-INSERT INTO position_players (player_template_id, position, description, effect)
-VALUES (?, ?, ?, ?)`, playerID, position, description, effect); err != nil {
+INSERT INTO player_positions (player_template_id, position, effect)
+VALUES (?, ?, ?)`, playerID, position, effect); err != nil {
 			return err
 		}
 	}
@@ -862,8 +1010,8 @@ func (r *Repository) loadPlayerPositions(ctx context.Context, players *[]domain.
 	}
 
 	query := fmt.Sprintf(`
-SELECT player_template_id, position, description, effect
-FROM position_players
+SELECT player_template_id, position, effect
+FROM player_positions
 WHERE player_template_id IN (%s)
 ORDER BY player_template_id ASC, effect DESC`, strings.Join(placeholders, ","))
 
@@ -880,7 +1028,7 @@ ORDER BY player_template_id ASC, effect DESC`, strings.Join(placeholders, ","))
 	for rows.Next() {
 		var playerID int64
 		var item domain.PositionProfile
-		if err := rows.Scan(&playerID, &item.Position, &item.Description, &item.Effect); err != nil {
+		if err := rows.Scan(&playerID, &item.Position, &item.Effect); err != nil {
 			return err
 		}
 		item.Position = strings.ToUpper(strings.TrimSpace(item.Position))

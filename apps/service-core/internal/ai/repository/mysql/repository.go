@@ -64,7 +64,7 @@ func (r *Repository) EnsureUserStages(ctx context.Context, userID uint64) error 
 		}
 
 		_, err := r.db.ExecContext(ctx, `
-INSERT INTO ai_user_stages (
+INSERT INTO user_stages (
   user_id,
   stage_no,
   club_id,
@@ -127,7 +127,7 @@ SELECT
   unlocked_at,
   last_cleared_at,
   updated_at
-FROM ai_user_stages
+FROM user_stages
 WHERE user_id = ?
 ORDER BY stage_no ASC`, userID)
 	if err != nil {
@@ -305,7 +305,7 @@ func (r *Repository) ApplyStageResult(ctx context.Context, userID uint64, stageN
 	var rewardExp int
 	err = tx.QueryRowContext(ctx, `
 SELECT is_unlocked, is_cleared, reward_money, reward_exp
-FROM ai_user_stages
+FROM user_stages
 WHERE user_id = ? AND stage_no = ?
 FOR UPDATE`, userID, stageNo).Scan(&isUnlocked, &isCleared, &rewardMoney, &rewardExp)
 	if err != nil {
@@ -319,7 +319,7 @@ FOR UPDATE`, userID, stageNo).Scan(&isUnlocked, &isCleared, &rewardMoney, &rewar
 	}
 
 	if _, err := tx.ExecContext(ctx, `
-UPDATE ai_user_stages
+UPDATE user_stages
 SET attempts = attempts + 1,
     wins = wins + CASE WHEN ? THEN 1 ELSE 0 END,
     is_cleared = CASE WHEN ? THEN 1 ELSE is_cleared END,
@@ -368,7 +368,7 @@ WHERE id IN (
 
 	if isWin && !isCleared && stageNo < domain.TotalStages {
 		res, err := tx.ExecContext(ctx, `
-UPDATE ai_user_stages
+UPDATE user_stages
 SET is_unlocked = 1,
     unlocked_at = COALESCE(unlocked_at, CURRENT_TIMESTAMP),
     updated_at = CURRENT_TIMESTAMP

@@ -18,6 +18,10 @@ type repository interface {
 	RemoveSkillFromPlayer(ctx context.Context, playerID int64, skillID int64) (domain.Player, error)
 	ListCountries(ctx context.Context) ([]domain.Country, error)
 	CreateCountry(ctx context.Context, input domain.Country) (domain.Country, error)
+	ListLeagues(ctx context.Context) ([]domain.League, error)
+	CreateLeague(ctx context.Context, input domain.League) (domain.League, error)
+	UpdateLeague(ctx context.Context, id int64, input domain.League) (domain.League, error)
+	DeleteLeague(ctx context.Context, id int64) error
 	CreateClub(ctx context.Context, input domain.Club) (domain.Club, error)
 	Create(ctx context.Context, input domain.Player) (domain.Player, error)
 	Update(ctx context.Context, id int64, input domain.Player) (domain.Player, error)
@@ -146,10 +150,53 @@ func (u *PlayerAdminUseCase) CreateCountry(ctx context.Context, input domain.Cou
 	return u.repo.CreateCountry(ctx, input)
 }
 
+func (u *PlayerAdminUseCase) ListLeagues(ctx context.Context) ([]domain.League, error) {
+	return u.repo.ListLeagues(ctx)
+}
+
+func (u *PlayerAdminUseCase) CreateLeague(ctx context.Context, input domain.League) (domain.League, error) {
+	input.Name = strings.TrimSpace(input.Name)
+	input.Logo = strings.TrimSpace(input.Logo)
+
+	if input.Name == "" {
+		return domain.League{}, errors.New("league name is required")
+	}
+	if input.CountryID == nil || *input.CountryID <= 0 {
+		return domain.League{}, errors.New("countryId is required")
+	}
+
+	return u.repo.CreateLeague(ctx, input)
+}
+
+func (u *PlayerAdminUseCase) UpdateLeague(ctx context.Context, id int64, input domain.League) (domain.League, error) {
+	if id <= 0 {
+		return domain.League{}, errors.New("league id is invalid")
+	}
+
+	input.Name = strings.TrimSpace(input.Name)
+	input.Logo = strings.TrimSpace(input.Logo)
+
+	if input.Name == "" {
+		return domain.League{}, errors.New("league name is required")
+	}
+	if input.CountryID == nil || *input.CountryID <= 0 {
+		return domain.League{}, errors.New("countryId is required")
+	}
+
+	return u.repo.UpdateLeague(ctx, id, input)
+}
+
+func (u *PlayerAdminUseCase) DeleteLeague(ctx context.Context, id int64) error {
+	if id <= 0 {
+		return errors.New("league id is invalid")
+	}
+
+	return u.repo.DeleteLeague(ctx, id)
+}
+
 func (u *PlayerAdminUseCase) CreateClub(ctx context.Context, input domain.Club) (domain.Club, error) {
 	input.Name = strings.TrimSpace(input.Name)
 	input.Logo = strings.TrimSpace(input.Logo)
-	input.LeagueName = strings.TrimSpace(input.LeagueName)
 
 	if input.Name == "" {
 		return domain.Club{}, errors.New("club name is required")
@@ -157,8 +204,8 @@ func (u *PlayerAdminUseCase) CreateClub(ctx context.Context, input domain.Club) 
 	if input.CountryID == nil || *input.CountryID <= 0 {
 		return domain.Club{}, errors.New("countryId is required")
 	}
-	if input.LeagueName == "" {
-		return domain.Club{}, errors.New("leagueName is required")
+	if input.LeagueID == nil || *input.LeagueID <= 0 {
+		return domain.Club{}, errors.New("leagueId is required")
 	}
 
 	return u.repo.CreateClub(ctx, input)
@@ -300,9 +347,8 @@ func (u *PlayerAdminUseCase) normalizePlayerInput(input domain.Player) (domain.P
 		}
 		seen[position] = struct{}{}
 		normalizedPositions = append(normalizedPositions, domain.PositionProfile{
-			Position:    position,
-			Description: strings.TrimSpace(item.Description),
-			Effect:      effect,
+			Position: position,
+			Effect:   effect,
 		})
 	}
 
@@ -339,8 +385,7 @@ func inferDefaultPosition(input domain.Player) domain.PositionProfile {
 	}
 
 	return domain.PositionProfile{
-		Position:    best.position,
-		Description: "Auto inferred from base stats",
-		Effect:      1,
+		Position: best.position,
+		Effect:   1,
 	}
 }

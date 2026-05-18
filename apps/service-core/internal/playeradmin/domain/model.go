@@ -40,9 +40,8 @@ type Player struct {
 }
 
 type PositionProfile struct {
-	Position    string  `json:"position"`
-	Description string  `json:"description"`
-	Effect      float64 `json:"effect"`
+	Position string  `json:"position"`
+	Effect   float64 `json:"effect"`
 }
 
 type SpecialSkill struct {
@@ -68,7 +67,17 @@ type Club struct {
 	CountryID  *int64  `json:"countryId,omitempty"`
 	Country    Country `json:"country"`
 	Budget     int64   `json:"budget"`
-	LeagueName string  `json:"leagueName"`
+	LeagueID   *int64  `json:"leagueId,omitempty"`
+	League     *League `json:"league,omitempty"`
+	LeagueName string  `json:"leagueName,omitempty"`
+}
+
+type League struct {
+	ID        int64   `json:"id"`
+	Name      string  `json:"name"`
+	CountryID *int64  `json:"countryId,omitempty"`
+	Country   Country `json:"country"`
+	Logo      string  `json:"logo"`
 }
 
 type PlayerFilter struct {

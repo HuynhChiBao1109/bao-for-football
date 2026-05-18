@@ -31,9 +31,8 @@ type Country struct {
 }
 
 type PositionProfile struct {
-	Position    string  `json:"position"`
-	Description string  `json:"description"`
-	Effect      float64 `json:"effect"`
+	Position string  `json:"position"`
+	Effect   float64 `json:"effect"`
 }
 
 type PlayerCard struct {

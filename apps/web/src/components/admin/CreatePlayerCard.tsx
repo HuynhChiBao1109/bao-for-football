@@ -7,7 +7,6 @@ import { PLAYER_POSITION_OPTIONS, PLAYER_SEASON_OPTIONS, PlayerPosition } from '
 
 type PositionDraft = {
   position: PlayerPosition;
-  description: string;
   effect: number;
 };
 
@@ -46,12 +45,9 @@ export function CreatePlayerCard({
   const [avatarPreview, setAvatarPreview] = useState('');
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
-  const [positions, setPositions] = useState<
-    Array<{ position: string; description: string; effect: number }>
-  >([]);
+  const [positions, setPositions] = useState<Array<{ position: string; effect: number }>>([]);
   const [positionDraft, setPositionDraft] = useState<PositionDraft>({
     position: PlayerPosition.CF,
-    description: '',
     effect: 1,
   });
 
@@ -81,7 +77,7 @@ export function CreatePlayerCard({
         ...STAT_DEFAULTS,
       }));
       setPositions([]);
-      setPositionDraft({ position: PlayerPosition.CF, description: '', effect: 1 });
+      setPositionDraft({ position: PlayerPosition.CF, effect: 1 });
       setAvatarFile(null);
       setAvatarPreview('');
       onCreated();
@@ -176,7 +172,7 @@ export function CreatePlayerCard({
 
           <div className="rounded-[12px] border border-white/10 bg-black/20 p-3 space-y-2">
             <p className="game-field-label">Position + Effect (0 &lt; effect &lt;= 1)</p>
-            <div className="grid gap-2 sm:grid-cols-[1fr_110px_1fr_auto]">
+            <div className="grid gap-2 sm:grid-cols-[1fr_110px_auto]">
               <select
                 value={positionDraft.position}
                 onChange={(e) =>
@@ -204,17 +200,6 @@ export function CreatePlayerCard({
                 }
                 className="game-input"
               />
-              <input
-                value={positionDraft.description}
-                onChange={(e) =>
-                  setPositionDraft((p) => ({
-                    ...p,
-                    description: e.target.value,
-                  }))
-                }
-                className="game-input"
-                placeholder="Description"
-              />
               <button
                 type="button"
                 className="game-button-secondary"
@@ -224,7 +209,6 @@ export function CreatePlayerCard({
                     const next = prev.filter((item) => item.position !== positionDraft.position);
                     next.push({
                       position: positionDraft.position,
-                      description: positionDraft.description.trim(),
                       effect,
                     });
                     return next;
@@ -244,7 +228,6 @@ export function CreatePlayerCard({
               {positions.map((item) => (
                 <span key={item.position} className="game-chip text-xs">
                   {item.position} x{item.effect.toFixed(2)}
-                  {item.description ? ` · ${item.description}` : ''}
                   <button
                     type="button"
                     className="ml-2 text-red-300"

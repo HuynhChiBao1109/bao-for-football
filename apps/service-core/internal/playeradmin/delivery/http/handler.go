@@ -83,10 +83,16 @@ type createCountryRequest struct {
 }
 
 type createClubRequest struct {
-	Name       string `json:"name" form:"name"`
-	Logo       string `json:"logo" form:"logo"`
-	CountryID  int64  `json:"countryId" form:"countryId"`
-	LeagueName string `json:"leagueName" form:"leagueName"`
+	Name      string `json:"name" form:"name"`
+	Logo      string `json:"logo" form:"logo"`
+	CountryID int64  `json:"countryId" form:"countryId"`
+	LeagueID  int64  `json:"leagueId" form:"leagueId"`
+}
+
+type leagueRequest struct {
+	Name      string `json:"name" form:"name"`
+	CountryID int64  `json:"countryId" form:"countryId"`
+	Logo      string `json:"logo" form:"logo"`
 }
 
 func (h *Handler) ListCountries(c *gin.Context) {
@@ -127,11 +133,12 @@ func (h *Handler) CreateClub(c *gin.Context) {
 	}
 
 	countryID := req.CountryID
+	leagueID := req.LeagueID
 	created, err := h.uc.CreateClub(c.Request.Context(), domain.Club{
-		Name:       req.Name,
-		Logo:       req.Logo,
-		CountryID:  &countryID,
-		LeagueName: req.LeagueName,
+		Name:      req.Name,
+		Logo:      req.Logo,
+		CountryID: &countryID,
+		LeagueID:  &leagueID,
 	})
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -139,6 +146,79 @@ func (h *Handler) CreateClub(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"message": "club created", "data": created})
+}
+
+func (h *Handler) ListLeagues(c *gin.Context) {
+	leagues, err := h.uc.ListLeagues(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": leagues})
+}
+
+func (h *Handler) CreateLeague(c *gin.Context) {
+	var req leagueRequest
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	countryID := req.CountryID
+	created, err := h.uc.CreateLeague(c.Request.Context(), domain.League{
+		Name:      req.Name,
+		CountryID: &countryID,
+		Logo:      req.Logo,
+	})
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"message": "league created", "data": created})
+}
+
+func (h *Handler) UpdateLeague(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	var req leagueRequest
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	countryID := req.CountryID
+	updated, err := h.uc.UpdateLeague(c.Request.Context(), id, domain.League{
+		Name:      req.Name,
+		CountryID: &countryID,
+		Logo:      req.Logo,
+	})
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "league updated", "data": updated})
+}
+
+func (h *Handler) DeleteLeague(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	if err := h.uc.DeleteLeague(c.Request.Context(), id); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "league deleted"})
 }
 
 func (h *Handler) List(c *gin.Context) {
@@ -417,9 +497,8 @@ func parsePositionProfiles(raw string) []domain.PositionProfile {
 	}
 
 	type payload struct {
-		Position    string  `json:"position"`
-		Description string  `json:"description"`
-		Effect      float64 `json:"effect"`
+		Position string  `json:"position"`
+		Effect   float64 `json:"effect"`
 	}
 
 	var input []payload
@@ -433,7 +512,6 @@ func parsePositionProfiles(raw string) []domain.PositionProfile {
 		if position == "" {
 			continue
 		}
-		description := strings.TrimSpace(item.Description)
 		effect := item.Effect
 		if effect <= 0 {
 			effect = 0.5
@@ -442,9 +520,8 @@ func parsePositionProfiles(raw string) []domain.PositionProfile {
 			effect = 1
 		}
 		out = append(out, domain.PositionProfile{
-			Position:    position,
-			Description: description,
-			Effect:      effect,
+			Position: position,
+			Effect:   effect,
 		})
 	}
 

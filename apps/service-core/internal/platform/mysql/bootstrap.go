@@ -14,14 +14,15 @@ import (
 )
 
 type migrationClub struct {
-	ID         uint64            `gorm:"primaryKey;autoIncrement;column:id"`
-	Name       string            `gorm:"type:varchar(120);not null;uniqueIndex:uk_clubs_name;column:name"`
-	Logo       string            `gorm:"type:varchar(500);not null;default:'';column:logo"`
-	CountryID  *uint64           `gorm:"index:idx_clubs_country_id;column:country_id"`
-	LeagueName string            `gorm:"type:varchar(120);not null;column:league_name"`
-	CreatedAt  time.Time         `gorm:"column:created_at"`
-	UpdatedAt  time.Time         `gorm:"column:updated_at"`
-	Country    *migrationCountry `gorm:"foreignKey:CountryID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	ID        uint64            `gorm:"primaryKey;autoIncrement;column:id"`
+	Name      string            `gorm:"type:varchar(120);not null;uniqueIndex:uk_clubs_name;column:name"`
+	Logo      string            `gorm:"type:varchar(500);not null;default:'';column:logo"`
+	CountryID *uint64           `gorm:"index:idx_clubs_country_id;column:country_id"`
+	LeagueID  *uint64           `gorm:"index:idx_clubs_league_id;column:league_id"`
+	CreatedAt time.Time         `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:created_at"`
+	UpdatedAt time.Time         `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:updated_at"`
+	Country   *migrationCountry `gorm:"foreignKey:CountryID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	League    *migrationLeague  `gorm:"foreignKey:LeagueID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 }
 
 func (migrationClub) TableName() string {
@@ -50,8 +51,8 @@ type migrationTeam struct {
 	Image     string    `gorm:"type:varchar(500);not null;default:'';column:image"`
 	Budget    int64     `gorm:"not null;default:360000000;column:budget"`
 	RankPoint int       `gorm:"not null;default:0;column:rank_point"`
-	CreatedAt time.Time `gorm:"column:created_at"`
-	UpdatedAt time.Time `gorm:"column:updated_at"`
+	CreatedAt time.Time `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:created_at"`
+	UpdatedAt time.Time `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:updated_at"`
 }
 
 func (migrationTeam) TableName() string {
@@ -63,12 +64,26 @@ type migrationCountry struct {
 	Name      string    `gorm:"type:varchar(120);not null;uniqueIndex:uk_countries_name;column:name"`
 	Code      string    `gorm:"type:varchar(20);column:code"`
 	Flag      string    `gorm:"type:varchar(255);column:flag"`
-	CreatedAt time.Time `gorm:"column:created_at"`
-	UpdatedAt time.Time `gorm:"column:updated_at"`
+	CreatedAt time.Time `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:created_at"`
+	UpdatedAt time.Time `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:updated_at"`
 }
 
 func (migrationCountry) TableName() string {
 	return "countries"
+}
+
+type migrationLeague struct {
+	ID        uint64            `gorm:"primaryKey;autoIncrement;column:id"`
+	Name      string            `gorm:"type:varchar(120);not null;uniqueIndex:uk_leagues_country_name,priority:2;column:name"`
+	CountryID *uint64           `gorm:"uniqueIndex:uk_leagues_country_name,priority:1;index:idx_leagues_country_id;column:country_id"`
+	Logo      string            `gorm:"type:varchar(500);not null;default:'';column:logo"`
+	CreatedAt time.Time         `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:created_at"`
+	UpdatedAt time.Time         `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:updated_at"`
+	Country   *migrationCountry `gorm:"foreignKey:CountryID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+}
+
+func (migrationLeague) TableName() string {
+	return "leagues"
 }
 
 type migrationPlayerTemplate struct {
@@ -100,8 +115,8 @@ type migrationPlayerTemplate struct {
 	BaseSlidingTackle  int               `gorm:"not null;default:1;column:base_sliding_tackle"`
 	BaseDribbling      int               `gorm:"not null;default:1;column:base_dribbling"`
 	BaseCurve          int               `gorm:"not null;default:1;column:base_curve"`
-	CreatedAt          time.Time         `gorm:"column:created_at"`
-	UpdatedAt          time.Time         `gorm:"column:updated_at"`
+	CreatedAt          time.Time         `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:created_at"`
+	UpdatedAt          time.Time         `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:updated_at"`
 	Country            *migrationCountry `gorm:"foreignKey:CountryID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 	Club               *migrationClub    `gorm:"foreignKey:ClubID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 }
@@ -138,8 +153,8 @@ type migrationUserPlayer struct {
 	BonusDribbling      int                     `gorm:"not null;default:0;column:bonus_dribbling"`
 	BonusCurve          int                     `gorm:"not null;default:0;column:bonus_curve"`
 	ObtainedAt          time.Time               `gorm:"column:obtained_at"`
-	CreatedAt           time.Time               `gorm:"column:created_at"`
-	UpdatedAt           time.Time               `gorm:"column:updated_at"`
+	CreatedAt           time.Time               `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:created_at"`
+	UpdatedAt           time.Time               `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:updated_at"`
 	Template            migrationPlayerTemplate `gorm:"foreignKey:PlayerTemplateID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;"`
 }
 
@@ -153,8 +168,8 @@ type migrationSkill struct {
 	IconURL   string    `gorm:"type:varchar(500);column:icon_url"`
 	BuffType  string    `gorm:"type:enum('shooting','passing','longPass','vision','gkReach','attackingAwareness','defensiveAwareness','gkParrying','gkReflex','duels','standingTackle','slidingTackle','pace','stamina','balance','technique','determination','strength','dribbling','curve');not null;column:buff_type"`
 	BuffValue int       `gorm:"not null;default:1;column:buff_value"`
-	CreatedAt time.Time `gorm:"column:created_at"`
-	UpdatedAt time.Time `gorm:"column:updated_at"`
+	CreatedAt time.Time `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:created_at"`
+	UpdatedAt time.Time `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:updated_at"`
 }
 
 func (migrationSkill) TableName() string {
@@ -165,7 +180,7 @@ type migrationPlayerSkill struct {
 	ID        uint64    `gorm:"primaryKey;autoIncrement;column:id"`
 	PlayerID  uint64    `gorm:"not null;index:idx_player_skills_player_id;uniqueIndex:uk_player_skills_player_skill,priority:1;column:player_id"`
 	SkillID   uint64    `gorm:"not null;index:idx_player_skills_skill_id;uniqueIndex:uk_player_skills_player_skill,priority:2;column:skill_id"`
-	CreatedAt time.Time `gorm:"column:created_at"`
+	CreatedAt time.Time `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:created_at"`
 }
 
 func (migrationPlayerSkill) TableName() string {
@@ -182,7 +197,7 @@ type migrationGachaLog struct {
 	IsPityTriggered              bool                 `gorm:"not null;default:false;column:is_pity_triggered"`
 	Rarity                       string               `gorm:"type:enum('N','R','SR','SSR','UR');not null;column:rarity"`
 	PulledAt                     time.Time            `gorm:"column:pulled_at"`
-	CreatedAt                    time.Time            `gorm:"column:created_at"`
+	CreatedAt                    time.Time            `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:created_at"`
 	UserPlayer                   *migrationUserPlayer `gorm:"foreignKey:UserPlayerID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 }
 
@@ -198,8 +213,8 @@ type migrationGachaBanner struct {
 	ExpiredAt       *time.Time `gorm:"column:expired_at"`
 	Status          int        `gorm:"not null;default:1;column:status"`
 	PlayerID        int64      `gorm:"not null;index:idx_gacha_banners_player_id;column:player_id"`
-	CreatedAt       time.Time  `gorm:"column:created_at"`
-	UpdatedAt       time.Time  `gorm:"column:updated_at"`
+	CreatedAt       time.Time  `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:created_at"`
+	UpdatedAt       time.Time  `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:updated_at"`
 }
 
 func (migrationGachaBanner) TableName() string {
@@ -213,8 +228,8 @@ type migrationTeamTactics struct {
 	PassRatio float64   `gorm:"not null;column:pass_ratio"`
 	ShotRatio float64   `gorm:"not null;column:shot_ratio"`
 	Pressure  float64   `gorm:"not null;column:pressure"`
-	CreatedAt time.Time `gorm:"column:created_at"`
-	UpdatedAt time.Time `gorm:"column:updated_at"`
+	CreatedAt time.Time `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:created_at"`
+	UpdatedAt time.Time `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:updated_at"`
 }
 
 func (migrationTeamTactics) TableName() string {
@@ -223,16 +238,15 @@ func (migrationTeamTactics) TableName() string {
 
 type migrationPositionPlayer struct {
 	ID               uint64    `gorm:"primaryKey;autoIncrement;column:id"`
-	PlayerTemplateID uint64    `gorm:"not null;index:idx_position_players_template_id;uniqueIndex:uk_position_players_template_position,priority:1;column:player_template_id"`
-	Position         string    `gorm:"type:varchar(10);not null;uniqueIndex:uk_position_players_template_position,priority:2;column:position"`
-	Description      string    `gorm:"type:varchar(255);not null;default:'';column:description"`
+	PlayerTemplateID uint64    `gorm:"not null;index:idx_player_positions_template_id;uniqueIndex:uk_player_positions_template_position,priority:1;column:player_template_id"`
+	Position         string    `gorm:"type:varchar(10);not null;uniqueIndex:uk_player_positions_template_position,priority:2;column:position"`
 	Effect           float64   `gorm:"type:decimal(4,2);not null;default:1.00;column:effect"`
-	CreatedAt        time.Time `gorm:"column:created_at"`
-	UpdatedAt        time.Time `gorm:"column:updated_at"`
+	CreatedAt        time.Time `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:created_at"`
+	UpdatedAt        time.Time `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:updated_at"`
 }
 
 func (migrationPositionPlayer) TableName() string {
-	return "position_players"
+	return "player_positions"
 }
 
 type migrationAIUserStage struct {
@@ -250,12 +264,12 @@ type migrationAIUserStage struct {
 	Wins           int        `gorm:"not null;default:0;column:wins"`
 	UnlockedAt     *time.Time `gorm:"column:unlocked_at"`
 	LastClearedAt  *time.Time `gorm:"column:last_cleared_at"`
-	CreatedAt      time.Time  `gorm:"column:created_at"`
-	UpdatedAt      time.Time  `gorm:"column:updated_at"`
+	CreatedAt      time.Time  `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:created_at"`
+	UpdatedAt      time.Time  `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:updated_at"`
 }
 
 func (migrationAIUserStage) TableName() string {
-	return "ai_user_stages"
+	return "user_stages"
 }
 
 type migrationMatch struct {
@@ -273,8 +287,8 @@ type migrationMatch struct {
 	AwayStats    string     `gorm:"type:json;column:away_stats"`
 	StartedAt    time.Time  `gorm:"column:started_at"`
 	EndedAt      *time.Time `gorm:"column:ended_at"`
-	CreatedAt    time.Time  `gorm:"column:created_at"`
-	UpdatedAt    time.Time  `gorm:"column:updated_at"`
+	CreatedAt    time.Time  `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:created_at"`
+	UpdatedAt    time.Time  `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:updated_at"`
 
 	User    migrationUser          `gorm:"foreignKey:UserID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	Scorers []migrationMatchScorer `gorm:"foreignKey:MatchID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
@@ -291,7 +305,7 @@ type migrationMatchScorer struct {
 	PlayerID   int       `gorm:"not null;column:player_id"`
 	PlayerName string    `gorm:"type:varchar(120);column:player_name"`
 	Minute     int       `gorm:"not null;default:0;column:minute"`
-	CreatedAt  time.Time `gorm:"column:created_at"`
+	CreatedAt  time.Time `gorm:"type:timestamp;not null;default:CURRENT_TIMESTAMP;column:created_at"`
 }
 
 func (migrationMatchScorer) TableName() string {
@@ -360,14 +374,12 @@ func AutoMigrate(ctx context.Context, db *gorm.DB) error {
 		return err
 	}
 
-	if err := ensureClubSchema(ctx, sqlDB); err != nil {
-		return err
-	}
 	if err := ensureTeamSchema(ctx, sqlDB); err != nil {
 		return err
 	}
 
 	if err := db.WithContext(ctx).Set("gorm:table_options", "ENGINE=InnoDB").AutoMigrate(
+		&migrationLeague{},
 		&migrationClub{},
 		&migrationCountry{},
 		&migrationPlayerTemplate{},
@@ -387,7 +399,13 @@ func AutoMigrate(ctx context.Context, db *gorm.DB) error {
 		return err
 	}
 
+	if err := ensureLeagueSchema(ctx, sqlDB); err != nil {
+		return err
+	}
 	if err := ensureClubSchema(ctx, sqlDB); err != nil {
+		return err
+	}
+	if err := ensureAuditTimestampSchema(ctx, sqlDB); err != nil {
 		return err
 	}
 	if err := ensureTeamSchema(ctx, sqlDB); err != nil {
@@ -443,7 +461,7 @@ func ensurePositionPlayerBackfill(ctx context.Context, db *sql.DB) error {
 	}
 
 	_, err := db.ExecContext(ctx, `
-INSERT INTO position_players (player_template_id, position, description, effect)
+INSERT INTO player_positions (player_template_id, position, effect)
 SELECT
 	pt.id,
 	CASE
@@ -466,10 +484,9 @@ SELECT
 			THEN 'CM'
 		ELSE 'LW'
 	END AS position,
-	'Auto migrated primary position' AS description,
 	1.00 AS effect
 FROM player_templates pt
-LEFT JOIN position_players pp ON pp.player_template_id = pt.id
+LEFT JOIN player_positions pp ON pp.player_template_id = pt.id
 WHERE pp.id IS NULL`)
 
 	return err
@@ -619,6 +636,9 @@ func ensureLegacyTableRenames(ctx context.Context, db *sql.DB) error {
 	}{
 		{oldName: "admin_gacha_banners", newName: "gacha_banners"},
 		{oldName: "admin_player_skills", newName: "player_skills"},
+		{oldName: "position_player", newName: "player_positions"},
+		{oldName: "position_players", newName: "player_positions"},
+		{oldName: "ai_user_stages", newName: "user_stages"},
 	}
 
 	for _, mapping := range legacyMappings {
@@ -719,6 +739,16 @@ func ensureClubSchema(ctx context.Context, db *sql.DB) error {
 		}
 	}
 
+	leagueIDExists, err := hasColumn(ctx, db, "clubs", "league_id")
+	if err != nil {
+		return err
+	}
+	if !leagueIDExists {
+		if _, err := db.ExecContext(ctx, `ALTER TABLE clubs ADD COLUMN league_id bigint unsigned NULL AFTER country_id`); err != nil {
+			return err
+		}
+	}
+
 	formationExists, err := hasColumn(ctx, db, "clubs", "formation")
 	if err != nil {
 		return err
@@ -736,6 +766,117 @@ func ensureClubSchema(ctx context.Context, db *sql.DB) error {
 	if budgetExists {
 		if _, err := db.ExecContext(ctx, `ALTER TABLE clubs DROP COLUMN budget`); err != nil {
 			return err
+		}
+	}
+
+	leagueNameExists, err := hasColumn(ctx, db, "clubs", "league_name")
+	if err != nil {
+		return err
+	}
+	if leagueNameExists {
+		if _, err := db.ExecContext(ctx, `
+INSERT INTO leagues (name, country_id, logo, created_at, updated_at)
+SELECT DISTINCT clubs.league_name, clubs.country_id, '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+FROM clubs
+WHERE clubs.league_name IS NOT NULL
+  AND TRIM(clubs.league_name) <> ''
+ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP`); err != nil {
+			return err
+		}
+
+		if _, err := db.ExecContext(ctx, `
+UPDATE clubs c
+INNER JOIN leagues l ON l.name = c.league_name AND ((l.country_id IS NULL AND c.country_id IS NULL) OR l.country_id = c.country_id)
+SET c.league_id = l.id
+WHERE c.league_id IS NULL
+  AND c.league_name IS NOT NULL
+  AND TRIM(c.league_name) <> ''`); err != nil {
+			return err
+		}
+
+		if _, err := db.ExecContext(ctx, `ALTER TABLE clubs DROP COLUMN league_name`); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func ensureLeagueSchema(ctx context.Context, db *sql.DB) error {
+	leaguesExists, err := hasTable(ctx, db, "leagues")
+	if err != nil {
+		return err
+	}
+	if !leaguesExists {
+		return nil
+	}
+
+	logoExists, err := hasColumn(ctx, db, "leagues", "logo")
+	if err != nil {
+		return err
+	}
+	if !logoExists {
+		if _, err := db.ExecContext(ctx, `ALTER TABLE leagues ADD COLUMN logo varchar(500) NOT NULL DEFAULT '' AFTER country_id`); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func ensureAuditTimestampSchema(ctx context.Context, db *sql.DB) error {
+	tables := []string{
+		"clubs",
+		"countries",
+		"leagues",
+		"player_templates",
+		"skills",
+		"player_skills",
+		"user_players",
+		"users",
+		"teams",
+		"gacha_logs",
+		"gacha_banners",
+		"team_tactics",
+		"player_positions",
+		"user_stages",
+		"matches",
+		"match_scorers",
+	}
+
+	for _, tableName := range tables {
+		tableExists, err := hasTable(ctx, db, tableName)
+		if err != nil {
+			return err
+		}
+		if !tableExists {
+			continue
+		}
+
+		createdAtExists, err := hasColumn(ctx, db, tableName, "created_at")
+		if err != nil {
+			return err
+		}
+		if createdAtExists {
+			if _, err := db.ExecContext(ctx, fmt.Sprintf(`UPDATE %s SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL`, tableName)); err != nil {
+				return err
+			}
+			if _, err := db.ExecContext(ctx, fmt.Sprintf(`ALTER TABLE %s MODIFY COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`, tableName)); err != nil {
+				return err
+			}
+		}
+
+		updatedAtExists, err := hasColumn(ctx, db, tableName, "updated_at")
+		if err != nil {
+			return err
+		}
+		if updatedAtExists {
+			if _, err := db.ExecContext(ctx, fmt.Sprintf(`UPDATE %s SET updated_at = CURRENT_TIMESTAMP WHERE updated_at IS NULL`, tableName)); err != nil {
+				return err
+			}
+			if _, err := db.ExecContext(ctx, fmt.Sprintf(`ALTER TABLE %s MODIFY COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`, tableName)); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -878,14 +1019,19 @@ func ensureDefaultClubs(ctx context.Context, db *sql.DB) error {
 			return err
 		}
 
+		leagueID, err := resolveLeagueID(ctx, db, club.LeagueName, countryID)
+		if err != nil {
+			return err
+		}
+
 		_, err = db.ExecContext(ctx, `
-INSERT IGNORE INTO clubs (id, name, logo, country_id, league_name)
+INSERT IGNORE INTO clubs (id, name, logo, country_id, league_id)
 VALUES (?, ?, ?, ?, ?)`,
 			club.ID,
 			club.Name,
 			club.Logo,
 			countryID,
-			club.LeagueName,
+			leagueID,
 		)
 		if err != nil {
 			return err
@@ -1481,4 +1627,39 @@ func resolveCountryID(ctx context.Context, db *sql.DB, countryName string, count
 	}
 
 	return nil, nil
+}
+
+func resolveLeagueID(ctx context.Context, db *sql.DB, leagueName string, countryID *uint64) (*uint64, error) {
+	leagueName = strings.TrimSpace(leagueName)
+	if leagueName == "" {
+		return nil, nil
+	}
+
+	var leagueID uint64
+	err := db.QueryRowContext(ctx, `
+SELECT id
+FROM leagues
+WHERE name = ?
+  AND ((country_id IS NULL AND ? IS NULL) OR country_id = ?)
+LIMIT 1`, leagueName, countryID, countryID).Scan(&leagueID)
+	if err == nil {
+		return &leagueID, nil
+	}
+	if err != sql.ErrNoRows {
+		return nil, err
+	}
+
+	result, err := db.ExecContext(ctx, `
+INSERT INTO leagues (name, country_id, logo)
+VALUES (?, ?, '')`, leagueName, countryID)
+	if err != nil {
+		return nil, err
+	}
+
+	insertedID, err := result.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+	leagueID = uint64(insertedID)
+	return &leagueID, nil
 }
