@@ -1,0 +1,231 @@
+/* Club Page - Main Dashboard Styling */
+
+.club-page {
+  position: relative;
+  min-height: 100vh;
+  padding: 32px 24px;
+  overflow: hidden;
+}
+
+/* Background with football stadium theme */
+.club-page__background {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.club-page__blur-element {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0;
+  animation: floatBackground 8s ease-in-out infinite;
+}
+
+.club-page__blur--1 {
+  width: 320px;
+  height: 320px;
+  top: -100px;
+  left: 10%;
+  background: radial-gradient(circle, rgba(114, 241, 184, 0.08), transparent 70%);
+  filter: blur(60px);
+  animation-delay: 0s;
+}
+
+.club-page__blur--2 {
+  width: 280px;
+  height: 280px;
+  top: 30%;
+  right: 5%;
+  background: radial-gradient(circle, rgba(88, 166, 255, 0.08), transparent 70%);
+  filter: blur(60px);
+  animation-delay: 2s;
+}
+
+.club-page__blur--3 {
+  width: 350px;
+  height: 350px;
+  bottom: -50px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: radial-gradient(circle, rgba(52, 211, 153, 0.05), transparent 70%);
+  filter: blur(70px);
+  animation-delay: 4s;
+}
+
+@keyframes floatBackground {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  50% {
+    transform: translateY(-30px) translateX(15px);
+    opacity: 0.5;
+  }
+}
+
+/* Main content */
+.club-page__content {
+  position: relative;
+  z-index: 1;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Header section */
+.club-page__header {
+  margin-bottom: 32px;
+  animation: fadeInDown 0.6s ease forwards;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.club-page__header .game-header-kicker {
+  animation: fadeInDown 0.6s ease forwards 0.1s;
+  animation-fill-mode: backwards;
+}
+
+.club-page__header .game-title {
+  margin-top: 12px;
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  animation: fadeInDown 0.6s ease forwards 0.2s;
+  animation-fill-mode: backwards;
+}
+
+/* Banner styles */
+.club-page__content > .banner {
+  margin-bottom: 24px;
+  animation: slideDown 0.5s ease forwards;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Club header */
+.club-page__content > .club-header {
+  margin-bottom: 40px;
+  animation: fadeInUp 0.6s ease forwards 0.3s;
+  animation-fill-mode: backwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Main grid layout - 3 columns */
+.club-page__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 28px;
+  margin-bottom: 32px;
+}
+
+/* Staggered animation for cards */
+.club-page__grid > .module-card:nth-child(1) {
+  animation: cardSlideIn 0.7s ease forwards 0.4s;
+  animation-fill-mode: backwards;
+}
+
+.club-page__grid > .module-card:nth-child(2) {
+  animation: cardSlideIn 0.7s ease forwards 0.5s;
+  animation-fill-mode: backwards;
+}
+
+.club-page__grid > .module-card:nth-child(3) {
+  animation: cardSlideIn 0.7s ease forwards 0.6s;
+  animation-fill-mode: backwards;
+}
+
+@keyframes cardSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(40px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Responsive grid */
+@media (max-width: 1200px) {
+  .club-page__grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .club-page {
+    padding: 20px 16px;
+  }
+
+  .club-page__grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .club-page__header {
+    margin-bottom: 24px;
+  }
+
+  .club-page__content > .club-header {
+    margin-bottom: 30px;
+  }
+
+  .club-page__header .game-title {
+    font-size: 24px;
+  }
+}
+
+/* Glow effects on scroll */
+@supports (scrollbar-width: thin) {
+  .club-page:hover .club-page__blur-element {
+    opacity: 1;
+  }
+}
+
+/* Print styles */
+@media print {
+  .club-page__background {
+    display: none;
+  }
+}
+
+/* Dark mode support (if needed) */
+@media (prefers-color-scheme: dark) {
+  .club-page {
+    background: transparent;
+  }
+}
+
+/* Focus management for accessibility */
+.club-page__content *:focus-visible {
+  outline: 2px solid rgba(114, 241, 184, 0.6);
+  outline-offset: 2px;
+  border-radius: 4px;
+}

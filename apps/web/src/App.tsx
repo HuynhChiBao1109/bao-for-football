@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-
 import { useAuth } from './hooks/useAuth'
 import { AppLayout } from './layouts/AppLayout'
 import { LoginPage } from './pages/LoginPage'
+import { AdminLoginPage } from './pages/AdminLoginPage.tsx'
 import { ClubPage } from './pages/ClubPage'
 import { PlayersPage } from './pages/PlayersPage'
 import { TacticsPage } from './pages/TacticsPage'
@@ -33,7 +34,7 @@ function App() {
 
   // Redirect authenticated users away from login
   useEffect(() => {
-    if (session && location.pathname === ROUTES.login) {
+    if (session && (location.pathname === ROUTES.login || location.pathname === ROUTES.adminLogin)) {
       navigate(isAdmin ? ROUTES.admin : ROUTES.club, { replace: true })
     }
   }, [session, isAdmin, location.pathname, navigate])
@@ -41,6 +42,7 @@ function App() {
   return (
     <Routes>
       <Route path={ROUTES.login} element={<LoginPage />} />
+      <Route path={ROUTES.adminLogin} element={<AdminLoginPage />} />
 
       <Route
         element={

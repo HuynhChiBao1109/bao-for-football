@@ -284,14 +284,14 @@ ON DUPLICATE KEY UPDATE
 		return err
 	}
 
-	if err := r.ensureStarterPlayers(ctx, tx, userID, starterClubName); err != nil {
+	if err := r.ensureStarterPlayers(ctx, tx, userID, clubID, starterClubName); err != nil {
 		return err
 	}
 
 	return tx.Commit()
 }
 
-func (r *Repository) ensureStarterPlayers(ctx context.Context, tx *sql.Tx, userID uint64, starterClubName string) error {
+func (r *Repository) ensureStarterPlayers(ctx context.Context, tx *sql.Tx, userID uint64, starterClubID int64, starterClubName string) error {
 	var ownedCount int
 	err := tx.QueryRowContext(ctx, `
 SELECT COUNT(*)
@@ -308,12 +308,12 @@ WHERE user_id = ?`, userID).Scan(&ownedCount)
 	err = tx.QueryRowContext(ctx, `
 SELECT COUNT(*)
 FROM player_templates
-WHERE base_club = ? AND season = 'normal'`, starterClubName).Scan(&availableCount)
+WHERE club_id = ? AND season = 'normal'`, starterClubID).Scan(&availableCount)
 	if err != nil {
 		return err
 	}
 	if availableCount < 22 {
-		return fmt.Errorf("starter club %q does not have enough normal player templates", starterClubName)
+		return fmt.Errorf("starter club id %d (%q) does not have enough normal player templates", starterClubID, starterClubName)
 	}
 
 	slotsLeft := 50 - ownedCount
@@ -355,15 +355,41 @@ INSERT INTO user_players (
   bonus_curve,
   obtained_at
 )
-SELECT ?, pt.id, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, CURRENT_TIMESTAMP
+SELECT
+	?,
+	pt.id,
+	1,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	CURRENT_TIMESTAMP
 FROM player_templates pt
 LEFT JOIN user_players up
   ON up.user_id = ? AND up.player_template_id = pt.id
-WHERE pt.base_club = ?
+WHERE pt.club_id = ?
   AND pt.season = 'normal'
   AND up.id IS NULL
 ORDER BY pt.id ASC
-LIMIT ?`, userID, userID, starterClubName, assignCount)
+LIMIT ?`, userID, userID, starterClubID, assignCount)
 
 	if err != nil {
 		return err
