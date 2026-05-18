@@ -12,6 +12,12 @@ import { queryClient } from '../lib/queryClient'
 import { ROUTES } from '../routes'
 import type { AdminPlayer, AdminPlayerFilter } from '../types'
 
+function calcOverall(source: Record<string, unknown>) {
+  const values = STAT_FIELDS.map(({ key }) => Number(source[key] ?? 0)).filter((value) => Number.isFinite(value))
+  if (values.length === 0) return 0
+  return values.reduce((sum, value) => sum + value, 0) / values.length
+}
+
 // ─── Admin Page ───────────────────────────────────────────────────────────────
 
 export function AdminPage() {
@@ -190,6 +196,7 @@ function PlayerTable({ players, selectedId, onSelect }: { players: AdminPlayer[]
             <th className="px-3 py-3 font-medium">Quốc gia</th>
             <th className="px-3 py-3 font-medium">CLB gốc</th>
             <th className="px-3 py-3 font-medium">Mùa</th>
+            <th className="px-3 py-3 font-medium">Overall</th>
             <th className="px-3 py-3 font-medium">Loại</th>
           </tr>
         </thead>
@@ -208,6 +215,7 @@ function PlayerTable({ players, selectedId, onSelect }: { players: AdminPlayer[]
               <td className="px-3 py-3 text-slate-300">{p.country?.name ?? '—'}</td>
               <td className="px-3 py-3 text-slate-300">{p.baseClub}</td>
               <td className="px-3 py-3 text-slate-300">{p.season}</td>
+              <td className="px-3 py-3 font-semibold text-emerald-200">{calcOverall(p).toFixed(1)}</td>
               <td className="px-3 py-3">
                 <span className={`game-chip text-xs ${p.sourceType === 'gacha_special' ? 'text-amber-300 border-amber-400/30' : ''}`}>{p.sourceType}</span>
               </td>
@@ -348,6 +356,9 @@ function PlayerDetail({
           <p className="game-header-kicker">Chi tiết</p>
           <h3 className="game-title text-xl font-bold text-white">{player.name}</h3>
           <p className="text-sm text-slate-400">{player.country?.name} · {player.baseClub} · {player.season}</p>
+          <p className="mt-2 inline-flex rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-sm font-semibold text-emerald-200">
+            Overall {calcOverall(player).toFixed(1)}
+          </p>
         </div>
       </div>
 
@@ -681,7 +692,7 @@ const SEASON_OPTIONS = [
   { value: 'moment time', label: 'Khoảnh khắc trận đấu (Moment Time)' },
 ]
 
-const POSITION_OPTIONS = ['GK', 'LB', 'CB', 'RB', 'CDM', 'CM', 'CAM', 'LW', 'RW', 'LMF', 'RMF', 'LWB', 'RWB', 'DMF', 'CMF', 'AMF', 'CF']
+const POSITION_OPTIONS = ['GK', 'LB', 'CB', 'RB', "LWB", "RWB", 'CDM', 'CM', 'CAM', 'LMF', 'RMF', 'DMF', 'CMF', 'AMF', 'CF', 'LW', 'RW', "SS"]
 
 function CreatePlayerCard({ countries, onCreated, title, defaultSeason, sourceType }: {
   countries: { id: number; name: string }[]
