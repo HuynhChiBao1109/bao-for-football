@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { apiClient } from '../../lib/apiClient';
+import { useAdminLoginMutation } from '../../hooks/useAuthMutations';
 import { ROUTES } from '../../routes';
 import { BrandLogo } from '../../components/auth';
 
 export function AdminLoginPage() {
   const { session, setSession } = useAuth();
   const navigate = useNavigate();
+  const adminLoginMutation = useAdminLoginMutation();
 
   const [form, setForm] = useState({ username: '', password: '' });
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -23,19 +23,13 @@ export function AdminLoginPage() {
 
   async function submitAdminLogin(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
     setError('');
     try {
-      const data = await apiClient('/admin/login', {
-        method: 'POST',
-        body: form,
-      });
+      const data = await adminLoginMutation.mutateAsync(form);
       setSession({ token: data.token, user: data.user });
       navigate(ROUTES.admin, { replace: true });
     } catch (err) {
       setError((err as Error).message);
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -79,8 +73,12 @@ export function AdminLoginPage() {
 
               {error && <p className="game-notice game-notice--error">{error}</p>}
 
-              <button type="submit" disabled={loading} className="game-button-primary w-full">
-                {loading ? 'Logging in...' : 'Login as Admin'}
+              <button
+                type="submit"
+                disabled={adminLoginMutation.isPending}
+                className="game-button-primary w-full"
+              >
+                {adminLoginMutation.isPending ? 'Logging in...' : 'Login as Admin'}
               </button>
             </form>
           </div>

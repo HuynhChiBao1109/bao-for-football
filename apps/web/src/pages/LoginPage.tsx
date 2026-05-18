@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { apiClient } from '../lib/apiClient';
+import { useLoginMutation, useRegisterMutation } from '../hooks/useAuthMutations';
 import { defaultAuthenticatedRoute } from '../routes';
 import { BrandLogo } from '../components/auth';
 import { AuthTab } from '../enums/auth';
@@ -17,10 +17,16 @@ export function LoginPage() {
 
   const [tab, setTab] = useState<AuthTab>(AuthTab.Login);
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
-  const [registerForm, setRegisterForm] = useState({ username: '', password: '' });
-  const [loading, setLoading] = useState(false);
+  const [registerForm, setRegisterForm] = useState({
+    username: '',
+    password: '',
+    confirmPassword: '',
+  });
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const loginMutation = useLoginMutation();
+  const registerMutation = useRegisterMutation();
+  const loading = loginMutation.isPending || registerMutation.isPending;
 
   useEffect(() => {
     setMessage('');
@@ -29,32 +35,31 @@ export function LoginPage() {
 
   async function submitLogin(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
     setError('');
     try {
-      const data = await apiClient('/api/v1/auth/login', { method: 'POST', body: loginForm });
+      const data = await loginMutation.mutateAsync(loginForm);
       setSession({ token: data.token, user: data.user });
       navigate(defaultAuthenticatedRoute(Boolean(data.user?.isAdmin)), { replace: true });
     } catch (err: unknown) {
       setError((err as Error).message);
-    } finally {
-      setLoading(false);
     }
   }
 
   async function submitRegister(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
     setError('');
     try {
-      await apiClient('/api/v1/auth/register', { method: 'POST', body: registerForm });
+      // check password confirmation
+      if (registerForm.password !== registerForm.confirmPassword) {
+        setError('Password and confirm password do not match.');
+        return;
+      }
+      await registerMutation.mutateAsync(registerForm);
       setMessage('Đăng ký thành công. Bạn có thể đăng nhập ngay.');
       setTab(AuthTab.Login);
       setLoginForm((prev) => ({ ...prev, username: registerForm.username }));
     } catch (err: unknown) {
       setError((err as Error).message);
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -124,10 +129,12 @@ export function LoginPage() {
                   value={registerForm.password}
                   onChange={(v) => setRegisterForm((p) => ({ ...p, password: v }))}
                 />
-                <p className="game-stat-card text-sm text-slate-300">
-                  Sau khi login lần đầu, hệ thống sẽ yêu cầu bạn chọn câu lạc bộ để tạo team khởi
-                  đầu.
-                </p>
+                <Field
+                  label="Confirm Password"
+                  type="password"
+                  value={registerForm.confirmPassword}
+                  onChange={(v) => setRegisterForm((p) => ({ ...p, confirmPassword: v }))}
+                />
 
                 {message && <p className="game-notice game-notice--success">{message}</p>}
                 {error && <p className="game-notice game-notice--error">{error}</p>}

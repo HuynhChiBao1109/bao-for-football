@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '../lib/apiClient';
-import { useAuth } from './useAuth';
-import type { SpecialSkill } from '../types';
+import { apiClient } from '../../lib/apiClient';
+import { useAuth } from '../useAuth';
+import type { SpecialSkill } from '../../types';
 
 export function useAdminSkills() {
   const { token } = useAuth();

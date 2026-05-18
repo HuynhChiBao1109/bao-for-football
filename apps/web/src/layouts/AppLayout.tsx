@@ -1,19 +1,18 @@
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { useAssignStarterTeamMutation } from '../hooks/useAuthMutations';
 import { useSession } from '../hooks/useSession';
 import { useClubs } from '../hooks/useClubs';
 import { ROUTES } from '../routes';
-import { queryClient } from '../lib/queryClient';
-import { apiClient } from '../lib/apiClient';
 
 export function AppLayout() {
   const { session, isAdmin } = useAuth();
+  const assignStarterTeamMutation = useAssignStarterTeamMutation();
   const { data: sessionData } = useSession();
   const { data: clubs = [], isLoading: clubsLoading } = useClubs();
   const navigate = useNavigate();
   const [selectedStarterClubId, setSelectedStarterClubId] = useState<number>(0);
-  const [assigningClub, setAssigningClub] = useState(false);
   const [assignClubError, setAssignClubError] = useState('');
 
   const needsStarterClub = Boolean(session && !isAdmin && !sessionData?.team);
@@ -37,25 +36,16 @@ export function AppLayout() {
   );
 
   async function handleCreateStarterTeam() {
-    if (!session?.token || !selectedStarterClub) {
+    if (!selectedStarterClub) {
       return;
     }
 
-    setAssigningClub(true);
     setAssignClubError('');
     try {
-      await apiClient('/api/v1/auth/team', {
-        method: 'POST',
-        token: session.token,
-        body: { clubId: selectedStarterClub.id },
-      });
-
-      await queryClient.invalidateQueries({ queryKey: ['session', session.token] });
+      await assignStarterTeamMutation.mutateAsync({ clubId: selectedStarterClub.id });
       navigate(ROUTES.club, { replace: true });
     } catch (err) {
       setAssignClubError((err as Error).message);
-    } finally {
-      setAssigningClub(false);
     }
   }
 
@@ -82,7 +72,7 @@ export function AppLayout() {
                     value={selectedStarterClub?.id ?? 0}
                     onChange={(event) => setSelectedStarterClubId(Number(event.target.value))}
                     className="game-select"
-                    disabled={assigningClub || clubsLoading || clubs.length === 0}
+                    disabled={assignStarterTeamMutation.isPending || clubsLoading || clubs.length === 0}
                   >
                     {clubs.map((club) => (
                       <option key={club.id} value={club.id}>
@@ -122,10 +112,10 @@ export function AppLayout() {
                 <button
                   type="button"
                   onClick={handleCreateStarterTeam}
-                  disabled={!selectedStarterClub || assigningClub || clubsLoading}
+                  disabled={!selectedStarterClub || assignStarterTeamMutation.isPending || clubsLoading}
                   className="game-button-primary mt-5 w-full"
                 >
-                  {assigningClub ? 'Đang tạo team...' : 'Bắt đầu tạo team'}
+                  {assignStarterTeamMutation.isPending ? 'Đang tạo team...' : 'Bắt đầu tạo team'}
                 </button>
               </div>
             </section>

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { API_BASE_URL, apiClient } from '../lib/apiClient';
-import { useAuth } from './useAuth';
-import type { AdminPlayer, AdminPlayerFilter } from '../types';
+import { API_BASE_URL, apiClient } from '../../lib/apiClient';
+import { useAuth } from '../useAuth';
+import type { AdminPlayer, AdminPlayerFilter } from '../../types';
 
 export function useAdminPlayers(filter: AdminPlayerFilter = {}, enabled = true) {
   const { token } = useAuth();
