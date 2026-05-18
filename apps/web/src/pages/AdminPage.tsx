@@ -1,33 +1,53 @@
-import { useState } from 'react'
-import { useAdminPlayers, useAdminPlayer, useCreateAdminPlayer } from '../hooks/useAdminPlayers'
-import { useAdminSkills, useCreateSkill, useAssignSkill } from '../hooks/useAdminSkills'
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAdminPlayers, useAdminPlayer, useCreateAdminPlayer, useDeleteAdminPlayer, useUpdateAdminPlayer } from '../hooks/useAdminPlayers'
+import { useAdminSkills, useCreateSkill, useAssignSkill, useRemoveSkill } from '../hooks/useAdminSkills'
 import { useCountries } from '../hooks/useCountries'
 import { useClubs } from '../hooks/useClubs'
 import { useAuth } from '../hooks/useAuth'
 import { STAT_FIELDS } from '../lib/constants'
 import { Banner } from '../components/ui/Banner'
 import { API_BASE_URL } from '../lib/apiClient'
+import { queryClient } from '../lib/queryClient'
+import { ROUTES } from '../routes'
 import type { AdminPlayer, AdminPlayerFilter } from '../types'
 
 // ─── Admin Page ───────────────────────────────────────────────────────────────
 
 export function AdminPage() {
-  const { token } = useAuth()
+  const { token, setSession } = useAuth()
+  const navigate = useNavigate()
   const [filter, setFilter] = useState<AdminPlayerFilter>({})
+  const [hasLoadedPlayers, setHasLoadedPlayers] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
 
-  const { data: players = [], isLoading: playersLoading, error: playersError, refetch } = useAdminPlayers(filter)
+  const { data: players = [], isLoading: playersLoading, error: playersError, refetch } = useAdminPlayers(filter, hasLoadedPlayers)
   const { data: countries = [] } = useCountries()
   const { data: clubs = [] } = useClubs()
   const { data: skills = [], refetch: refetchSkills } = useAdminSkills()
 
   function handleNameChange(value: string) {
     setNameInput(value)
+    setHasLoadedPlayers(true)
     if (debounceTimer) clearTimeout(debounceTimer)
     const t = setTimeout(() => setFilter((prev) => ({ ...prev, name: value.trim() || undefined })), 300)
     setDebounceTimer(t)
+  }
+
+  function handleRefreshPlayers() {
+    if (!hasLoadedPlayers) {
+      setHasLoadedPlayers(true)
+      return
+    }
+    refetch()
+  }
+
+  function handleLogout() {
+    setSession(null)
+    queryClient.clear()
+    navigate(ROUTES.login, { replace: true })
   }
 
   const uniqueClubNames = Array.from(new Set(clubs.map((c) => c.name).filter(Boolean))).sort()
@@ -36,9 +56,16 @@ export function AdminPage() {
     <div className="space-y-6">
       <section className="game-panel game-panel--accent overflow-hidden p-5 sm:p-6">
         <div className="game-panel__content">
-          <p className="game-header-kicker">Admin Foundry</p>
-          <h2 className="game-title mt-3 text-3xl font-bold text-white">Quản lí cầu thủ nguồn và kỹ năng đặc biệt</h2>
-          <p className="game-copy mt-3 max-w-2xl text-base">Tạo cầu thủ mới, gán kỹ năng đặc biệt, tạo banner gacha và kiểm tra pool nguồn quốc gia.</p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="game-header-kicker">Admin Foundry</p>
+              <h2 className="game-title mt-3 text-3xl font-bold text-white">Quản lí cầu thủ nguồn và kỹ năng đặc biệt</h2>
+              <p className="game-copy mt-3 max-w-2xl text-base">Tạo cầu thủ mới, gán kỹ năng đặc biệt, tạo banner gacha và kiểm tra pool nguồn quốc gia.</p>
+            </div>
+            <button type="button" onClick={handleLogout} className="game-button-ghost">
+              Logout
+            </button>
+          </div>
         </div>
       </section>
 
@@ -51,18 +78,41 @@ export function AdminPage() {
             countries={countries}
             clubNames={uniqueClubNames}
             onNameChange={handleNameChange}
-            onCountryChange={(v) => setFilter((p) => ({ ...p, countryId: v || undefined }))}
-            onClubChange={(v) => setFilter((p) => ({ ...p, baseClub: v || undefined }))}
-            onRefresh={refetch}
+            onCountryChange={(v) => {
+              setHasLoadedPlayers(true)
+              setFilter((p) => ({ ...p, countryId: v || undefined }))
+            }}
+            onClubChange={(v) => {
+              setHasLoadedPlayers(true)
+              setFilter((p) => ({ ...p, baseClub: v || undefined }))
+            }}
+            onRefresh={handleRefreshPlayers}
           />
-          {playersLoading && <Banner text="Đang tải danh sách cầu thủ..." tone="info" />}
-          {playersError && <Banner text={(playersError as Error).message} tone="error" />}
-          <PlayerTable players={players} selectedId={selectedId} onSelect={setSelectedId} />
+          {hasLoadedPlayers && playersLoading && <Banner text="Đang tải danh sách cầu thủ..." tone="info" />}
+          {hasLoadedPlayers && playersError && <Banner text={(playersError as Error).message} tone="error" />}
+          {hasLoadedPlayers ? (
+            <PlayerTable players={players} selectedId={selectedId} onSelect={setSelectedId} />
+          ) : (
+            <Banner text="Mặc định chưa tải danh sách. Hãy lọc hoặc bấm Tải lại để hiển thị cầu thủ." tone="muted" />
+          )}
         </div>
 
         <div className="space-y-4">
           {selectedId ? (
-            <PlayerDetail playerId={selectedId} skills={skills} onSkillAssigned={() => { refetch(); refetchSkills() }} />
+            <PlayerDetail
+              playerId={selectedId}
+              skills={skills}
+              countries={countries}
+              clubs={clubs}
+              onDataChanged={() => {
+                handleRefreshPlayers()
+                refetchSkills()
+              }}
+              onDeleted={() => {
+                setSelectedId(null)
+                handleRefreshPlayers()
+              }}
+            />
           ) : (
             <div className="game-stat-card">
               <p className="game-stat-card__label">Chi tiết cầu thủ</p>
@@ -75,13 +125,13 @@ export function AdminPage() {
 
       {/* Create player form */}
       <section className="grid gap-6 lg:grid-cols-2">
-        <CreatePlayerCard countries={countries} onCreated={refetch} title="Tạo cầu thủ mùa thường" defaultSeason="normal" sourceType="base" />
-        <CreatePlayerCard countries={countries} onCreated={refetch} title="Tạo cầu thủ đặc biệt (Gacha)" defaultSeason="special year" sourceType="gacha_special" />
+        {/* <CreatePlayerCard countries={countries} onCreated={handleRefreshPlayers} title="Tạo cầu thủ mùa thường" defaultSeason="normal" sourceType="base" /> */}
+        <CreatePlayerCard countries={countries} onCreated={handleRefreshPlayers} title="Tạo cầu thủ" defaultSeason="special year" sourceType="gacha_special" />
       </section>
 
       {/* Create gacha banner form */}
       <section>
-        <GachaBannerCard token={token} players={players} onCreated={refetch} />
+        <GachaBannerCard token={token} players={players} onCreated={handleRefreshPlayers} />
       </section>
     </div>
   )
@@ -152,7 +202,7 @@ function PlayerTable({ players, selectedId, onSelect }: { players: AdminPlayer[]
               className="cursor-pointer"
             >
               <td className="px-3 py-3 font-medium text-white flex items-center gap-2">
-                {p.avatar && <img src={`${API_BASE_URL}${p.avatar}`} alt={p.name} className="h-8 w-8 rounded-lg object-cover" />}
+                {p.avatar && <img src={`${p.avatar}`} alt={p.name} className="h-8 w-8 rounded-lg object-cover" />}
                 {p.name}
               </td>
               <td className="px-3 py-3 text-slate-300">{p.country?.name ?? '—'}</td>
@@ -171,22 +221,118 @@ function PlayerTable({ players, selectedId, onSelect }: { players: AdminPlayer[]
 
 // ─── Player Detail ────────────────────────────────────────────────────────────
 
-function PlayerDetail({ playerId, skills, onSkillAssigned }: { playerId: number; skills: { id: number; name: string }[]; onSkillAssigned: () => void }) {
+function PlayerDetail({
+  playerId,
+  skills,
+  countries,
+  clubs,
+  onDataChanged,
+  onDeleted,
+}: {
+  playerId: number
+  skills: { id: number; name: string }[]
+  countries: { id: number; name: string }[]
+  clubs: { id: number; name: string }[]
+  onDataChanged: () => void
+  onDeleted: () => void
+}) {
   const { data: player, isLoading, error } = useAdminPlayer(playerId)
   const assignMutation = useAssignSkill()
+  const removeSkillMutation = useRemoveSkill()
+  const updateMutation = useUpdateAdminPlayer()
+  const deleteMutation = useDeleteAdminPlayer()
   const [selectedSkillId, setSelectedSkillId] = useState<number>(0)
-  const [assignMsg, setAssignMsg] = useState('')
+  const [msg, setMsg] = useState('')
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [avatarPreview, setAvatarPreview] = useState('')
+  const [positions, setPositions] = useState<Array<{ position: string; description: string; effect: number }>>([])
+  const [positionDraft, setPositionDraft] = useState({ position: 'CF', description: '', effect: 1 })
+  const [form, setForm] = useState<Record<string, string | number>>({
+    name: '',
+    countryId: '',
+    clubId: '',
+    season: 'normal',
+    sourceType: 'base',
+    ...Object.fromEntries(STAT_FIELDS.map(({ key }) => [key, 60])),
+  })
+
+  useEffect(() => {
+    if (!player) return
+    setForm({
+      name: player.name ?? '',
+      countryId: player.countryId ?? '',
+      clubId: player.clubId ?? '',
+      season: player.season ?? 'normal',
+      sourceType: player.sourceType ?? 'base',
+      ...Object.fromEntries(STAT_FIELDS.map(({ key }) => [key, Number((player as Record<string, unknown>)[key] ?? 60)])),
+    })
+    setPositions((player.positions ?? []).map((item) => ({
+      position: item.position,
+      description: item.description ?? '',
+      effect: Number(item.effect ?? 1),
+    })))
+    setAvatarFile(null)
+    setAvatarPreview('')
+    setSelectedSkillId(0)
+    setMsg('')
+  }, [player])
 
   async function handleAssign(e: React.FormEvent) {
     e.preventDefault()
     if (!player || !selectedSkillId) return
-    setAssignMsg('')
+    setMsg('')
     try {
       await assignMutation.mutateAsync({ playerId: player.id, skillId: selectedSkillId })
-      setAssignMsg('Đã gán kỹ năng thành công.')
-      onSkillAssigned()
+      setMsg('Đã gán kỹ năng thành công.')
+      onDataChanged()
     } catch (err) {
-      setAssignMsg((err as Error).message)
+      setMsg((err as Error).message)
+    }
+  }
+
+  async function handleRemoveSkill(skillId: number) {
+    if (!player) return
+    setMsg('')
+    try {
+      await removeSkillMutation.mutateAsync({ playerId: player.id, skillId })
+      setMsg('Đã gỡ kỹ năng khỏi cầu thủ.')
+      onDataChanged()
+    } catch (err) {
+      setMsg((err as Error).message)
+    }
+  }
+
+  async function handleUpdate(e: React.FormEvent) {
+    e.preventDefault()
+    if (!player) return
+
+    setMsg('')
+    const fd = new FormData()
+    Object.entries(form).forEach(([k, v]) => fd.append(k, String(v)))
+    fd.append('positions', JSON.stringify(positions))
+    if (avatarFile) {
+      fd.append('avatar', avatarFile)
+    }
+
+    try {
+      await updateMutation.mutateAsync({ playerId: player.id, formData: fd })
+      setMsg('Đã cập nhật cầu thủ thành công.')
+      onDataChanged()
+    } catch (err) {
+      setMsg((err as Error).message)
+    }
+  }
+
+  async function handleDelete() {
+    if (!player) return
+    const ok = window.confirm(`Xóa cầu thủ ${player.name}?`)
+    if (!ok) return
+    setMsg('')
+    try {
+      await deleteMutation.mutateAsync({ playerId: player.id })
+      onDeleted()
+    } catch (err) {
+      setMsg((err as Error).message)
     }
   }
 
@@ -197,9 +343,7 @@ function PlayerDetail({ playerId, skills, onSkillAssigned }: { playerId: number;
   return (
     <div className="game-stat-card space-y-3">
       <div className="flex items-center gap-3">
-        {player.avatar && (
-          <img src={`${API_BASE_URL}${player.avatar}`} alt={player.name} className="h-14 w-14 rounded-2xl bg-white/10 object-cover" />
-        )}
+        {(avatarPreview || player.avatar) && <img src={avatarPreview || player.avatar} alt={player.name} className="h-14 w-14 rounded-2xl bg-white/10 object-cover" />}
         <div>
           <p className="game-header-kicker">Chi tiết</p>
           <h3 className="game-title text-xl font-bold text-white">{player.name}</h3>
@@ -207,49 +351,134 @@ function PlayerDetail({ playerId, skills, onSkillAssigned }: { playerId: number;
         </div>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2">
-        {STAT_FIELDS.map(({ key, label }) => (
-          <div key={key} className="flex justify-between rounded-[12px] border border-white/8 bg-black/20 px-3 py-2 text-sm">
-            <span className="text-slate-400">{label}</span>
-            <strong className="text-white">{(player as Record<string, unknown>)[key] as number ?? 0}</strong>
-          </div>
-        ))}
-      </div>
-
-      {player.skills && player.skills.length > 0 && (
-        <div>
-          <p className="game-field-label">Kỹ năng đặc biệt</p>
-          <div className="flex flex-wrap gap-2 mt-2">
-            {player.skills.map((s) => (
-              <span key={s.id} className="game-chip text-xs text-emerald-300 border-emerald-400/30">{s.name}</span>
-            ))}
-          </div>
+      <form onSubmit={handleUpdate} className="space-y-3">
+        <div className="flex items-center gap-3">
+          <label className="game-button-secondary cursor-pointer">
+            Đổi avatar
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                setAvatarFile(file)
+                setAvatarPreview(URL.createObjectURL(file))
+              }}
+            />
+          </label>
+          {avatarFile && <span className="text-xs text-slate-400">{avatarFile.name}</span>}
         </div>
-      )}
 
-      {player.positions && player.positions.length > 0 && (
-        <div>
+        <input value={String(form.name ?? '')} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} className="game-input" placeholder="Tên cầu thủ" required />
+
+        <div className="grid grid-cols-2 gap-2">
+          <select value={String(form.countryId ?? '')} onChange={(e) => setForm((p) => ({ ...p, countryId: Number(e.target.value) }))} className="game-input" required>
+            <option value="" disabled>Chọn quốc gia</option>
+            {countries.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <select value={String(form.clubId ?? '')} onChange={(e) => setForm((p) => ({ ...p, clubId: Number(e.target.value) }))} className="game-input" required>
+            <option value="" disabled>Chọn CLB</option>
+            {clubs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <select value={String(form.season ?? 'normal')} onChange={(e) => setForm((p) => ({ ...p, season: e.target.value }))} className="game-input">
+            {SEASON_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+          </select>
+          <select value={String(form.sourceType ?? 'base')} onChange={(e) => setForm((p) => ({ ...p, sourceType: e.target.value }))} className="game-input">
+            <option value="base">base</option>
+            <option value="gacha_special">gacha_special</option>
+          </select>
+        </div>
+
+        <div className="rounded-[12px] border border-white/10 bg-black/20 p-3 space-y-2">
           <p className="game-field-label">Position Profiles</p>
+          <div className="grid gap-2 sm:grid-cols-[1fr_110px_1fr_auto]">
+            <select value={positionDraft.position} onChange={(e) => setPositionDraft((p) => ({ ...p, position: e.target.value }))} className="game-input">
+              {POSITION_OPTIONS.map((pos) => <option key={pos} value={pos}>{pos}</option>)}
+            </select>
+            <input type="number" min={0.1} max={1} step={0.05} value={positionDraft.effect} onChange={(e) => setPositionDraft((p) => ({ ...p, effect: Number(e.target.value) }))} className="game-input" />
+            <input value={positionDraft.description} onChange={(e) => setPositionDraft((p) => ({ ...p, description: e.target.value }))} className="game-input" placeholder="Description" />
+            <button
+              type="button"
+              className="game-button-secondary"
+              onClick={() => {
+                const effect = Math.max(0.1, Math.min(1, Number(positionDraft.effect || 0)))
+                setPositions((prev) => {
+                  const next = prev.filter((item) => item.position !== positionDraft.position)
+                  next.push({ position: positionDraft.position, description: positionDraft.description.trim(), effect })
+                  return next
+                })
+              }}
+            >
+              Add
+            </button>
+          </div>
+
           <div className="mt-2 flex flex-wrap gap-2">
-            {player.positions.map((item) => (
-              <span key={`${item.position}-${item.effect}`} className="game-chip text-xs text-amber-200 border-amber-400/30">
+            {positions.map((item) => (
+              <span key={item.position} className="game-chip text-xs text-amber-200 border-amber-400/30">
                 {item.position} x{Number(item.effect || 0).toFixed(2)}{item.description ? ` · ${item.description}` : ''}
+                <button type="button" className="ml-2 text-red-300" onClick={() => setPositions((prev) => prev.filter((p) => p.position !== item.position))}>x</button>
               </span>
             ))}
+            {positions.length === 0 && <span className="text-xs text-slate-400">Đang trống: hệ thống sẽ tự infer 1 position khi update.</span>}
           </div>
         </div>
-      )}
+
+        <div className="grid grid-cols-2 gap-2">
+          {STAT_FIELDS.map(({ key, label }) => (
+            <label key={key} className="flex items-center gap-2 rounded-[12px] border border-white/8 bg-black/20 px-3 py-2">
+              <span className="flex-1 text-xs text-slate-400 truncate">{label}</span>
+              <input
+                type="number"
+                value={Number(form[key] ?? 60)}
+                min={1}
+                max={99}
+                onChange={(e) => setForm((p) => ({ ...p, [key]: Number(e.target.value) }))}
+                className="w-14 rounded-lg border border-white/8 bg-black/30 px-1 py-0.5 text-center text-sm text-white"
+              />
+            </label>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <button type="submit" disabled={updateMutation.isPending} className="game-button-primary">
+            {updateMutation.isPending ? 'Đang cập nhật...' : 'Update cầu thủ'}
+          </button>
+          <button type="button" disabled={deleteMutation.isPending} onClick={handleDelete} className="game-button-ghost text-red-300 border-red-400/30">
+            {deleteMutation.isPending ? 'Đang xóa...' : 'Xóa cầu thủ'}
+          </button>
+        </div>
+      </form>
+
+      <div className="space-y-2">
+        <p className="game-field-label">Kỹ năng đang có</p>
+        <div className="flex flex-wrap gap-2">
+          {(player.skills ?? []).map((s) => (
+            <span key={s.id} className="game-chip text-xs text-emerald-300 border-emerald-400/30">
+              {s.name}
+              <button type="button" className="ml-2 text-red-300" onClick={() => handleRemoveSkill(s.id)} disabled={removeSkillMutation.isPending}>x</button>
+            </span>
+          ))}
+          {(player.skills ?? []).length === 0 && <span className="text-xs text-slate-400">Chưa có kỹ năng.</span>}
+        </div>
+      </div>
 
       <form onSubmit={handleAssign} className="space-y-2">
         <p className="game-field-label">Gán kỹ năng</p>
         <div className="flex gap-2">
           <select value={selectedSkillId} onChange={(e) => setSelectedSkillId(Number(e.target.value))} className="game-input flex-1">
             <option value={0} disabled>Chọn kỹ năng</option>
-            {skills.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            {skills.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
           </select>
           <button type="submit" disabled={!selectedSkillId || assignMutation.isPending} className="game-button-secondary">Gán</button>
         </div>
-        {assignMsg && <p className="text-xs text-emerald-300">{assignMsg}</p>}
+        {msg && <p className="text-xs text-emerald-300">{msg}</p>}
       </form>
     </div>
   )

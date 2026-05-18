@@ -3,7 +3,7 @@ import { API_BASE_URL, apiClient } from '../lib/apiClient'
 import { useAuth } from './useAuth'
 import type { AdminPlayer, AdminPlayerFilter } from '../types'
 
-export function useAdminPlayers(filter: AdminPlayerFilter = {}) {
+export function useAdminPlayers(filter: AdminPlayerFilter = {}, enabled = true) {
   const { token } = useAuth()
 
   return useQuery<AdminPlayer[]>({
@@ -19,7 +19,7 @@ export function useAdminPlayers(filter: AdminPlayerFilter = {}) {
       const data = payload?.data ?? payload
       return Array.isArray(data) ? data : []
     },
-    enabled: Boolean(token),
+    enabled: Boolean(token && enabled),
   })
 }
 
@@ -55,5 +55,48 @@ export function useCreateAdminPlayer() {
       return (data?.data ?? data) as AdminPlayer
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['adminPlayers'] }),
+  })
+}
+
+export function useUpdateAdminPlayer() {
+  const { token } = useAuth()
+  const qc = useQueryClient()
+
+  return useMutation<AdminPlayer, Error, { playerId: number; formData: FormData }>({
+    mutationFn: async ({ playerId, formData }) => {
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/players/${playerId}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      })
+      const isJSON = response.headers.get('content-type')?.includes('application/json')
+      const data = isJSON ? await response.json() : null
+      if (!response.ok) {
+        throw new Error(data?.error || data?.message || 'Update player failed')
+      }
+      return (data?.data ?? data) as AdminPlayer
+    },
+    onSuccess: (_data, { playerId }) => {
+      qc.invalidateQueries({ queryKey: ['adminPlayers'] })
+      qc.invalidateQueries({ queryKey: ['adminPlayer', playerId] })
+    },
+  })
+}
+
+export function useDeleteAdminPlayer() {
+  const { token } = useAuth()
+  const qc = useQueryClient()
+
+  return useMutation<void, Error, { playerId: number }>({
+    mutationFn: async ({ playerId }) => {
+      await apiClient(`/api/v1/admin/players/${playerId}`, {
+        method: 'DELETE',
+        token,
+      })
+    },
+    onSuccess: (_data, { playerId }) => {
+      qc.invalidateQueries({ queryKey: ['adminPlayers'] })
+      qc.removeQueries({ queryKey: ['adminPlayer', playerId] })
+    },
   })
 }

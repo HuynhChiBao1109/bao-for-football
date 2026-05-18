@@ -1,15 +1,18 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSession } from '../hooks/useSession'
+import { useAuth } from '../hooks/useAuth'
 import { useClubDetail } from '../hooks/useClubDetail'
 import { ROUTES } from '../routes'
 import { Banner } from '../components/ui/Banner'
 import { ClubHeader } from '../components/ui/ClubHeader'
 import { ModuleCard } from '../components/ui/ModuleCard'
+import { queryClient } from '../lib/queryClient'
 import './ClubPage.css'
 
 export function ClubPage() {
   const { data: sessionData, isLoading: sessionLoading } = useSession()
+  const { setSession } = useAuth()
   const navigate = useNavigate()
   const [notice, setNotice] = useState('')
 
@@ -19,6 +22,12 @@ export function ClubPage() {
   const { data: club, isLoading: clubLoading, error: clubError } = useClubDetail(clubId)
 
   const loading = sessionLoading || clubLoading
+
+  function handleLogout() {
+    setSession(null)
+    queryClient.clear()
+    navigate(ROUTES.login, { replace: true })
+  }
 
   return (
     <section className="club-page">
@@ -32,8 +41,13 @@ export function ClubPage() {
       <div className="club-page__content">
         {/* Header section */}
         <div className="club-page__header">
-          <p className="game-header-kicker">⚽ Football Manager</p>
-          <h1 className="game-title">Trung tâm điều hành CLB</h1>
+          <div>
+            <p className="game-header-kicker">⚽ Football Manager</p>
+            <h1 className="game-title">Trung tâm điều hành CLB</h1>
+          </div>
+          <button type="button" onClick={handleLogout} className="game-button-ghost">
+            Nghỉ ngơi
+          </button>
         </div>
 
         {/* Status messages */}

@@ -1,77 +1,21 @@
-import { Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { Outlet, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useSession } from '../hooks/useSession'
 import { useClubs } from '../hooks/useClubs'
-import { navItems, ROUTES } from '../routes'
+import { ROUTES } from '../routes'
 import { queryClient } from '../lib/queryClient'
-import { BrandLogo } from '../components/ui/BrandLogo'
 import { apiClient } from '../lib/apiClient'
 
-const routeMeta: Record<string, { title: string; eyebrow: string; description: string }> = {
-  [ROUTES.club]: {
-    title: 'Club Command Center',
-    eyebrow: 'Club Ops',
-    description: 'Quản lý roster nền, ngân sách và các tuyến nâng cấp của đội hình hiện tại.',
-  },
-  [ROUTES.players]: {
-    title: 'Player Lab',
-    eyebrow: 'Squad Data',
-    description: 'Theo dõi tiến trình thẻ cầu thủ, chỉnh điểm kỹ năng và xem toàn bộ chỉ số phát triển.',
-  },
-  [ROUTES.tactics]: {
-    title: 'Tactics Forge',
-    eyebrow: 'Match Engine',
-    description: 'Tinh chỉnh nhịp độ, áp lực và hồ sơ gameplay để đẩy thẳng sang realtime engine.',
-  },
-  [ROUTES.aiMatch]: {
-    title: 'AI Campaign',
-    eyebrow: 'Progression',
-    description: 'Đánh từng stage, mở khóa màn kế tiếp và farm tiền thưởng cùng EXP toàn đội.',
-  },
-  [ROUTES.pvp]: {
-    title: 'Arena Queue',
-    eyebrow: 'PvP Hub',
-    description: 'Không gian chờ cho matchmaking realtime, xếp hạng và đấu rank nhiều mùa giải.',
-  },
-  [ROUTES.gacha]: {
-    title: 'Scout Capsule',
-    eyebrow: 'Recruitment',
-    description: 'Roll banner mùa giải, theo dõi pity và chốt kết quả hiếm ngay trong phiên hiện tại.',
-  },
-  [ROUTES.admin]: {
-    title: 'Admin Foundry',
-    eyebrow: 'Back Office',
-    description: 'Tạo cầu thủ mới, kiểm tra pool quốc gia và rà soát dữ liệu nguồn cho hệ thống.',
-  },
-}
-
-const navHints: Record<string, string> = {
-  [ROUTES.club]: 'Tổng quan CLB',
-  [ROUTES.players]: 'Nâng cấp thẻ',
-  [ROUTES.tactics]: 'Preset đội hình',
-  [ROUTES.aiMatch]: '50 stage',
-  [ROUTES.pvp]: 'Xếp hạng',
-  [ROUTES.gacha]: 'Banner roll',
-  [ROUTES.admin]: 'Quản trị dữ liệu',
-}
-
 export function AppLayout() {
-  const { session, setSession, isAdmin } = useAuth()
-  const { data: sessionData, isLoading } = useSession()
+  const { session, isAdmin } = useAuth()
+  const { data: sessionData } = useSession()
   const { data: clubs = [], isLoading: clubsLoading } = useClubs()
   const navigate = useNavigate()
-  const location = useLocation()
-  const pathname = location.pathname
   const [selectedStarterClubId, setSelectedStarterClubId] = useState<number>(0)
   const [assigningClub, setAssigningClub] = useState(false)
   const [assignClubError, setAssignClubError] = useState('')
 
-  const items = navItems(isAdmin)
-  const meta = routeMeta[pathname] ?? routeMeta[ROUTES.club]
-  const clubName = sessionData?.team?.clubName ?? 'Chưa đồng bộ'
-  const budget = Number(sessionData?.team?.budget ?? 0).toLocaleString()
-  const rankPoint = Number(sessionData?.team?.rankPoint ?? 0)
   const needsStarterClub = Boolean(session && !isAdmin && !sessionData?.team)
 
   useEffect(() => {
@@ -91,12 +35,6 @@ export function AppLayout() {
     () => clubs.find((club) => club.id === selectedStarterClubId) ?? clubs[0] ?? null,
     [clubs, selectedStarterClubId],
   )
-
-  function handleLogout() {
-    setSession(null)
-    queryClient.clear()
-    navigate(ROUTES.login, { replace: true })
-  }
 
   async function handleCreateStarterTeam() {
     if (!session?.token || !selectedStarterClub) {

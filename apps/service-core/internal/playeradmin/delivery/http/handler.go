@@ -72,6 +72,7 @@ type createSkillRequest struct {
 }
 
 type assignSkillRequest struct {
+	SkillID   int64  `json:"skillId" form:"skillId"`
 	SkillName string `json:"skillName" form:"skillName"`
 }
 
@@ -209,13 +210,35 @@ func (h *Handler) AssignSkill(c *gin.Context) {
 		return
 	}
 
-	updated, err := h.uc.AssignSkillToPlayer(c.Request.Context(), playerID, req.SkillName)
+	updated, err := h.uc.AssignSkillToPlayer(c.Request.Context(), playerID, req.SkillID, req.SkillName)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "skill assigned", "data": updated})
+}
+
+func (h *Handler) RemoveSkill(c *gin.Context) {
+	playerID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || playerID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	skillID, err := strconv.ParseInt(c.Param("skillId"), 10, 64)
+	if err != nil || skillID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid skillId"})
+		return
+	}
+
+	updated, err := h.uc.RemoveSkillFromPlayer(c.Request.Context(), playerID, skillID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "skill removed", "data": updated})
 }
 
 func (h *Handler) Detail(c *gin.Context) {
@@ -294,6 +317,97 @@ func (h *Handler) Create(c *gin.Context) {
 		"message": "player added to catalog",
 		"data":    created,
 	})
+}
+
+func (h *Handler) Update(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	current, err := h.uc.GetByID(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	var req createPlayerRequest
+	if err := c.ShouldBind(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if countryID, ok := parseFormInt64(c, "countryId", "country_id"); ok {
+		req.CountryID = countryID
+	}
+	if clubID, ok := parseFormInt64(c, "clubId", "club_id"); ok {
+		req.ClubID = clubID
+	}
+
+	avatarURL, err := h.saveAvatarIfPresent(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	avatarPtr := current.Avatar
+	if trimmed := strings.TrimSpace(avatarURL); trimmed != "" {
+		avatarPtr = &trimmed
+	}
+
+	updated, err := h.uc.Update(c.Request.Context(), id, domain.Player{
+		Name:           req.Name,
+		CountryID:      req.CountryID,
+		ClubID:         req.ClubID,
+		Avatar:         avatarPtr,
+		BaseClub:       req.BaseClub,
+		Season:         req.Season,
+		SourceType:     req.SourceType,
+		SpecialSkill:   req.SpecialSkill,
+		Shooting:       req.Shooting,
+		Passing:        req.Passing,
+		LongPass:       req.LongPass,
+		Vision:         req.Vision,
+		GKReach:        firstNonZero(req.GKReach, req.DefAwareness, req.Defending),
+		AttAwareness:   firstNonZero(req.AttAwareness, req.CtrAwareness),
+		DefAwareness:   firstNonZero(req.DefAwareness, req.Defending),
+		GKParrying:     firstNonZero(req.GKParrying, req.Crossbar),
+		GKReflex:       firstNonZero(req.GKReflex, req.Reflexes),
+		Duels:          req.Duels,
+		Pace:           req.Pace,
+		Stamina:        req.Stamina,
+		Balance:        req.Balance,
+		Technique:      req.Technique,
+		Determination:  req.Determination,
+		Strength:       firstNonZero(req.Strength, req.Physical),
+		StandingTackle: req.StandingTackle,
+		SlidingTackle:  req.SlidingTackle,
+		Dribbling:      req.Dribbling,
+		Curve:          req.Curve,
+		Positions:      parsePositionProfiles(req.Positions),
+	})
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "player updated", "data": updated})
+}
+
+func (h *Handler) Delete(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	if err := h.uc.Delete(c.Request.Context(), id); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "player deleted"})
 }
 
 func parsePositionProfiles(raw string) []domain.PositionProfile {

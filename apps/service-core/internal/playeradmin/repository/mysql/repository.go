@@ -532,17 +532,30 @@ VALUES (?, ?, ?, ?)`, input.Name, input.IconURL, input.BuffType, input.BuffValue
 	return input, nil
 }
 
-func (r *Repository) AssignSkillToPlayer(ctx context.Context, playerID int64, skillName string) (domain.Player, error) {
+func (r *Repository) AssignSkillToPlayer(ctx context.Context, playerID int64, skillID int64, skillName string) (domain.Player, error) {
 	if r.db == nil {
 		return domain.Player{}, errors.New("database is not configured")
 	}
 
-	var existingSkillID int64
-	if err := r.db.QueryRowContext(ctx, `SELECT id FROM skills WHERE name = ? LIMIT 1`, skillName).Scan(&existingSkillID); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return domain.Player{}, errors.New("skill not found")
+	existingSkillID := skillID
+	if existingSkillID > 0 {
+		if err := r.db.QueryRowContext(ctx, `SELECT id FROM skills WHERE id = ? LIMIT 1`, existingSkillID).Scan(&existingSkillID); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return domain.Player{}, errors.New("skill not found")
+			}
+			return domain.Player{}, err
 		}
-		return domain.Player{}, err
+	} else {
+		skillName = strings.TrimSpace(skillName)
+		if skillName == "" {
+			return domain.Player{}, errors.New("skillId or skillName is required")
+		}
+		if err := r.db.QueryRowContext(ctx, `SELECT id FROM skills WHERE name = ? LIMIT 1`, skillName).Scan(&existingSkillID); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return domain.Player{}, errors.New("skill not found")
+			}
+			return domain.Player{}, err
+		}
 	}
 
 	var existingPlayerID int64
@@ -564,6 +577,184 @@ VALUES (?, ?)`, playerID, existingSkillID); err != nil {
 		return domain.Player{}, err
 	}
 	return updated, nil
+}
+
+func (r *Repository) RemoveSkillFromPlayer(ctx context.Context, playerID int64, skillID int64) (domain.Player, error) {
+	if r.db == nil {
+		return domain.Player{}, errors.New("database is not configured")
+	}
+
+	if _, err := r.db.ExecContext(ctx, `DELETE FROM player_skills WHERE player_id = ? AND skill_id = ?`, playerID, skillID); err != nil {
+		return domain.Player{}, err
+	}
+
+	updated, err := r.GetByID(ctx, playerID)
+	if err != nil {
+		return domain.Player{}, err
+	}
+	return updated, nil
+}
+
+func (r *Repository) Update(ctx context.Context, id int64, input domain.Player) (domain.Player, error) {
+	input.CreatedAt = time.Now()
+
+	if r.db == nil {
+		r.memMu.Lock()
+		defer r.memMu.Unlock()
+		for i := range r.memData {
+			if r.memData[i].ID == id {
+				input.ID = id
+				r.memData[i] = input
+				return input, nil
+			}
+		}
+		return domain.Player{}, errors.New("player not found")
+	}
+
+	if err := r.ensureTable(ctx); err != nil {
+		return domain.Player{}, err
+	}
+
+	if input.CountryID > 0 {
+		countryRow := r.db.QueryRowContext(ctx, `
+SELECT id, name, COALESCE(code, ''), COALESCE(flag, '')
+FROM countries
+WHERE id = ?
+LIMIT 1`, input.CountryID)
+		if err := countryRow.Scan(&input.Country.ID, &input.Country.Name, &input.Country.Code, &input.Country.Flag); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return domain.Player{}, errors.New("country not found")
+			}
+			return domain.Player{}, err
+		}
+	}
+
+	if input.ClubID > 0 {
+		clubRow := r.db.QueryRowContext(ctx, `
+SELECT id, name, COALESCE(logo, '')
+FROM clubs
+WHERE id = ?
+LIMIT 1`, input.ClubID)
+		if err := clubRow.Scan(&input.Club.ID, &input.Club.Name, &input.Club.Logo); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return domain.Player{}, errors.New("club not found")
+			}
+			return domain.Player{}, err
+		}
+		input.BaseClub = input.Club.Name
+	}
+
+	result, err := r.db.ExecContext(ctx, `
+UPDATE player_templates
+SET
+	name = ?,
+	country_id = ?,
+	club_id = ?,
+	base_club = ?,
+	season = ?,
+	image_url = ?,
+	base_shooting = ?,
+	base_passing = ?,
+	base_long_pass = ?,
+	base_vision = ?,
+	base_gk_reach = ?,
+	base_counter_attack_awareness = ?,
+	base_defending = ?,
+	base_gk_parrying = ?,
+	base_gk_reflex = ?,
+	base_duels = ?,
+	base_pace = ?,
+	base_stamina = ?,
+	base_balance = ?,
+	base_technique = ?,
+	base_determination = ?,
+	base_physical = ?,
+	base_standing_tackle = ?,
+	base_sliding_tackle = ?,
+	base_dribbling = ?,
+	base_curve = ?
+WHERE id = ?`,
+		input.Name,
+		input.CountryID,
+		input.ClubID,
+		input.BaseClub,
+		input.Season,
+		avatarValue(input.Avatar),
+		input.Shooting,
+		input.Passing,
+		input.LongPass,
+		input.Vision,
+		input.GKReach,
+		input.AttAwareness,
+		input.DefAwareness,
+		input.GKParrying,
+		input.GKReflex,
+		input.Duels,
+		input.Pace,
+		input.Stamina,
+		input.Balance,
+		input.Technique,
+		input.Determination,
+		input.Strength,
+		input.StandingTackle,
+		input.SlidingTackle,
+		input.Dribbling,
+		input.Curve,
+		id,
+	)
+	if err != nil {
+		return domain.Player{}, err
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return domain.Player{}, err
+	}
+	if affected == 0 {
+		return domain.Player{}, errors.New("player not found")
+	}
+
+	if err := r.upsertPlayerPositions(ctx, id, input.Positions); err != nil {
+		return domain.Player{}, err
+	}
+
+	updated, err := r.GetByID(ctx, id)
+	if err != nil {
+		return domain.Player{}, err
+	}
+	return updated, nil
+}
+
+func (r *Repository) Delete(ctx context.Context, id int64) error {
+	if r.db == nil {
+		r.memMu.Lock()
+		defer r.memMu.Unlock()
+		for i := range r.memData {
+			if r.memData[i].ID == id {
+				r.memData = append(r.memData[:i], r.memData[i+1:]...)
+				return nil
+			}
+		}
+		return errors.New("player not found")
+	}
+
+	if err := r.ensureTable(ctx); err != nil {
+		return err
+	}
+
+	result, err := r.db.ExecContext(ctx, `DELETE FROM player_templates WHERE id = ?`, id)
+	if err != nil {
+		return err
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return errors.New("player not found")
+	}
+
+	return nil
 }
 
 func (r *Repository) ensureTable(ctx context.Context) error {

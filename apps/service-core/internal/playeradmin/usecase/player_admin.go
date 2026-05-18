@@ -14,11 +14,14 @@ type repository interface {
 	GetByID(ctx context.Context, id int64) (domain.Player, error)
 	ListSkills(ctx context.Context) ([]domain.SpecialSkill, error)
 	CreateSkill(ctx context.Context, input domain.SpecialSkill) (domain.SpecialSkill, error)
-	AssignSkillToPlayer(ctx context.Context, playerID int64, skillName string) (domain.Player, error)
+	AssignSkillToPlayer(ctx context.Context, playerID int64, skillID int64, skillName string) (domain.Player, error)
+	RemoveSkillFromPlayer(ctx context.Context, playerID int64, skillID int64) (domain.Player, error)
 	ListCountries(ctx context.Context) ([]domain.Country, error)
 	CreateCountry(ctx context.Context, input domain.Country) (domain.Country, error)
 	CreateClub(ctx context.Context, input domain.Club) (domain.Club, error)
 	Create(ctx context.Context, input domain.Player) (domain.Player, error)
+	Update(ctx context.Context, id int64, input domain.Player) (domain.Player, error)
+	Delete(ctx context.Context, id int64) error
 }
 
 type PlayerAdminUseCase struct {
@@ -81,17 +84,50 @@ func (u *PlayerAdminUseCase) CreateSkill(ctx context.Context, input domain.Speci
 	return u.repo.CreateSkill(ctx, input)
 }
 
-func (u *PlayerAdminUseCase) AssignSkillToPlayer(ctx context.Context, playerID int64, skillName string) (domain.Player, error) {
+func (u *PlayerAdminUseCase) AssignSkillToPlayer(ctx context.Context, playerID int64, skillID int64, skillName string) (domain.Player, error) {
 	if playerID <= 0 {
 		return domain.Player{}, errors.New("player id is invalid")
 	}
-
-	skillName = strings.TrimSpace(skillName)
-	if skillName == "" {
-		return domain.Player{}, errors.New("skillName is required")
+	if skillID <= 0 {
+		skillName = strings.TrimSpace(skillName)
+		if skillName == "" {
+			return domain.Player{}, errors.New("skillId or skillName is required")
+		}
 	}
 
-	return u.repo.AssignSkillToPlayer(ctx, playerID, skillName)
+	return u.repo.AssignSkillToPlayer(ctx, playerID, skillID, skillName)
+}
+
+func (u *PlayerAdminUseCase) RemoveSkillFromPlayer(ctx context.Context, playerID int64, skillID int64) (domain.Player, error) {
+	if playerID <= 0 {
+		return domain.Player{}, errors.New("player id is invalid")
+	}
+	if skillID <= 0 {
+		return domain.Player{}, errors.New("skill id is invalid")
+	}
+
+	return u.repo.RemoveSkillFromPlayer(ctx, playerID, skillID)
+}
+
+func (u *PlayerAdminUseCase) Update(ctx context.Context, id int64, input domain.Player) (domain.Player, error) {
+	if id <= 0 {
+		return domain.Player{}, errors.New("id is invalid")
+	}
+
+	normalized, err := u.normalizePlayerInput(input)
+	if err != nil {
+		return domain.Player{}, err
+	}
+
+	return u.repo.Update(ctx, id, normalized)
+}
+
+func (u *PlayerAdminUseCase) Delete(ctx context.Context, id int64) error {
+	if id <= 0 {
+		return errors.New("id is invalid")
+	}
+
+	return u.repo.Delete(ctx, id)
 }
 
 func (u *PlayerAdminUseCase) ListCountries(ctx context.Context) ([]domain.Country, error) {
@@ -129,6 +165,15 @@ func (u *PlayerAdminUseCase) CreateClub(ctx context.Context, input domain.Club) 
 }
 
 func (u *PlayerAdminUseCase) Create(ctx context.Context, input domain.Player) (domain.Player, error) {
+	normalized, err := u.normalizePlayerInput(input)
+	if err != nil {
+		return domain.Player{}, err
+	}
+
+	return u.repo.Create(ctx, normalized)
+}
+
+func (u *PlayerAdminUseCase) normalizePlayerInput(input domain.Player) (domain.Player, error) {
 	input.Name = strings.TrimSpace(input.Name)
 	if input.Avatar != nil {
 		trimmedAvatar := strings.TrimSpace(*input.Avatar)
@@ -266,7 +311,7 @@ func (u *PlayerAdminUseCase) Create(ctx context.Context, input domain.Player) (d
 	}
 	input.Positions = normalizedPositions
 
-	return u.repo.Create(ctx, input)
+	return input, nil
 }
 
 func inferDefaultPosition(input domain.Player) domain.PositionProfile {

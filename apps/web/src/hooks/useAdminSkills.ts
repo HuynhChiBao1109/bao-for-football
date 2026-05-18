@@ -53,3 +53,21 @@ export function useAssignSkill() {
     },
   })
 }
+
+export function useRemoveSkill() {
+  const { token } = useAuth()
+  const qc = useQueryClient()
+
+  return useMutation<void, Error, { playerId: number; skillId: number }>({
+    mutationFn: async ({ playerId, skillId }) => {
+      await apiClient(`/api/v1/admin/players/${playerId}/skills/${skillId}`, {
+        method: 'DELETE',
+        token,
+      })
+    },
+    onSuccess: (_data, { playerId }) => {
+      qc.invalidateQueries({ queryKey: ['adminPlayer', playerId] })
+      qc.invalidateQueries({ queryKey: ['adminPlayers'] })
+    },
+  })
+}

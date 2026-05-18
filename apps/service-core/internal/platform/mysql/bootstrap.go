@@ -426,6 +426,9 @@ func EnsureSeedData(ctx context.Context, db *sql.DB) error {
 	if err := backfillCountryRelations(ctx, db); err != nil {
 		return fmt.Errorf("backfillCountryRelations: %w", err)
 	}
+	if err := ensureManUTDPlayers(ctx, db); err != nil {
+		return fmt.Errorf("ensureManUTDPlayers: %w", err)
+	}
 	if err := ensureDefaultPlayers(ctx, db); err != nil {
 		return fmt.Errorf("ensureDefaultPlayers: %w", err)
 	}
@@ -1069,6 +1072,26 @@ type rawCountrySeed struct {
 	Flag *string `json:"flag"`
 }
 
+type rawManUTDSeed struct {
+	Team    rawManUTDTeam     `json:"team"`
+	Players []rawManUTDPlayer `json:"players"`
+}
+
+type rawManUTDTeam struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+	Logo string `json:"logo"`
+}
+
+type rawManUTDPlayer struct {
+	ID       int64  `json:"id"`
+	Name     string `json:"name"`
+	Age      int    `json:"age"`
+	Number   int    `json:"number"`
+	Position string `json:"position"`
+	Photo    string `json:"photo"`
+}
+
 func loadSeededCountries() ([]defaultCountry, error) {
 	seedFiles := []string{
 		filepath.Join("database", "country.json"),
@@ -1117,6 +1140,249 @@ func loadSeededCountries() ([]defaultCountry, error) {
 	}
 
 	return seededCountries, nil
+}
+
+func ensureManUTDPlayers(ctx context.Context, db *sql.DB) error {
+	const (
+		manUTDClubID    int64 = 33
+		unknownCountry  int64 = 168
+		defaultHeightCM int   = 170
+		defaultStat     int   = 60
+	)
+
+	seed, err := loadManUTDPlayers()
+	if err != nil {
+		return err
+	}
+	if len(seed.Players) == 0 {
+		return nil
+	}
+
+	if err := ensureCountryID(ctx, db, unknownCountry); err != nil {
+		return err
+	}
+
+	baseClub := strings.TrimSpace(seed.Team.Name)
+	if baseClub == "" {
+		baseClub = "Manchester United"
+	}
+
+	for _, player := range seed.Players {
+		name := strings.TrimSpace(player.Name)
+		if name == "" {
+			continue
+		}
+
+		avatar := strings.TrimSpace(player.Photo)
+
+		var existingID int64
+		err := db.QueryRowContext(ctx, `
+SELECT id
+FROM player_templates
+WHERE club_id = ?
+  AND season = 'normal'
+  AND LOWER(name) = LOWER(?)
+LIMIT 1`, manUTDClubID, name).Scan(&existingID)
+		if err != nil && err != sql.ErrNoRows {
+			return err
+		}
+
+		if err == sql.ErrNoRows {
+			_, err = db.ExecContext(ctx, `
+INSERT INTO player_templates (
+  name,
+  height_cm,
+  country_id,
+  club_id,
+  base_club,
+  season,
+  image_url,
+  base_shooting,
+  base_passing,
+  base_long_pass,
+  base_vision,
+  base_gk_reach,
+  base_counter_attack_awareness,
+  base_defending,
+  base_gk_parrying,
+  base_gk_reflex,
+  base_duels,
+  base_pace,
+  base_stamina,
+  base_balance,
+  base_technique,
+  base_determination,
+  base_physical,
+  base_standing_tackle,
+  base_sliding_tackle,
+  base_dribbling,
+  base_curve
+) VALUES (?, ?, ?, ?, ?, 'normal', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				name,
+				defaultHeightCM,
+				unknownCountry,
+				manUTDClubID,
+				baseClub,
+				avatar,
+				defaultStat,
+				defaultStat,
+				defaultStat,
+				defaultStat,
+				defaultStat,
+				defaultStat,
+				defaultStat,
+				defaultStat,
+				defaultStat,
+				defaultStat,
+				defaultStat,
+				defaultStat,
+				defaultStat,
+				defaultStat,
+				defaultStat,
+				defaultStat,
+				defaultStat,
+				defaultStat,
+				defaultStat,
+				defaultStat,
+			)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+
+		_, err = db.ExecContext(ctx, `
+UPDATE player_templates
+SET
+  country_id = ?,
+  club_id = ?,
+  base_club = ?,
+  season = 'normal',
+  image_url = ?,
+  base_shooting = ?,
+  base_passing = ?,
+  base_long_pass = ?,
+  base_vision = ?,
+  base_gk_reach = ?,
+  base_counter_attack_awareness = ?,
+  base_defending = ?,
+  base_gk_parrying = ?,
+  base_gk_reflex = ?,
+  base_duels = ?,
+  base_pace = ?,
+  base_stamina = ?,
+  base_balance = ?,
+  base_technique = ?,
+  base_determination = ?,
+  base_physical = ?,
+  base_standing_tackle = ?,
+  base_sliding_tackle = ?,
+  base_dribbling = ?,
+  base_curve = ?
+WHERE id = ?`,
+			unknownCountry,
+			manUTDClubID,
+			baseClub,
+			avatar,
+			defaultStat,
+			defaultStat,
+			defaultStat,
+			defaultStat,
+			defaultStat,
+			defaultStat,
+			defaultStat,
+			defaultStat,
+			defaultStat,
+			defaultStat,
+			defaultStat,
+			defaultStat,
+			defaultStat,
+			defaultStat,
+			defaultStat,
+			defaultStat,
+			defaultStat,
+			defaultStat,
+			defaultStat,
+			existingID,
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func ensureCountryID(ctx context.Context, db *sql.DB, countryID int64) error {
+	if countryID <= 0 {
+		return nil
+	}
+
+	var exists int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM countries WHERE id = ?`, countryID).Scan(&exists); err != nil {
+		return err
+	}
+	if exists > 0 {
+		return nil
+	}
+
+	_, err := db.ExecContext(ctx, `
+INSERT INTO countries (id, name, code, flag)
+VALUES (?, ?, ?, ?)`, countryID, fmt.Sprintf("Unknown (%d)", countryID), fmt.Sprintf("UNK-%d", countryID), "")
+	return err
+}
+
+func loadManUTDPlayers() (rawManUTDSeed, error) {
+	seedFiles := []string{
+		filepath.Join("database", "manUTD_player.json"),
+		filepath.Join("..", "database", "manUTD_player.json"),
+		filepath.Join("..", "..", "database", "manUTD_player.json"),
+	}
+
+	for _, seedFile := range seedFiles {
+		content, err := os.ReadFile(seedFile)
+		if err != nil {
+			continue
+		}
+
+		var raw []rawManUTDSeed
+		if err := json.Unmarshal(content, &raw); err != nil {
+			continue
+		}
+		if len(raw) == 0 {
+			continue
+		}
+
+		seed := raw[0]
+		seed.Players = compactManUTDPlayers(seed.Players)
+		return seed, nil
+	}
+
+	return rawManUTDSeed{}, nil
+}
+
+func compactManUTDPlayers(players []rawManUTDPlayer) []rawManUTDPlayer {
+	if len(players) == 0 {
+		return nil
+	}
+
+	seen := make(map[string]struct{}, len(players))
+	out := make([]rawManUTDPlayer, 0, len(players))
+	for _, item := range players {
+		name := strings.TrimSpace(item.Name)
+		if name == "" {
+			continue
+		}
+		key := strings.ToLower(name)
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		item.Name = name
+		out = append(out, item)
+	}
+
+	return out
 }
 
 func loadSeededClubs() ([]defaultClub, error) {

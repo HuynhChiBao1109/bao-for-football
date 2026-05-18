@@ -161,9 +161,12 @@ func main() {
 	admin.GET("/players", playerAdminHandler.List)
 	admin.GET("/players/:id", playerAdminHandler.Detail)
 	admin.POST("/players", playerAdminHandler.Create)
+	admin.PUT("/players/:id", playerAdminHandler.Update)
+	admin.DELETE("/players/:id", playerAdminHandler.Delete)
 	admin.GET("/skills", playerAdminHandler.ListSkills)
 	admin.POST("/skills", playerAdminHandler.CreateSkill)
 	admin.POST("/players/:id/skills", playerAdminHandler.AssignSkill)
+	admin.DELETE("/players/:id/skills/:skillId", playerAdminHandler.RemoveSkill)
 	admin.POST("/uploads/image", gachaAdminHandler.UploadImage)
 	admin.POST("/gacha/banners", gachaAdminHandler.CreateBanner)
 

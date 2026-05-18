@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { useAiStages, useAiStageDetail, useSubmitStageResult, useStartMatch, useFinalizeMatch } from '../hooks/useAiCampaign'
+import { useAiStages, useSubmitStageResult, useStartMatch, useFinalizeMatch } from '../hooks/useAiCampaign'
 import { Banner } from '../components/ui/Banner'
 import MatchView from '../MatchView.jsx'
 import type { AiStage } from '../types'
@@ -17,8 +17,6 @@ export function AiMatchPage() {
   const [fightError, setFightError] = useState('')
 
   const selected = useMemo(() => stages.find((s) => s.stageNo === selectedStageNo) ?? null, [stages, selectedStageNo])
-
-  const { data: stageDetail } = useAiStageDetail(selectedStageNo)
 
   async function handleStartMatch() {
     if (!selected || !selected.isUnlocked || selected.isCleared) return
@@ -143,14 +141,5 @@ function StageButton({ stage, active, onClick }: { stage: AiStage; active: boole
       <p className="mt-1 text-xs text-slate-400 truncate">{stage.clubName}</p>
       <p className="mt-1 text-xs">{completed ? '✓ Hoàn thành' : locked ? '🔒 Khóa' : '▶ Khả dụng'}</p>
     </button>
-  )
-}
-
-function InfoTile({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-[14px] border border-white/8 bg-black/20 px-4 py-3">
-      <p className="text-xs text-slate-400">{label}</p>
-      <p className="mt-1 font-semibold text-white">{value}</p>
-    </div>
   )
 }

@@ -65,6 +65,7 @@ export type AdminPlayer = {
   id: number
   name: string
   countryId: number
+  clubId: number
   country?: Country
   avatar?: string
   nationality?: string
