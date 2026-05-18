@@ -8,6 +8,8 @@ export const AppRoute = {
   Pvp: '/match/pvp',
   Gacha: '/gacha',
   Admin: '/admin',
+  LeagueMatch: '/match/league',
+  ChampionShipMatch: '/match/championship',
 } as const;
 
 export type AppRoute = (typeof AppRoute)[keyof typeof AppRoute];

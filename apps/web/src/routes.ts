@@ -7,6 +7,8 @@ export const ROUTES = {
   players: AppRoute.Players,
   tactics: AppRoute.Tactics,
   aiMatch: AppRoute.AiMatch,
+  leagueMatch: AppRoute.LeagueMatch,
+  championShipMatch: AppRoute.ChampionShipMatch,
   pvp: AppRoute.Pvp,
   gacha: AppRoute.Gacha,
   admin: AppRoute.Admin,

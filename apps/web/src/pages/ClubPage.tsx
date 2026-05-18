@@ -108,6 +108,18 @@ export function ClubPage() {
                     onClick: () => navigate(ROUTES.aiMatch),
                   },
                   {
+                    label: 'League',
+                    description: 'Vào chuỗi màn League để farm thưởng và đẩy tiến độ đội.',
+                    icon: '🤖',
+                    onClick: () => navigate(ROUTES.leagueMatch),
+                  },
+                  {
+                    label: 'Champion ship',
+                    description: 'Vào chuỗi màn Champion ship để farm thưởng và đẩy tiến độ đội.',
+                    icon: '🤖',
+                    onClick: () => navigate(ROUTES.championShipMatch),
+                  },
+                  {
                     label: 'PvP',
                     description: 'Vào rank match để leo hạng và đối đầu người chơi khác.',
                     icon: '🏆',
