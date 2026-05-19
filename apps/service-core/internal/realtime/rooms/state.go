@@ -25,6 +25,12 @@ type Player struct {
 	SlidingTackle  int
 	Mental         int
 	HasBall        bool
+	VX             float64
+	VY             float64
+	Fatigue        float64
+	Morale         float64
+	Pressure       float64
+	ReactionDelay  int
 }
 
 type PlayerStatsInput struct {
@@ -74,6 +80,8 @@ type Ball struct {
 	TargetY     float64
 	FlightTotal float64
 	FlightLeft  float64
+	Spin        float64
+	VZ          float64
 }
 
 type MatchState struct {
@@ -222,10 +230,26 @@ func createTeamPlayers(teamID string, mirror bool) []*Player {
 			StandingTackle: standingTackle,
 			SlidingTackle:  slidingTackle,
 			Mental:         mental,
+			Morale:         1.0, // Default morale
 		})
 	}
 
 	return players
+}
+
+func formationRoles(formation string) []string {
+	switch formation {
+	case "4-4-2":
+		return []string{"GK", "LB", "LCB", "RCB", "RB", "LM", "LCM", "RCM", "RM", "LST", "RST"}
+	case "3-5-2":
+		return []string{"GK", "LCB", "CB", "RCB", "LM", "LCM", "CM", "RCM", "RM", "LST", "RST"}
+	case "4-2-3-1":
+		return []string{"GK", "LB", "LCB", "RCB", "RB", "LDM", "RDM", "LM", "CAM", "RM", "ST"}
+	case "4-3-3":
+		fallthrough
+	default:
+		return []string{"GK", "LB", "LCB", "RCB", "RB", "LCM", "CM", "RCM", "LW", "ST", "RW"}
+	}
 }
 
 func ApplyFormation(team *Team, formation string) {
@@ -235,6 +259,7 @@ func ApplyFormation(team *Team, formation string) {
 	}
 
 	team.Tactics.Formation = formation
+	roles := formationRoles(formation)
 
 	for idx, p := range team.Players {
 		x := shape[idx].X
@@ -245,6 +270,9 @@ func ApplyFormation(team *Team, formation string) {
 
 		p.HomeX = x
 		p.HomeY = y
+		if idx < len(roles) {
+			p.Role = roles[idx]
+		}
 	}
 }
 
@@ -282,6 +310,21 @@ func formationShape(formation string) []Vec2 {
 			{20, 10}, {20, 24}, {20, 40}, {20, 54},
 			{38, 10}, {38, 24}, {38, 40}, {38, 54},
 			{58, 24}, {58, 40},
+		}
+	case "3-5-2":
+		return []Vec2{
+			{6, 32},
+			{20, 16}, {20, 32}, {20, 48},
+			{38, 8}, {38, 20}, {38, 32}, {38, 44}, {38, 56},
+			{58, 20}, {58, 44},
+		}
+	case "4-2-3-1":
+		return []Vec2{
+			{6, 32},
+			{20, 10}, {20, 24}, {20, 40}, {20, 54},
+			{34, 20}, {34, 44},
+			{44, 10}, {44, 32}, {44, 54},
+			{58, 32},
 		}
 	case "4-3-3":
 		fallthrough
