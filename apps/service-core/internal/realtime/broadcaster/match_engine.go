@@ -55,19 +55,29 @@ type kickoffPassState struct {
 	delayTicks int
 }
 
+type celebrationState struct {
+	scorerID      int
+	teamID        string
+	kickoffTeamID string
+	ticksLeft     int
+	cornerX       float64
+	cornerY       float64
+}
+
 type MatchEngine struct {
-	hub        *hub.Hub
-	rand       *rand.Rand
-	mu         sync.Mutex
-	running    bool
-	stopCh     chan struct{}
-	state      *rooms.MatchState
-	kickoff    *kickoffPassState
-	pending    map[string]UpdateTacticsInput
-	bindings   map[string]string
-	runtime    gameplayRuntime
-	eventQueue []events.MatchEvent
-	momentum   float64
+	hub         *hub.Hub
+	rand        *rand.Rand
+	mu          sync.Mutex
+	running     bool
+	stopCh      chan struct{}
+	state       *rooms.MatchState
+	kickoff     *kickoffPassState
+	celebration *celebrationState
+	pending     map[string]UpdateTacticsInput
+	bindings    map[string]string
+	runtime     gameplayRuntime
+	eventQueue  []events.MatchEvent
+	momentum    float64
 }
 
 type UpdateTacticsInput struct {
@@ -201,6 +211,21 @@ func (e *MatchEngine) run(matchID string, stopCh chan struct{}) {
 			e.computePlayerMovement(state, nil)
 			if secondHalfKickoffDelayTicks == 0 {
 				tickEvents := e.prepareKickoffSequence(state, secondHalfKickoffTeamID, "Second half kickoff")
+				e.broadcastTick(state, tick, tickEvents)
+			} else {
+				e.broadcastTick(state, tick, nil)
+			}
+			e.mu.Unlock()
+			continue
+		}
+
+		if e.celebration != nil {
+			e.celebration.ticksLeft--
+			e.computePlayerMovement(state, nil)
+			if e.celebration.ticksLeft <= 0 {
+				kickoffTeamID := e.celebration.kickoffTeamID
+				e.celebration = nil
+				tickEvents := e.prepareKickoffSequence(state, kickoffTeamID, "Kickoff after goal celebration")
 				e.broadcastTick(state, tick, tickEvents)
 			} else {
 				e.broadcastTick(state, tick, nil)
@@ -523,6 +548,64 @@ func (e *MatchEngine) computePlayerMovement(state *rooms.MatchState, tickEvents 
 	hasAttackingPossession := attackingTeamID != ""
 
 	for _, p := range state.AllPlayers() {
+		if e.celebration != nil {
+			var targetX, targetY float64
+			if p.Role == "GK" {
+				targetX = p.HomeX
+				targetY = p.HomeY
+			} else if p.TeamID == e.celebration.teamID {
+				// Scoring team celebrates!
+				if p.ID == e.celebration.scorerID {
+					// Scorer runs to the corner flag to celebrate
+					targetX = e.celebration.cornerX
+					targetY = e.celebration.cornerY
+				} else {
+					// Teammates run to the scorer to celebrate together!
+					scorer := findPlayerByID(state.AllPlayers(), e.celebration.scorerID)
+					if scorer != nil {
+						offsetAngle := float64(p.ID) * 0.72
+						targetX = scorer.X + math.Cos(offsetAngle)*1.8
+						targetY = scorer.Y + math.Sin(offsetAngle)*1.8
+					} else {
+						targetX = e.celebration.cornerX
+						targetY = e.celebration.cornerY
+					}
+				}
+			} else {
+				// Defending team is dejected and walks slowly back to their home penalty area
+				targetX = p.HomeX * 0.8 + (state.FieldW/2) * 0.2
+				targetY = p.HomeY * 0.8 + (state.FieldH/2) * 0.2
+			}
+			
+			dx := targetX - p.X
+			dy := targetY - p.Y
+			dist := math.Sqrt(dx*dx + dy*dy)
+			desiredVX := 0.0
+			desiredVY := 0.0
+			if dist > 0.1 {
+				// Dejected defenders walk slow, celebrating team runs fast
+				speedScale := 1.15
+				if p.TeamID != e.celebration.teamID {
+					speedScale = 0.38
+				}
+				maxStep := e.paceStep(p.Pace) * speedScale
+				desiredVX = dx / dist * maxStep
+				desiredVY = dy / dist * maxStep
+			}
+			turnRate := 0.28 + float64(p.Mental)*0.0018
+			p.VX += (desiredVX - p.VX) * turnRate
+			p.VY += (desiredVY - p.VY) * turnRate
+			p.X += p.VX
+			p.Y += p.VY
+			p.X = clamp(p.X, 1.2, state.FieldW-1.2)
+			p.Y = clamp(p.Y, 1.2, state.FieldH-1.2)
+			
+			if p.Role == "GK" {
+				p.X, p.Y = clampGoalkeeperPosition(p, state)
+			}
+			continue
+		}
+
 		if p.Morale <= 0.0 {
 			p.Morale = 1.0
 		}
@@ -1362,8 +1445,39 @@ func (e *MatchEngine) handleShot(state *rooms.MatchState, owner *rooms.Player, o
 		Message:  fmt.Sprintf("%s runs to the corner flag to celebrate with the crowd!", owner.Role),
 	})
 
+	owner.HasBall = false
+	state.Ball.OwnerID = 0
+	state.Ball.OwnerTeamID = ""
+	state.Ball.VX = 0
+	state.Ball.VY = 0
+	state.Ball.VZ = 0
+	state.Ball.Height = 0
+	state.Ball.InFlight = false
+
+	if owner.TeamID == state.HomeTeam.ID {
+		state.Ball.X = state.FieldW + 0.8
+		state.Ball.Y = state.FieldH / 2
+	} else {
+		state.Ball.X = -0.8
+		state.Ball.Y = state.FieldH / 2
+	}
+
 	kickoffTeamID := oppositeTeamID(owner.TeamID, state)
-	*tickEvents = append(*tickEvents, e.prepareKickoffSequence(state, kickoffTeamID, "Kickoff after goal")...)
+	cornerX := state.FieldW - 0.5
+	cornerY := 0.5 // Top right flag
+	if owner.TeamID == state.AwayTeam.ID {
+		cornerX = 0.5
+		cornerY = 0.5 // Top left flag
+	}
+	
+	e.celebration = &celebrationState{
+		scorerID:      owner.ID,
+		teamID:        owner.TeamID,
+		kickoffTeamID: kickoffTeamID,
+		ticksLeft:     35, // ~3.5 seconds of high-fidelity celebration
+		cornerX:       cornerX,
+		cornerY:       cornerY,
+	}
 }
 
 func (e *MatchEngine) handleFoul(state *rooms.MatchState, defender *rooms.Player, attacker *rooms.Player, tickEvents *[]events.MatchEvent) {
@@ -1537,9 +1651,46 @@ func (e *MatchEngine) handlePenaltyKick(state *rooms.MatchState, fouled *rooms.P
 
 	*tickEvents = append(*tickEvents, events.MatchEvent{Kind: "penalty_scored", TeamID: attacking.ID, PlayerID: taker.ID, Message: "Penalty scored"})
 	*tickEvents = append(*tickEvents, events.MatchEvent{Kind: "goal", TeamID: attacking.ID, PlayerID: taker.ID, Message: "Goal scored"})
+	*tickEvents = append(*tickEvents, events.MatchEvent{
+		Kind:     "player_celebration",
+		TeamID:   attacking.ID,
+		PlayerID: taker.ID,
+		Message:  fmt.Sprintf("%s runs to the corner flag to celebrate with the crowd!", taker.Role),
+	})
+
+	taker.HasBall = false
+	state.Ball.OwnerID = 0
+	state.Ball.OwnerTeamID = ""
+	state.Ball.VX = 0
+	state.Ball.VY = 0
+	state.Ball.VZ = 0
+	state.Ball.Height = 0
+	state.Ball.InFlight = false
+
+	if attacking.ID == state.HomeTeam.ID {
+		state.Ball.X = state.FieldW + 0.8
+		state.Ball.Y = state.FieldH / 2
+	} else {
+		state.Ball.X = -0.8
+		state.Ball.Y = state.FieldH / 2
+	}
 
 	kickoffTeamID := oppositeTeamID(attacking.ID, state)
-	*tickEvents = append(*tickEvents, e.prepareKickoffSequence(state, kickoffTeamID, "Kickoff after penalty goal")...)
+	cornerX := state.FieldW - 0.5
+	cornerY := 0.5 // Top right flag
+	if attacking.ID == state.AwayTeam.ID {
+		cornerX = 0.5
+		cornerY = 0.5 // Top left flag
+	}
+	
+	e.celebration = &celebrationState{
+		scorerID:      taker.ID,
+		teamID:        attacking.ID,
+		kickoffTeamID: kickoffTeamID,
+		ticksLeft:     35, // ~3.5 seconds of high-fidelity celebration
+		cornerX:       cornerX,
+		cornerY:       cornerY,
+	}
 }
 
 func choosePenaltyTaker(team *rooms.Team, preferred *rooms.Player) *rooms.Player {
@@ -1713,6 +1864,9 @@ func (e *MatchEngine) resetKickoff(state *rooms.MatchState, kickoffTeamID string
 }
 
 func (e *MatchEngine) updateBall(state *rooms.MatchState) {
+	if e.celebration != nil {
+		return
+	}
 	for _, p := range state.AllPlayers() {
 		if p.ID == state.Ball.OwnerID {
 			state.Ball.X = clamp(p.X+ownerGoalDirection(p.TeamID, state)*0.38, 0.4, state.FieldW-0.4)
