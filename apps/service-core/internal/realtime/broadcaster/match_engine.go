@@ -571,11 +571,13 @@ func (e *MatchEngine) computePlayerMovement(state *rooms.MatchState, tickEvents 
 			targetX = clamp(targetX+lineShift, 8, state.FieldW-8)
 		}
 
-		// Attacking and support runs when in possession (even during ball flights)
-		if sameTeamAsAttacker && !isPossessor {
-			if (p.Role == "LB" || p.Role == "RB") && state.Ball.X > 38 {
-				targetX = clamp(state.Ball.X+team.AttackDir*14.0, 15, state.FieldW-12)
-				targetY = p.HomeY
+		// Attacking off-ball support runs seeking open spaces and clear passing lanes (chạy chỗ tìm khoảng trống)
+		if sameTeamAsAttacker && !isPossessor && p.Role != "GK" {
+			// 1. Start with the base tactical target position
+			baseTargetX, baseTargetY := targetX, targetY
+			if (p.Role == "LB" || p.Role == "RB") && state.Ball.X > 35 {
+				baseTargetX = clamp(state.Ball.X+team.AttackDir*15.0, 15, state.FieldW-12)
+				baseTargetY = p.HomeY
 				if tickEvents != nil && e.rand.Float64() < 0.015 && distance(p.X, p.Y, state.Ball.X, state.Ball.Y) < 18 {
 					*tickEvents = append(*tickEvents, events.MatchEvent{
 						Kind:     "overload",
@@ -585,29 +587,74 @@ func (e *MatchEngine) computePlayerMovement(state *rooms.MatchState, tickEvents 
 					})
 				}
 			} else if p.Role == "LW" || p.Role == "RW" || p.Role == "ST" || p.Role == "LST" || p.Role == "RST" {
-				targetX = clamp(state.Ball.X+team.AttackDir*(12.0+float64(p.Pace)*0.08), 12, state.FieldW-3)
+				baseTargetX = clamp(state.Ball.X+team.AttackDir*(14.0+float64(p.Pace)*0.10), 12, state.FieldW-3)
 				if p.Role == "LW" {
-					targetY = clamp(state.Ball.Y-9.0, 3, state.FieldH-3)
+					baseTargetY = clamp(state.Ball.Y-10.0, 3, state.FieldH-3)
 				} else if p.Role == "RW" {
-					targetY = clamp(state.Ball.Y+9.0, 3, state.FieldH-3)
+					baseTargetY = clamp(state.Ball.Y+10.0, 3, state.FieldH-3)
 				} else {
-					targetY = clamp(state.FieldH/2+(e.rand.Float64()-0.5)*14, 10, state.FieldH-10)
+					baseTargetY = clamp(state.FieldH/2+(e.rand.Float64()-0.5)*14, 10, state.FieldH-10)
 				}
-
+				
+				// Clamp behind the offside line
 				lastDefenderX := e.getOffsideLine(state, oppTeam.ID)
 				if team.AttackDir > 0 {
-					if targetX >= lastDefenderX {
-						targetX = lastDefenderX - 1.1
+					if baseTargetX >= lastDefenderX {
+						baseTargetX = lastDefenderX - 1.1
 					}
 				} else {
-					if targetX <= lastDefenderX {
-						targetX = lastDefenderX + 1.1
+					if baseTargetX <= lastDefenderX {
+						baseTargetX = lastDefenderX + 1.1
 					}
 				}
 			} else if strings.Contains(p.Role, "CM") || strings.Contains(p.Role, "DM") || strings.Contains(p.Role, "AM") {
-				targetX = clamp(state.Ball.X-team.AttackDir*7.0, 18, state.FieldW-18)
-				targetY = p.HomeY + (state.Ball.Y-p.HomeY)*0.42
+				baseTargetX = clamp(state.Ball.X-team.AttackDir*6.0, 18, state.FieldW-18)
+				baseTargetY = p.HomeY + (state.Ball.Y-p.HomeY)*0.45
 			}
+
+			// 2. Active off-ball adjustment to find maximum local space!
+			// Check 5 radial candidate points around the tactical target.
+			// Select the candidate point that maximizes space from the closest opponent and has a clear passing lane.
+			bestX, bestY := baseTargetX, baseTargetY
+			maxScore := -999.0
+			
+			// Base candidate (doing nothing)
+			baseSpace := nearestOpponentDistanceVec(baseTargetX, baseTargetY, oppTeam.Players)
+			baseLaneThreat := passingLaneRiskFromCoord(state.Ball.X, state.Ball.Y, baseTargetX, baseTargetY, oppTeam.Players)
+			maxScore = baseSpace - baseLaneThreat*3.5
+			
+			angles := []float64{0, math.Pi/4, -math.Pi/4, math.Pi/2, -math.Pi/2}
+			radius := 4.8 // search within 4.8 meters
+			for _, ang := range angles {
+				candX := clamp(baseTargetX + math.Cos(ang)*radius, 5, state.FieldW-5)
+				candY := clamp(baseTargetY + math.Sin(ang)*radius, 3, state.FieldH-3)
+				
+				// Offside cap check for forward candidates
+				if p.Role == "ST" || p.Role == "LST" || p.Role == "RST" || p.Role == "LW" || p.Role == "RW" {
+					lastDefenderX := e.getOffsideLine(state, oppTeam.ID)
+					if team.AttackDir > 0 && candX >= lastDefenderX {
+						continue
+					}
+					if team.AttackDir < 0 && candX <= lastDefenderX {
+						continue
+					}
+				}
+				
+				// Evaluate space and lane risk
+				sp := nearestOpponentDistanceVec(candX, candY, oppTeam.Players)
+				laneThreat := passingLaneRiskFromCoord(state.Ball.X, state.Ball.Y, candX, candY, oppTeam.Players)
+				
+				// Score favors points that are far from defenders (sp) and have a clean passing lane (low laneThreat)
+				score := sp - laneThreat*3.5
+				if score > maxScore {
+					maxScore = score
+					bestX = candX
+					bestY = candY
+				}
+			}
+
+			targetX = bestX
+			targetY = bestY
 		}
 
 		isPressingChaser := !sameTeamAsAttacker && hasAttackingPossession && distance(p.X, p.Y, state.Ball.X, state.Ball.Y) < (11.0 + team.Tactics.Pressure*15.0)
@@ -626,18 +673,39 @@ func (e *MatchEngine) computePlayerMovement(state *rooms.MatchState, tickEvents 
 			}
 		}
 
-		// Tight defensive marking for other non-chasing defenders
+		// Tight 1-on-1 defensive marking and active pressing for other non-chasing defenders (kèm 1-1, pressing)
 		if !sameTeamAsAttacker && hasAttackingPossession && !isNearestChaser && !isPressingChaser && p.Role != "GK" {
 			nearestAttacker := nearestOpponent(p, oppTeam.Players)
-			if nearestAttacker != nil && distance(p.X, p.Y, nearestAttacker.X, nearestAttacker.Y) < 16.0 {
+			if nearestAttacker != nil {
+				attackerSpace := nearestOpponentDistance(nearestAttacker, team.Players) // space attacker has from other defenders
+				
+				// Determine goal line to stand between attacker and goal
 				goalX := 0.0
 				if p.TeamID == state.HomeTeam.ID {
 					goalX = 0.0
 				} else {
 					goalX = state.FieldW
 				}
-				targetX = nearestAttacker.X*0.72 + goalX*0.28
-				targetY = nearestAttacker.Y*0.72 + (state.FieldH/2)*0.28
+
+				distToGoal := distance(nearestAttacker.X, nearestAttacker.Y, goalX, state.FieldH/2)
+				
+				if distToGoal < 30.0 || attackerSpace > 6.0 {
+					// Mark extremely tight (1-on-1): stand 90% close to them, blocking the passing lane
+					ballDist := distance(state.Ball.X, state.Ball.Y, nearestAttacker.X, nearestAttacker.Y)
+					if ballDist > 4.0 {
+						// Position directly in the passing lane: 78% towards attacker, 12% towards ball, 10% goal line
+						targetX = nearestAttacker.X * 0.78 + state.Ball.X * 0.12 + goalX * 0.10
+						targetY = nearestAttacker.Y * 0.78 + state.Ball.Y * 0.12 + (state.FieldH/2) * 0.10
+					} else {
+						// Extremely close tight marking
+						targetX = nearestAttacker.X * 0.90 + goalX * 0.10
+						targetY = nearestAttacker.Y * 0.90 + (state.FieldH/2) * 0.10
+					}
+				} else {
+					// Standard defensive tracking
+					targetX = nearestAttacker.X*0.70 + goalX*0.30
+					targetY = nearestAttacker.Y*0.70 + (state.FieldH/2)*0.30
+				}
 			}
 		}
 
@@ -1564,7 +1632,7 @@ func (e *MatchEngine) executeKickoffPass(state *rooms.MatchState) []events.Match
 	}
 
 	dist := distance(passer.X, passer.Y, receiver.X, receiver.Y)
-	kickoffSpeed := clamp(e.passBallSpeed(dist, false)*0.64, 0.5, 0.85)
+	kickoffSpeed := clamp(e.passBallSpeed(passer.Passing, dist, false)*0.64, 0.5, 0.85)
 	e.startPassFlight(state, passer, teamID, receiver.ID, receiver.X, receiver.Y, kickoffSpeed, false)
 
 	return []events.MatchEvent{{
@@ -1945,6 +2013,43 @@ func passingLaneRisk(owner *rooms.Player, target *rooms.Player, opponents []*roo
 	return clamp(risk, 0, 3.8)
 }
 
+func nearestOpponentDistanceVec(x float64, y float64, opponents []*rooms.Player) float64 {
+	if len(opponents) == 0 {
+		return 99.0
+	}
+	best := distance(x, y, opponents[0].X, opponents[0].Y)
+	for _, o := range opponents[1:] {
+		d := distance(x, y, o.X, o.Y)
+		if d < best {
+			best = d
+		}
+	}
+	return best
+}
+
+func passingLaneRiskFromCoord(fromX float64, fromY float64, toX float64, toY float64, opponents []*rooms.Player) float64 {
+	segLen := distance(fromX, fromY, toX, toY)
+	if segLen < 0.1 {
+		return 0
+	}
+
+	risk := 0.0
+	for _, o := range opponents {
+		along, perp := projectionDistance(fromX, fromY, toX, toY, o.X, o.Y)
+		if along < 0 || along > segLen {
+			continue
+		}
+		if perp > 4.4 {
+			continue
+		}
+
+		lineThreat := (1.0 - perp/4.4) * (0.46 + float64(o.StandingTackle)/260.0 + float64(o.Defending)/460.0)
+		risk += lineThreat
+	}
+
+	return clamp(risk, 0, 3.8)
+}
+
 func projectionDistance(x1 float64, y1 float64, x2 float64, y2 float64, px float64, py float64) (float64, float64) {
 	vx := x2 - x1
 	vy := y2 - y1
@@ -2007,13 +2112,17 @@ func (e *MatchEngine) bestPassDecision(state *rooms.MatchState, owner *rooms.Pla
 
 			if score > bestScore {
 				bestScore = score
+				passSkill := owner.Passing
+				if isLob {
+					passSkill = owner.LongPass
+				}
 				best = &passDecision{
 					target:       mate,
 					isLob:        isLob,
 					success:      success,
 					targetX:      mate.X,
 					targetY:      mate.Y,
-					initialSpeed: e.passBallSpeed(dist, isLob),
+					initialSpeed: e.passBallSpeed(passSkill, dist, isLob),
 				}
 			}
 		}
@@ -2061,20 +2170,27 @@ func estimatePassSuccess(owner *rooms.Player, target *rooms.Player, team *rooms.
 
 	spaceBoost := clamp(space/24.0, 0, 0.2)
 	tacticBoost := team.Tactics.PassRatio*0.08 - opponent.Tactics.Pressure*0.06
-	pressurePenalty := pressure * 0.24
+	
+	// Heavy pressure penalty: passing success rate falls by up to 52% if opponent defenders are tight
+	pressurePenalty := pressure * 0.52
 
 	if isLob {
 		base += 0.03
 	}
 
-	return clamp(base-distancePenalty-lanePenalty-pressurePenalty+spaceBoost+tacticBoost, 0.15, 0.92)
+	return clamp(base-distancePenalty-lanePenalty-pressurePenalty+spaceBoost+tacticBoost, 0.10, 0.92)
 }
 
-func (e *MatchEngine) passBallSpeed(dist float64, isLob bool) float64 {
+func (e *MatchEngine) passBallSpeed(ownerPassSkill int, dist float64, isLob bool) float64 {
+	// Dynamically calculate speed factor from the player's passing attribute!
+	// 99 passing gives a 1.15x speed multiplier, whereas 50 passing gives a 0.98x multiplier.
+	skillFactor := 0.85 + float64(ownerPassSkill)/380.0
 	if isLob {
-		return clamp((0.95+dist*0.014)*e.runtime.PassSpeedScale, 0.82, 2.1)
+		// Raised base speed range from [0.95, 2.1] to [1.25, 2.7] for crisp, organic lobs!
+		return clamp((1.25+dist*0.018)*e.runtime.PassSpeedScale*skillFactor, 1.15, 2.7)
 	}
-	return clamp((0.72+dist*0.016)*e.runtime.PassSpeedScale, 0.62, 1.85)
+	// Raised base speed range from [0.72, 1.85] to [0.98, 2.45] for crisp, responsive ground passes!
+	return clamp((0.98+dist*0.020)*e.runtime.PassSpeedScale*skillFactor, 0.95, 2.45)
 }
 
 func (e *MatchEngine) startPassFlight(state *rooms.MatchState, owner *rooms.Player, passTeamID string, targetID int, targetX float64, targetY float64, speed float64, isLob bool) {
