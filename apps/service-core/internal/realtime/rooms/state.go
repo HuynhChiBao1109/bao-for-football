@@ -81,10 +81,11 @@ type Ball struct {
 	TargetID    int
 	TargetX     float64
 	TargetY     float64
-	FlightTotal float64
-	FlightLeft  float64
-	Spin        float64
-	VZ          float64
+	FlightTotal     float64
+	FlightLeft      float64
+	Spin            float64
+	VZ              float64
+	LastTouchTeamID string
 }
 
 type MatchState struct {

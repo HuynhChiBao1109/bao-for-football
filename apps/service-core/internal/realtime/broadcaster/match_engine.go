@@ -82,6 +82,9 @@ const (
 	setPieceFarFreeKick  setPieceType = "far_free_kick"
 	setPieceNearFreeKick setPieceType = "near_free_kick"
 	setPiecePenalty      setPieceType = "penalty"
+	setPieceThrowIn      setPieceType = "throw_in"
+	setPieceCornerKick   setPieceType = "corner_kick"
+	setPieceGoalKick     setPieceType = "goal_kick"
 )
 
 type setPieceState struct {
@@ -2098,13 +2101,8 @@ func (e *MatchEngine) updateBall(state *rooms.MatchState) {
 		state.Ball.Y += state.Ball.VY
 		state.Ball.Height += state.Ball.VZ
 
-		if state.Ball.X <= 0.2 || state.Ball.X >= state.FieldW-0.2 {
-			state.Ball.VX = -state.Ball.VX * 0.35
-			state.Ball.X = clamp(state.Ball.X, 0.2, state.FieldW-0.2)
-		}
-		if state.Ball.Y <= 0.2 || state.Ball.Y >= state.FieldH-0.2 {
-			state.Ball.VY = -state.Ball.VY * 0.35
-			state.Ball.Y = clamp(state.Ball.Y, 0.2, state.FieldH-0.2)
+		if e.checkOutOfBounds(state) {
+			return
 		}
 
 		if state.Ball.Height <= 0.0 {
@@ -2130,13 +2128,8 @@ func (e *MatchEngine) updateBall(state *rooms.MatchState) {
 		state.Ball.VX *= 0.88
 		state.Ball.VY *= 0.88
 
-		if state.Ball.X <= 0.2 || state.Ball.X >= state.FieldW-0.2 {
-			state.Ball.VX = -state.Ball.VX * 0.28
-			state.Ball.X = clamp(state.Ball.X, 0.2, state.FieldW-0.2)
-		}
-		if state.Ball.Y <= 0.2 || state.Ball.Y >= state.FieldH-0.2 {
-			state.Ball.VY = -state.Ball.VY * 0.28
-			state.Ball.Y = clamp(state.Ball.Y, 0.2, state.FieldH-0.2)
+		if e.checkOutOfBounds(state) {
+			return
 		}
 
 		if math.Abs(state.Ball.VX) < 0.01 && math.Abs(state.Ball.VY) < 0.01 {
@@ -2144,6 +2137,121 @@ func (e *MatchEngine) updateBall(state *rooms.MatchState) {
 			state.Ball.VY = 0
 		}
 	}
+}
+
+func (e *MatchEngine) checkOutOfBounds(state *rooms.MatchState) bool {
+	outX := state.Ball.X <= 0.0 || state.Ball.X >= state.FieldW
+	outY := state.Ball.Y <= 0.0 || state.Ball.Y >= state.FieldH
+
+	if !outX && !outY {
+		return false
+	}
+
+	state.Ball.VX = 0
+	state.Ball.VY = 0
+	state.Ball.VZ = 0
+	state.Ball.InFlight = false
+	state.Ball.IsLob = false
+	state.Ball.Spin = 0
+
+	// Determine possessing team before it went out
+	lastTouchTeam := state.Ball.LastTouchTeamID
+	if lastTouchTeam == "" {
+		// fallback if unknown
+		lastTouchTeam = state.HomeTeam.ID
+	}
+	
+	attackingTeam := state.HomeTeam
+	defendingTeam := state.AwayTeam
+	if lastTouchTeam == state.HomeTeam.ID {
+		attackingTeam = state.AwayTeam
+		defendingTeam = state.HomeTeam
+	}
+
+	if outX {
+		// Crossed the goal line (Corner kick or Goal kick)
+		isDefendingSide := (state.Ball.X <= 0.0 && defendingTeam.AttackDir > 0) || (state.Ball.X >= state.FieldW && defendingTeam.AttackDir < 0)
+		
+		if isDefendingSide {
+			// Last touched by defending team on their own half -> Corner Kick
+			e.eventQueue = append(e.eventQueue, events.MatchEvent{
+				Kind:    "corner",
+				TeamID:  attackingTeam.ID,
+				Message: "Corner kick awarded!",
+			})
+
+			cornerY := 0.5
+			if state.Ball.Y > state.FieldH/2 {
+				cornerY = state.FieldH - 0.5
+			}
+
+			e.setPiece = &setPieceState{
+				Type:      setPieceCornerKick,
+				TeamID:    attackingTeam.ID,
+				DefTeamID: defendingTeam.ID,
+				FoulX:     clamp(state.Ball.X, 0.5, state.FieldW-0.5),
+				FoulY:     cornerY, // snap to nearest corner flag
+				TicksLeft: 30, // 3 seconds setup
+			}
+		} else {
+			// Last touched by attacking team -> Goal Kick
+			e.eventQueue = append(e.eventQueue, events.MatchEvent{
+				Kind:    "goal_kick",
+				TeamID:  defendingTeam.ID,
+				Message: "Goal kick to restart play.",
+			})
+
+			gk := findGoalkeeper(defendingTeam)
+			kickerID := 0
+			if gk != nil {
+				kickerID = gk.ID
+			}
+
+			e.setPiece = &setPieceState{
+				Type:      setPieceGoalKick,
+				TeamID:    defendingTeam.ID,
+				DefTeamID: attackingTeam.ID,
+				FoulX:     clamp(state.Ball.X, 5.5, state.FieldW-5.5),
+				FoulY:     state.FieldH / 2, // snap to 6-yard box center roughly
+				KickerID:  kickerID,
+				KickerObj: gk,
+				TicksLeft: 20, // 2 seconds setup
+			}
+		}
+	} else if outY {
+		// Crossed touchline -> Throw-in
+		e.eventQueue = append(e.eventQueue, events.MatchEvent{
+			Kind:    "throw_in",
+			TeamID:  attackingTeam.ID,
+			Message: "Throw-in awarded.",
+		})
+		
+		e.setPiece = &setPieceState{
+			Type:      setPieceThrowIn,
+			TeamID:    attackingTeam.ID,
+			DefTeamID: defendingTeam.ID,
+			FoulX:     clamp(state.Ball.X, 1.0, state.FieldW-1.0),
+			FoulY:     clamp(state.Ball.Y, 0.1, state.FieldH-0.1),
+			TicksLeft: 20,
+		}
+	}
+	
+	// Pick kicker for corner and throw-in
+	if e.setPiece.KickerObj == nil {
+		var kicker *rooms.Player
+		for _, p := range attackingTeam.Players {
+			if p.Role != "GK" && (kicker == nil || distance(p.X, p.Y, e.setPiece.FoulX, e.setPiece.FoulY) < distance(kicker.X, kicker.Y, e.setPiece.FoulX, e.setPiece.FoulY)) {
+				kicker = p
+			}
+		}
+		if kicker != nil {
+			e.setPiece.KickerID = kicker.ID
+			e.setPiece.KickerObj = kicker
+		}
+	}
+
+	return true
+
 }
 
 func (e *MatchEngine) broadcastTick(state *rooms.MatchState, tick int, tickEvents []events.MatchEvent) {
@@ -2701,6 +2809,7 @@ func (e *MatchEngine) giveBallToPlayer(state *rooms.MatchState, owner *rooms.Pla
 	owner.HasBall = true
 	state.Ball.OwnerID = owner.ID
 	state.Ball.OwnerTeamID = owner.TeamID
+	state.Ball.LastTouchTeamID = owner.TeamID
 	state.Ball.VX = 0
 	state.Ball.VY = 0
 	state.Ball.Height = 0
@@ -3013,7 +3122,6 @@ func (e *MatchEngine) updateSetPieceTick(state *rooms.MatchState) {
 			targetX := e.setPiece.FoulX - dir*10.0
 			targetY := p.HomeY
 			
-			// Defending players stand slightly closer
 			if p.TeamID == e.setPiece.DefTeamID {
 				targetX = e.setPiece.FoulX - dir*9.5
 			}
@@ -3028,18 +3136,49 @@ func (e *MatchEngine) updateSetPieceTick(state *rooms.MatchState) {
 			p.Y += (targetY - p.Y) * 0.22
 			wallCount++
 
+		} else if e.setPiece.Type == setPieceCornerKick {
+			// Crowding the penalty box
+			targetX := goalX + ownerGoalDirection(e.setPiece.DefTeamID, state)*(6.0+e.rand.Float64()*8.0)
+			targetY := state.FieldH/2 + (e.rand.Float64()-0.5)*18.0
+			if p.Role == "CB" || p.Role == "ST" {
+				// CBs and Strikers get even closer to the goal
+				targetX = goalX + ownerGoalDirection(e.setPiece.DefTeamID, state)*(4.0+e.rand.Float64()*5.0)
+				targetY = state.FieldH/2 + (e.rand.Float64()-0.5)*10.0
+			}
+			p.X += (targetX - p.X) * 0.12
+			p.Y += (targetY - p.Y) * 0.12
+
+		} else if e.setPiece.Type == setPieceThrowIn {
+			// Players offer short options or mark tightly near the touchline
+			targetX := p.HomeX*0.7 + e.setPiece.FoulX*0.3
+			targetY := p.HomeY*0.4 + e.setPiece.FoulY*0.6
+			
+			distToBall := distance(targetX, targetY, e.setPiece.FoulX, e.setPiece.FoulY)
+			if p.TeamID == e.setPiece.DefTeamID && distToBall < 3.0 {
+				targetX = e.setPiece.FoulX + (targetX-e.setPiece.FoulX)/distToBall*3.5
+				targetY = e.setPiece.FoulY + (targetY-e.setPiece.FoulY)/distToBall*3.5
+			}
+			p.X += (targetX - p.X) * 0.15
+			p.Y += (targetY - p.Y) * 0.15
+
+		} else if e.setPiece.Type == setPieceGoalKick {
+			// Push up the field
+			dir := ownerGoalDirection(e.setPiece.TeamID, state)
+			targetX := p.HomeX + dir*15.0
+			targetY := p.HomeY
+			p.X += (targetX - p.X) * 0.12
+			p.Y += (targetY - p.Y) * 0.12
+
 		} else {
 			// Generic spread out / tactical repositioning for Far Free Kicks or non-wall players
 			targetX := p.HomeX*0.8 + e.setPiece.FoulX*0.2
 			targetY := p.HomeY*0.8 + e.setPiece.FoulY*0.2
 
-			// Ensure defending players maintain 9m distance from ball
 			distToBall := distance(targetX, targetY, e.setPiece.FoulX, e.setPiece.FoulY)
 			if p.TeamID == e.setPiece.DefTeamID && distToBall < 9.0 {
 				targetX = e.setPiece.FoulX + (targetX-e.setPiece.FoulX)/distToBall*9.5
 				targetY = e.setPiece.FoulY + (targetY-e.setPiece.FoulY)/distToBall*9.5
 			}
-
 			p.X += (targetX - p.X) * 0.15
 			p.Y += (targetY - p.Y) * 0.15
 		}
@@ -3053,28 +3192,56 @@ func (e *MatchEngine) executeSetPiece(state *rooms.MatchState) []events.MatchEve
 	e.setPiece.Executed = true
 	tickEvents := make([]events.MatchEvent, 0)
 
+	team := state.HomeTeam
+	opponent := state.AwayTeam
+	if e.setPiece.TeamID == state.AwayTeam.ID {
+		team = state.AwayTeam
+		opponent = state.HomeTeam
+	}
+	kicker := e.setPiece.KickerObj
+
 	if e.setPiece.Type == setPiecePenalty {
-		e.handlePenaltyKick(state, e.setPiece.KickerObj, &tickEvents)
+		e.handlePenaltyKick(state, kicker, &tickEvents)
 	} else if e.setPiece.Type == setPieceNearFreeKick {
 		e.executeDirectFreeKick(state, &tickEvents)
+	} else if e.setPiece.Type == setPieceCornerKick {
+		e.giveBallToPlayer(state, kicker)
+		tickEvents = append(tickEvents, events.MatchEvent{
+			Kind:     "corner",
+			TeamID:   e.setPiece.TeamID,
+			PlayerID: e.setPiece.KickerID,
+			Message:  "Swings the corner into the box!",
+		})
+		e.handleCross(state, kicker, team, opponent, &tickEvents)
+	} else if e.setPiece.Type == setPieceGoalKick {
+		e.giveBallToPlayer(state, kicker)
+		tickEvents = append(tickEvents, events.MatchEvent{
+			Kind:     "goal_kick",
+			TeamID:   e.setPiece.TeamID,
+			PlayerID: e.setPiece.KickerID,
+			Message:  "Goalkeeper launches a long ball upfield.",
+		})
+		// Force a long pass to strikers
+		e.handleClearance(state, kicker, opponent, &tickEvents)
+	} else if e.setPiece.Type == setPieceThrowIn {
+		e.giveBallToPlayer(state, kicker)
+		tickEvents = append(tickEvents, events.MatchEvent{
+			Kind:     "throw_in",
+			TeamID:   e.setPiece.TeamID,
+			PlayerID: e.setPiece.KickerID,
+			Message:  "Throws the ball back into play.",
+		})
+		e.handlePass(state, kicker, team, opponent, &tickEvents)
 	} else {
 		// Far free kick - treated as a tactical pass execution
+		e.giveBallToPlayer(state, kicker)
 		tickEvents = append(tickEvents, events.MatchEvent{
 			Kind:     "pass",
 			TeamID:   e.setPiece.TeamID,
 			PlayerID: e.setPiece.KickerID,
 			Message:  "Takes the free kick to restart play.",
 		})
-
-		e.giveBallToPlayer(state, e.setPiece.KickerObj)
-		team := state.HomeTeam
-		opponent := state.AwayTeam
-		if e.setPiece.TeamID == state.AwayTeam.ID {
-			team = state.AwayTeam
-			opponent = state.HomeTeam
-		}
-		
-		e.handlePass(state, e.setPiece.KickerObj, team, opponent, &tickEvents)
+		e.handlePass(state, kicker, team, opponent, &tickEvents)
 	}
 
 	e.setPiece = nil

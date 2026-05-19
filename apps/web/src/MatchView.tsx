@@ -109,6 +109,22 @@ const EV = {
     dur: 5500,
     phase: 'full_time',
   },
+  throw_in: {
+    label: '👐 Ném Biên',
+    title: 'NÉM BIÊN',
+    color: '#d9f99d',
+    bg: '#0a1005',
+    bdr: '#bef264',
+    dur: 2000,
+  },
+  goal_kick: {
+    label: '🥅 Phát Bóng',
+    title: 'PHÁT BÓNG LÊN',
+    color: '#e5e5e5',
+    bg: '#101010',
+    bdr: '#a3a3a3',
+    dur: 2000,
+  },
   kickoff: {
     label: '⚽ Giao Bóng',
     title: 'KICK OFF',
