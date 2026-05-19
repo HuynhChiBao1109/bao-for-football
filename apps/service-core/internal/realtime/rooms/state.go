@@ -11,6 +11,8 @@ type Player struct {
 	ID             int
 	TeamID         string
 	Role           string
+	Name           string
+	Avatar         string
 	X              float64
 	Y              float64
 	HomeX          float64
@@ -62,6 +64,7 @@ type Team struct {
 	Score     int
 	Tactics   TeamTactics
 	Players   []*Player
+	Reserves  []*Player
 }
 
 type Ball struct {
@@ -139,7 +142,9 @@ func NewDemoMatchState(matchID string) *MatchState {
 	}
 
 	home.Players = createTeamPlayers(home.ID, false)
+	home.Reserves = createTeamReserves(home.ID)
 	away.Players = createTeamPlayers(away.ID, true)
+	away.Reserves = createTeamReserves(away.ID)
 
 	state := &MatchState{
 		MatchID:   matchID,
@@ -172,6 +177,29 @@ func createTeamPlayers(teamID string, mirror bool) []*Player {
 	}
 
 	roles := []string{"GK", "LB", "LCB", "RCB", "RB", "LCM", "CM", "RCM", "LW", "ST", "RW"}
+
+	var names []string
+	var avatars []string
+
+	if teamID == "home" {
+		names = []string{
+			"D. de Gea", "A. Davies", "V. van Dijk", "R. Varane", "T. Alexander-Arnold",
+			"L. Modric", "Casemiro", "K. De Bruyne", "Vinicius Jr.", "E. Haaland", "M. Salah",
+		}
+		avatars = []string{
+			"🧤", "🏃", "🛡️", "🧱", "🎯",
+			"🪄", "⚓", "🚀", "⚡", "🤖", "👑",
+		}
+	} else {
+		names = []string{
+			"M. Neuer", "T. Hernandez", "R. Dias", "Marquinhos", "A. Hakimi",
+			"T. Kroos", "Rodri", "J. Bellingham", "K. Mbappe", "R. Lewandowski", "L. Messi",
+		}
+		avatars = []string{
+			"🧤", "🏃", "🛡️", "🧱", "⚡",
+			"🪄", "⚓", "🚀", "⚡", "🎯", "👑",
+		}
+	}
 
 	players := make([]*Player, 0, 11)
 	baseID := 1
@@ -217,6 +245,8 @@ func createTeamPlayers(teamID string, mirror bool) []*Player {
 			ID:             baseID + i,
 			TeamID:         teamID,
 			Role:           roles[i],
+			Name:           names[i],
+			Avatar:         avatars[i],
 			X:              x,
 			Y:              y,
 			HomeX:          x,
@@ -230,7 +260,7 @@ func createTeamPlayers(teamID string, mirror bool) []*Player {
 			StandingTackle: standingTackle,
 			SlidingTackle:  slidingTackle,
 			Mental:         mental,
-			Morale:         1.0, // Default morale
+			Morale:         1.0,
 		})
 	}
 
@@ -346,4 +376,60 @@ func clampInt(v int, minV int, maxV int) int {
 		return maxV
 	}
 	return v
+}
+
+func createTeamReserves(teamID string) []*Player {
+	var names []string
+	var avatars []string
+	var roles []string
+	baseID := 101
+	if teamID == "away" {
+		baseID = 201
+	}
+
+	if teamID == "home" {
+		names = []string{"H. Kane", "Pedri", "H. Maguire", "L. Shaw", "M. ter Stegen"}
+		avatars = []string{"🎯", "🪄", "🧱", "🏃", "🧤"}
+		roles = []string{"ST", "CM", "CB", "LB", "GK"}
+	} else {
+		names = []string{"K. Benzema", "Bruno F.", "P. Kimpembe", "K. Walker", "Alisson B."}
+		avatars = []string{"🎯", "🪄", "🧱", "⚡", "🧤"}
+		roles = []string{"ST", "CM", "CB", "RB", "GK"}
+	}
+
+	reserves := make([]*Player, 0, 5)
+	for i := 0; i < 5; i++ {
+		pace := 65 + (i*4)%20
+		passing := 62 + (i*3)%22
+		longPass := 58 + (i*4)%20
+		vision := 60 + (i*5)%18
+		shooting := 60 + (i*3)%24
+		defending := 55 + (i*6)%25
+		standingTackle := 56 + (i*5)%22
+		slidingTackle := 54 + (i*4)%22
+		mental := 62 + (i*2)%20
+
+		reserves = append(reserves, &Player{
+			ID:             baseID + i,
+			TeamID:         teamID,
+			Role:           roles[i],
+			Name:           names[i],
+			Avatar:         avatars[i],
+			X:              -20,
+			Y:              -20,
+			HomeX:          -20,
+			HomeY:          -20,
+			Pace:           pace,
+			Passing:        passing,
+			LongPass:       longPass,
+			Vision:         vision,
+			Shooting:       shooting,
+			Defending:      defending,
+			StandingTackle: standingTackle,
+			SlidingTackle:  slidingTackle,
+			Mental:         mental,
+			Morale:         1.0,
+		})
+	}
+	return reserves
 }

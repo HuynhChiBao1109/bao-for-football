@@ -18,7 +18,7 @@ type repository interface {
 }
 
 type realtimeStarter interface {
-	StartMatch(ctx context.Context, matchID string) error
+	StartMatch(ctx context.Context, matchID string, homeName string, awayName string) error
 }
 
 type MatchUseCase struct {
@@ -64,7 +64,7 @@ func (u *MatchUseCase) Start(ctx context.Context, input domain.StartInput) (*dom
 		StartedAt:    nowUTC(),
 	}
 
-	if err := u.realtime.StartMatch(ctx, matchID); err != nil {
+	if err := u.realtime.StartMatch(ctx, matchID, homeClubName, awayClubName); err != nil {
 		return nil, err
 	}
 

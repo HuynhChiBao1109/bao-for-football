@@ -140,7 +140,7 @@ func (h *Handler) StartMatch(c *gin.Context) {
 		return
 	}
 
-	if err := h.engine.StartMatch(req.MatchID); err != nil {
+	if err := h.engine.StartMatch(req.MatchID, "", ""); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -223,4 +223,24 @@ func toReplayPayload(raw []byte) ([]byte, error) {
 	snapshot.Events = nil
 
 	return json.Marshal(snapshot)
+}
+
+func (h *Handler) Substitute(c *gin.Context) {
+	var req struct {
+		TeamID      string `json:"teamId"`
+		PlayerOutID int    `json:"playerOutId"`
+		PlayerInID  int    `json:"playerInId"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err := h.engine.RequestSubstitution(req.TeamID, req.PlayerOutID, req.PlayerInID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "substitution requested"})
 }

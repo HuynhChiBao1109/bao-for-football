@@ -130,6 +130,7 @@ func main() {
 	})
 	router.GET("/ws", realtimeHandler.Connect)
 	router.GET("/sse/match", realtimeHandler.StreamMatchSSE)
+	router.POST("/realtime/substitute", realtimeHandler.Substitute)
 	router.GET("/api/v1/auth/clubs", authHandler.ListRegistrationClubs)
 	router.POST("/api/v1/auth/login", authHandler.Login)
 	router.POST("/api/v1/auth/register", authHandler.Register)

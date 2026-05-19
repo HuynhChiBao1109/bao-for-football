@@ -64,20 +64,33 @@ type celebrationState struct {
 	cornerY       float64
 }
 
+type substitutionState struct {
+	teamID       string
+	playerOutID  int
+	playerInID   int
+	outX         float64
+	outY         float64
+	outReached   bool
+	ticksLeft    int
+	hasHighFived bool
+	playerInObj  *rooms.Player // temporary player model to render inside the sub animation
+}
+
 type MatchEngine struct {
-	hub         *hub.Hub
-	rand        *rand.Rand
-	mu          sync.Mutex
-	running     bool
-	stopCh      chan struct{}
-	state       *rooms.MatchState
-	kickoff     *kickoffPassState
-	celebration *celebrationState
-	pending     map[string]UpdateTacticsInput
-	bindings    map[string]string
-	runtime     gameplayRuntime
-	eventQueue  []events.MatchEvent
-	momentum    float64
+	hub          *hub.Hub
+	rand         *rand.Rand
+	mu           sync.Mutex
+	running      bool
+	stopCh       chan struct{}
+	state        *rooms.MatchState
+	kickoff      *kickoffPassState
+	celebration  *celebrationState
+	substitution *substitutionState
+	pending      map[string]UpdateTacticsInput
+	bindings     map[string]string
+	runtime      gameplayRuntime
+	eventQueue   []events.MatchEvent
+	momentum     float64
 }
 
 type UpdateTacticsInput struct {
@@ -112,10 +125,10 @@ func (e *MatchEngine) EnsureRunning() {
 	e.stopCh = stopCh
 	e.mu.Unlock()
 
-	go e.run("match-demo-11v11", stopCh)
+	go e.run("match-demo-11v11", "", "", stopCh)
 }
 
-func (e *MatchEngine) StartMatch(matchID string) error {
+func (e *MatchEngine) StartMatch(matchID string, homeName string, awayName string) error {
 	e.mu.Lock()
 	matchID = strings.TrimSpace(matchID)
 	if matchID == "" {
@@ -134,12 +147,20 @@ func (e *MatchEngine) StartMatch(matchID string) error {
 	e.stopCh = stopCh
 	e.mu.Unlock()
 
-	go e.run(matchID, stopCh)
+	go e.run(matchID, homeName, awayName, stopCh)
 	return nil
 }
 
-func (e *MatchEngine) run(matchID string, stopCh chan struct{}) {
+func (e *MatchEngine) run(matchID string, homeName string, awayName string, stopCh chan struct{}) {
 	state := rooms.NewDemoMatchState(matchID)
+	homeName = strings.TrimSpace(homeName)
+	if homeName != "" {
+		state.HomeTeam.Name = homeName
+	}
+	awayName = strings.TrimSpace(awayName)
+	if awayName != "" {
+		state.AwayTeam.Name = awayName
+	}
 	state.Duration = matchLength
 	startingKickoffTeamID := state.HomeTeam.ID
 
@@ -227,6 +248,19 @@ func (e *MatchEngine) run(matchID string, stopCh chan struct{}) {
 				e.celebration = nil
 				tickEvents := e.prepareKickoffSequence(state, kickoffTeamID, "Kickoff after goal celebration")
 				e.broadcastTick(state, tick, tickEvents)
+			} else {
+				e.broadcastTick(state, tick, nil)
+			}
+			e.mu.Unlock()
+			continue
+		}
+
+		if e.substitution != nil {
+			e.substitution.ticksLeft--
+			e.updateSubstitutionTick(state)
+			if e.substitution.ticksLeft <= 0 {
+				e.finalizeSubstitution(state)
+				e.broadcastTick(state, tick, []events.MatchEvent{{Kind: "substitution_done", Message: "Substitution done"}})
 			} else {
 				e.broadcastTick(state, tick, nil)
 			}
@@ -347,6 +381,97 @@ func (e *MatchEngine) applyTacticsLocked(input UpdateTacticsInput, internalTeamI
 	rooms.ApplyFormation(team, input.Formation)
 	rooms.ApplyPlayerStats(team, input.Players)
 	e.runtime = runtimeFromInput(input.Mode, input.Gameplay)
+}
+
+func (e *MatchEngine) RequestSubstitution(teamID string, playerOutID int, playerInID int) error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	if e.state == nil {
+		return fmt.Errorf("no active match running")
+	}
+
+	team := e.state.HomeTeam
+	if teamID == "away" || teamID == e.state.AwayTeam.ID {
+		team = e.state.AwayTeam
+	}
+
+	// 1. Find playerOut in active roster
+	var outIdx = -1
+	for idx, p := range team.Players {
+		if p.ID == playerOutID {
+			outIdx = idx
+			break
+		}
+	}
+	if outIdx == -1 {
+		return fmt.Errorf("active player not found in roster")
+	}
+
+	// 2. Find playerIn in reserves
+	var inIdx = -1
+	for idx, p := range team.Reserves {
+		if p.ID == playerInID {
+			inIdx = idx
+			break
+		}
+	}
+	if inIdx == -1 {
+		return fmt.Errorf("reserve player not found in reserves")
+	}
+
+	// Check if already in substitution phase
+	if e.substitution != nil {
+		return fmt.Errorf("a substitution is already in progress")
+	}
+
+	playerOut := team.Players[outIdx]
+	playerIn := team.Reserves[inIdx]
+
+	// Put playerIn in a temporary rendering model starting off pitch near midfield touchline
+	playerInCopy := &rooms.Player{
+		ID:             playerIn.ID,
+		TeamID:         playerIn.TeamID,
+		Role:           playerOut.Role, // inherits position/role
+		Name:           playerIn.Name,
+		Avatar:         playerIn.Avatar,
+		X:              50.0,
+		Y:              -2.5,
+		HomeX:          playerOut.HomeX,
+		HomeY:          playerOut.HomeY,
+		Pace:           playerIn.Pace,
+		Passing:        playerIn.Passing,
+		LongPass:       playerIn.LongPass,
+		Vision:         playerIn.Vision,
+		Shooting:       playerIn.Shooting,
+		Defending:      playerIn.Defending,
+		StandingTackle: playerIn.StandingTackle,
+		SlidingTackle:  playerIn.SlidingTackle,
+		Mental:         playerIn.Mental,
+		Morale:         playerIn.Morale,
+		Fatigue:        0.0, // fresh stamina
+	}
+
+	e.substitution = &substitutionState{
+		teamID:       team.ID,
+		playerOutID:  playerOut.ID,
+		playerInID:   playerIn.ID,
+		outX:         50.0,
+		outY:         1.2,
+		outReached:   false,
+		ticksLeft:    90, // ~9 seconds duration
+		playerInObj:  playerInCopy,
+	}
+
+	// Log prepared event
+	e.eventQueue = append(e.eventQueue, events.MatchEvent{
+		Kind:     "substitution_prepared",
+		TeamID:   team.ID,
+		PlayerID: playerOut.ID,
+		Message:  fmt.Sprintf("🔄 Bảng thay người: %s (%s) chuẩn bị rời sân, %s vào sân!", playerOut.Name, playerOut.Role, playerIn.Name),
+	})
+
+	return nil
 }
 
 func runtimeFromInput(mode string, tuning GameplayTuningInput) gameplayRuntime {
@@ -1864,7 +1989,7 @@ func (e *MatchEngine) resetKickoff(state *rooms.MatchState, kickoffTeamID string
 }
 
 func (e *MatchEngine) updateBall(state *rooms.MatchState) {
-	if e.celebration != nil {
+	if e.celebration != nil || e.substitution != nil {
 		return
 	}
 	for _, p := range state.AllPlayers() {
@@ -1963,14 +2088,50 @@ func (e *MatchEngine) broadcastTick(state *rooms.MatchState, tick int, tickEvent
 			X:       round2(p.X),
 			Y:       round2(p.Y),
 			HasBall: p.HasBall,
+			Name:    p.Name,
+			Avatar:  p.Avatar,
+			Fatigue: round2(p.Fatigue),
+			Morale:  round2(p.Morale),
 		})
 	}
 
-	payload := events.TickPayload{
-		Type:      "match_tick",
-		MatchID:   state.MatchID,
-		Tick:      tick,
-		ElapsedMS: state.Elapsed.Milliseconds(),
+	reserves := make([]events.PlayerSnapshot, 0, len(state.HomeTeam.Reserves)+len(state.AwayTeam.Reserves))
+	for _, p := range state.HomeTeam.Reserves {
+		reserves = append(reserves, events.PlayerSnapshot{
+			ID:      p.ID,
+			TeamID:  p.TeamID,
+			Role:    p.Role,
+			X:       -20,
+			Y:       -20,
+			HasBall: false,
+			Name:    p.Name,
+			Avatar:  p.Avatar,
+			Fatigue: round2(p.Fatigue),
+			Morale:  round2(p.Morale),
+		})
+	}
+	for _, p := range state.AwayTeam.Reserves {
+		reserves = append(reserves, events.PlayerSnapshot{
+			ID:      p.ID,
+			TeamID:  p.TeamID,
+			Role:    p.Role,
+			X:       -20,
+			Y:       -20,
+			HasBall: false,
+			Name:    p.Name,
+			Avatar:  p.Avatar,
+			Fatigue: round2(p.Fatigue),
+			Morale:  round2(p.Morale),
+		})
+	}
+
+ 	payload := events.TickPayload{
+		Type:         "match_tick",
+		MatchID:      state.MatchID,
+		HomeTeamName: state.HomeTeam.Name,
+		AwayTeamName: state.AwayTeam.Name,
+		Tick:         tick,
+		ElapsedMS:    state.Elapsed.Milliseconds(),
 		Score: events.ScoreSnapshot{
 			Home: state.HomeTeam.Score,
 			Away: state.AwayTeam.Score,
@@ -1985,7 +2146,8 @@ func (e *MatchEngine) broadcastTick(state *rooms.MatchState, tick int, tickEvent
 			OwnerTeamID: state.Ball.OwnerTeamID,
 			OwnerID:     state.Ball.OwnerID,
 		},
-		Players: players,
+		Players:  players,
+		Reserves: reserves,
 		Events:  tickEvents,
 		Debug:   e.buildDebugSnapshot(state),
 	}
@@ -2564,4 +2726,146 @@ func maxInt(a int, b int) int {
 		return a
 	}
 	return b
+}
+
+func (e *MatchEngine) updateSubstitutionTick(state *rooms.MatchState) {
+	sub := e.substitution
+	if sub == nil {
+		return
+	}
+
+	team := state.HomeTeam
+	if sub.teamID == state.AwayTeam.ID {
+		team = state.AwayTeam
+	}
+
+	var playerOut *rooms.Player
+	for _, p := range team.Players {
+		if p.ID == sub.playerOutID {
+			playerOut = p
+			break
+		}
+	}
+
+	// 1. Move all OTHER active players slowly towards their home positions
+	for _, p := range state.AllPlayers() {
+		if playerOut != nil && p.ID == playerOut.ID {
+			continue
+		}
+		dx := p.HomeX - p.X
+		dy := p.HomeY - p.Y
+		dist := math.Hypot(dx, dy)
+		if dist > 0.5 {
+			p.X += (dx / dist) * 0.22
+			p.Y += (dy / dist) * 0.22
+		}
+	}
+
+	// 2. Move playerOut towards the touchline center (50, 1.2)
+	if playerOut != nil {
+		if !sub.outReached {
+			dx := sub.outX - playerOut.X
+			dy := sub.outY - playerOut.Y
+			dist := math.Hypot(dx, dy)
+			if dist > 0.8 {
+				playerOut.X += (dx / dist) * 0.45
+				playerOut.Y += (dy / dist) * 0.45
+			} else {
+				sub.outReached = true
+				e.eventQueue = append(e.eventQueue, events.MatchEvent{
+					Kind:     "substitution_highfive",
+					TeamID:   sub.teamID,
+					PlayerID: sub.playerInID,
+					Message:  fmt.Sprintf("🤝 High five! %s enters the pitch.", sub.playerInObj.Name),
+				})
+			}
+		} else {
+			// Once high-fived, playerOut runs off pitch to technical area
+			dx := 50.0 - playerOut.X
+			dy := -4.0 - playerOut.Y
+			dist := math.Hypot(dx, dy)
+			if dist > 0.2 {
+				playerOut.X += (dx / dist) * 0.38
+				playerOut.Y += (dy / dist) * 0.38
+			}
+		}
+	}
+
+	// 3. Move playerInObj
+	if sub.playerInObj != nil {
+		if !sub.outReached {
+			// Runs towards touchline to meet playerOut
+			dx := sub.outX - sub.playerInObj.X
+			dy := sub.outY - sub.playerInObj.Y
+			dist := math.Hypot(dx, dy)
+			if dist > 0.5 {
+				sub.playerInObj.X += (dx / dist) * 0.38
+				sub.playerInObj.Y += (dy / dist) * 0.38
+			}
+		} else {
+			// Once high-fived, runs onto the pitch towards home position
+			dx := sub.playerInObj.HomeX - sub.playerInObj.X
+			dy := sub.playerInObj.HomeY - sub.playerInObj.Y
+			dist := math.Hypot(dx, dy)
+			if dist > 0.8 {
+				sub.playerInObj.X += (dx / dist) * 0.45
+				sub.playerInObj.Y += (dy / dist) * 0.45
+			}
+		}
+	}
+}
+
+func (e *MatchEngine) finalizeSubstitution(state *rooms.MatchState) {
+	sub := e.substitution
+	if sub == nil {
+		return
+	}
+
+	team := state.HomeTeam
+	if sub.teamID == state.AwayTeam.ID {
+		team = state.AwayTeam
+	}
+
+	// Find playerOut and playerIn
+	var outIdx = -1
+	for idx, p := range team.Players {
+		if p.ID == sub.playerOutID {
+			outIdx = idx
+			break
+		}
+	}
+
+	var inIdx = -1
+	for idx, p := range team.Reserves {
+		if p.ID == sub.playerInID {
+			inIdx = idx
+			break
+		}
+	}
+
+	if outIdx != -1 && inIdx != -1 {
+		pOut := team.Players[outIdx]
+		pIn := team.Reserves[inIdx]
+
+		// Final position swap!
+		pIn.X = sub.playerInObj.X
+		pIn.Y = sub.playerInObj.Y
+		pIn.HomeX = pOut.HomeX
+		pIn.HomeY = pOut.HomeY
+		pIn.Role = pOut.Role // Inherits role/position
+
+		// Swap them in the active and reserves lists
+		team.Players[outIdx] = pIn
+		team.Reserves[inIdx] = pOut
+
+		// Send final match event
+		e.eventQueue = append(e.eventQueue, events.MatchEvent{
+			Kind:     "substitution_complete",
+			TeamID:   team.ID,
+			PlayerID: pIn.ID,
+			Message:  fmt.Sprintf("✅ Thay người hoàn tất: %s vào sân thay cho %s!", pIn.Name, pOut.Name),
+		})
+	}
+
+	e.substitution = nil
 }

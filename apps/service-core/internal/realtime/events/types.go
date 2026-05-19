@@ -21,6 +21,10 @@ type PlayerSnapshot struct {
 	X       float64 `json:"x"`
 	Y       float64 `json:"y"`
 	HasBall bool    `json:"hasBall"`
+	Name    string  `json:"name,omitempty"`
+	Avatar  string  `json:"avatar,omitempty"`
+	Fatigue float64 `json:"fatigue,omitempty"`
+	Morale  float64 `json:"morale,omitempty"`
 }
 
 type BallSnapshot struct {
@@ -66,14 +70,17 @@ type ScoreSnapshot struct {
 }
 
 type TickPayload struct {
-	Type      string           `json:"type"`
-	MatchID   string           `json:"matchId"`
-	Replay    bool             `json:"replay,omitempty"`
-	Tick      int              `json:"tick"`
-	ElapsedMS int64            `json:"elapsedMs"`
-	Score     ScoreSnapshot    `json:"score"`
-	Ball      BallSnapshot     `json:"ball"`
-	Players   []PlayerSnapshot `json:"players"`
-	Events    []MatchEvent     `json:"events"`
-	Debug     DebugSnapshot    `json:"debug"`
+	Type         string           `json:"type"`
+	MatchID      string           `json:"matchId"`
+	HomeTeamName string           `json:"homeTeamName,omitempty"`
+	AwayTeamName string           `json:"awayTeamName,omitempty"`
+	Replay       bool             `json:"replay,omitempty"`
+	Tick         int              `json:"tick"`
+	ElapsedMS    int64            `json:"elapsedMs"`
+	Score        ScoreSnapshot    `json:"score"`
+	Ball         BallSnapshot     `json:"ball"`
+	Players      []PlayerSnapshot `json:"players"`
+	Reserves     []PlayerSnapshot `json:"reserves,omitempty"`
+	Events       []MatchEvent     `json:"events"`
+	Debug        DebugSnapshot    `json:"debug"`
 }

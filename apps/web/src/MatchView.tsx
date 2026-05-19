@@ -315,6 +315,12 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
   const [popup, setPopup] = useState(null);
   const [matchStats, setMatchStats] = useState(INITIAL_MATCH_STATS);
   const [displayPlayers, setDisplayPlayers] = useState([]);
+  const [reserves, setReserves] = useState([]);
+  const [selectedReserve, setSelectedReserve] = useState(null);
+  const [selectedActive, setSelectedActive] = useState(null);
+  const [showRosterModal, setShowRosterModal] = useState(false);
+  const [homeTeamName, setHomeTeamName] = useState('FC Navy');
+  const [awayTeamName, setAwayTeamName] = useState('Black United');
   const [displayBall, setDisplayBall] = useState({
     x: 50,
     y: 32,
@@ -328,6 +334,27 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
   });
   const [fieldFx, setFieldFx] = useState([]); // on-SVG effects
   const [matchPhase, setMatchPhase] = useState('playing'); // 'playing'|'half_time'|'second_half'|'full_time'
+
+  const triggerSubstitution = async (playerOutId, playerInId) => {
+    try {
+      const res = await fetch('/realtime/substitute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teamId: 'home',
+          playerOutId: Number(playerOutId),
+          playerInId: Number(playerInId),
+        }),
+      });
+      if (res.ok) {
+        setSelectedReserve(null);
+        setSelectedActive(null);
+        setShowRosterModal(false);
+      }
+    } catch (err) {
+      console.error('Substitution error:', err);
+    }
+  };
 
   const targetsRef = useRef(new Map());
   const ballTargetRef = useRef({ x: 50, y: 32, height: 0, vx: 0, vy: 0 });
@@ -539,9 +566,37 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
 
       if (Array.isArray(payload.players)) {
         for (const pl of payload.players) targetsRef.current.set(pl.id, pl);
-        setDisplayPlayers((prev) =>
-          prev.length > 0 ? prev : payload.players.map((pl) => ({ ...pl })),
-        );
+        setDisplayPlayers((prev) => {
+          if (prev.length === 0) return payload.players.map((pl) => ({ ...pl }));
+          const prevMap = new Map(prev.map((p) => [p.id, p]));
+          const next = payload.players.map((pl) => {
+            const existing = prevMap.get(pl.id);
+            if (existing) {
+              return {
+                ...existing,
+                hasBall: pl.hasBall,
+                role: pl.role,
+                name: pl.name,
+                avatar: pl.avatar,
+                fatigue: pl.fatigue,
+                morale: pl.morale,
+              };
+            }
+            return { ...pl };
+          });
+          return next;
+        });
+      }
+
+      if (Array.isArray(payload.reserves)) {
+        setReserves(payload.reserves);
+      }
+
+      if (payload.homeTeamName) {
+        setHomeTeamName(payload.homeTeamName);
+      }
+      if (payload.awayTeamName) {
+        setAwayTeamName(payload.awayTeamName);
       }
 
       if (payload.debug) {
@@ -637,6 +692,10 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
               hasBall,
               teamId: target?.teamId ?? p.teamId,
               role: target?.role ?? p.role,
+              name: target?.name ?? p.name,
+              avatar: target?.avatar ?? p.avatar,
+              fatigue: target?.fatigue ?? p.fatigue,
+              morale: target?.morale ?? p.morale,
             };
           }
           return p;
@@ -1025,7 +1084,7 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
 
   return (
     <section
-      className={`mx-auto grid w-full max-w-[1400px] grid-cols-1 gap-4 ${
+      className={`mx-auto grid w-full max-w-[1600px] grid-cols-1 lg:grid-cols-[1fr_330px] gap-6 ${
         embedded ? 'p-0' : 'min-h-screen p-4 lg:p-6'
       }`}
     >
@@ -1303,8 +1362,38 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
               const isHome = player.teamId === 'home';
               const fill = isHome ? '#13206d' : '#1a0524';
               const stroke = isHome ? '#7f9cff' : '#f472b6';
+              const lastName = player.name ? player.name.split(' ').pop() : '';
+              const isSelectedActive = selectedActive?.id === player.id;
+              
               return (
-                <g key={player.id} transform={`translate(${player.x}, ${player.y})`}>
+                <g
+                  key={player.id}
+                  transform={`translate(${player.x}, ${player.y})`}
+                  className={isHome ? 'cursor-pointer select-none' : ''}
+                  onClick={() => {
+                    if (isHome) {
+                      if (selectedReserve) {
+                        triggerSubstitution(player.id, selectedReserve.id);
+                      } else {
+                        setSelectedActive(isSelectedActive ? null : player);
+                      }
+                    }
+                  }}
+                >
+                  {/* Pulsing sub target highlighting */}
+                  {selectedReserve && isHome && (
+                    <circle r="3.2" fill="none" stroke="#ec4899" strokeWidth="0.25" strokeDasharray="0.5 0.5">
+                      <animate attributeName="r" values="2.6;3.6;2.6" dur="1s" repeatCount="indefinite" />
+                    </circle>
+                  )}
+
+                  {/* Pulsing active select highlighting */}
+                  {isSelectedActive && (
+                    <circle r="3.0" fill="none" stroke="#fbbf24" strokeWidth="0.25" strokeDasharray="0.5 0.5">
+                      <animate attributeName="r" values="2.4;3.2;2.4" dur="1s" repeatCount="indefinite" />
+                    </circle>
+                  )}
+
                   {player.hasBall && (
                     <circle r="2.4" fill="none" stroke="#f6d87a" strokeWidth="0.22" opacity="0.65">
                       <animate
@@ -1321,6 +1410,12 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
                       />
                     </circle>
                   )}
+
+                  {/* Avatar / Emoji rendering above player dot */}
+                  <text y="-1.9" textAnchor="middle" fill="#fef08a" fontSize="1.3" fontWeight="bold">
+                    {player.avatar || ''}
+                  </text>
+
                   <circle
                     r="1.4"
                     fill={fill}
@@ -1328,8 +1423,15 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
                     strokeWidth="0.28"
                     filter="url(#glow)"
                   />
-                  <text y="2.9" textAnchor="middle" fill="#f8fafc" fontSize="1.1" fontWeight="600">
+
+                  {/* Role text inside dot */}
+                  <text y="0.4" textAnchor="middle" fill="#f8fafc" fontSize="1.0" fontWeight="bold">
                     {player.role}
+                  </text>
+
+                  {/* Player last name below dot */}
+                  <text y="2.7" textAnchor="middle" fill="#93c5fd" fontSize="0.95" fontWeight="600">
+                    {lastName}
                   </text>
                 </g>
               );
@@ -1396,11 +1498,11 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
 
         {/* Score bar */}
         <div className="mt-3 flex items-center justify-center gap-5 rounded-xl border border-[#1b2458] bg-black/40 px-4 py-3">
-          <p className="text-sm font-semibold tracking-wider text-slate-200">FC NAVY</p>
+          <p className="text-sm font-semibold tracking-wider text-slate-200">{homeTeamName.toUpperCase()}</p>
           <p className="font-['Space_Grotesk'] text-3xl font-bold text-[#f6d87a]">
             {score.home} &ndash; {score.away}
           </p>
-          <p className="text-sm font-semibold tracking-wider text-slate-200">BLACK UNITED</p>
+          <p className="text-sm font-semibold tracking-wider text-slate-200">{awayTeamName.toUpperCase()}</p>
         </div>
 
         {/* Match stats */}
@@ -1416,9 +1518,9 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
 
           <div className="space-y-2">
             <div className="grid grid-cols-[1fr_auto_1fr] items-center px-2 text-[11px] uppercase tracking-[0.14em] text-slate-400 sm:text-xs">
-              <p className="text-left text-[#9db5ff]">FC Navy</p>
+              <p className="text-left text-[#9db5ff]">{homeTeamName}</p>
               <p className="text-center">Chỉ số</p>
-              <p className="text-right text-[#f9a8d4]">Black United</p>
+              <p className="text-right text-[#f9a8d4]">{awayTeamName}</p>
             </div>
 
             {statsRows.map((row) => (
@@ -1458,6 +1560,211 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
           </div>
         )}
       </div>
+
+      {/* ── Right Sidebar ── */}
+      <div className="flex flex-col gap-4">
+        {/* Active Outfield & Stamina bar preview */}
+        <div className="rounded-2xl border border-[#1b2458] bg-black/40 p-4 shadow-xl">
+          <div className="mb-4 flex items-center justify-between border-b border-[#1b2458] pb-3">
+            <h3 className="font-['Space_Grotesk'] text-sm font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+              <span>🏃</span> ĐỘI HÌNH ĐANG ĐẤU
+            </h3>
+            <button
+              onClick={() => setShowRosterModal(true)}
+              className="rounded-lg bg-indigo-600/80 hover:bg-indigo-600 border border-indigo-500/40 px-2.5 py-1 text-[11px] font-semibold text-white transition-all shadow-[0_0_10px_rgba(99,102,241,0.4)]"
+            >
+              Chi tiết
+            </button>
+          </div>
+
+          <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 scrollbar-thin">
+            {displayPlayers
+              .filter((p) => p.teamId === 'home')
+              .map((p) => {
+                const stamina = Math.round((1 - (p.fatigue || 0)) * 100);
+                const isSelected = selectedActive?.id === p.id;
+                return (
+                  <div
+                    key={p.id}
+                    onClick={() => {
+                      if (selectedReserve) {
+                        triggerSubstitution(p.id, selectedReserve.id);
+                      } else {
+                        setSelectedActive(isSelected ? null : p);
+                      }
+                    }}
+                    className={`flex items-center justify-between rounded-lg border p-2 cursor-pointer transition-all ${
+                      isSelected
+                        ? 'border-yellow-400 bg-yellow-400/10'
+                        : 'border-[#1b2458] bg-black/20 hover:bg-indigo-900/20'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">{p.avatar || '👤'}</span>
+                      <div>
+                        <p className="text-xs font-bold text-slate-100">{p.name || `Cầu thủ ${p.id}`}</p>
+                        <p className="text-[10px] font-semibold text-indigo-300">{p.role}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-slate-400">ST:</span>
+                      <span className={`text-xs font-bold ${stamina > 60 ? 'text-emerald-400' : stamina > 35 ? 'text-amber-400' : 'text-rose-500'}`}>
+                        {stamina}%
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+
+        {/* Reserves/Subs list */}
+        <div className="rounded-2xl border border-[#1b2458] bg-black/40 p-4 shadow-xl flex-1 flex flex-col min-h-[300px]">
+          <div className="mb-4 border-b border-[#1b2458] pb-3">
+            <h3 className="font-['Space_Grotesk'] text-sm font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+              <span>🔄</span> CẦU THỦ DỰ BỊ
+            </h3>
+            <p className="text-[10px] text-slate-400 mt-1">Chọn 1 cầu thủ dự bị để bắt đầu thay người</p>
+          </div>
+
+          <div className="space-y-3 flex-1 overflow-y-auto pr-1 scrollbar-thin">
+            {reserves
+              .filter((p) => p.teamId === 'home')
+              .map((p) => {
+                const stamina = Math.round((1 - (p.fatigue || 0)) * 100);
+                const isSelected = selectedReserve?.id === p.id;
+                return (
+                  <div
+                    key={p.id}
+                    onClick={() => {
+                      setSelectedReserve(isSelected ? null : p);
+                      setSelectedActive(null);
+                    }}
+                    className={`group relative overflow-hidden rounded-xl border p-3 cursor-pointer transition-all ${
+                      isSelected
+                        ? 'border-pink-500 bg-pink-500/15 shadow-[0_0_15px_rgba(236,72,153,0.25)]'
+                        : 'border-[#1b2458] bg-black/30 hover:border-indigo-500 hover:bg-indigo-900/10'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-xl">{p.avatar || '👤'}</span>
+                        <div>
+                          <p className="text-xs font-bold text-white group-hover:text-yellow-300 transition-colors">
+                            {p.name}
+                          </p>
+                          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                            Vị trí: {p.role}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[9px] uppercase tracking-wider text-slate-400">Thể Lực</p>
+                        <p className="text-xs font-extrabold text-emerald-400">{stamina}%</p>
+                      </div>
+                    </div>
+
+                    {/* Quick helper when selected */}
+                    {isSelected && (
+                      <div className="mt-2.5 border-t border-pink-500/20 pt-2 text-center animate-pulse">
+                        <p className="text-[10px] font-bold text-pink-400 uppercase tracking-widest">
+                          👉 Chọn cầu thủ trên sân để thay
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            
+            {reserves.filter((p) => p.teamId === 'home').length === 0 && (
+              <div className="flex flex-col items-center justify-center py-10 text-slate-500">
+                <span className="text-3xl mb-2">📋</span>
+                <p className="text-xs font-semibold">Chưa có danh sách dự bị</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Roster & Stamina Modal */}
+      {showRosterModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-[#1b2458] bg-[#070b22]/98 p-5 shadow-[0_0_50px_rgba(0,0,0,0.8)]">
+            <div className="mb-4 flex items-center justify-between border-b border-[#1b2458] pb-3">
+              <h2 className="font-['Space_Grotesk'] text-base font-bold text-white tracking-wide uppercase flex items-center gap-2">
+                <span>📋</span> CHI TIẾT THỂ LỰC ĐỘI HÌNH
+              </h2>
+              <button
+                onClick={() => setShowRosterModal(false)}
+                className="rounded-full bg-slate-800 hover:bg-slate-700 w-8 h-8 flex items-center justify-center text-slate-300 font-bold transition-all"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3.5 max-h-[380px] overflow-y-auto pr-1 scrollbar-thin">
+              {displayPlayers
+                .filter((p) => p.teamId === 'home')
+                .map((p) => {
+                  const stamina = Math.round((1 - (p.fatigue || 0)) * 100);
+                  const moraleVal = p.morale || 1.0;
+                  const moraleEmoji = moraleVal > 1.2 ? '🔥' : moraleVal > 0.95 ? '😊' : moraleVal > 0.7 ? '😐' : '😩';
+                  
+                  return (
+                    <div key={p.id} className="flex items-center justify-between rounded-xl bg-black/35 border border-[#1b2458]/40 p-3 hover:bg-indigo-900/10 transition-all">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">{p.avatar || '👤'}</span>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm font-bold text-white">{p.name || `Cầu thủ ${p.id}`}</p>
+                            <span className="text-xs" title="Tinh thần">{moraleEmoji}</span>
+                          </div>
+                          <p className="text-[11px] font-semibold text-indigo-300 uppercase tracking-widest">{p.role}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        <div className="w-24 sm:w-32">
+                          <div className="flex justify-between text-[10px] font-semibold text-slate-400 mb-1">
+                            <span>Thể Lực</span>
+                            <span className={stamina > 60 ? 'text-emerald-400' : stamina > 35 ? 'text-amber-400' : 'text-rose-500'}>
+                              {stamina}%
+                            </span>
+                          </div>
+                          <div className="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-300 ${
+                                stamina > 60 ? 'bg-emerald-500' : stamina > 35 ? 'bg-amber-500' : 'bg-rose-500'
+                              }`}
+                              style={{ width: `${stamina}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        {selectedReserve && (
+                          <button
+                            onClick={() => triggerSubstitution(p.id, selectedReserve.id)}
+                            className="rounded-lg bg-pink-600/90 hover:bg-pink-600 border border-pink-500/30 px-3 py-1.5 text-xs font-bold text-white transition-all shadow-[0_0_10px_rgba(236,72,153,0.3)]"
+                          >
+                            Thay
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+
+            {selectedReserve && (
+              <div className="mt-4 rounded-xl bg-pink-900/10 border border-pink-500/20 p-3 text-center">
+                <p className="text-xs font-semibold text-pink-400">
+                  🔄 Đang chọn dự bị: <span className="font-bold text-white">{selectedReserve.avatar} {selectedReserve.name}</span>. Click nút "Thay" bên cạnh cầu thủ muốn thay thế.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </section>
   );
 }

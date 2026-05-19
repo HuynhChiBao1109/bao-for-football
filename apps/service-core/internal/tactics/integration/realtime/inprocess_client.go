@@ -39,13 +39,13 @@ func (c *InProcessClient) Push(ctx context.Context, cfg domain.Config) error {
 	})
 }
 
-func (c *InProcessClient) StartMatch(ctx context.Context, matchID string) error {
+func (c *InProcessClient) StartMatch(ctx context.Context, matchID string, homeName string, awayName string) error {
 	if c == nil || c.engine == nil {
 		return nil
 	}
 
 	_ = ctx
-	return c.engine.StartMatch(matchID)
+	return c.engine.StartMatch(matchID, homeName, awayName)
 }
 
 func mapPlayers(input []domain.Player) []realtimerooms.PlayerStatsInput {
