@@ -76,6 +76,28 @@ type substitutionState struct {
 	playerInObj  *rooms.Player // temporary player model to render inside the sub animation
 }
 
+type setPieceType string
+
+const (
+	setPieceFarFreeKick  setPieceType = "far_free_kick"
+	setPieceNearFreeKick setPieceType = "near_free_kick"
+	setPiecePenalty      setPieceType = "penalty"
+)
+
+type setPieceState struct {
+	Type          setPieceType
+	TeamID        string        // attacking team
+	DefTeamID     string        // defending team
+	FoulX         float64       // coordinates of the foul / spot
+	FoulY         float64       // coordinates of the foul / spot
+	KickerID      int           // designated kicker player ID
+	KickerObj     *rooms.Player // designated kicker player
+	GKObj         *rooms.Player // defending goalkeeper
+	TicksLeft     int           // dynamic delay before execution
+	Initialized   bool          // whether wall/positions are set up
+	Executed      bool          // whether kick is shot/passed
+}
+
 type MatchEngine struct {
 	hub          *hub.Hub
 	rand         *rand.Rand
@@ -86,6 +108,7 @@ type MatchEngine struct {
 	kickoff      *kickoffPassState
 	celebration  *celebrationState
 	substitution *substitutionState
+	setPiece     *setPieceState
 	pending      map[string]UpdateTacticsInput
 	bindings     map[string]string
 	runtime      gameplayRuntime
@@ -273,6 +296,19 @@ func (e *MatchEngine) run(matchID string, homeName string, awayName string, stop
 			e.computePlayerMovement(state, nil)
 			if e.kickoff.delayTicks <= 0 {
 				tickEvents := e.executeKickoffPass(state)
+				e.broadcastTick(state, tick, tickEvents)
+			} else {
+				e.broadcastTick(state, tick, nil)
+			}
+			e.mu.Unlock()
+			continue
+		}
+
+		if e.setPiece != nil {
+			e.setPiece.TicksLeft--
+			e.updateSetPieceTick(state)
+			if e.setPiece.TicksLeft <= 0 && !e.setPiece.Executed {
+				tickEvents := e.executeSetPiece(state)
 				e.broadcastTick(state, tick, tickEvents)
 			} else {
 				e.broadcastTick(state, tick, nil)
@@ -1614,6 +1650,15 @@ func (e *MatchEngine) handleFoul(state *rooms.MatchState, defender *rooms.Player
 	})
 
 	isPenalty := isInPenaltyArea(attacker, state)
+	distToGoal := distanceToGoal(attacker, state)
+	
+	spType := setPieceFarFreeKick
+	if isPenalty {
+		spType = setPiecePenalty
+	} else if distToGoal < 32.0 {
+		spType = setPieceNearFreeKick
+	}
+
 	if isPenalty {
 		*tickEvents = append(*tickEvents, events.MatchEvent{
 			Kind:     "penalty_awarded",
@@ -1622,7 +1667,6 @@ func (e *MatchEngine) handleFoul(state *rooms.MatchState, defender *rooms.Player
 			Message:  "Penalty awarded",
 		})
 	} else {
-		e.giveBallToPlayer(state, attacker)
 		*tickEvents = append(*tickEvents, events.MatchEvent{
 			Kind:     "free_kick",
 			TeamID:   attacker.TeamID,
@@ -1631,7 +1675,7 @@ func (e *MatchEngine) handleFoul(state *rooms.MatchState, defender *rooms.Player
 		})
 	}
 
-	dangerFactor := clamp(1.0-distanceToGoal(attacker, state)/35.0, 0, 1)
+	dangerFactor := clamp(1.0-distToGoal/35.0, 0, 1)
 	aggression := clamp(float64(defender.SlidingTackle-defender.StandingTackle)/100.0, -0.15, 0.22)
 	cardRoll := e.rand.Float64()
 	redThreshold := clamp(0.04+dangerFactor*0.08+aggression*0.1, 0.03, 0.22)
@@ -1650,10 +1694,7 @@ func (e *MatchEngine) handleFoul(state *rooms.MatchState, defender *rooms.Player
 		defender.SlidingTackle = maxInt(defender.SlidingTackle-12, 30)
 		defender.StandingTackle = maxInt(defender.StandingTackle-8, 30)
 		defender.Morale = clamp(defender.Morale-0.35, 0.5, 1.5)
-		return
-	}
-
-	if cardRoll < yellowThreshold {
+	} else if cardRoll < yellowThreshold {
 		*tickEvents = append(*tickEvents, events.MatchEvent{Kind: "yellow_card", TeamID: defender.TeamID, PlayerID: defender.ID, Message: "Yellow card"})
 		if e.rand.Float64() < 0.35 {
 			*tickEvents = append(*tickEvents, events.MatchEvent{
@@ -1668,8 +1709,35 @@ func (e *MatchEngine) handleFoul(state *rooms.MatchState, defender *rooms.Player
 		defender.Morale = clamp(defender.Morale-0.12, 0.5, 1.5)
 	}
 
-	if isPenalty {
-		e.handlePenaltyKick(state, attacker, tickEvents)
+	attacking := ownerTeam(attacker.TeamID, state)
+	defending := state.HomeTeam
+	if attacking.ID == state.HomeTeam.ID {
+		defending = state.AwayTeam
+	}
+	
+	// Determine designated kicker
+	var kicker *rooms.Player
+	if spType == setPiecePenalty {
+		kicker = choosePenaltyTaker(attacking, attacker)
+	} else if spType == setPieceNearFreeKick {
+		kicker = chooseFreeKickTaker(attacking, attacker)
+	}
+	if kicker == nil {
+		kicker = attacker
+	}
+
+	e.setPiece = &setPieceState{
+		Type:        spType,
+		TeamID:      attacking.ID,
+		DefTeamID:   defending.ID,
+		FoulX:       attacker.X,
+		FoulY:       attacker.Y,
+		KickerID:    kicker.ID,
+		KickerObj:   kicker,
+		GKObj:       findGoalkeeper(defending),
+		TicksLeft:   30, // 3 seconds delay for suspense and repositioning!
+		Initialized: false,
+		Executed:    false,
 	}
 }
 
@@ -2868,4 +2936,350 @@ func (e *MatchEngine) finalizeSubstitution(state *rooms.MatchState) {
 	}
 
 	e.substitution = nil
+}
+
+func (e *MatchEngine) updateSetPieceTick(state *rooms.MatchState) {
+	if e.setPiece == nil {
+		return
+	}
+
+	// Lock the ball at the foul spot, dampening any leftover physics
+	if state.Ball.InFlight {
+		state.Ball.VX *= 0.8
+		state.Ball.VY *= 0.8
+		state.Ball.VZ *= 0.8
+		state.Ball.X += state.Ball.VX
+		state.Ball.Y += state.Ball.VY
+		state.Ball.Height += state.Ball.VZ
+		if state.Ball.Height < 0 {
+			state.Ball.Height = 0
+			state.Ball.VZ = -state.Ball.VZ * 0.4
+		}
+		if state.Ball.VX*state.Ball.VX+state.Ball.VY*state.Ball.VY < 0.01 && state.Ball.Height < 0.1 {
+			state.Ball.InFlight = false
+		}
+	} else {
+		state.Ball.X = e.setPiece.FoulX
+		state.Ball.Y = e.setPiece.FoulY
+		state.Ball.VX = 0
+		state.Ball.VY = 0
+		state.Ball.VZ = 0
+		state.Ball.Height = 0
+	}
+
+	goalX := 0.0
+	if e.setPiece.DefTeamID == state.HomeTeam.ID {
+		goalX = 0.0
+	} else {
+		goalX = state.FieldW
+	}
+
+	// Calculate defensive wall anchor point (9 meters away, directly between ball and goal center)
+	wallX := e.setPiece.FoulX + (goalX-e.setPiece.FoulX)*0.3
+	wallY := e.setPiece.FoulY + (state.FieldH/2-e.setPiece.FoulY)*0.3
+	distToGoal := distance(e.setPiece.FoulX, e.setPiece.FoulY, goalX, state.FieldH/2)
+	if distToGoal > 9.0 {
+		dirX := (goalX - e.setPiece.FoulX) / distToGoal
+		dirY := (state.FieldH/2 - e.setPiece.FoulY) / distToGoal
+		wallX = e.setPiece.FoulX + dirX*9.0
+		wallY = e.setPiece.FoulY + dirY*9.0
+	}
+
+	wallCount := 0
+	maxWallPlayers := 4
+
+	for _, p := range state.AllPlayers() {
+		// Kicker gently walks to the ball and waits
+		if p.ID == e.setPiece.KickerID {
+			targetX := e.setPiece.FoulX - ownerGoalDirection(p.TeamID, state)*1.2
+			targetY := e.setPiece.FoulY
+			p.X += (targetX - p.X) * 0.15
+			p.Y += (targetY - p.Y) * 0.15
+			continue
+		}
+
+		if p.Role == "GK" {
+			p.X, p.Y = clampGoalkeeperPosition(p, state)
+			// Goalkeeper slightly favors the near post if there's a wall
+			if e.setPiece.Type == setPieceNearFreeKick {
+				p.Y += (e.setPiece.FoulY - state.FieldH/2) * 0.12
+			}
+			continue
+		}
+
+		if e.setPiece.Type == setPiecePenalty {
+			// All other players gather outside the penalty box (arc)
+			dir := ownerGoalDirection(e.setPiece.TeamID, state)
+			targetX := e.setPiece.FoulX - dir*10.0
+			targetY := p.HomeY
+			
+			// Defending players stand slightly closer
+			if p.TeamID == e.setPiece.DefTeamID {
+				targetX = e.setPiece.FoulX - dir*9.5
+			}
+			p.X += (targetX - p.X) * 0.18
+			p.Y += (targetY - p.Y) * 0.18
+
+		} else if e.setPiece.Type == setPieceNearFreeKick && p.TeamID == e.setPiece.DefTeamID && wallCount < maxWallPlayers && p.Role != "ST" {
+			// Defending players form the wall
+			targetX := wallX
+			targetY := wallY + float64(wallCount-maxWallPlayers/2)*1.4
+			p.X += (targetX - p.X) * 0.22
+			p.Y += (targetY - p.Y) * 0.22
+			wallCount++
+
+		} else {
+			// Generic spread out / tactical repositioning for Far Free Kicks or non-wall players
+			targetX := p.HomeX*0.8 + e.setPiece.FoulX*0.2
+			targetY := p.HomeY*0.8 + e.setPiece.FoulY*0.2
+
+			// Ensure defending players maintain 9m distance from ball
+			distToBall := distance(targetX, targetY, e.setPiece.FoulX, e.setPiece.FoulY)
+			if p.TeamID == e.setPiece.DefTeamID && distToBall < 9.0 {
+				targetX = e.setPiece.FoulX + (targetX-e.setPiece.FoulX)/distToBall*9.5
+				targetY = e.setPiece.FoulY + (targetY-e.setPiece.FoulY)/distToBall*9.5
+			}
+
+			p.X += (targetX - p.X) * 0.15
+			p.Y += (targetY - p.Y) * 0.15
+		}
+
+		p.X = clamp(p.X, 1.2, state.FieldW-1.2)
+		p.Y = clamp(p.Y, 1.2, state.FieldH-1.2)
+	}
+}
+
+func (e *MatchEngine) executeSetPiece(state *rooms.MatchState) []events.MatchEvent {
+	e.setPiece.Executed = true
+	tickEvents := make([]events.MatchEvent, 0)
+
+	if e.setPiece.Type == setPiecePenalty {
+		e.handlePenaltyKick(state, e.setPiece.KickerObj, &tickEvents)
+	} else if e.setPiece.Type == setPieceNearFreeKick {
+		e.executeDirectFreeKick(state, &tickEvents)
+	} else {
+		// Far free kick - treated as a tactical pass execution
+		tickEvents = append(tickEvents, events.MatchEvent{
+			Kind:     "pass",
+			TeamID:   e.setPiece.TeamID,
+			PlayerID: e.setPiece.KickerID,
+			Message:  "Takes the free kick to restart play.",
+		})
+
+		e.giveBallToPlayer(state, e.setPiece.KickerObj)
+		team := state.HomeTeam
+		opponent := state.AwayTeam
+		if e.setPiece.TeamID == state.AwayTeam.ID {
+			team = state.AwayTeam
+			opponent = state.HomeTeam
+		}
+		
+		e.handlePass(state, e.setPiece.KickerObj, team, opponent, &tickEvents)
+	}
+
+	e.setPiece = nil
+	return tickEvents
+}
+
+func (e *MatchEngine) executeDirectFreeKick(state *rooms.MatchState, tickEvents *[]events.MatchEvent) {
+	owner := e.setPiece.KickerObj
+	opponent := state.HomeTeam
+	if owner.TeamID == state.HomeTeam.ID {
+		opponent = state.AwayTeam
+	}
+
+	distGoal := distanceToGoal(owner, state)
+	baseShotPower := 1.45 + float64(owner.Shooting)/72.0 + e.rand.Float64()*0.45
+	shotSpeedKmh := baseShotPower*42.0 + float64(owner.Shooting)*0.22 + e.rand.Float64()*12.0
+	shotSpeedKmh = clamp(shotSpeedKmh, 75.0, 142.0)
+
+	gkSavingCapability := 50
+	gkID := 0
+	if e.setPiece.GKObj != nil {
+		gkID = e.setPiece.GKObj.ID
+		gkSavingCapability = int(clamp(float64(e.setPiece.GKObj.Defending)*0.45+float64(e.setPiece.GKObj.Pace)*0.25+float64(e.setPiece.GKObj.Mental)*0.15+(e.setPiece.GKObj.Morale*10.0), 10, 99))
+	}
+
+	gkDefenseFactor := float64(gkSavingCapability) / 100.0
+	speedFactor := shotSpeedKmh / 100.0
+
+	xg := clamp(0.12+float64(owner.Shooting)/140.0+float64(owner.Vision)/300.0-distGoal/95.0, 0.05, 0.85)
+	xg = clamp(xg*speedFactor*(1.8-gkDefenseFactor*1.2), 0.01, 0.85)
+	xg = clamp(xg+owner.Morale*0.05, 0.01, 0.88)
+
+	isGoal := e.rand.Float64() < xg
+	shotOnTarget := isGoal
+	if !shotOnTarget {
+		onTargetProb := clamp(0.35+float64(owner.Shooting)/180.0-distGoal/180.0, 0.20, 0.75)
+		shotOnTarget = e.rand.Float64() < onTargetProb
+	}
+
+	*tickEvents = append(*tickEvents, events.MatchEvent{
+		Kind:         "shot",
+		TeamID:       owner.TeamID,
+		PlayerID:     owner.ID,
+		ShotPower:    round2(shotSpeedKmh),
+		ShotOnTarget: shotOnTarget,
+		GKCapability: gkSavingCapability,
+		Message:      fmt.Sprintf("DIRECT FREE KICK! %s strikes a beautiful curling shot at %.1f km/h!", owner.Role, shotSpeedKmh),
+	})
+
+	if !isGoal {
+		owner.HasBall = false
+		state.Ball.OwnerID = 0
+		state.Ball.OwnerTeamID = ""
+		state.Ball.PassTeamID = ""
+		state.Ball.TargetID = 0
+		state.Ball.InFlight = true
+		state.Ball.IsLob = false
+		state.Ball.TargetX = clamp(owner.X+ownerGoalDirection(owner.TeamID, state)*(16+e.rand.Float64()*18), 0, state.FieldW)
+		state.Ball.TargetY = clamp(state.FieldH/2+(e.rand.Float64()-0.5)*16, 0, state.FieldH)
+		state.Ball.FlightTotal = distance(owner.X, owner.Y, state.Ball.TargetX, state.Ball.TargetY)
+		state.Ball.FlightLeft = state.Ball.FlightTotal
+		dx := state.Ball.TargetX - owner.X
+		dy := state.Ball.TargetY - owner.Y
+		d := math.Max(math.Sqrt(dx*dx+dy*dy), 0.01)
+
+		ballSpeedScale := clamp(shotSpeedKmh/42.0, 1.7, 3.2)
+		state.Ball.VX = dx / d * ballSpeedScale
+		state.Ball.VY = dy / d * ballSpeedScale
+		state.Ball.VZ = 0.35 + e.rand.Float64()*0.42
+		state.Ball.Height = 0.35
+		state.Ball.Spin = (e.rand.Float64() - 0.5) * 2.8 // Very high Magnus spin curl
+
+		woodworkChance := 0.12 + (shotSpeedKmh/150.0)*0.06
+		if shotOnTarget && e.rand.Float64() < woodworkChance {
+			*tickEvents = append(*tickEvents, events.MatchEvent{
+				Kind:     "woodwork_hit",
+				TeamID:   owner.TeamID,
+				PlayerID: owner.ID,
+				Message:  "OFF THE POST! The beautifully curled free kick is denied by the woodwork!",
+			})
+			state.Ball.VX = -state.Ball.VX * 0.42
+			state.Ball.VY = (e.rand.Float64() - 0.5) * 2.2
+			state.Ball.VZ = 0.65
+			owner.Morale = clamp(owner.Morale-0.10, 0.5, 1.5)
+			return
+		}
+
+		if e.rand.Float64() < 0.25 {
+			*tickEvents = append(*tickEvents, events.MatchEvent{
+				Kind:     "blocked_shot",
+				TeamID:   opponent.ID,
+				PlayerID: opponent.Players[e.rand.Intn(len(opponent.Players))].ID,
+				Message:  "The defensive wall jumps and bravely blocks the free kick!",
+			})
+			state.Ball.VX = -state.Ball.VX * 0.22
+			state.Ball.VY = (e.rand.Float64() - 0.5) * 1.5
+			state.Ball.VZ = 0.12
+			return
+		}
+
+		if shotOnTarget {
+			saveRoll := e.rand.Float64()
+			if e.setPiece.GKObj != nil {
+				e.setPiece.GKObj.Morale = clamp(e.setPiece.GKObj.Morale+0.08, 0.5, 1.5)
+			}
+			owner.Morale = clamp(owner.Morale-0.04, 0.5, 1.5)
+
+			greatSaveChance := float64(gkSavingCapability) * 0.005
+			if saveRoll < greatSaveChance {
+				*tickEvents = append(*tickEvents, events.MatchEvent{
+					Kind:          "great_save",
+					TeamID:        opponent.ID,
+					PlayerID:      gkID,
+					InterceptorID: gkID,
+					Message:       "SENSATIONAL FLYING SAVE! The keeper tips the curling free kick away!",
+				})
+			} else {
+				*tickEvents = append(*tickEvents, events.MatchEvent{
+					Kind:          "save",
+					TeamID:        opponent.ID,
+					PlayerID:      gkID,
+					InterceptorID: gkID,
+					Message:       "The keeper anticipates the curve and comfortably catches the free kick.",
+				})
+			}
+
+			if e.rand.Float64() < 0.35 {
+				*tickEvents = append(*tickEvents, events.MatchEvent{
+					Kind:    "rebound",
+					TeamID:  owner.TeamID,
+					Message: "Rebound! The ball is spilled inside the box!",
+				})
+				state.Ball.VX = -state.Ball.VX * 0.25
+				state.Ball.VY = (e.rand.Float64() - 0.5) * 2.8
+				state.Ball.VZ = 0.38
+			} else {
+				if e.setPiece.GKObj != nil {
+					e.giveBallToPlayer(state, e.setPiece.GKObj)
+				}
+			}
+		}
+		return
+	}
+
+	if owner.TeamID == state.HomeTeam.ID {
+		state.HomeTeam.Score++
+	} else {
+		state.AwayTeam.Score++
+	}
+	owner.Morale = clamp(owner.Morale+0.25, 0.5, 1.5)
+	*tickEvents = append(*tickEvents, events.MatchEvent{Kind: "goal", TeamID: owner.TeamID, PlayerID: owner.ID, Message: "GOAL! ABSOLUTE MAGIC FROM THE FREE KICK!"})
+	*tickEvents = append(*tickEvents, events.MatchEvent{
+		Kind:     "player_celebration",
+		TeamID:   owner.TeamID,
+		PlayerID: owner.ID,
+		Message:  fmt.Sprintf("%s celebrates a world-class free kick goal!", owner.Role),
+	})
+
+	owner.HasBall = false
+	state.Ball.OwnerID = 0
+	state.Ball.OwnerTeamID = ""
+	state.Ball.VX = 0
+	state.Ball.VY = 0
+	state.Ball.VZ = 0
+	state.Ball.Height = 0
+	state.Ball.InFlight = false
+
+	if owner.TeamID == state.HomeTeam.ID {
+		state.Ball.X = state.FieldW + 0.8
+		state.Ball.Y = state.FieldH / 2
+	} else {
+		state.Ball.X = -0.8
+		state.Ball.Y = state.FieldH / 2
+	}
+
+	kickoffTeamID := oppositeTeamID(owner.TeamID, state)
+	cornerX := state.FieldW - 0.5
+	cornerY := 0.5
+	if owner.TeamID == state.AwayTeam.ID {
+		cornerX = 0.5
+		cornerY = 0.5
+	}
+
+	e.celebration = &celebrationState{
+		scorerID:      owner.ID,
+		teamID:        owner.TeamID,
+		kickoffTeamID: kickoffTeamID,
+		ticksLeft:     35,
+		cornerX:       cornerX,
+		cornerY:       cornerY,
+	}
+}
+
+func chooseFreeKickTaker(team *rooms.Team, fouled *rooms.Player) *rooms.Player {
+	var best *rooms.Player
+	bestScore := -1.0
+	for _, p := range team.Players {
+		if p.Role == "GK" {
+			continue
+		}
+		score := float64(p.Passing)*0.35 + float64(p.Vision)*0.25 + float64(p.Shooting)*0.4
+		if score > bestScore {
+			bestScore = score
+			best = p
+		}
+	}
+	return best
 }
