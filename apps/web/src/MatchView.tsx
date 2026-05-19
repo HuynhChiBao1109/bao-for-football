@@ -279,7 +279,14 @@ const EV = {
   },
   pass: { label: 'Chuyền Bóng' },
   interception: { label: '🛡 Cắt Bóng', color: '#fca5a5', bdr: '#dc2626' },
-  shot: { label: 'Sút', color: '#fde68a', bdr: '#d97706' },
+  shot: {
+    label: '⚡ Sút Bóng',
+    title: 'CÚ SÚT NGUY HIỂM!',
+    color: '#fbbf24',
+    bg: '#1a0d02',
+    bdr: '#f59e0b',
+    dur: 2600,
+  },
   possession_change: { label: 'Đổi Bóng' },
 };
 
@@ -382,13 +389,17 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
 
       const cfg = EV[event.kind];
       if (cfg?.title) {
+        let msg = event.message || '';
+        if (event.kind === 'shot' && event.shotPower) {
+          msg = `🔥 Lực sút: ${event.shotPower} km/h\n🧤 Khả năng cản phá của thủ môn: ${event.gkCapability}%`;
+        }
         setPopup({
           kind: event.kind,
           title: cfg.title,
           color: cfg.color,
           bg: cfg.bg,
           border: cfg.bdr,
-          detail: event.message || '',
+          detail: msg,
           duration: cfg.dur || 2500,
         });
       }
@@ -1178,6 +1189,38 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
               fill="none"
               stroke="#cbd5e1"
               strokeWidth="0.35"
+            />
+
+            {/* Left Goal Post and Netting */}
+            <path
+              d="M 1 28 L -1.5 28 L -1.5 36 L 1 36"
+              fill="none"
+              stroke="#ffffff"
+              strokeWidth="0.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M 1 28 L -1.5 29 M 1 30 L -1.5 31 M 1 32 L -1.5 33 M 1 34 L -1.5 35 M 1 36 L -1.5 36 M -1.5 28 L -1.5 36 M -0.8 28 L -0.8 36"
+              fill="none"
+              stroke="rgba(255,255,255,0.22)"
+              strokeWidth="0.15"
+            />
+
+            {/* Right Goal Post and Netting */}
+            <path
+              d="M 99 28 L 101.5 28 L 101.5 36 L 99 36"
+              fill="none"
+              stroke="#ffffff"
+              strokeWidth="0.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M 99 28 L 101.5 29 M 99 30 L 101.5 31 M 99 32 L 101.5 33 M 99 34 L 101.5 35 M 99 36 L 101.5 36 M 101.5 28 L 101.5 36 M 100.2 28 L 100.2 36"
+              fill="none"
+              stroke="rgba(255,255,255,0.22)"
+              strokeWidth="0.15"
             />
 
             {/* Penalty arcs */}

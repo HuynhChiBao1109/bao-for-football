@@ -1116,17 +1116,39 @@ func (e *MatchEngine) handleClearance(state *rooms.MatchState, owner *rooms.Play
 }
 
 func (e *MatchEngine) handleShot(state *rooms.MatchState, owner *rooms.Player, opponent *rooms.Team, tickEvents *[]events.MatchEvent) {
-	shotPower := clamp(1.45+float64(owner.Shooting)/72.0+e.rand.Float64()*0.55, 1.5, 3.0)
+	// 1. Calculate Shot Power (Lực sút) in km/h:
+	// A standard shot ranges from 65km/h to 138km/h depending on Shooting stat, Morale, and random noise.
+	baseShotPower := 1.45 + float64(owner.Shooting)/72.0 + e.rand.Float64()*0.55
+	shotSpeedKmh := baseShotPower * 42.0 + float64(owner.Shooting)*0.22 + e.rand.Float64()*12.0
+	shotSpeedKmh = clamp(shotSpeedKmh, 65.0, 138.0)
+
+	// 2. Calculate GK saving capability (Khả năng chụp của thủ môn) out of 100:
+	gk := findGoalkeeper(opponent)
+	gkSavingCapability := 50
+	gkID := 0
+	if gk != nil {
+		gkID = gk.ID
+		// stats: Defending (as Goalkeeping), Pace (as Agility/Reflexes), Mental, Morale
+		gkSavingCapability = int(clamp(float64(gk.Defending)*0.45 + float64(gk.Pace)*0.25 + float64(gk.Mental)*0.15 + (gk.Morale * 10.0), 10, 99))
+	}
 
 	distGoal := distanceToGoal(owner, state)
 	defenseBlock := teamDefendingAverage(opponent.Players) / 200.0
-	xg := clamp(0.05+float64(owner.Shooting)/170.0+float64(owner.Mental)/500.0-distGoal/110.0-defenseBlock, 0.02, 0.72)
-	xg = clamp(xg+ownerTeam(owner.TeamID, state).Tactics.ShotRatio*0.1-opponent.Tactics.Pressure*0.06+owner.Morale*0.05, 0.02, 0.78)
+
+	// 3. Expected Goals (xG) calculation integrating shot power and GK saving capability:
+	// High shot speed reduces GK reaction and increases goal probability.
+	// High GK saving capability reduces goal probability.
+	gkDefenseFactor := float64(gkSavingCapability) / 100.0
+	speedFactor := shotSpeedKmh / 100.0 // 1.0 is average 100km/h
+
+	xg := clamp(0.05 + float64(owner.Shooting)/170.0 + float64(owner.Mental)/500.0 - distGoal/110.0 - defenseBlock, 0.02, 0.72)
+	xg = clamp(xg * speedFactor * (1.8 - gkDefenseFactor * 1.2), 0.01, 0.85)
+	xg = clamp(xg + ownerTeam(owner.TeamID, state).Tactics.ShotRatio*0.1 - opponent.Tactics.Pressure*0.06 + owner.Morale*0.05, 0.01, 0.88)
 
 	isGoal := e.rand.Float64() < xg
 	shotOnTarget := isGoal
 	if !shotOnTarget {
-		onTargetProb := clamp(0.22+float64(owner.Shooting)/260.0-distGoal/210.0-opponent.Tactics.Pressure*0.05, 0.12, 0.66)
+		onTargetProb := clamp(0.22 + float64(owner.Shooting)/260.0 - distGoal/210.0 - opponent.Tactics.Pressure*0.05, 0.12, 0.66)
 		shotOnTarget = e.rand.Float64() < onTargetProb
 	}
 
@@ -1134,9 +1156,10 @@ func (e *MatchEngine) handleShot(state *rooms.MatchState, owner *rooms.Player, o
 		Kind:         "shot",
 		TeamID:       owner.TeamID,
 		PlayerID:     owner.ID,
-		ShotPower:    round2(shotPower),
+		ShotPower:    round2(shotSpeedKmh),
 		ShotOnTarget: shotOnTarget,
-		Message:      fmt.Sprintf("%s fires a powerful shot!", owner.Role),
+		GKCapability: gkSavingCapability,
+		Message:      fmt.Sprintf("%s fires a powerful shot! [Power: %.1f km/h, GK Save Capability: %d%%]", owner.Role, shotSpeedKmh, gkSavingCapability),
 	})
 
 	if !isGoal {
@@ -1154,17 +1177,24 @@ func (e *MatchEngine) handleShot(state *rooms.MatchState, owner *rooms.Player, o
 		dx := state.Ball.TargetX - owner.X
 		dy := state.Ball.TargetY - owner.Y
 		d := math.Max(math.Sqrt(dx*dx+dy*dy), 0.01)
-		state.Ball.VX = dx / d * clamp(shotPower*1.1, 1.7, 3.2)
-		state.Ball.VY = dy / d * clamp(shotPower*1.1, 1.7, 3.2)
+		
+		// Map ball speed to the shot speed scale
+		ballSpeedScale := clamp(shotSpeedKmh / 42.0, 1.7, 3.2)
+		state.Ball.VX = dx / d * ballSpeedScale
+		state.Ball.VY = dy / d * ballSpeedScale
 		state.Ball.VZ = 0.28 + e.rand.Float64()*0.42
 		state.Ball.Height = 0.35
 
-		if shotOnTarget && e.rand.Float64() < 0.12 {
+		// Goalpost/Woodwork interaction:
+		// If shot is on target but doesn't go in, it can strike the post or crossbar (woodwork).
+		// Higher shot power combined with slightly off-center accuracy makes striking the post more likely.
+		woodworkChance := 0.08 + (shotSpeedKmh/150.0)*0.06
+		if shotOnTarget && e.rand.Float64() < woodworkChance {
 			*tickEvents = append(*tickEvents, events.MatchEvent{
 				Kind:     "woodwork_hit",
 				TeamID:   owner.TeamID,
 				PlayerID: owner.ID,
-				Message:  "STRIKES THE WOODWORK! Unbelievable misfortune!",
+				Message:  fmt.Sprintf("STRIKES THE WOODWORK! A fierce %.1f km/h rocket rattles the post!", shotSpeedKmh),
 			})
 			state.Ball.VX = -state.Ball.VX * 0.42
 			state.Ball.VY = (e.rand.Float64() - 0.5) * 2.2
@@ -1173,6 +1203,7 @@ func (e *MatchEngine) handleShot(state *rooms.MatchState, owner *rooms.Player, o
 			return
 		}
 
+		// Defender block interaction:
 		if e.rand.Float64() < 0.25 {
 			*tickEvents = append(*tickEvents, events.MatchEvent{
 				Kind:     "blocked_shot",
@@ -1186,23 +1217,23 @@ func (e *MatchEngine) handleShot(state *rooms.MatchState, owner *rooms.Player, o
 			return
 		}
 
+		// Goalkeeper save interaction:
 		if shotOnTarget {
 			saveRoll := e.rand.Float64()
-			gk := findGoalkeeper(opponent)
-			gkID := 0
 			if gk != nil {
-				gkID = gk.ID
 				gk.Morale = clamp(gk.Morale+0.08, 0.5, 1.5)
 			}
 			owner.Morale = clamp(owner.Morale-0.04, 0.5, 1.5)
 
-			if saveRoll < 0.28 {
+			// GK capability determines world-class great saves!
+			greatSaveChance := float64(gkSavingCapability) * 0.0042 // up to 42% chance of a world-class save
+			if saveRoll < greatSaveChance {
 				*tickEvents = append(*tickEvents, events.MatchEvent{
 					Kind:          "great_save",
 					TeamID:        opponent.ID,
 					PlayerID:      gkID,
 					InterceptorID: gkID,
-					Message:       "SENSATIONAL DIVE! What a world-class save!",
+					Message:       fmt.Sprintf("SENSATIONAL DIVE! GK denies a %.1f km/h rocket with a world-class save!", shotSpeedKmh),
 				})
 			} else {
 				*tickEvents = append(*tickEvents, events.MatchEvent{

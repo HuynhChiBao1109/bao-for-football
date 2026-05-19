@@ -11,6 +11,7 @@ type MatchEvent struct {
 	InterceptorID int     `json:"interceptorId,omitempty"`
 	ShotPower     float64 `json:"shotPower,omitempty"`
 	ShotOnTarget  bool    `json:"shotOnTarget,omitempty"`
+	GKCapability  int     `json:"gkCapability,omitempty"`
 }
 
 type PlayerSnapshot struct {
