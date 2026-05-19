@@ -171,6 +171,7 @@ func (e *MatchEngine) run(matchID string, stopCh chan struct{}) {
 
 		if kickoffWarmupTicks > 0 {
 			kickoffWarmupTicks--
+			e.computePlayerMovement(state, nil)
 			if kickoffWarmupTicks == 0 {
 				tickEvents := e.prepareKickoffSequence(state, startingKickoffTeamID, "Match started")
 				e.broadcastTick(state, tick, tickEvents)
@@ -183,6 +184,7 @@ func (e *MatchEngine) run(matchID string, stopCh chan struct{}) {
 
 		if halfTimeHoldTicks > 0 {
 			halfTimeHoldTicks--
+			e.computePlayerMovement(state, nil)
 			if halfTimeHoldTicks == 0 {
 				secondHalfKickoffDelayTicks = 8
 				tickEvents := []events.MatchEvent{{Kind: "second_half_start", Message: "Second half started"}}
@@ -196,6 +198,7 @@ func (e *MatchEngine) run(matchID string, stopCh chan struct{}) {
 
 		if secondHalfKickoffDelayTicks > 0 {
 			secondHalfKickoffDelayTicks--
+			e.computePlayerMovement(state, nil)
 			if secondHalfKickoffDelayTicks == 0 {
 				tickEvents := e.prepareKickoffSequence(state, secondHalfKickoffTeamID, "Second half kickoff")
 				e.broadcastTick(state, tick, tickEvents)
@@ -208,6 +211,7 @@ func (e *MatchEngine) run(matchID string, stopCh chan struct{}) {
 
 		if e.kickoff != nil {
 			e.kickoff.delayTicks--
+			e.computePlayerMovement(state, nil)
 			if e.kickoff.delayTicks <= 0 {
 				tickEvents := e.executeKickoffPass(state)
 				e.broadcastTick(state, tick, tickEvents)
@@ -509,6 +513,15 @@ func (e *MatchEngine) computePlayerMovement(state *rooms.MatchState, tickEvents 
 	ballOwner := findPlayerByID(state.AllPlayers(), state.Ball.OwnerID)
 	hasPossessor := ballOwner != nil
 
+	// Determine active attacking possession even if the ball is in flight
+	attackingTeamID := ""
+	if hasPossessor {
+		attackingTeamID = ballOwner.TeamID
+	} else if state.Ball.PassTeamID != "" {
+		attackingTeamID = state.Ball.PassTeamID
+	}
+	hasAttackingPossession := attackingTeamID != ""
+
 	for _, p := range state.AllPlayers() {
 		if p.Morale <= 0.0 {
 			p.Morale = 1.0
@@ -534,13 +547,13 @@ func (e *MatchEngine) computePlayerMovement(state *rooms.MatchState, tickEvents 
 		}
 
 		isPossessor := hasPossessor && ballOwner.ID == p.ID
-		sameTeamAsOwner := hasPossessor && ballOwner.TeamID == p.TeamID
+		sameTeamAsAttacker := hasAttackingPossession && attackingTeamID == p.TeamID
 		isNearestChaser := (homeNearest != nil && p.ID == homeNearest.ID) || (awayNearest != nil && p.ID == awayNearest.ID)
 
 		widthScale := 1.0
-		if sameTeamAsOwner {
+		if sameTeamAsAttacker {
 			widthScale = 1.12 + team.Tactics.PassRatio*0.25
-		} else if hasPossessor {
+		} else if hasAttackingPossession {
 			widthScale = 0.82 - team.Tactics.Pressure*0.12
 		}
 
@@ -548,9 +561,9 @@ func (e *MatchEngine) computePlayerMovement(state *rooms.MatchState, tickEvents 
 		targetY = centerH + (targetY-centerH)*widthScale
 
 		lineShift := 0.0
-		if sameTeamAsOwner {
+		if sameTeamAsAttacker {
 			lineShift = team.AttackDir * (12.0 + team.Tactics.ShotRatio*11.0)
-		} else if hasPossessor {
+		} else if hasAttackingPossession {
 			lineShift = team.AttackDir * (-9.0 + team.Tactics.Pressure*15.0)
 		}
 
@@ -558,16 +571,17 @@ func (e *MatchEngine) computePlayerMovement(state *rooms.MatchState, tickEvents 
 			targetX = clamp(targetX+lineShift, 8, state.FieldW-8)
 		}
 
-		if sameTeamAsOwner && !isPossessor {
-			if (p.Role == "LB" || p.Role == "RB") && ballOwner.X > 38 {
-				targetX = clamp(ballOwner.X+team.AttackDir*14.0, 15, state.FieldW-12)
+		// Attacking and support runs when in possession (even during ball flights)
+		if sameTeamAsAttacker && !isPossessor {
+			if (p.Role == "LB" || p.Role == "RB") && state.Ball.X > 38 {
+				targetX = clamp(state.Ball.X+team.AttackDir*14.0, 15, state.FieldW-12)
 				targetY = p.HomeY
-				if e.rand.Float64() < 0.015 && distance(p.X, p.Y, ballOwner.X, ballOwner.Y) < 18 {
+				if tickEvents != nil && e.rand.Float64() < 0.015 && distance(p.X, p.Y, state.Ball.X, state.Ball.Y) < 18 {
 					*tickEvents = append(*tickEvents, events.MatchEvent{
-						Kind:    "overload",
-						TeamID:  p.TeamID,
+						Kind:     "overload",
+						TeamID:   p.TeamID,
 						PlayerID: p.ID,
-						Message: fmt.Sprintf("%s overlaps aggressively", p.Role),
+						Message:  fmt.Sprintf("%s overlaps aggressively", p.Role),
 					})
 				}
 			} else if p.Role == "LW" || p.Role == "RW" || p.Role == "ST" || p.Role == "LST" || p.Role == "RST" {
@@ -596,19 +610,34 @@ func (e *MatchEngine) computePlayerMovement(state *rooms.MatchState, tickEvents 
 			}
 		}
 
-		isPressingChaser := !sameTeamAsOwner && hasPossessor && distance(p.X, p.Y, state.Ball.X, state.Ball.Y) < (11.0 + team.Tactics.Pressure*15.0)
+		isPressingChaser := !sameTeamAsAttacker && hasAttackingPossession && distance(p.X, p.Y, state.Ball.X, state.Ball.Y) < (11.0 + team.Tactics.Pressure*15.0)
 
 		if isNearestChaser || isPressingChaser {
 			predX, predY := e.predictBallIntercept(state, p)
 			targetX = predX
 			targetY = predY
-			if !sameTeamAsOwner && isPossessor && e.rand.Float64() < 0.025 {
+			if tickEvents != nil && !sameTeamAsAttacker && hasPossessor && e.rand.Float64() < 0.025 {
 				*tickEvents = append(*tickEvents, events.MatchEvent{
-					Kind:    "pressing_trigger",
-					TeamID:  p.TeamID,
+					Kind:     "pressing_trigger",
+					TeamID:   p.TeamID,
 					PlayerID: p.ID,
-					Message: fmt.Sprintf("%s triggers pressure pressing", p.Role),
+					Message:  fmt.Sprintf("%s triggers pressure pressing", p.Role),
 				})
+			}
+		}
+
+		// Tight defensive marking for other non-chasing defenders
+		if !sameTeamAsAttacker && hasAttackingPossession && !isNearestChaser && !isPressingChaser && p.Role != "GK" {
+			nearestAttacker := nearestOpponent(p, oppTeam.Players)
+			if nearestAttacker != nil && distance(p.X, p.Y, nearestAttacker.X, nearestAttacker.Y) < 16.0 {
+				goalX := 0.0
+				if p.TeamID == state.HomeTeam.ID {
+					goalX = 0.0
+				} else {
+					goalX = state.FieldW
+				}
+				targetX = nearestAttacker.X*0.72 + goalX*0.28
+				targetY = nearestAttacker.Y*0.72 + (state.FieldH/2)*0.28
 			}
 		}
 
