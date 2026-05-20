@@ -2,6 +2,13 @@
 
 FIFAM la du an game football manager gom backend Gin (Go) va frontend React.
 
+FIFAM không phải game turn-based mà là:
+
+realtime simulation
+tactical-driven football engine
+event-chain system
+animation-first match viewer
+
 ## 1) Tech Stack
 
 ### Backend (apps/service-core)
