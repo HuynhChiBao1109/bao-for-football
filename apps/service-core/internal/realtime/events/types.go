@@ -59,9 +59,38 @@ type PassPreviewSnapshot struct {
 	LaneRiskY   float64 `json:"laneRiskY,omitempty"`
 }
 
+type OffsideCandidateDebugSnapshot struct {
+	PlayerID      int     `json:"playerId"`
+	X             float64 `json:"x"`
+	Y             float64 `json:"y"`
+	MarkedOffside bool    `json:"markedOffside"`
+	AttemptedPlay bool    `json:"attemptedPlay,omitempty"`
+	Challenged    bool    `json:"challenged,omitempty"`
+	Interfered    bool    `json:"interfered,omitempty"`
+}
+
+type OffsideDebugSnapshot struct {
+	Active             bool                            `json:"active"`
+	AttackTeamID       string                          `json:"attackTeamId,omitempty"`
+	DefendingTeamID    string                          `json:"defendingTeamId,omitempty"`
+	KickSource         string                          `json:"kickSource,omitempty"`
+	KickBallX          float64                         `json:"kickBallX,omitempty"`
+	KickBallY          float64                         `json:"kickBallY,omitempty"`
+	SecondLastLineX    float64                         `json:"secondLastLineX,omitempty"`
+	OffsideLineX       float64                         `json:"offsideLineX,omitempty"`
+	PendingWhistle     bool                            `json:"pendingWhistle,omitempty"`
+	WhistleTicksLeft   int                             `json:"whistleTicksLeft,omitempty"`
+	OffenderID         int                             `json:"offenderId,omitempty"`
+	OffenceReason      string                          `json:"offenceReason,omitempty"`
+	LastDeflectionID   int                             `json:"lastDeflectionId,omitempty"`
+	LastDeflectionSave bool                            `json:"lastDeflectionSave,omitempty"`
+	Candidates         []OffsideCandidateDebugSnapshot `json:"candidates,omitempty"`
+}
+
 type DebugSnapshot struct {
 	Gameplay    GameplayDebugSnapshot `json:"gameplay"`
 	PassPreview *PassPreviewSnapshot  `json:"passPreview,omitempty"`
+	Offside     *OffsideDebugSnapshot `json:"offside,omitempty"`
 }
 
 type ScoreSnapshot struct {

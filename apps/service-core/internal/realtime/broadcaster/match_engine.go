@@ -22,6 +22,12 @@ const (
 	gkHomeMaxX            = 15.0
 	gkAwayMinX            = 85.0
 	gkAwayMaxX            = 98.0
+	offsideEqualEpsilon   = 0.12
+	offsideActiveRadius   = 1.2
+	offsideAttemptRadius  = 3.8
+	offsideInterfereDist  = 1.7
+	offsideMaxAgeTicks    = 36
+	offsideWhistleDelay   = 3
 )
 
 type gameplayRuntime struct {
@@ -88,17 +94,54 @@ const (
 )
 
 type setPieceState struct {
-	Type          setPieceType
-	TeamID        string        // attacking team
-	DefTeamID     string        // defending team
-	FoulX         float64       // coordinates of the foul / spot
-	FoulY         float64       // coordinates of the foul / spot
-	KickerID      int           // designated kicker player ID
-	KickerObj     *rooms.Player // designated kicker player
-	GKObj         *rooms.Player // defending goalkeeper
-	TicksLeft     int           // dynamic delay before execution
-	Initialized   bool          // whether wall/positions are set up
-	Executed      bool          // whether kick is shot/passed
+	Type        setPieceType
+	TeamID      string        // attacking team
+	DefTeamID   string        // defending team
+	FoulX       float64       // coordinates of the foul / spot
+	FoulY       float64       // coordinates of the foul / spot
+	KickerID    int           // designated kicker player ID
+	KickerObj   *rooms.Player // designated kicker player
+	GKObj       *rooms.Player // defending goalkeeper
+	TicksLeft   int           // dynamic delay before execution
+	Initialized bool          // whether wall/positions are set up
+	Executed    bool          // whether kick is shot/passed
+}
+
+type offsideCandidate struct {
+	PlayerID       int
+	SnapshotX      float64
+	SnapshotY      float64
+	SnapshotProg   float64
+	MarkedOffside  bool
+	AttemptedPlay  bool
+	ChallengedBall bool
+	InterferedOpp  bool
+}
+
+type offsidePhase struct {
+	Active               bool
+	AttackingTeamID      string
+	DefendingTeamID      string
+	PasserID             int
+	IntendedReceiverID   int
+	KickSource           string
+	KickExempt           bool
+	KickBallX            float64
+	KickBallY            float64
+	KickBallProg         float64
+	SecondLastDefProg    float64
+	OffsideLineProg      float64
+	AttackDir            float64
+	AgeTicks             int
+	Candidates           []offsideCandidate
+	PendingWhistle       bool
+	WhistleTicksLeft     int
+	OffenderID           int
+	OffenceReason        string
+	OffenceX             float64
+	OffenceY             float64
+	LastDeflectionByID   int
+	LastDeflectionIsSave bool
 }
 
 type MatchEngine struct {
@@ -117,6 +160,8 @@ type MatchEngine struct {
 	runtime      gameplayRuntime
 	eventQueue   []events.MatchEvent
 	momentum     float64
+	tickNo       int
+	offside      *offsidePhase
 }
 
 type UpdateTacticsInput struct {
@@ -225,9 +270,11 @@ func (e *MatchEngine) run(matchID string, homeName string, awayName string, stop
 
 		tick++
 		e.mu.Lock()
+		e.tickNo = tick
 
 		if kickoffWarmupTicks > 0 {
 			kickoffWarmupTicks--
+			e.offside = nil
 			e.computePlayerMovement(state, nil)
 			if kickoffWarmupTicks == 0 {
 				tickEvents := e.prepareKickoffSequence(state, startingKickoffTeamID, "Match started")
@@ -241,6 +288,7 @@ func (e *MatchEngine) run(matchID string, homeName string, awayName string, stop
 
 		if halfTimeHoldTicks > 0 {
 			halfTimeHoldTicks--
+			e.offside = nil
 			e.computePlayerMovement(state, nil)
 			if halfTimeHoldTicks == 0 {
 				secondHalfKickoffDelayTicks = 8
@@ -255,6 +303,7 @@ func (e *MatchEngine) run(matchID string, homeName string, awayName string, stop
 
 		if secondHalfKickoffDelayTicks > 0 {
 			secondHalfKickoffDelayTicks--
+			e.offside = nil
 			e.computePlayerMovement(state, nil)
 			if secondHalfKickoffDelayTicks == 0 {
 				tickEvents := e.prepareKickoffSequence(state, secondHalfKickoffTeamID, "Second half kickoff")
@@ -268,6 +317,7 @@ func (e *MatchEngine) run(matchID string, homeName string, awayName string, stop
 
 		if e.celebration != nil {
 			e.celebration.ticksLeft--
+			e.offside = nil
 			e.computePlayerMovement(state, nil)
 			if e.celebration.ticksLeft <= 0 {
 				kickoffTeamID := e.celebration.kickoffTeamID
@@ -283,6 +333,7 @@ func (e *MatchEngine) run(matchID string, homeName string, awayName string, stop
 
 		if e.substitution != nil {
 			e.substitution.ticksLeft--
+			e.offside = nil
 			e.updateSubstitutionTick(state)
 			if e.substitution.ticksLeft <= 0 {
 				e.finalizeSubstitution(state)
@@ -296,6 +347,7 @@ func (e *MatchEngine) run(matchID string, homeName string, awayName string, stop
 
 		if e.kickoff != nil {
 			e.kickoff.delayTicks--
+			e.offside = nil
 			e.computePlayerMovement(state, nil)
 			if e.kickoff.delayTicks <= 0 {
 				tickEvents := e.executeKickoffPass(state)
@@ -309,6 +361,7 @@ func (e *MatchEngine) run(matchID string, homeName string, awayName string, stop
 
 		if e.setPiece != nil {
 			e.setPiece.TicksLeft--
+			e.offside = nil
 			e.updateSetPieceTick(state)
 			if e.setPiece.TicksLeft <= 0 && !e.setPiece.Executed {
 				tickEvents := e.executeSetPiece(state)
@@ -352,6 +405,8 @@ cleanup:
 		e.running = false
 		e.state = nil
 		e.kickoff = nil
+		e.offside = nil
+		e.tickNo = 0
 		e.stopCh = nil
 	}
 	e.mu.Unlock()
@@ -492,14 +547,14 @@ func (e *MatchEngine) RequestSubstitution(teamID string, playerOutID int, player
 	}
 
 	e.substitution = &substitutionState{
-		teamID:       team.ID,
-		playerOutID:  playerOut.ID,
-		playerInID:   playerIn.ID,
-		outX:         50.0,
-		outY:         1.2,
-		outReached:   false,
-		ticksLeft:    90, // ~9 seconds duration
-		playerInObj:  playerInCopy,
+		teamID:      team.ID,
+		playerOutID: playerOut.ID,
+		playerInID:  playerIn.ID,
+		outX:        50.0,
+		outY:        1.2,
+		outReached:  false,
+		ticksLeft:   90, // ~9 seconds duration
+		playerInObj: playerInCopy,
 	}
 
 	// Log prepared event
@@ -604,6 +659,8 @@ func (e *MatchEngine) getPriority(kind string) int {
 		return 5
 	case "yellow_card", "foul", "free_kick", "corner", "great_save", "woodwork_hit", "injury", "match_end", "kickoff":
 		return 4
+	case "offside", "offside_warning":
+		return 4
 	case "shot", "save", "blocked_shot", "clearance", "tackle", "sliding_tackle", "substitution":
 		return 3
 	case "through_ball", "cross", "long_pass", "nutmeg", "skill_move", "dribble_success", "counter_attack", "momentum_shift", "big_chance":
@@ -638,53 +695,139 @@ func (e *MatchEngine) processQueue() []events.MatchEvent {
 	return emitted
 }
 
+func (e *MatchEngine) progressToGoal(state *rooms.MatchState, teamID string, x float64) float64 {
+	attackDir := ownerGoalDirection(teamID, state)
+	if attackDir >= 0 {
+		return x
+	}
+	return state.FieldW - x
+}
+
+func (e *MatchEngine) progressToX(state *rooms.MatchState, teamID string, progress float64) float64 {
+	attackDir := ownerGoalDirection(teamID, state)
+	if attackDir >= 0 {
+		return progress
+	}
+	return state.FieldW - progress
+}
+
+func (e *MatchEngine) isInOppHalf(state *rooms.MatchState, teamID string, x float64) bool {
+	attackDir := ownerGoalDirection(teamID, state)
+	mid := state.FieldW / 2
+	if attackDir >= 0 {
+		return x > mid+offsideEqualEpsilon
+	}
+	return x < mid-offsideEqualEpsilon
+}
+
+func (e *MatchEngine) secondLastDefenderProgress(state *rooms.MatchState, defendingTeamID string) float64 {
+	defending := ownerTeam(defendingTeamID, state)
+	if defending == nil || len(defending.Players) == 0 {
+		return state.FieldW / 2
+	}
+
+	first := -1.0
+	second := -1.0
+	for _, p := range defending.Players {
+		prog := e.progressToGoal(state, defendingTeamID, p.X)
+		if prog > first {
+			second = first
+			first = prog
+		} else if prog > second {
+			second = prog
+		}
+	}
+
+	if second < 0 {
+		second = first
+	}
+	if second < 0 {
+		return state.FieldW / 2
+	}
+	return second
+}
+
 func (e *MatchEngine) getOffsideLine(state *rooms.MatchState, defendingTeamID string) float64 {
-	opponents := state.HomeTeam.Players
-	if defendingTeamID == state.AwayTeam.ID {
-		opponents = state.AwayTeam.Players
+	attackingTeamID := oppositeTeamID(defendingTeamID, state)
+	secondLast := e.secondLastDefenderProgress(state, defendingTeamID)
+	lineX := e.progressToX(state, attackingTeamID, secondLast)
+	return clamp(lineX, 0, state.FieldW)
+}
+
+func (e *MatchEngine) beginOffsidePhase(state *rooms.MatchState, passTeamID string, passerID int, targetID int, ballX float64, ballY float64, source string, exempt bool) {
+	if exempt || passTeamID == "" {
+		e.offside = nil
+		return
 	}
 
-	var deepestX = 0.0
-	var secondDeepestX = 0.0
-	isHome := defendingTeamID == "home"
-
-	if isHome {
-		deepestX = 999.0
-		secondDeepestX = 999.0
-		for _, p := range opponents {
-			if p.Role == "GK" {
-				continue
-			}
-			if p.X < deepestX {
-				secondDeepestX = deepestX
-				deepestX = p.X
-			} else if p.X < secondDeepestX {
-				secondDeepestX = p.X
-			}
-		}
-		if secondDeepestX > 500 {
-			secondDeepestX = 22.0
-		}
-		return clamp(secondDeepestX, 16.5, 50.0)
-	} else {
-		deepestX = -999.0
-		secondDeepestX = -999.0
-		for _, p := range opponents {
-			if p.Role == "GK" {
-				continue
-			}
-			if p.X > deepestX {
-				secondDeepestX = deepestX
-				deepestX = p.X
-			} else if p.X > secondDeepestX {
-				secondDeepestX = p.X
-			}
-		}
-		if secondDeepestX < -500 {
-			secondDeepestX = state.FieldW - 22.0
-		}
-		return clamp(secondDeepestX, 50.0, state.FieldW-16.5)
+	attacking := ownerTeam(passTeamID, state)
+	if attacking == nil || len(attacking.Players) == 0 {
+		e.offside = nil
+		return
 	}
+
+	defendingTeamID := oppositeTeamID(passTeamID, state)
+	ballProg := e.progressToGoal(state, passTeamID, ballX)
+	secondLastProg := e.secondLastDefenderProgress(state, defendingTeamID)
+	offsideLineProg := math.Max(ballProg, secondLastProg)
+
+	candidates := make([]offsideCandidate, 0, 5)
+	for _, p := range attacking.Players {
+		if p == nil || p.ID == passerID {
+			continue
+		}
+		if !e.isInOppHalf(state, passTeamID, p.X) {
+			continue
+		}
+
+		prog := e.progressToGoal(state, passTeamID, p.X)
+		marked := prog > ballProg+offsideEqualEpsilon && prog > secondLastProg+offsideEqualEpsilon
+		if !marked {
+			continue
+		}
+
+		candidates = append(candidates, offsideCandidate{
+			PlayerID:      p.ID,
+			SnapshotX:     p.X,
+			SnapshotY:     p.Y,
+			SnapshotProg:  prog,
+			MarkedOffside: true,
+		})
+	}
+
+	if len(candidates) == 0 {
+		e.offside = nil
+		return
+	}
+
+	e.offside = &offsidePhase{
+		Active:             true,
+		AttackingTeamID:    passTeamID,
+		DefendingTeamID:    defendingTeamID,
+		PasserID:           passerID,
+		IntendedReceiverID: targetID,
+		KickSource:         source,
+		KickExempt:         exempt,
+		KickBallX:          ballX,
+		KickBallY:          ballY,
+		KickBallProg:       ballProg,
+		SecondLastDefProg:  secondLastProg,
+		OffsideLineProg:    offsideLineProg,
+		AttackDir:          attacking.AttackDir,
+		Candidates:         candidates,
+	}
+}
+
+func (e *MatchEngine) resetOffsidePhase() {
+	e.offside = nil
+}
+
+func (e *MatchEngine) markOffsideDeflection(playerID int, isSave bool) {
+	if e.offside == nil || !e.offside.Active {
+		return
+	}
+	e.offside.LastDeflectionByID = playerID
+	e.offside.LastDeflectionIsSave = isSave
 }
 
 func (e *MatchEngine) predictBallIntercept(state *rooms.MatchState, p *rooms.Player) (float64, float64) {
@@ -737,10 +880,10 @@ func (e *MatchEngine) computePlayerMovement(state *rooms.MatchState, tickEvents 
 				}
 			} else {
 				// Defending team is dejected and walks slowly back to their home penalty area
-				targetX = p.HomeX * 0.8 + (state.FieldW/2) * 0.2
-				targetY = p.HomeY * 0.8 + (state.FieldH/2) * 0.2
+				targetX = p.HomeX*0.8 + (state.FieldW/2)*0.2
+				targetY = p.HomeY*0.8 + (state.FieldH/2)*0.2
 			}
-			
+
 			dx := targetX - p.X
 			dy := targetY - p.Y
 			dist := math.Sqrt(dx*dx + dy*dy)
@@ -763,7 +906,7 @@ func (e *MatchEngine) computePlayerMovement(state *rooms.MatchState, tickEvents 
 			p.Y += p.VY
 			p.X = clamp(p.X, 1.2, state.FieldW-1.2)
 			p.Y = clamp(p.Y, 1.2, state.FieldH-1.2)
-			
+
 			if p.Role == "GK" {
 				p.X, p.Y = clampGoalkeeperPosition(p, state)
 			}
@@ -842,7 +985,7 @@ func (e *MatchEngine) computePlayerMovement(state *rooms.MatchState, tickEvents 
 				} else {
 					baseTargetY = clamp(state.FieldH/2+(e.rand.Float64()-0.5)*14, 10, state.FieldH-10)
 				}
-				
+
 				// Clamp behind the offside line
 				lastDefenderX := e.getOffsideLine(state, oppTeam.ID)
 				if team.AttackDir > 0 {
@@ -864,18 +1007,18 @@ func (e *MatchEngine) computePlayerMovement(state *rooms.MatchState, tickEvents 
 			// Select the candidate point that maximizes space from the closest opponent and has a clear passing lane.
 			bestX, bestY := baseTargetX, baseTargetY
 			maxScore := -999.0
-			
+
 			// Base candidate (doing nothing)
 			baseSpace := nearestOpponentDistanceVec(baseTargetX, baseTargetY, oppTeam.Players)
 			baseLaneThreat := passingLaneRiskFromCoord(state.Ball.X, state.Ball.Y, baseTargetX, baseTargetY, oppTeam.Players)
 			maxScore = baseSpace - baseLaneThreat*3.5
-			
-			angles := []float64{0, math.Pi/4, -math.Pi/4, math.Pi/2, -math.Pi/2}
+
+			angles := []float64{0, math.Pi / 4, -math.Pi / 4, math.Pi / 2, -math.Pi / 2}
 			radius := 4.8 // search within 4.8 meters
 			for _, ang := range angles {
-				candX := clamp(baseTargetX + math.Cos(ang)*radius, 5, state.FieldW-5)
-				candY := clamp(baseTargetY + math.Sin(ang)*radius, 3, state.FieldH-3)
-				
+				candX := clamp(baseTargetX+math.Cos(ang)*radius, 5, state.FieldW-5)
+				candY := clamp(baseTargetY+math.Sin(ang)*radius, 3, state.FieldH-3)
+
 				// Offside cap check for forward candidates
 				if p.Role == "ST" || p.Role == "LST" || p.Role == "RST" || p.Role == "LW" || p.Role == "RW" {
 					lastDefenderX := e.getOffsideLine(state, oppTeam.ID)
@@ -886,11 +1029,11 @@ func (e *MatchEngine) computePlayerMovement(state *rooms.MatchState, tickEvents 
 						continue
 					}
 				}
-				
+
 				// Evaluate space and lane risk
 				sp := nearestOpponentDistanceVec(candX, candY, oppTeam.Players)
 				laneThreat := passingLaneRiskFromCoord(state.Ball.X, state.Ball.Y, candX, candY, oppTeam.Players)
-				
+
 				// Score favors points that are far from defenders (sp) and have a clean passing lane (low laneThreat)
 				score := sp - laneThreat*3.5
 				if score > maxScore {
@@ -904,7 +1047,7 @@ func (e *MatchEngine) computePlayerMovement(state *rooms.MatchState, tickEvents 
 			targetY = bestY
 		}
 
-		isPressingChaser := !sameTeamAsAttacker && hasAttackingPossession && distance(p.X, p.Y, state.Ball.X, state.Ball.Y) < (11.0 + team.Tactics.Pressure*15.0)
+		isPressingChaser := !sameTeamAsAttacker && hasAttackingPossession && distance(p.X, p.Y, state.Ball.X, state.Ball.Y) < (11.0+team.Tactics.Pressure*15.0)
 
 		if isNearestChaser || isPressingChaser {
 			predX, predY := e.predictBallIntercept(state, p)
@@ -925,7 +1068,7 @@ func (e *MatchEngine) computePlayerMovement(state *rooms.MatchState, tickEvents 
 			nearestAttacker := nearestOpponent(p, oppTeam.Players)
 			if nearestAttacker != nil {
 				attackerSpace := nearestOpponentDistance(nearestAttacker, team.Players) // space attacker has from other defenders
-				
+
 				// Determine goal line to stand between attacker and goal
 				goalX := 0.0
 				if p.TeamID == state.HomeTeam.ID {
@@ -935,18 +1078,18 @@ func (e *MatchEngine) computePlayerMovement(state *rooms.MatchState, tickEvents 
 				}
 
 				distToGoal := distance(nearestAttacker.X, nearestAttacker.Y, goalX, state.FieldH/2)
-				
+
 				if distToGoal < 30.0 || attackerSpace > 6.0 {
 					// Mark extremely tight (1-on-1): stand 90% close to them, blocking the passing lane
 					ballDist := distance(state.Ball.X, state.Ball.Y, nearestAttacker.X, nearestAttacker.Y)
 					if ballDist > 4.0 {
 						// Position directly in the passing lane: 78% towards attacker, 12% towards ball, 10% goal line
-						targetX = nearestAttacker.X * 0.78 + state.Ball.X * 0.12 + goalX * 0.10
-						targetY = nearestAttacker.Y * 0.78 + state.Ball.Y * 0.12 + (state.FieldH/2) * 0.10
+						targetX = nearestAttacker.X*0.78 + state.Ball.X*0.12 + goalX*0.10
+						targetY = nearestAttacker.Y*0.78 + state.Ball.Y*0.12 + (state.FieldH/2)*0.10
 					} else {
 						// Extremely close tight marking
-						targetX = nearestAttacker.X * 0.90 + goalX * 0.10
-						targetY = nearestAttacker.Y * 0.90 + (state.FieldH/2) * 0.10
+						targetX = nearestAttacker.X*0.90 + goalX*0.10
+						targetY = nearestAttacker.Y*0.90 + (state.FieldH/2)*0.10
 					}
 				} else {
 					// Standard defensive tracking
@@ -1027,6 +1170,239 @@ func (e *MatchEngine) computePlayerMovement(state *rooms.MatchState, tickEvents 
 	}
 }
 
+func (e *MatchEngine) offsideCandidateIndex(playerID int) int {
+	if e.offside == nil {
+		return -1
+	}
+	for i := range e.offside.Candidates {
+		if e.offside.Candidates[i].PlayerID == playerID {
+			return i
+		}
+	}
+	return -1
+}
+
+func (e *MatchEngine) markOffsideInvolvement(playerID int, reason string, x float64, y float64, tickEvents *[]events.MatchEvent) {
+	if e.offside == nil || !e.offside.Active || e.offside.PendingWhistle {
+		return
+	}
+	e.offside.PendingWhistle = true
+	e.offside.WhistleTicksLeft = offsideWhistleDelay
+	e.offside.OffenderID = playerID
+	e.offside.OffenceReason = reason
+	e.offside.OffenceX = x
+	e.offside.OffenceY = y
+
+	*tickEvents = append(*tickEvents, events.MatchEvent{
+		Kind:     "offside_warning",
+		TeamID:   e.offside.AttackingTeamID,
+		PlayerID: playerID,
+		Message:  "Assistant keeps flag down briefly (delayed offside check)",
+	})
+}
+
+func (e *MatchEngine) triggerOffsideWhistle(state *rooms.MatchState, tickEvents *[]events.MatchEvent) {
+	if e.offside == nil {
+		return
+	}
+	ph := e.offside
+
+	state.Ball.OwnerID = 0
+	state.Ball.OwnerTeamID = ""
+	state.Ball.PassTeamID = ""
+	state.Ball.TargetID = 0
+	state.Ball.InFlight = false
+	state.Ball.IsLob = false
+	state.Ball.VX = 0
+	state.Ball.VY = 0
+	state.Ball.VZ = 0
+	state.Ball.Height = 0
+
+	offenceX := clamp(ph.OffenceX, 2.5, state.FieldW-2.5)
+	offenceY := clamp(ph.OffenceY, 2.5, state.FieldH-2.5)
+	defending := ownerTeam(ph.DefendingTeamID, state)
+	attacking := ownerTeam(ph.AttackingTeamID, state)
+
+	*tickEvents = append(*tickEvents, events.MatchEvent{
+		Kind:     "offside",
+		TeamID:   ph.AttackingTeamID,
+		PlayerID: ph.OffenderID,
+		Message:  fmt.Sprintf("Offside: player %d penalized (%s)", ph.OffenderID, ph.OffenceReason),
+	})
+
+	e.setPiece = &setPieceState{
+		Type:      setPieceFarFreeKick,
+		TeamID:    ph.DefendingTeamID,
+		DefTeamID: ph.AttackingTeamID,
+		FoulX:     offenceX,
+		FoulY:     offenceY,
+		TicksLeft: 12,
+	}
+
+	if defending != nil {
+		var kicker *rooms.Player
+		for _, p := range defending.Players {
+			if p == nil {
+				continue
+			}
+			if kicker == nil {
+				kicker = p
+				continue
+			}
+			if p.Role != "GK" && distance(p.X, p.Y, offenceX, offenceY) < distance(kicker.X, kicker.Y, offenceX, offenceY) {
+				kicker = p
+			}
+		}
+		if kicker != nil {
+			e.setPiece.KickerObj = kicker
+			e.setPiece.KickerID = kicker.ID
+		}
+	}
+
+	if attacking != nil {
+		for _, p := range attacking.Players {
+			if p != nil {
+				p.HasBall = false
+			}
+		}
+	}
+
+	e.resetOffsidePhase()
+}
+
+func (e *MatchEngine) evaluateOffsidePhase(state *rooms.MatchState, tickEvents *[]events.MatchEvent) {
+	ph := e.offside
+	if ph == nil || !ph.Active || ph.KickExempt {
+		return
+	}
+	if e.setPiece != nil || e.kickoff != nil || e.substitution != nil || e.celebration != nil {
+		e.resetOffsidePhase()
+		return
+	}
+
+	ph.AgeTicks++
+	if ph.AgeTicks > offsideMaxAgeTicks {
+		e.resetOffsidePhase()
+		return
+	}
+
+	if ph.PendingWhistle {
+		ph.WhistleTicksLeft--
+		if ph.WhistleTicksLeft <= 0 {
+			e.triggerOffsideWhistle(state, tickEvents)
+		}
+		return
+	}
+
+	owner := findPlayerByID(state.AllPlayers(), state.Ball.OwnerID)
+	if owner != nil {
+		if owner.TeamID == ph.DefendingTeamID {
+			e.resetOffsidePhase()
+			return
+		}
+		if owner.TeamID == ph.AttackingTeamID {
+			idx := e.offsideCandidateIndex(owner.ID)
+			if idx >= 0 {
+				e.markOffsideInvolvement(owner.ID, "touch_ball", owner.X, owner.Y, tickEvents)
+				return
+			}
+			e.resetOffsidePhase()
+			return
+		}
+	}
+
+	if state.Ball.PassTeamID != "" && state.Ball.PassTeamID != ph.AttackingTeamID {
+		e.resetOffsidePhase()
+		return
+	}
+
+	defending := ownerTeam(ph.DefendingTeamID, state)
+	for i := range ph.Candidates {
+		cand := &ph.Candidates[i]
+		if !cand.MarkedOffside {
+			continue
+		}
+
+		pl := findPlayerByID(state.AllPlayers(), cand.PlayerID)
+		if pl == nil {
+			continue
+		}
+
+		nearestDefRole := ""
+		nearestDefDist := 99.0
+		if defending != nil {
+			nearestDef := nearestOpponent(pl, defending.Players)
+			if nearestDef != nil {
+				nearestDefRole = nearestDef.Role
+				nearestDefDist = distance(pl.X, pl.Y, nearestDef.X, nearestDef.Y)
+			}
+		}
+
+		challengeRadius, attemptRadius, interfereDist, interfereBallGate := offsideInvolvementThresholds(pl.Role, nearestDefRole)
+		dBall := distance(pl.X, pl.Y, state.Ball.X, state.Ball.Y)
+		if dBall <= challengeRadius {
+			cand.ChallengedBall = true
+			e.markOffsideInvolvement(pl.ID, "challenge_ball", pl.X, pl.Y, tickEvents)
+			return
+		}
+
+		if state.Ball.TargetID == pl.ID && dBall <= attemptRadius {
+			cand.AttemptedPlay = true
+			e.markOffsideInvolvement(pl.ID, "attempt_play", pl.X, pl.Y, tickEvents)
+			return
+		}
+
+		if nearestDefDist <= interfereDist && dBall <= interfereBallGate {
+			cand.InterferedOpp = true
+			e.markOffsideInvolvement(pl.ID, "interfere_opponent", pl.X, pl.Y, tickEvents)
+			return
+		}
+	}
+}
+
+func offsideInvolvementThresholds(attackerRole string, defenderRole string) (float64, float64, float64, float64) {
+	challenge := offsideActiveRadius
+	attempt := offsideAttemptRadius
+	interfere := offsideInterfereDist
+	interfereBallGate := offsideAttemptRadius
+
+	a := strings.ToUpper(strings.TrimSpace(attackerRole))
+	d := strings.ToUpper(strings.TrimSpace(defenderRole))
+
+	// Forwards are more likely to actively challenge/attempt play from marginal positions.
+	if a == "ST" || a == "LW" || a == "RW" || a == "LST" || a == "RST" || a == "AM" || a == "LAM" || a == "RAM" {
+		challenge += 0.18
+		attempt += 0.55
+		interfere += 0.20
+		interfereBallGate += 0.45
+	}
+
+	// Deep roles are less likely to trigger active offside involvement quickly.
+	if a == "GK" || strings.Contains(a, "CB") || a == "LB" || a == "RB" || a == "CDM" || a == "DM" {
+		challenge -= 0.14
+		attempt -= 0.50
+		interfere -= 0.18
+		interfereBallGate -= 0.35
+	}
+
+	// Goalkeeper rush-outs increase vision/screening interference likelihood.
+	if d == "GK" {
+		interfere += 0.36
+		interfereBallGate += 0.45
+	}
+
+	if strings.Contains(d, "CB") {
+		interfere += 0.08
+	}
+
+	challenge = clamp(challenge, 0.85, 1.65)
+	attempt = clamp(attempt, 2.7, 5.1)
+	interfere = clamp(interfere, 1.15, 2.35)
+	interfereBallGate = clamp(interfereBallGate, 2.7, 5.2)
+
+	return challenge, attempt, interfere, interfereBallGate
+}
+
 func (e *MatchEngine) updateState(state *rooms.MatchState) []events.MatchEvent {
 	tickEvents := make([]events.MatchEvent, 0, 4)
 
@@ -1039,6 +1415,8 @@ func (e *MatchEngine) updateState(state *rooms.MatchState) []events.MatchEvent {
 		e.resolvePossessionPlay(state, &tickEvents)
 		e.updateBall(state)
 	}
+
+	e.evaluateOffsidePhase(state, &tickEvents)
 
 	if e.rand.Float64() < 0.006 {
 		homePressure := state.HomeTeam.Tactics.Pressure
@@ -1256,15 +1634,15 @@ func (e *MatchEngine) resolvePossessionPlay(state *rooms.MatchState, tickEvents 
 		}
 	case "pass":
 		if highestVal > 40.0 && passDec != nil {
-			e.handlePassWithDecision(state, owner, team, opponent, passDec, tickEvents)
+			e.handlePassWithDecision(state, owner, team, opponent, passDec, false, tickEvents)
 		}
 	case "cross":
 		if highestVal > 48.0 {
-			e.handleCross(state, owner, team, opponent, tickEvents)
+			e.handleCross(state, owner, team, opponent, false, tickEvents)
 		}
 	case "clear":
 		if highestVal > 55.0 {
-			e.handleClearance(state, owner, opponent, tickEvents)
+			e.handleClearance(state, owner, opponent, false, tickEvents)
 		}
 	default:
 		if owner.Pressure < 0.25 && e.rand.Float64() < 0.02 {
@@ -1279,7 +1657,7 @@ func (e *MatchEngine) resolvePossessionPlay(state *rooms.MatchState, tickEvents 
 	}
 }
 
-func (e *MatchEngine) handlePassWithDecision(state *rooms.MatchState, owner *rooms.Player, team *rooms.Team, opponent *rooms.Team, decision *passDecision, tickEvents *[]events.MatchEvent) {
+func (e *MatchEngine) handlePassWithDecision(state *rooms.MatchState, owner *rooms.Player, team *rooms.Team, opponent *rooms.Team, decision *passDecision, offsideExempt bool, tickEvents *[]events.MatchEvent) {
 	if decision == nil || decision.target == nil {
 		return
 	}
@@ -1343,15 +1721,15 @@ func (e *MatchEngine) handlePassWithDecision(state *rooms.MatchState, owner *roo
 		})
 	}
 
-	e.startPassFlight(state, owner, team.ID, targetID, targetX, targetY, decision.initialSpeed, decision.isLob)
+	e.startPassFlight(state, owner, team.ID, targetID, targetX, targetY, decision.initialSpeed, decision.isLob, passType, offsideExempt)
 }
 
-func (e *MatchEngine) handlePass(state *rooms.MatchState, owner *rooms.Player, team *rooms.Team, opponent *rooms.Team, tickEvents *[]events.MatchEvent) {
+func (e *MatchEngine) handlePass(state *rooms.MatchState, owner *rooms.Player, team *rooms.Team, opponent *rooms.Team, offsideExempt bool, tickEvents *[]events.MatchEvent) {
 	decision := e.bestPassDecision(state, owner, team, opponent)
-	e.handlePassWithDecision(state, owner, team, opponent, decision, tickEvents)
+	e.handlePassWithDecision(state, owner, team, opponent, decision, offsideExempt, tickEvents)
 }
 
-func (e *MatchEngine) handleCross(state *rooms.MatchState, owner *rooms.Player, team *rooms.Team, opponent *rooms.Team, tickEvents *[]events.MatchEvent) {
+func (e *MatchEngine) handleCross(state *rooms.MatchState, owner *rooms.Player, team *rooms.Team, opponent *rooms.Team, offsideExempt bool, tickEvents *[]events.MatchEvent) {
 	var strikers []*rooms.Player
 	for _, p := range team.Players {
 		if strings.Contains(p.Role, "ST") || strings.Contains(p.Role, "W") || strings.Contains(p.Role, "AM") {
@@ -1366,28 +1744,12 @@ func (e *MatchEngine) handleCross(state *rooms.MatchState, owner *rooms.Player, 
 		target = team.Players[len(team.Players)-1]
 	}
 
-	owner.HasBall = false
-	state.Ball.OwnerID = 0
-	state.Ball.OwnerTeamID = ""
-	state.Ball.PassTeamID = team.ID
-	state.Ball.InFlight = true
-	state.Ball.IsLob = true
-	state.Ball.TargetID = target.ID
-
 	noise := 3.2 - float64(owner.Passing)*0.02
-	state.Ball.TargetX = clamp(target.X+(e.rand.Float64()-0.5)*noise, 0, state.FieldW)
-	state.Ball.TargetY = clamp(target.Y+(e.rand.Float64()-0.5)*noise, 0, state.FieldH)
-
-	dist := distance(owner.X, owner.Y, state.Ball.TargetX, state.Ball.TargetY)
-	state.Ball.FlightTotal = dist
-	state.Ball.FlightLeft = dist
-
-	dx := state.Ball.TargetX - owner.X
-	dy := state.Ball.TargetY - owner.Y
-	state.Ball.VX = dx / dist * 1.85
-	state.Ball.VY = dy / dist * 1.85
-	state.Ball.VZ = 1.15
-	state.Ball.Height = 0.3
+	targetX := clamp(target.X+(e.rand.Float64()-0.5)*noise, 0, state.FieldW)
+	targetY := clamp(target.Y+(e.rand.Float64()-0.5)*noise, 0, state.FieldH)
+	dist := distance(owner.X, owner.Y, targetX, targetY)
+	speed := clamp(1.25+dist*0.018, 1.15, 2.7)
+	e.startPassFlight(state, owner, team.ID, target.ID, targetX, targetY, speed, true, "cross", offsideExempt)
 
 	*tickEvents = append(*tickEvents, events.MatchEvent{
 		Kind:       "cross",
@@ -1398,29 +1760,14 @@ func (e *MatchEngine) handleCross(state *rooms.MatchState, owner *rooms.Player, 
 	})
 }
 
-func (e *MatchEngine) handleClearance(state *rooms.MatchState, owner *rooms.Player, opponent *rooms.Team, tickEvents *[]events.MatchEvent) {
-	owner.HasBall = false
-	state.Ball.OwnerID = 0
-	state.Ball.OwnerTeamID = ""
-	state.Ball.PassTeamID = ""
-	state.Ball.TargetID = 0
-	state.Ball.InFlight = true
-	state.Ball.IsLob = true
+func (e *MatchEngine) handleClearance(state *rooms.MatchState, owner *rooms.Player, opponent *rooms.Team, offsideExempt bool, tickEvents *[]events.MatchEvent) {
 
 	dir := ownerTeam(owner.TeamID, state).AttackDir
-	state.Ball.TargetX = clamp(owner.X+dir*(32.0+e.rand.Float64()*20.0), 10, state.FieldW-10)
-	state.Ball.TargetY = clamp(state.FieldH/2+(e.rand.Float64()-0.5)*35.0, 10, state.FieldH-10)
-
-	dist := distance(owner.X, owner.Y, state.Ball.TargetX, state.Ball.TargetY)
-	state.Ball.FlightTotal = dist
-	state.Ball.FlightLeft = dist
-
-	dx := state.Ball.TargetX - owner.X
-	dy := state.Ball.TargetY - owner.Y
-	state.Ball.VX = dx / dist * 2.2
-	state.Ball.VY = dy / dist * 2.2
-	state.Ball.VZ = 1.35
-	state.Ball.Height = 0.4
+	targetX := clamp(owner.X+dir*(32.0+e.rand.Float64()*20.0), 10, state.FieldW-10)
+	targetY := clamp(state.FieldH/2+(e.rand.Float64()-0.5)*35.0, 10, state.FieldH-10)
+	dist := distance(owner.X, owner.Y, targetX, targetY)
+	speed := clamp(1.35+dist*0.02, 1.35, 2.8)
+	e.startPassFlight(state, owner, owner.TeamID, 0, targetX, targetY, speed, true, "clearance", offsideExempt)
 
 	*tickEvents = append(*tickEvents, events.MatchEvent{
 		Kind:     "clearance",
@@ -1434,7 +1781,7 @@ func (e *MatchEngine) handleShot(state *rooms.MatchState, owner *rooms.Player, o
 	// 1. Calculate Shot Power (Lực sút) in km/h:
 	// A standard shot ranges from 65km/h to 138km/h depending on Shooting stat, Morale, and random noise.
 	baseShotPower := 1.45 + float64(owner.Shooting)/72.0 + e.rand.Float64()*0.55
-	shotSpeedKmh := baseShotPower * 42.0 + float64(owner.Shooting)*0.22 + e.rand.Float64()*12.0
+	shotSpeedKmh := baseShotPower*42.0 + float64(owner.Shooting)*0.22 + e.rand.Float64()*12.0
 	shotSpeedKmh = clamp(shotSpeedKmh, 65.0, 138.0)
 
 	// 2. Calculate GK saving capability (Khả năng chụp của thủ môn) out of 100:
@@ -1444,7 +1791,7 @@ func (e *MatchEngine) handleShot(state *rooms.MatchState, owner *rooms.Player, o
 	if gk != nil {
 		gkID = gk.ID
 		// stats: Defending (as Goalkeeping), Pace (as Agility/Reflexes), Mental, Morale
-		gkSavingCapability = int(clamp(float64(gk.Defending)*0.45 + float64(gk.Pace)*0.25 + float64(gk.Mental)*0.15 + (gk.Morale * 10.0), 10, 99))
+		gkSavingCapability = int(clamp(float64(gk.Defending)*0.45+float64(gk.Pace)*0.25+float64(gk.Mental)*0.15+(gk.Morale*10.0), 10, 99))
 	}
 
 	distGoal := distanceToGoal(owner, state)
@@ -1456,14 +1803,14 @@ func (e *MatchEngine) handleShot(state *rooms.MatchState, owner *rooms.Player, o
 	gkDefenseFactor := float64(gkSavingCapability) / 100.0
 	speedFactor := shotSpeedKmh / 100.0 // 1.0 is average 100km/h
 
-	xg := clamp(0.05 + float64(owner.Shooting)/170.0 + float64(owner.Mental)/500.0 - distGoal/110.0 - defenseBlock, 0.02, 0.72)
-	xg = clamp(xg * speedFactor * (1.8 - gkDefenseFactor * 1.2), 0.01, 0.85)
-	xg = clamp(xg + ownerTeam(owner.TeamID, state).Tactics.ShotRatio*0.1 - opponent.Tactics.Pressure*0.06 + owner.Morale*0.05, 0.01, 0.88)
+	xg := clamp(0.05+float64(owner.Shooting)/170.0+float64(owner.Mental)/500.0-distGoal/110.0-defenseBlock, 0.02, 0.72)
+	xg = clamp(xg*speedFactor*(1.8-gkDefenseFactor*1.2), 0.01, 0.85)
+	xg = clamp(xg+ownerTeam(owner.TeamID, state).Tactics.ShotRatio*0.1-opponent.Tactics.Pressure*0.06+owner.Morale*0.05, 0.01, 0.88)
 
 	isGoal := e.rand.Float64() < xg
 	shotOnTarget := isGoal
 	if !shotOnTarget {
-		onTargetProb := clamp(0.22 + float64(owner.Shooting)/260.0 - distGoal/210.0 - opponent.Tactics.Pressure*0.05, 0.12, 0.66)
+		onTargetProb := clamp(0.22+float64(owner.Shooting)/260.0-distGoal/210.0-opponent.Tactics.Pressure*0.05, 0.12, 0.66)
 		shotOnTarget = e.rand.Float64() < onTargetProb
 	}
 
@@ -1492,9 +1839,9 @@ func (e *MatchEngine) handleShot(state *rooms.MatchState, owner *rooms.Player, o
 		dx := state.Ball.TargetX - owner.X
 		dy := state.Ball.TargetY - owner.Y
 		d := math.Max(math.Sqrt(dx*dx+dy*dy), 0.01)
-		
+
 		// Map ball speed to the shot speed scale
-		ballSpeedScale := clamp(shotSpeedKmh / 42.0, 1.7, 3.2)
+		ballSpeedScale := clamp(shotSpeedKmh/42.0, 1.7, 3.2)
 		state.Ball.VX = dx / d * ballSpeedScale
 		state.Ball.VY = dy / d * ballSpeedScale
 		state.Ball.VZ = 0.28 + e.rand.Float64()*0.42
@@ -1561,6 +1908,7 @@ func (e *MatchEngine) handleShot(state *rooms.MatchState, owner *rooms.Player, o
 			}
 
 			if e.rand.Float64() < 0.45 {
+				e.markOffsideDeflection(gkID, true)
 				*tickEvents = append(*tickEvents, events.MatchEvent{
 					Kind:    "rebound",
 					TeamID:  owner.TeamID,
@@ -1633,7 +1981,7 @@ func (e *MatchEngine) handleShot(state *rooms.MatchState, owner *rooms.Player, o
 		cornerX = 0.5
 		cornerY = 0.5 // Top left flag
 	}
-	
+
 	e.celebration = &celebrationState{
 		scorerID:      owner.ID,
 		teamID:        owner.TeamID,
@@ -1654,7 +2002,7 @@ func (e *MatchEngine) handleFoul(state *rooms.MatchState, defender *rooms.Player
 
 	isPenalty := isInPenaltyArea(attacker, state)
 	distToGoal := distanceToGoal(attacker, state)
-	
+
 	spType := setPieceFarFreeKick
 	if isPenalty {
 		spType = setPiecePenalty
@@ -1717,7 +2065,7 @@ func (e *MatchEngine) handleFoul(state *rooms.MatchState, defender *rooms.Player
 	if attacking.ID == state.HomeTeam.ID {
 		defending = state.AwayTeam
 	}
-	
+
 	// Determine designated kicker
 	var kicker *rooms.Player
 	if spType == setPiecePenalty {
@@ -1878,7 +2226,7 @@ func (e *MatchEngine) handlePenaltyKick(state *rooms.MatchState, fouled *rooms.P
 		cornerX = 0.5
 		cornerY = 0.5 // Top left flag
 	}
-	
+
 	e.celebration = &celebrationState{
 		scorerID:      taker.ID,
 		teamID:        attacking.ID,
@@ -1946,6 +2294,7 @@ func isInPenaltyArea(attacker *rooms.Player, state *rooms.MatchState) bool {
 }
 
 func (e *MatchEngine) prepareKickoffSequence(state *rooms.MatchState, kickoffTeamID string, message string) []events.MatchEvent {
+	e.resetOffsidePhase()
 	kickoffPlayer, receiver := e.resetKickoff(state, kickoffTeamID)
 	tickEvents := []events.MatchEvent{{Kind: "kickoff", TeamID: kickoffTeamID, Message: message}}
 
@@ -1980,7 +2329,7 @@ func (e *MatchEngine) executeKickoffPass(state *rooms.MatchState) []events.Match
 
 	dist := distance(passer.X, passer.Y, receiver.X, receiver.Y)
 	kickoffSpeed := clamp(e.passBallSpeed(passer.Passing, dist, false)*0.64, 0.5, 0.85)
-	e.startPassFlight(state, passer, teamID, receiver.ID, receiver.X, receiver.Y, kickoffSpeed, false)
+	e.startPassFlight(state, passer, teamID, receiver.ID, receiver.X, receiver.Y, kickoffSpeed, false, "kickoff", false)
 
 	return []events.MatchEvent{{
 		Kind:       "pass",
@@ -2146,6 +2495,7 @@ func (e *MatchEngine) checkOutOfBounds(state *rooms.MatchState) bool {
 	if !outX && !outY {
 		return false
 	}
+	e.resetOffsidePhase()
 
 	state.Ball.VX = 0
 	state.Ball.VY = 0
@@ -2160,7 +2510,7 @@ func (e *MatchEngine) checkOutOfBounds(state *rooms.MatchState) bool {
 		// fallback if unknown
 		lastTouchTeam = state.HomeTeam.ID
 	}
-	
+
 	attackingTeam := state.HomeTeam
 	defendingTeam := state.AwayTeam
 	if lastTouchTeam == state.HomeTeam.ID {
@@ -2171,7 +2521,7 @@ func (e *MatchEngine) checkOutOfBounds(state *rooms.MatchState) bool {
 	if outX {
 		// Crossed the goal line (Corner kick or Goal kick)
 		isDefendingSide := (state.Ball.X <= 0.0 && defendingTeam.AttackDir > 0) || (state.Ball.X >= state.FieldW && defendingTeam.AttackDir < 0)
-		
+
 		if isDefendingSide {
 			// Last touched by defending team on their own half -> Corner Kick
 			e.eventQueue = append(e.eventQueue, events.MatchEvent{
@@ -2191,7 +2541,7 @@ func (e *MatchEngine) checkOutOfBounds(state *rooms.MatchState) bool {
 				DefTeamID: defendingTeam.ID,
 				FoulX:     clamp(state.Ball.X, 0.5, state.FieldW-0.5),
 				FoulY:     cornerY, // snap to nearest corner flag
-				TicksLeft: 30, // 3 seconds setup
+				TicksLeft: 30,      // 3 seconds setup
 			}
 		} else {
 			// Last touched by attacking team -> Goal Kick
@@ -2225,7 +2575,7 @@ func (e *MatchEngine) checkOutOfBounds(state *rooms.MatchState) bool {
 			TeamID:  attackingTeam.ID,
 			Message: "Throw-in awarded.",
 		})
-		
+
 		e.setPiece = &setPieceState{
 			Type:      setPieceThrowIn,
 			TeamID:    attackingTeam.ID,
@@ -2235,7 +2585,7 @@ func (e *MatchEngine) checkOutOfBounds(state *rooms.MatchState) bool {
 			TicksLeft: 20,
 		}
 	}
-	
+
 	// Pick kicker for corner and throw-in
 	if e.setPiece.KickerObj == nil {
 		var kicker *rooms.Player
@@ -2301,7 +2651,7 @@ func (e *MatchEngine) broadcastTick(state *rooms.MatchState, tick int, tickEvent
 		})
 	}
 
- 	payload := events.TickPayload{
+	payload := events.TickPayload{
 		Type:         "match_tick",
 		MatchID:      state.MatchID,
 		HomeTeamName: state.HomeTeam.Name,
@@ -2324,8 +2674,8 @@ func (e *MatchEngine) broadcastTick(state *rooms.MatchState, tick int, tickEvent
 		},
 		Players:  players,
 		Reserves: reserves,
-		Events:  tickEvents,
-		Debug:   e.buildDebugSnapshot(state),
+		Events:   tickEvents,
+		Debug:    e.buildDebugSnapshot(state),
 	}
 
 	bytes, err := json.Marshal(payload)
@@ -2344,6 +2694,40 @@ func (e *MatchEngine) buildDebugSnapshot(state *rooms.MatchState) events.DebugSn
 			GKBuildUpBias:      round2(e.runtime.GKBuildUpBias),
 			TempoScale:         round2(e.runtime.TempoScale),
 		},
+	}
+
+	if e.offside != nil && e.offside.Active {
+		ph := e.offside
+		cand := make([]events.OffsideCandidateDebugSnapshot, 0, len(ph.Candidates))
+		for _, c := range ph.Candidates {
+			cand = append(cand, events.OffsideCandidateDebugSnapshot{
+				PlayerID:      c.PlayerID,
+				X:             round2(c.SnapshotX),
+				Y:             round2(c.SnapshotY),
+				MarkedOffside: c.MarkedOffside,
+				AttemptedPlay: c.AttemptedPlay,
+				Challenged:    c.ChallengedBall,
+				Interfered:    c.InterferedOpp,
+			})
+		}
+
+		debug.Offside = &events.OffsideDebugSnapshot{
+			Active:             true,
+			AttackTeamID:       ph.AttackingTeamID,
+			DefendingTeamID:    ph.DefendingTeamID,
+			KickSource:         ph.KickSource,
+			KickBallX:          round2(ph.KickBallX),
+			KickBallY:          round2(ph.KickBallY),
+			SecondLastLineX:    round2(e.progressToX(state, ph.AttackingTeamID, ph.SecondLastDefProg)),
+			OffsideLineX:       round2(e.progressToX(state, ph.AttackingTeamID, ph.OffsideLineProg)),
+			PendingWhistle:     ph.PendingWhistle,
+			WhistleTicksLeft:   ph.WhistleTicksLeft,
+			OffenderID:         ph.OffenderID,
+			OffenceReason:      ph.OffenceReason,
+			LastDeflectionID:   ph.LastDeflectionByID,
+			LastDeflectionSave: ph.LastDeflectionIsSave,
+			Candidates:         cand,
+		}
 	}
 
 	if state.Ball.OwnerID == 0 {
@@ -2662,7 +3046,7 @@ func estimatePassSuccess(owner *rooms.Player, target *rooms.Player, team *rooms.
 
 	spaceBoost := clamp(space/24.0, 0, 0.2)
 	tacticBoost := team.Tactics.PassRatio*0.08 - opponent.Tactics.Pressure*0.06
-	
+
 	// Heavy pressure penalty: passing success rate falls by up to 52% if opponent defenders are tight
 	pressurePenalty := pressure * 0.52
 
@@ -2685,13 +3069,15 @@ func (e *MatchEngine) passBallSpeed(ownerPassSkill int, dist float64, isLob bool
 	return clamp((0.98+dist*0.020)*e.runtime.PassSpeedScale*skillFactor, 0.95, 2.45)
 }
 
-func (e *MatchEngine) startPassFlight(state *rooms.MatchState, owner *rooms.Player, passTeamID string, targetID int, targetX float64, targetY float64, speed float64, isLob bool) {
+func (e *MatchEngine) startPassFlight(state *rooms.MatchState, owner *rooms.Player, passTeamID string, targetID int, targetX float64, targetY float64, speed float64, isLob bool, source string, offsideExempt bool) {
 	dx := targetX - owner.X
 	dy := targetY - owner.Y
 	d := math.Sqrt(dx*dx + dy*dy)
 	if d < 0.01 {
 		return
 	}
+
+	e.beginOffsidePhase(state, passTeamID, owner.ID, targetID, owner.X, owner.Y, source, offsideExempt)
 
 	owner.HasBall = false
 	state.Ball.OwnerID = 0
@@ -2767,6 +3153,28 @@ func (e *MatchEngine) tryResolveFlightContact(state *rooms.MatchState, tickEvent
 
 	chance := clamp(0.2+bestSkill*0.34, 0.2, 0.9)
 	if e.rand.Float64() > chance {
+		if best.TeamID != passingTeamID {
+			deflectChance := clamp(0.16+bestSkill*0.24, 0.12, 0.58)
+			if e.rand.Float64() < deflectChance {
+				state.Ball.LastTouchTeamID = best.TeamID
+				state.Ball.OwnerID = 0
+				state.Ball.OwnerTeamID = ""
+				state.Ball.PassTeamID = passingTeamID
+				state.Ball.InFlight = true
+				state.Ball.VX = -state.Ball.VX * (0.22 + e.rand.Float64()*0.32)
+				state.Ball.VY += (e.rand.Float64() - 0.5) * 0.7
+				state.Ball.VZ = clamp(state.Ball.VZ+0.08+e.rand.Float64()*0.2, 0.08, 1.2)
+				e.markOffsideDeflection(best.ID, false)
+				*tickEvents = append(*tickEvents, events.MatchEvent{
+					Kind:          "blocked_shot",
+					TeamID:        best.TeamID,
+					PlayerID:      best.ID,
+					InterceptorID: best.ID,
+					ReceiverID:    intendedReceiver,
+					Message:       "Deflection: defender gets a touch but cannot control",
+				})
+			}
+		}
 		return false
 	}
 
@@ -3121,7 +3529,7 @@ func (e *MatchEngine) updateSetPieceTick(state *rooms.MatchState) {
 			dir := ownerGoalDirection(e.setPiece.TeamID, state)
 			targetX := e.setPiece.FoulX - dir*10.0
 			targetY := p.HomeY
-			
+
 			if p.TeamID == e.setPiece.DefTeamID {
 				targetX = e.setPiece.FoulX - dir*9.5
 			}
@@ -3152,7 +3560,7 @@ func (e *MatchEngine) updateSetPieceTick(state *rooms.MatchState) {
 			// Players offer short options or mark tightly near the touchline
 			targetX := p.HomeX*0.7 + e.setPiece.FoulX*0.3
 			targetY := p.HomeY*0.4 + e.setPiece.FoulY*0.6
-			
+
 			distToBall := distance(targetX, targetY, e.setPiece.FoulX, e.setPiece.FoulY)
 			if p.TeamID == e.setPiece.DefTeamID && distToBall < 3.0 {
 				targetX = e.setPiece.FoulX + (targetX-e.setPiece.FoulX)/distToBall*3.5
@@ -3212,7 +3620,7 @@ func (e *MatchEngine) executeSetPiece(state *rooms.MatchState) []events.MatchEve
 			PlayerID: e.setPiece.KickerID,
 			Message:  "Swings the corner into the box!",
 		})
-		e.handleCross(state, kicker, team, opponent, &tickEvents)
+		e.handleCross(state, kicker, team, opponent, true, &tickEvents)
 	} else if e.setPiece.Type == setPieceGoalKick {
 		e.giveBallToPlayer(state, kicker)
 		tickEvents = append(tickEvents, events.MatchEvent{
@@ -3222,7 +3630,7 @@ func (e *MatchEngine) executeSetPiece(state *rooms.MatchState) []events.MatchEve
 			Message:  "Goalkeeper launches a long ball upfield.",
 		})
 		// Force a long pass to strikers
-		e.handleClearance(state, kicker, opponent, &tickEvents)
+		e.handleClearance(state, kicker, opponent, true, &tickEvents)
 	} else if e.setPiece.Type == setPieceThrowIn {
 		e.giveBallToPlayer(state, kicker)
 		tickEvents = append(tickEvents, events.MatchEvent{
@@ -3231,7 +3639,7 @@ func (e *MatchEngine) executeSetPiece(state *rooms.MatchState) []events.MatchEve
 			PlayerID: e.setPiece.KickerID,
 			Message:  "Throws the ball back into play.",
 		})
-		e.handlePass(state, kicker, team, opponent, &tickEvents)
+		e.handlePass(state, kicker, team, opponent, true, &tickEvents)
 	} else {
 		// Far free kick - treated as a tactical pass execution
 		e.giveBallToPlayer(state, kicker)
@@ -3241,7 +3649,7 @@ func (e *MatchEngine) executeSetPiece(state *rooms.MatchState) []events.MatchEve
 			PlayerID: e.setPiece.KickerID,
 			Message:  "Takes the free kick to restart play.",
 		})
-		e.handlePass(state, kicker, team, opponent, &tickEvents)
+		e.handlePass(state, kicker, team, opponent, false, &tickEvents)
 	}
 
 	e.setPiece = nil
@@ -3369,6 +3777,7 @@ func (e *MatchEngine) executeDirectFreeKick(state *rooms.MatchState, tickEvents 
 			}
 
 			if e.rand.Float64() < 0.35 {
+				e.markOffsideDeflection(gkID, true)
 				*tickEvents = append(*tickEvents, events.MatchEvent{
 					Kind:    "rebound",
 					TeamID:  owner.TeamID,

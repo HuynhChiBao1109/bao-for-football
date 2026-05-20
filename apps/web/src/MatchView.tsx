@@ -50,6 +50,22 @@ const EV = {
     bdr: '#f97316',
     dur: 2200,
   },
+  offside: {
+    label: '🚩 Việt Vị',
+    title: 'OFFSIDE',
+    color: '#fda4af',
+    bg: '#20060a',
+    bdr: '#fb7185',
+    dur: 2600,
+  },
+  offside_warning: {
+    label: '🧑‍⚖️ Delay Cờ',
+    title: 'DELAYED FLAG',
+    color: '#fbcfe8',
+    bg: '#220918',
+    bdr: '#f472b6',
+    dur: 2000,
+  },
   free_kick: {
     label: '🦵 Đá Phạt',
     title: 'ĐÁ PHẠT',
@@ -347,6 +363,7 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
   const [debugOverlay, setDebugOverlay] = useState({
     gameplay: null,
     passPreview: null,
+    offside: null,
   });
   const [fieldFx, setFieldFx] = useState([]); // on-SVG effects
   const [matchPhase, setMatchPhase] = useState('playing'); // 'playing'|'half_time'|'second_half'|'full_time'
@@ -402,7 +419,7 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
     matchStatsRef.current = INITIAL_MATCH_STATS;
     setDisplayPlayers([]);
     setDisplayBall({ x: 50, y: 32, height: 0, vx: 0, vy: 0 });
-    setDebugOverlay({ gameplay: null, passPreview: null });
+    setDebugOverlay({ gameplay: null, passPreview: null, offside: null });
     setFieldFx([]);
     setMatchPhase('playing');
     targetsRef.current = new Map();
@@ -619,6 +636,7 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
         setDebugOverlay({
           gameplay: payload.debug.gameplay || null,
           passPreview: payload.debug.passPreview || null,
+          offside: normalizeOffsideDebug(payload.debug.offside),
         });
       }
 
@@ -1373,6 +1391,66 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
               </g>
             )}
 
+            {debugOverlay.offside?.active && (
+              <g pointerEvents="none">
+                <line
+                  x1={debugOverlay.offside.offsideLineX}
+                  y1="1"
+                  x2={debugOverlay.offside.offsideLineX}
+                  y2="63"
+                  stroke={debugOverlay.offside.pendingWhistle ? '#f472b6' : '#fb7185'}
+                  strokeWidth="0.35"
+                  strokeDasharray="0.8 0.9"
+                  opacity="0.9"
+                />
+                <line
+                  x1={debugOverlay.offside.secondLastLineX}
+                  y1="1"
+                  x2={debugOverlay.offside.secondLastLineX}
+                  y2="63"
+                  stroke="#fda4af"
+                  strokeWidth="0.28"
+                  strokeDasharray="0.6 1.1"
+                  opacity="0.55"
+                />
+                {debugOverlay.offside.candidates?.map((cand) => (
+                  <g key={cand.playerId}>
+                    <circle
+                      cx={cand.x}
+                      cy={cand.y}
+                      r={cand.playerId === debugOverlay.offside.offenderId ? '1.45' : '1.05'}
+                      fill="none"
+                      stroke={cand.playerId === debugOverlay.offside.offenderId ? '#f43f5e' : '#fda4af'}
+                      strokeWidth={cand.playerId === debugOverlay.offside.offenderId ? '0.42' : '0.28'}
+                    />
+                    {(cand.challenged || cand.attemptedPlay || cand.interfered) && (
+                      <text
+                        x={cand.x}
+                        y={cand.y - 1.7}
+                        textAnchor="middle"
+                        fill="#fecdd3"
+                        fontSize="1.5"
+                        fontWeight="700"
+                      >
+                        active
+                      </text>
+                    )}
+                  </g>
+                ))}
+                {debugOverlay.offside.pendingWhistle && (
+                  <text
+                    x={debugOverlay.offside.offsideLineX + 0.8}
+                    y="3"
+                    fill="#fbcfe8"
+                    fontSize="1.6"
+                    fontWeight="700"
+                  >
+                    DELAY {debugOverlay.offside.whistleTicksLeft}
+                  </text>
+                )}
+              </g>
+            )}
+
             {/* Players */}
             {displayPlayers.map((player) => {
               const isHome = player.teamId === 'home';
@@ -1791,6 +1869,28 @@ function lerp(a, b, t) {
 
 function clamp(v, min, max) {
   return Math.min(max, Math.max(min, v));
+}
+
+function normalizeOffsideDebug(raw) {
+  if (!raw?.active) return null;
+
+  const lineX = Number(raw.offsideLineX);
+  const secondLineX = Number(raw.secondLastLineX);
+  return {
+    ...raw,
+    offsideLineX: Number.isFinite(lineX) ? clamp(lineX, 0, F.w) : 50,
+    secondLastLineX: Number.isFinite(secondLineX) ? clamp(secondLineX, 0, F.w) : 50,
+    whistleTicksLeft: Math.max(0, Number(raw.whistleTicksLeft || 0)),
+    candidates: Array.isArray(raw.candidates)
+      ? raw.candidates
+          .map((c) => ({
+            ...c,
+            x: clamp(Number(c.x || 0), 0, F.w),
+            y: clamp(Number(c.y || 0), 0, F.h),
+          }))
+          .slice(0, 16)
+      : [],
+  };
 }
 
 function deriveMatchWebSocketURL(rawURL) {
