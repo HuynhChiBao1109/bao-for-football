@@ -1,139 +1,242 @@
-# FIFAM 11v11 - Full-stack Boilerplate
+# FIFAM
 
-Web game boilerplate for football management 11v11.
+FIFAM la du an game football manager gom backend Gin (Go) va frontend React.
 
-## Tech Stack
+## 1) Tech Stack
 
-- Frontend: React + Vite + Tailwind CSS
-- Backend: Golang + Gin
-- Database: MySQL (local dev default `root/1234`)
-- Real-time: WebSocket
+### Backend (apps/service-core)
 
-## Repository Layout
+- Language: Go 1.25
+- HTTP framework: Gin
+- ORM + DB driver: GORM + MySQL driver
+- Auth: JWT (golang-jwt/jwt/v5) + bcrypt
+- Realtime transport: WebSocket (gorilla/websocket) + SSE
+- Live reload dev: air
 
-- `apps/web`: Frontend client
-- `apps/service-core`: Core domain APIs + realtime match engine + websocket/sse
-- `deployments/docker`: Local Docker Compose files
-- `database`: SQL helper files
+### Frontend (apps/web)
 
-## Quick Start (Local)
+- React 19 + TypeScript + Vite
+- Routing: react-router-dom
+- Server state: @tanstack/react-query
+- Styling: TailwindCSS v4 + CSS modules/page CSS
+- Tooling: ESLint + Prettier
 
-1. Run MySQL (Docker):
+### Database
 
-```bash
-docker compose -f deployments/docker/docker-compose.dev.yml up -d mysql
+- MySQL 8.x
+- Schema migration + bootstrap duoc quan ly boi GORM AutoMigrate va bootstrap code trong backend
+
+### Infrastructure / DevOps
+
+- Docker Compose dev stack (mysql + service-core + web)
+- Monorepo voi go.work
+
+## 2) Source Code Structure
+
+```text
+fifam/
+|- go.work
+|- README.md
+|- apps/
+|  |- service-core/
+|  |  |- cmd/server/main.go                # entrypoint backend
+|  |  |- internal/
+|  |  |  |- config/                        # env config
+|  |  |  |- platform/mysql/                # db connection, automigrate, seed
+|  |  |  |- middleware/                    # cors middleware
+|  |  |  |- auth/                          # auth/login/register/jwt/team assignment
+|  |  |  |- club/                          # club detail
+|  |  |  |- player/                        # user player cards + stat allocation
+|  |  |  |- playeradmin/                   # admin CRUD player/country/league/club/skill
+|  |  |  |- tactics/                       # tactics config + lineup + realtime push
+|  |  |  |- ai/                            # AI campaign 50 stages
+|  |  |  |- gacha/                         # gacha roll + pity + budget deduct
+|  |  |  |- gachaadmin/                    # admin gacha banner
+|  |  |  |- match/                         # start/finalize match
+|  |  |  |- realtime/                      # hub, broadcaster, ws/sse transport
+|  |  |- uploads/image/                    # uploaded image files
+|  |- web/
+|  |  |- src/
+|  |  |  |- App.tsx                        # route + guard
+|  |  |  |- layouts/AppLayout.tsx          # app shell + starter team modal
+|  |  |  |- pages/                         # user pages (club, players, tactics, ai, pvp, gacha)
+|  |  |  |- pages/admin/                   # admin login + admin dashboard
+|  |  |  |- hooks/                         # react-query hooks for all APIs
+|  |  |  |- components/                    # UI and feature components
+|  |  |  |- lib/                           # api client, query client, constants
+|  |  |  |- types/                         # shared TS types
+|- database/
+|  |- schema.sql                           # notes: source of truth la GORM bootstrap
+|  |- migrate.go                           # data migration/bootstrap helper
+|- deployments/docker/
+|  |- docker-compose.dev.yml
 ```
 
-2. Start frontend:
+## 3) Current Features
+
+### Authentication & Session
+
+- User register/login
+- Admin login route rieng
+- JWT auth cho user va admin
+- Session endpoint (`/api/v1/auth/me`)
+- Starter team assignment cho user moi (`/api/v1/auth/team`)
+
+### Club Hub
+
+- Club dashboard sau login
+- Load club detail theo team da gan
+- Hien budget, rank point, logo, league
+
+### Players (User)
+
+- List danh sach user player cards
+- Auto level-up theo EXP (toi da level 36)
+- Allocate/de-allocate stats theo diem hien co
+- Validate khong am bonus stat, khong vuot current points
+
+### Tactics
+
+- Support 2 formation: `4-3-3`, `4-4-2`
+- Config passRatio/shotRatio/pressure
+- Gameplay tuning profile theo mode (`ranked`, `casual`, `ai_campaign`)
+- Save lineup (slot + position + userPlayerId)
+- Push tactics vao realtime match engine
+
+### AI Campaign
+
+- Campaign 50 stages
+- Stage progression: thang moi mo khoa stage tiep theo
+- Stage detail (club, enemy stat bonus, reward)
+- Submit result stage (win/lose)
+- Grant reward money + player exp khi win
+
+### Match & Realtime
+
+- Start match (`/api/v1/matches/start`)
+- Finalize match (`/api/v1/matches/:matchId/finalize`)
+- Realtime tick stream qua:
+  - WebSocket: `/ws`
+  - SSE: `/sse/match`
+- Reconnect replay support tick moi nhat theo matchId
+- Realtime substitution endpoint (`/realtime/substitute`)
+
+### Gacha
+
+- List active banners
+- Roll banner (`/api/v1/gacha/roll`)
+- Pity logic:
+  - Ty le special co ban: 10%
+  - Guaranteed special khi >= 80 rolls khong ra special
+- Tru budget team moi roll (cost hien tai: 360000)
+- Add player card vao user inventory sau roll
+- Track progress (`totalRolls`, `rollsSinceSpecial`)
+
+### Admin Features
+
+- Country management: list/create
+- League management: list/create/update/delete
+- Club management: create
+- Player management:
+  - list/detail/create/update/delete
+  - upload avatar/image
+  - stat validation + season validation + position profile
+- Skill management:
+  - list/create skill
+  - assign/remove skill cho player
+- Gacha banner management:
+  - upload banner image
+  - create banner (bannerCode, bannerName, playerId, timeEnd)
+  - list banners
+
+### Data & Platform
+
+- Tu dong tao database neu chua ton tai
+- AutoMigrate schema khi service startup
+- Seed countries mac dinh
+- Trigger gioi han user toi da 50 player cards
+
+### Frontend UX Status
+
+- Da co flow day du cho: Auth, Club, Players, Tactics, AI Campaign, Gacha, Admin
+- PvP page hien tai o muc lobby/placeholder UI, cho backend matchmaking realtime full flow
+- Match viewer co event feed + score + stats + animation layer
+
+## 4) Main API Groups
+
+- Public:
+  - `GET /health`
+  - `POST /api/v1/auth/login`
+  - `POST /api/v1/auth/register`
+  - `POST /admin/login`
+  - `GET /api/v1/auth/clubs`
+
+- Authenticated user (`/api/v1`):
+  - auth/session/team
+  - clubs
+  - ai stages/result
+  - tactics
+  - players
+  - gacha (roll/progress/banners)
+  - matches (start/finalize)
+
+- Admin (`/api/v1/admin`):
+  - countries/leagues/clubs
+  - players CRUD
+  - skills CRUD gan vao player
+  - upload image
+  - gacha banners
+
+## 5) Run Project
+
+### Option A - Docker (recommended for quick start)
+
+```bash
+cd deployments/docker
+docker compose -f docker-compose.dev.yml up -d
+```
+
+Default services:
+
+- MySQL: `localhost:3306`
+- Backend: `http://localhost:8081`
+- Frontend: `http://localhost:5173`
+
+### Option B - Local dev
+
+1. Start MySQL va tao DB `fifam_dev` (neu chua co)
+2. Run backend:
+
+```bash
+cd apps/service-core
+go mod tidy
+air -c .air.toml
+```
+
+3. Run frontend:
 
 ```bash
 cd apps/web
+npm install
 npm run dev
 ```
 
-3. Start backend service:
+### Important ENV
 
-```bash
-cd apps/service-core && go run ./cmd/server
-```
+Backend (`apps/service-core`):
 
-### Feature
+- `SERVICE_CORE_PORT` (default `8081`)
+- `MYSQL_DSN` (default `root:1234@tcp(localhost:3306)/fifam_dev?parseTime=true`)
+- `JWT_SECRET` (default `fifam-dev-secret`)
+- `ADMIN_USERNAME` (default `admin`)
+- `ADMIN_PASSWORD` (default `admin123`)
 
-- Đăng ký, đăng nhập , khi mới tạo account sẽ được chọn đội bóng, đặt tên CLB => bao gồm 22 thẻ cầu thủ mùa thường, tối đa 1 user có thể có 50 cầu thủ
+Frontend (`apps/web`):
 
-- main page sẽ bao gồm quản lí đội bóng, chiến thuật, đấu với máy, đấu với người, gacha cầu thủ, và admin page ( chỉ admin mới có quyền truy cập )
+- `VITE_API_BASE_URL` (default `http://localhost:8081`)
+- `VITE_WS_URL` (default `ws://localhost:8081/ws`)
 
-- Thẻ cầu thủ bao gồm chiều cao, chuyền sút, và các chỉ số cơ bản của cầu thủ + kĩ năng (các kĩ năng đặc biệt có thể buff chỉ số), câu lạc bộ gốc và quốc gia theo `country_id`. Dữ liệu quốc gia lưu ở bảng `countries` theo format `name`, `code`, `flag` và khi lấy chi tiết cầu thủ sẽ map để hiển thị ảnh cờ quốc gia. Tất cả cầu thủ có các field chỉ số cơ bản giống nhau, chỉ có kĩ năng đặc biệt là có thể khác. Tổng chỉ số cầu thủ bằng trung bình các chỉ số. Có các thẻ mùa đặc biệt và mùa thường. Cầu thủ có 36 level, mỗi level tăng có thể tăng chỉ số (tùy ý hoặc tự động).
+## 6) Notes
 
-- Các kĩ năng đặc biệt bao gồm các hình ảnh hoặc icon đại diện
-
-- Các chế độ thi đấu:
-
-* đấu với máy theo từng màn: tạo sẵn 50 màn (màn 1 -> màn 50), mỗi màn có phần thưởng tiền + EXP tăng cho mỗi cầu thủ thi đấu.
-* phải thắng màn hiện tại mới mở màn kế tiếp.
-* chỉ khi người chơi bấm nút "Thi đấu" thì mới mở màn hình thi đấu.
-* mỗi màn sẽ random CLB đối thủ và đội hình 22 cầu thủ của CLB đó; chỉ số cầu thủ đối thủ tăng dần khi qua màn mới.
-
-* đấu với người ( rank) : ghép trận tự động => và thắng sẽ phân hạng từ nghiệp dư, bán chuyên, chuyên nghiệp, hạng 3, hạng 2, hạng 1 và siêu sao. 10 trận nếu thắng 6 sẽ lên hạng
-
-- Màn hình thi đấu ( quan trọng nhất )
-
-* tổng trận đấu : 2p
-
-* tự động thi đấu và show tình huống bên phải
-
-* màn hình sân banh sẽ gồm 22 cầu thủ ( các hình tròn - avatar cầu thủ - tên ) sẽ di chuyển, chuyền , sút hay các tính huống đá phạt, var, phạt góc , phạm lỗi, thẻ vàng. thẻ đỏ , sẽ đầy đủ.
-
-* các hình tròn ( đại diện cho mỗi cầu thủ ) hãy chỉnh logic di chuyển cho thực tế vận tốc, chuyền banh ....
-
-- Chỉnh chiến thuật các thông số chiến thuật như sơ đồ, pressing, tỉ lệ chuyền, sút , phòng thủ tấn công , áp lực. sẽ ảnh hưởng đến AI di chuyển của cầu thủ.
-
-- Thêm chức năng quay gacha các cầu thủ mùa giải đặc biệt ( 50 - 60 ) lần roll sẽ chắc chắn ra 1 cầu thủ trong gói
-
-- tạo 1 admin page để thêm cầu thủ đặc biệt hoặc cầu thủ thường
-
-## Thông tin thẻ cầu thủ
-
-- Tên cầu thủ, avatar, quốc tịch, câu lạc bộ, mùa giải (bình thường hay đặc biệt)
-- Chỉ số cơ bản (không thể chỉnh sửa): Chiều cao, độ dài chân, format body type (dựa trên chiều cao và độ dài chân),
-- Chỉ số kỹ năng (có thể tăng khi lên level): Dứt điểm, chuyền ngắn, chuyền dài, tầm nhìn, GK REACH, nhận thức tấn công, nhận thức phòng thủ, GK parrying, GK reflexes, tranh chấp, tắc bóng, xoạc bóng, tốc độ, thể lực, thăng bằng, kỹ thuật, quyết đoán, sức mạnh, rê bóng, sút xoáy
-- Kỹ năng đặc biệt (admin sẽ thêm vào) và có thể chỉnh sửa: Bao gồm image kỹ năng và hiệu ứng buff chỉ số (ví dụ: +5 tốc độ, +3 dứt điểm, ...)
-
-## Event trong trận
-
-### giao banh khi bắt đầu trận, sau ghi bàn, sang hiệp 2
-
-### Logic Phạm Lỗi (Foul & Card Simulation Logic)
-
-Match Engine Core xử lý logic phạm lỗi dựa trên các thông số chiến thuật (Pressing, Aggression), chỉ số ẩn của cầu thủ, và trạng thái va chạm vật lý trên sân.
-
-#### 1. Điều kiện kích hoạt Phạm lỗi (Trigger Conditions)
-
-- **Tỷ lệ phạm lỗi (Foul Probability):** Phụ thuộc trực tiếp vào mức độ **Pressing/Áp lực** trong cài đặt chiến thuật của đội phòng ngự và chỉ số **Phòng ngự (Defense/Tackling)** của cầu thủ tranh chấp.
-- **Công thức gợi ý cho Match Engine:**
-  $$P(foul) = \text{Base\_Rate} \times \text{Tactical\_Pressing\_Modifier} \times (1 - \text{Tackling\_Attribute})$$
-- Nếu Random Chance trúng tỷ lệ phạm lỗi khi 2 cầu thủ vòng tròn va chạm (Collision) gần bóng, trận đấu tạm dừng để xử lý Foul Event.
-
-#### 2. Phân loại lỗi và Thẻ phạt (Foul Severity & Cards)
-
-Khi xảy ra phạm lỗi, Match Engine sẽ tính toán mức độ nghiêm trọng (Severity Score từ `0.0` đến `1.0`):
-
-- **Lỗi nhẹ (Minor Foul - `Score < 0.5`):**
-  - Trọng tài thổi còi phạt đền/phạt trực tiếp/phạt gián tiếp.
-  - Nhắc nhở (No card).
-- **Thẻ vàng (Yellow Card - `0.5 <= Score < 0.85`):**
-  - Phạt thẻ vàng cho cầu thủ phạm lỗi.
-  - **Logic cộng dồn:** Nếu cầu thủ đã có 1 thẻ vàng trước đó $\rightarrow$ Tự động chuyển thành **Thẻ đỏ (Red Card)** và đuổi khỏi sân.
-- **Thẻ đỏ trực tiếp (Straight Red Card - `Score >= 0.85`):**
-  - Phạm lỗi nghiêm trọng (xoạc bóng từ phía sau, ngăn chặn cơ hội ghi bàn mười mươi).
-  - Cầu thủ bị truất quyền thi đấu ngay lập tức.
-
-#### 3. Hệ quả sau khi dính Thẻ đỏ (Red Card Consequences)
-
-- **Frontend (UI/UX):**
-  - Vòng tròn avatar của cầu thủ bị thẻ đỏ sẽ **bị xóa khỏi sa bàn 2D** (Sân bóng chỉ còn di chuyển 10 cầu thủ hoặc ít hơn).
-  - Hiện thông báo Event Log ở sidebar bên phải: `[Phút X] - [Tên cầu thủ] nhận thẻ đỏ và rời sân!`
-- **Backend (Match Engine):**
-  - Cập nhật mảng danh sách cầu thủ đang thi đấu trên sân (Active Players).
-  - **Ảnh hưởng chiến thuật:** AI di chuyển của các cầu thủ còn lại phải tự động co cụm hoặc dãn đội hình để bù đắp vào vị trí trống (Zone) của cầu thủ bị đuổi, dẫn đến giảm chỉ số phòng thủ chung của toàn đội.
-
-#### 4. Trạng thái bóng chết sau Phạm lỗi (Set Pieces Trigger)
-
-Tùy thuộc vào vị trí (Tọa độ X, Y) xảy ra va chạm trên sa bàn:
-
-- **Ngoài vòng cấm (Outside Penalty Area):** Khởi động trạng thái **Đá phạt (Free Kick)**. Cầu thủ sút phạt tốt nhất sẽ thực hiện chuyền bóng hoặc sút thẳng (tùy khoảng cách đến khung thành).
-- **Trong vòng cấm đội phòng ngự (Inside Penalty Area):** Khởi động trạng thái **Phạt đền (Penalty Kick)**.
-  - Chuyển màn hình về trạng thái 1v1 (Thủ môn vs Cầu thủ sút phạt).
-  - Tỷ lệ ghi bàn dựa trên: `Chỉ số Sút của Tiền đạo` vs `Chỉ số Thủ môn`.
-
-#### 5. Logic VAR (Video Assistant Referee)
-
-- **Tỷ lệ xuất hiện:** `5% - 10%` đối với các tình huống nhạy cảm (Phạt đền Penalty hoặc Thẻ đỏ trực tiếp).
-- **Trạng thái Game Loop:**
-  1.  Trận đấu tạm dừng $\rightarrow$ Hiển thị icon VAR trên màn hình.
-  2.  Event log thông báo: _"Trọng tài đang kiểm tra VAR..."_
-  3.  Sau 3 giây delay, đưa ra quyết định cuối cùng (Bẻ còi hủy phạt đền/thẻ phạt hoặc giữ nguyên quyết định).
-
-
-## Position cầu thủ
-- GK, LB, CB, RB, CDM, CM, CAM, LW, RW, LMF, RMF, LWB, RWB, DMF, CMF, AMF, CF
+- File `database/schema.sql` chi la note huong dan; schema source of truth dang nam o backend bootstrap/migration code.
+- Mot so module nhu `match`, `realtime`, `club`, `gacha` da vao production-shape; `pvp matchmaking` van trong giai doan hoan thien.
