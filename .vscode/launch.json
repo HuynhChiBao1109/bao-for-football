@@ -2,26 +2,30 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Debug service-core",
-      "type": "go",
+      "name": "Debug NestJS server",
+      "type": "pwa-node",
       "request": "launch",
-      "mode": "debug",
-      "program": "${workspaceFolder}/apps/service-core/cmd/server",
-      "cwd": "${workspaceFolder}/apps/service-core",
+      "runtimeArgs": [
+        "--nolazy",
+        "-r",
+        "ts-node/register"
+      ],
+      "program": "${workspaceFolder}/apps/server/src/main.ts",
+      "cwd": "${workspaceFolder}/apps/server",
       "env": {
-        "GO111MODULE": "on"
-      }
-    }, 
+        "NODE_ENV": "development"
+      },
+      "autoAttachChildProcesses": true,
+      "restart": true,
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
     {
-      "name": "Debug =migrate",
-      "type": "go",
+      "name": "Debug React web",
+      "type": "pwa-chrome",
       "request": "launch",
-      "mode": "debug",
-      "program": "${workspaceFolder}/database/migrate.go",
-      "cwd": "${workspaceFolder}/database",
-      "env": {
-        "GO111MODULE": "on"
-      }
-    }, 
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/apps/web/src"
+    }
   ]
 }
