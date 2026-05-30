@@ -10,8 +10,7 @@ export function useTactics(tacticsTeamId: string | undefined) {
     queryKey: ['tactics', tacticsTeamId],
     queryFn: async () => {
       try {
-        const payload = await apiClient(`/api/v1/tactics/${tacticsTeamId}`, { token });
-        const data = payload?.data;
+        const data = await apiClient(`/api/v1/tactics/${tacticsTeamId}`, { token });
         if (!data) return null;
         return {
           formation: data.formation ?? '4-3-3',
@@ -72,7 +71,7 @@ export function useSaveTactics() {
           gameplay: body.gameplay,
         },
       });
-      const data = payload?.data;
+      const data = payload;
       return {
         formation: data.formation,
         passRatio: Math.round(Number(data.passRatio ?? 0) * 100),

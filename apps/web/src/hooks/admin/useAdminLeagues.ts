@@ -10,8 +10,7 @@ export function useAdminLeagues() {
     queryKey: ['adminLeagues'],
     queryFn: async () => {
       const payload = await apiClient('/api/v1/admin/leagues', { token });
-      const data = payload?.data ?? payload;
-      return Array.isArray(data) ? data : [];
+      return Array.isArray(payload) ? payload : [];
     },
     enabled: Boolean(token),
     staleTime: 5 * 60_000,
@@ -29,7 +28,7 @@ export function useCreateLeague() {
         token,
         body,
       });
-      return (payload?.data ?? payload) as League;
+      return payload as League;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['adminLeagues'] });
@@ -53,7 +52,7 @@ export function useUpdateLeague() {
         token,
         body,
       });
-      return (payload?.data ?? payload) as League;
+      return payload as League;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['adminLeagues'] });
@@ -98,10 +97,10 @@ export function useUploadAdminImage() {
 
       const payload = await response.json();
       if (!response.ok) {
-        throw new Error(payload?.error || 'Không thể upload hình ảnh');
+        throw new Error(payload?.message || payload?.error || 'Không thể upload hình ảnh');
       }
 
-      const imageURL = payload?.data?.url;
+      const imageURL = payload?.data?.url ?? payload?.url;
       if (!imageURL) {
         throw new Error('Upload thành công nhưng không nhận được URL ảnh');
       }

@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '../lib/apiClient';
+import { apiClient, redirectToLogin } from '../lib/apiClient';
 import { useAuth } from './useAuth';
 import type { Session } from '../types';
 
@@ -49,7 +49,10 @@ export function useAssignStarterTeamMutation() {
 
   return useMutation<void, Error, { clubId: number }>({
     mutationFn: async ({ clubId }) => {
-      if (!token) throw new Error('Missing auth token');
+      if (!token) {
+        redirectToLogin();
+        throw new Error('Missing auth token');
+      }
       await apiClient('/api/v1/auth/team', {
         method: 'POST',
         token,

@@ -29,14 +29,14 @@ export function useCreateAdminGachaBanner() {
       });
       const uploadData = await uploadResponse.json();
       if (!uploadResponse.ok) {
-        throw new Error(uploadData?.error || 'Không thể upload ảnh banner');
+        throw new Error(uploadData?.message || uploadData?.error || 'Không thể upload ảnh banner');
       }
 
       const payload = {
         bannerCode: `gacha-${playerId}-${Date.now()}`,
         bannerName: `${playerName || 'Player'} Banner`,
         playerId,
-        bannerImageUrl: uploadData?.data?.url || '',
+        bannerImageUrl: uploadData?.data?.url || uploadData?.url || '',
         timeEnd: expiresAt.toISOString(),
       };
 
@@ -50,7 +50,7 @@ export function useCreateAdminGachaBanner() {
       });
       const createData = await createResponse.json();
       if (!createResponse.ok) {
-        throw new Error(createData?.error || 'Không thể tạo banner gacha');
+        throw new Error(createData?.message || createData?.error || 'Không thể tạo banner gacha');
       }
     },
   });

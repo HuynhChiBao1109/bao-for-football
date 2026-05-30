@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Session } from '../types';
 
 const SESSION_KEY = 'fifam-session';
+const TOKEN_COOKIE_KEY = 'fifam-token';
 
 type AuthContextValue = {
   session: Session | null;
@@ -25,8 +26,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (session) {
       localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      document.cookie = `${TOKEN_COOKIE_KEY}=${encodeURIComponent(session.token)}; Path=/; SameSite=Lax`;
     } else {
       localStorage.removeItem(SESSION_KEY);
+      document.cookie = `${TOKEN_COOKIE_KEY}=; Max-Age=0; Path=/; SameSite=Lax`;
     }
   }, [session]);
 

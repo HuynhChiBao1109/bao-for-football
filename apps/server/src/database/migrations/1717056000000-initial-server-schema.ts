@@ -172,7 +172,7 @@ export class InitialServerSchema1717056000000 implements MigrationInterface {
           },
           { name: "name", type: "varchar", length: "191" },
           {
-            name: "avatar_url",
+            name: "image_url",
             type: "varchar",
             length: "512",
             isNullable: true,
@@ -191,7 +191,6 @@ export class InitialServerSchema1717056000000 implements MigrationInterface {
             isNullable: true,
           },
           { name: "club_id", type: "bigint", unsigned: true, isNullable: true },
-          { name: "positions_json", type: "text", isNullable: true },
           { name: "base_pace", type: "int", default: "0" },
           { name: "base_passing", type: "int", default: "0" },
           { name: "base_long_pass", type: "int", default: "0" },
@@ -205,6 +204,45 @@ export class InitialServerSchema1717056000000 implements MigrationInterface {
         ],
       }),
       true,
+    );
+
+    await queryRunner.createTable(
+      new Table({
+        name: "player_positions",
+        columns: [
+          {
+            name: "id",
+            type: "bigint",
+            isPrimary: true,
+            isGenerated: true,
+            generationStrategy: "increment",
+            unsigned: true,
+          },
+          { name: "player_template_id", type: "bigint", unsigned: true },
+          { name: "position", type: "varchar", length: "32" },
+          { name: "effect", type: "double", default: "1" },
+          {
+            name: "created_at",
+            type: "timestamp",
+            default: "CURRENT_TIMESTAMP",
+          },
+          {
+            name: "updated_at",
+            type: "timestamp",
+            default: "CURRENT_TIMESTAMP",
+            onUpdate: "CURRENT_TIMESTAMP",
+          },
+        ],
+      }),
+      true,
+    );
+    await queryRunner.createIndex(
+      "player_positions",
+      new TableIndex({
+        name: "IDX_player_positions_template_position",
+        columnNames: ["player_template_id", "position"],
+        isUnique: true,
+      }),
     );
 
     await queryRunner.createTable(
@@ -510,6 +548,7 @@ export class InitialServerSchema1717056000000 implements MigrationInterface {
     await queryRunner.dropTable("gacha_logs", true);
     await queryRunner.dropTable("gacha_banners", true);
     await queryRunner.dropTable("user_players", true);
+    await queryRunner.dropTable("player_positions", true);
     await queryRunner.dropTable("player_special_skills", true);
     await queryRunner.dropTable("player_templates", true);
     await queryRunner.dropTable("skills", true);

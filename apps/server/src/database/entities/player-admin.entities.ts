@@ -69,7 +69,7 @@ export class PlayerTemplateEntity {
   @Column({ type: "varchar", length: 191 })
   name!: string;
 
-  @Column({ name: "avatar_url", type: "varchar", length: 512, nullable: true })
+  @Column({ name: "image_url", type: "varchar", length: 512, nullable: true })
   avatarUrl!: string | null;
 
   @Column({ name: "base_club", type: "varchar", length: 191, nullable: true })
@@ -88,9 +88,6 @@ export class PlayerTemplateEntity {
 
   @Column({ name: "club_id", type: "bigint", unsigned: true, nullable: true })
   clubId!: string | null;
-
-  @Column({ name: "positions_json", type: "text", nullable: true })
-  positionsJson!: string | null;
 
   @Column({ name: "base_pace", type: "int", default: 0 })
   basePace!: number;

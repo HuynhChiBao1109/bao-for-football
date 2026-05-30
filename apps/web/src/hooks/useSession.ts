@@ -10,7 +10,7 @@ export function useSession() {
     queryKey: ['session', token],
     queryFn: async () => {
       const payload = await apiClient('/api/v1/auth/me', { token });
-      return (payload?.data ?? null) as SessionData;
+      return (payload ?? null) as SessionData;
     },
     enabled: Boolean(token),
     staleTime: 60_000,

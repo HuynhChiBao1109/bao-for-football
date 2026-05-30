@@ -10,8 +10,7 @@ export function useCountries() {
     queryKey: ['countries'],
     queryFn: async () => {
       const payload = await apiClient('/api/v1/admin/countries', { token });
-      const data = payload?.data ?? payload;
-      return Array.isArray(data) ? data : [];
+      return Array.isArray(payload) ? payload : [];
     },
     enabled: Boolean(token),
     staleTime: 10 * 60_000,

@@ -7,10 +7,117 @@ import { UserPlayerEntity } from "../../database/entities/player.entities";
 @Injectable()
 export class PlayerRepository {
   private readonly memStore = new Map<number, any[]>();
+  private readonly statKeys = [
+    "shooting",
+    "passing",
+    "longPass",
+    "vision",
+    "attackingAwareness",
+    "defensiveAwareness",
+    "duels",
+    "pace",
+    "stamina",
+    "balance",
+    "technique",
+    "determination",
+    "strength",
+    "standingTackle",
+    "slidingTackle",
+    "dribbling",
+    "curve",
+    "gkParrying",
+    "gkReflex",
+    "gkReach",
+  ] as const;
 
   constructor(
     @Inject(DATABASE_CONNECTION) private readonly dataSource: DataSource | null,
   ) {}
+
+  private numberOf(value: unknown): number {
+    const parsed = Number(value ?? 0);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private buildBaseStats(template: PlayerTemplateEntity | null | undefined) {
+    const source = template as any;
+    return {
+      shooting: this.numberOf(source?.baseShooting),
+      passing: this.numberOf(source?.basePassing),
+      longPass: this.numberOf(source?.baseLongPass),
+      vision: this.numberOf(source?.baseVision),
+      attackingAwareness: this.numberOf(source?.baseCounterAttackAwareness),
+      defensiveAwareness: this.numberOf(source?.baseDefending),
+      duels: this.numberOf(source?.baseDuels),
+      pace: this.numberOf(source?.basePace),
+      stamina: this.numberOf(source?.baseStamina),
+      balance: this.numberOf(source?.baseBalance),
+      technique: this.numberOf(source?.baseTechnique),
+      determination: this.numberOf(source?.baseDetermination),
+      strength: this.numberOf(source?.basePhysical),
+      standingTackle: this.numberOf(source?.baseStandingTackle),
+      slidingTackle: this.numberOf(source?.baseSlidingTackle),
+      dribbling: this.numberOf(source?.baseDribbling),
+      curve: this.numberOf(source?.baseCurve),
+      gkParrying: this.numberOf(source?.baseGkParrying),
+      gkReflex: this.numberOf(source?.baseGkReflex),
+      gkReach: this.numberOf(source?.baseGkReach),
+    } as Record<(typeof this.statKeys)[number], number>;
+  }
+
+  private buildBonusStats(card: UserPlayerEntity) {
+    return {
+      shooting: this.numberOf(card.bonusShooting),
+      passing: this.numberOf(card.bonusPassing),
+      longPass: this.numberOf(card.bonusLongPass),
+      vision: this.numberOf(card.bonusVision),
+      attackingAwareness: this.numberOf(card.bonusCounterAttackAwareness),
+      defensiveAwareness: this.numberOf(card.bonusDefending),
+      duels: this.numberOf(card.bonusDuels),
+      pace: this.numberOf(card.bonusPace),
+      stamina: this.numberOf(card.bonusStamina),
+      balance: this.numberOf(card.bonusBalance),
+      technique: this.numberOf(card.bonusTechnique),
+      determination: this.numberOf(card.bonusDetermination),
+      strength: this.numberOf(card.bonusPhysical),
+      standingTackle: this.numberOf(card.bonusStandingTackle),
+      slidingTackle: this.numberOf(card.bonusSlidingTackle),
+      dribbling: this.numberOf(card.bonusDribbling),
+      curve: this.numberOf(card.bonusCurve),
+      gkParrying: this.numberOf(card.bonusGkParrying),
+      gkReflex: this.numberOf(card.bonusGkReflex),
+      gkReach: this.numberOf(card.bonusGkReach),
+    } as Record<(typeof this.statKeys)[number], number>;
+  }
+
+  private buildCardResponse(card: UserPlayerEntity, template: any) {
+    const baseStats = this.buildBaseStats(template ?? null);
+    const bonusStats = this.buildBonusStats(card);
+    const totalStats = this.statKeys.reduce(
+      (acc, key) => ({
+        ...acc,
+        [key]: this.numberOf(baseStats[key]) + this.numberOf(bonusStats[key]),
+      }),
+      {} as Record<(typeof this.statKeys)[number], number>,
+    );
+
+    return {
+      userPlayerId: Number(card.id),
+      templateId: Number(card.playerTemplateId),
+      playerTemplateId: Number(card.playerTemplateId),
+      name: template?.name ?? "",
+      imageUrl: template?.avatarUrl ?? "",
+      baseClub: template?.baseClub ?? "",
+      season: template?.season ?? "",
+      level: this.numberOf(card.level),
+      currentExp: this.numberOf(card.exp),
+      exp: this.numberOf(card.exp),
+      currentPoints: this.numberOf(card.currentPoints),
+      baseStats,
+      bonusStats,
+      totalStats,
+    };
+  }
 
   async listMyCards(userId: number): Promise<any[]> {
     if (!this.dataSource) {
@@ -34,17 +141,7 @@ export class PlayerRepository {
     const templateMap = new Map(templates.map((item) => [item.id, item]));
     return cards.map((card) => {
       const template = templateMap.get(card.playerTemplateId);
-      return {
-        userPlayerId: Number(card.id),
-        playerTemplateId: Number(card.playerTemplateId),
-        name: template?.name ?? "",
-        imageUrl: template?.avatarUrl ?? "",
-        baseClub: template?.baseClub ?? "",
-        season: template?.season ?? "",
-        level: card.level,
-        exp: card.exp,
-        currentPoints: card.currentPoints,
-      };
+      return this.buildCardResponse(card, template);
     });
   }
 

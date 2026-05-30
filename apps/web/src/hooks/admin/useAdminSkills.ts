@@ -10,8 +10,7 @@ export function useAdminSkills() {
     queryKey: ['adminSkills'],
     queryFn: async () => {
       const payload = await apiClient('/api/v1/admin/skills', { token });
-      const data = payload?.data ?? payload;
-      return Array.isArray(data) ? data : [];
+      return Array.isArray(payload) ? payload : [];
     },
     enabled: Boolean(token),
     staleTime: 60_000,
@@ -33,7 +32,7 @@ export function useCreateSkill() {
         token,
         body,
       });
-      return payload?.data as SpecialSkill;
+      return payload as SpecialSkill;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['adminSkills'] }),
   });

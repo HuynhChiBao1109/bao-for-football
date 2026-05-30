@@ -14,7 +14,7 @@ export function useGachaBanners() {
     queryKey: ['gacha-banners'],
     queryFn: async () => {
       const payload = await apiClient('/api/v1/gacha/banners', { token });
-      return (payload?.data as GachaBanner[]) ?? [];
+      return (payload as GachaBanner[]) ?? [];
     },
   });
 }
@@ -26,7 +26,7 @@ export function useGachaProgress(bannerCode: string | null) {
     queryFn: async () => {
       if (!bannerCode) throw new Error('bannerCode required');
       const payload = await apiClient(`/api/v1/gacha/progress?bannerCode=${bannerCode}`, { token });
-      return (payload?.data as GachaProgress) ?? { totalRolls: 0, rollsSinceSpecial: 0 };
+      return (payload as GachaProgress) ?? { totalRolls: 0, rollsSinceSpecial: 0 };
     },
     enabled: !!bannerCode,
   });
@@ -42,7 +42,7 @@ export function useGachaRoll() {
         token,
         body,
       });
-      return payload?.data as GachaResult;
+      return payload as GachaResult;
     },
   });
 }

@@ -7,8 +7,7 @@ export function useClubs() {
     queryKey: ['clubs'],
     queryFn: async () => {
       const payload = await apiClient('/api/v1/auth/clubs');
-      const data = payload?.data ?? payload;
-      return Array.isArray(data) ? data : [];
+      return Array.isArray(payload) ? payload : [];
     },
     staleTime: 5 * 60_000,
   });
