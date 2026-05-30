@@ -1,10 +1,11 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { DataSource } from "typeorm";
+import { DataSource, In } from "typeorm";
 import { DATABASE_CONNECTION } from "../../common/constants/app.constants";
 import { ClubEntity } from "../club/entities/club.entities";
 import {
   CountryEntity,
   LeagueEntity,
+  PlayerPositionEntity,
   PlayerSpecialSkillEntity,
   PlayerTemplateEntity,
   SkillEntity,
@@ -71,21 +72,12 @@ export class PlayerAdminRepository {
       return positionsMap;
     }
 
-    const placeholders = playerIDs.map(() => "?").join(",");
-    let rows: any[] = [];
-    try {
-      rows = await this.dataSource.query(
-        `
-SELECT player_template_id AS playerTemplateId, position, effect
-FROM player_positions
-WHERE player_template_id IN (${placeholders})`,
-        playerIDs,
-      );
-    } catch {
-      return positionsMap;
-    }
+    const repository = this.dataSource.getRepository(PlayerPositionEntity);
+    const rows = await repository.find({
+      where: { playerTemplateId: In(playerIDs.map((item) => String(item))) },
+    });
 
-    for (const row of rows as any[]) {
+    for (const row of rows) {
       const key = String(row.playerTemplateId);
       const current = positionsMap.get(key) ?? [];
       current.push({
@@ -104,31 +96,36 @@ WHERE player_template_id IN (${placeholders})`,
       return skillsMap;
     }
 
-    const placeholders = playerIDs.map(() => "?").join(",");
-    const rows = await this.dataSource.query(
-      `
-SELECT
-  pss.player_template_id AS playerTemplateId,
-  s.id,
-  s.name,
-  s.icon_url AS iconUrl,
-  s.buff_type AS buffType,
-  s.buff_value AS buffValue
-FROM player_special_skills pss
-INNER JOIN skills s ON s.id = pss.skill_id
-WHERE pss.player_template_id IN (${placeholders})`,
-      playerIDs,
+    const pivotRepository = this.dataSource.getRepository(
+      PlayerSpecialSkillEntity,
     );
+    const skillRepository = this.dataSource.getRepository(SkillEntity);
+    const pivots = await pivotRepository.find({
+      where: { playerTemplateId: In(playerIDs.map((item) => String(item))) },
+    });
+    const skillIds = Array.from(
+      new Set(pivots.map((item) => String(item.skillId))),
+    );
+    const skills = skillIds.length
+      ? await skillRepository.find({
+          where: { id: In(skillIds) },
+        })
+      : [];
+    const skillMap = new Map(skills.map((skill) => [String(skill.id), skill]));
 
-    for (const row of rows as any[]) {
-      const key = String(row.playerTemplateId);
+    for (const pivot of pivots) {
+      const skill = skillMap.get(String(pivot.skillId));
+      if (!skill) {
+        continue;
+      }
+      const key = String(pivot.playerTemplateId);
       const current = skillsMap.get(key) ?? [];
       current.push({
-        id: Number(row.id),
-        name: String(row.name ?? ""),
-        iconUrl: row.iconUrl != null ? String(row.iconUrl) : null,
-        buffType: row.buffType != null ? String(row.buffType) : null,
-        buffValue: Number(row.buffValue ?? 0),
+        id: Number(skill.id),
+        name: String(skill.name ?? ""),
+        iconUrl: skill.iconUrl != null ? String(skill.iconUrl) : null,
+        buffType: skill.buffType != null ? String(skill.buffType) : null,
+        buffValue: Number(skill.buffValue ?? 0),
       });
       skillsMap.set(key, current);
     }
@@ -239,23 +236,22 @@ WHERE pss.player_template_id IN (${placeholders})`,
     }
 
     const normalized = this.normalizePositions(input);
-    try {
-      await this.dataSource.query(
-        "DELETE FROM player_positions WHERE player_template_id = ?",
-        [playerID],
-      );
+    const repository = this.dataSource.getRepository(PlayerPositionEntity);
+    await repository.delete({ playerTemplateId: String(playerID) });
 
-      for (const item of normalized) {
-        await this.dataSource.query(
-          `
-INSERT INTO player_positions (player_template_id, position, effect, created_at, updated_at)
-VALUES (?, ?, ?, NOW(), NOW())`,
-          [playerID, item.position, item.effect],
-        );
-      }
-    } catch {
+    if (!normalized.length) {
       return;
     }
+
+    await repository.save(
+      normalized.map((item) =>
+        repository.create({
+          playerTemplateId: String(playerID),
+          position: item.position,
+          effect: item.effect,
+        }),
+      ),
+    );
   }
 
   async listPlayers(filters: Record<string, any>) {
@@ -433,10 +429,9 @@ VALUES (?, ?, ?, NOW(), NOW())`,
       return;
     }
     const repository = this.dataSource.getRepository(PlayerTemplateEntity);
-    await this.dataSource.query(
-      "DELETE FROM player_positions WHERE player_template_id = ?",
-      [id],
-    );
+    await this.dataSource.getRepository(PlayerPositionEntity).delete({
+      playerTemplateId: String(id),
+    });
     await repository.delete({ id: String(id) });
   }
 
@@ -570,13 +565,13 @@ VALUES (?, ?, ?, NOW(), NOW())`,
       throw new Error("skillId or skillName is required");
     }
     const existing = await pivotRepository.findOne({
-      where: { playerTemplateId: String(playerId), skilCode: skillId },
+      where: { playerTemplateId: String(playerId), skillId },
     });
     if (!existing) {
       await pivotRepository.save(
         pivotRepository.create({
           playerTemplateId: String(playerId),
-          skilCode: skillId,
+          skillId,
         }),
       );
     }
@@ -590,7 +585,7 @@ VALUES (?, ?, ?, NOW(), NOW())`,
     const repository = this.dataSource.getRepository(PlayerSpecialSkillEntity);
     await repository.delete({
       playerTemplateId: String(playerId),
-      skilCode: String(skillId),
+      skillId: String(skillId),
     });
   }
 }
