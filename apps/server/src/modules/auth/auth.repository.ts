@@ -4,7 +4,7 @@ import { DataSource } from "typeorm";
 import { DATABASE_CONNECTION } from "../../common/constants/app.constants";
 import { TeamEntity, UserEntity } from "./entities/auth.entities";
 import { ClubEntity } from "../club/entities/club.entities";
-import { PlayerTemplateEntity } from "../playeradmin/entities/player-admin.entities";
+import { PlayerTemplateEntity } from "../player/entities/player-admin.entities";
 import { UserPlayerEntity } from "../player/entities/player.entities";
 import { AuthUser, ClubOption, TeamAssignment } from "./types";
 

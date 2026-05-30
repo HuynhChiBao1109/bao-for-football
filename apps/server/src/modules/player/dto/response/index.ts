@@ -1,8 +1,8 @@
-export interface ListMyCardsResponseDto {
-  data: any[];
+export interface PlayerAdminDataResponseDto {
+  data: any;
 }
 
-export interface AllocateStatsResponseDto {
+export interface PlayerAdminMessageResponseDto {
   message: string;
-  data: any;
+  data?: any;
 }

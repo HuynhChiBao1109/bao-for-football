@@ -1,9 +1,13 @@
-export interface ListMyCardsInputDto {
-  userId: number;
+export interface ListPlayersInputDto {
+  filters: Record<string, any>;
 }
 
-export interface AllocateStatsInputDto {
-  userId: number;
-  playerUserId: number;
-  body: Record<string, number>;
+export interface UpsertPlayerInputDto {
+  id?: number;
+  body: Record<string, any>;
+}
+
+export interface AssignPlayerSkillInputDto {
+  playerId: number;
+  body: Record<string, any>;
 }

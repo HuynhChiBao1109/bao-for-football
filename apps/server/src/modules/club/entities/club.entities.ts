@@ -5,7 +5,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from "typeorm";
-import { LeagueEntity } from "../../playeradmin/entities/player-admin.entities";
+import { LeagueEntity } from "../../player/entities/player-admin.entities";
 
 @Entity("clubs")
 export class ClubEntity {
