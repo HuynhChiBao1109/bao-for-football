@@ -27,5 +27,6 @@
         "Out-Null": true,
         "Copy-Item": true,
         "npx tsc": true
-    }
+    },
+    "git.ignoreLimitWarning": true
 }

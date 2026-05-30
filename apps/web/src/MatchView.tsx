@@ -1,12 +1,13 @@
 // @ts-nocheck
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { io } from 'socket.io-client';
 
 const F = { w: 100, h: 64 };
-const MATCH_WS_BASE_URL =
+const { baseUrl: MATCH_SOCKET_BASE_URL, path: MATCH_SOCKET_PATH } = resolveMatchSocketConfig(
   import.meta.env.VITE_MATCH_WS_URL ||
-  import.meta.env.VITE_WS_URL ||
-  deriveMatchWebSocketURL(import.meta.env.VITE_MATCH_SSE_URL) ||
-  'ws://localhost:8081/ws';
+    import.meta.env.VITE_WS_URL ||
+    import.meta.env.VITE_MATCH_SSE_URL,
+);
 
 // Per-event display config: label (log), title (popup), color, bg, border, duration(ms)
 const EV = {
@@ -370,20 +371,15 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
 
   const triggerSubstitution = async (playerOutId, playerInId) => {
     try {
-      const res = await fetch('/realtime/substitute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          teamId: 'home',
-          playerOutId: Number(playerOutId),
-          playerInId: Number(playerInId),
-        }),
+      socketRef.current?.emit('match.substitute', {
+        matchId,
+        teamId: 'home',
+        playerOutId: Number(playerOutId),
+        playerInId: Number(playerInId),
       });
-      if (res.ok) {
-        setSelectedReserve(null);
-        setSelectedActive(null);
-        setShowRosterModal(false);
-      }
+      setSelectedReserve(null);
+      setSelectedActive(null);
+      setShowRosterModal(false);
     } catch (err) {
       console.error('Substitution error:', err);
     }
@@ -400,9 +396,10 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
   const matchStatsRef = useRef(INITIAL_MATCH_STATS);
   const eventQueueRef = useRef([]);
   const eventQueueTimerRef = useRef(0);
+  const socketRef = useRef(null);
 
-  const matchWSURL = useMemo(() => {
-    return buildMatchWebSocketURL(MATCH_WS_BASE_URL, matchId);
+  const socketQuery = useMemo(() => {
+    return matchId ? { matchId } : undefined;
   }, [matchId]);
 
   // keep phase ref in sync
@@ -562,12 +559,18 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
     };
 
     const handleEvent = (rawData) => {
-      let payload;
-      try {
-        payload = JSON.parse(rawData);
-      } catch {
-        return;
-      }
+      const payload =
+        typeof rawData === 'string'
+          ? (() => {
+              try {
+                return JSON.parse(rawData);
+              } catch {
+                return null;
+              }
+            })()
+          : rawData;
+
+      if (!payload) return;
       if (payload?.type !== 'match_tick') return;
       if (matchId && payload?.matchId !== matchId) return;
       const isReplay = Boolean(payload?.replay);
@@ -648,24 +651,34 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
     const connect = () => {
       if (closed) return;
 
-      socket = new WebSocket(matchWSURL);
-      socket.onopen = () => {
+      socket = io(MATCH_SOCKET_BASE_URL, {
+        path: MATCH_SOCKET_PATH,
+        transports: ['websocket'],
+        query: socketQuery,
+        autoConnect: false,
+        reconnection: false,
+      });
+      socketRef.current = socket;
+
+      socket.on('connect', () => {
         setConnState('Live');
-      };
-      socket.onmessage = (event) => {
-        if (typeof event.data === 'string') {
-          handleEvent(event.data);
-        }
-      };
-      socket.onerror = () => {
+      });
+      socket.on('match.latest', (message) => {
+        handleEvent(message?.data ?? message);
+      });
+      socket.on('match.update', (message) => {
+        handleEvent(message?.data ?? message);
+      });
+      socket.on('connect_error', () => {
         setConnState('Socket reconnecting...');
         socket?.close();
-      };
-      socket.onclose = () => {
+      });
+      socket.on('disconnect', () => {
         if (closed) return;
         setConnState('Socket reconnecting...');
         reconnectTimer = window.setTimeout(connect, 1000);
-      };
+      });
+      socket.connect();
     };
 
     connect();
@@ -678,8 +691,9 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
         eventQueueTimerRef.current = 0;
       }
       socket?.close();
+      socketRef.current = null;
     };
-  }, [matchId, matchWSURL, onMatchEnd]);
+  }, [matchId, onMatchEnd, socketQuery]);
 
   // auto-clear popup after its configured duration
   useEffect(() => {
@@ -1420,8 +1434,12 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
                       cy={cand.y}
                       r={cand.playerId === debugOverlay.offside.offenderId ? '1.45' : '1.05'}
                       fill="none"
-                      stroke={cand.playerId === debugOverlay.offside.offenderId ? '#f43f5e' : '#fda4af'}
-                      strokeWidth={cand.playerId === debugOverlay.offside.offenderId ? '0.42' : '0.28'}
+                      stroke={
+                        cand.playerId === debugOverlay.offside.offenderId ? '#f43f5e' : '#fda4af'
+                      }
+                      strokeWidth={
+                        cand.playerId === debugOverlay.offside.offenderId ? '0.42' : '0.28'
+                      }
                     />
                     {(cand.challenged || cand.attemptedPlay || cand.interfered) && (
                       <text
@@ -1458,7 +1476,7 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
               const stroke = isHome ? '#7f9cff' : '#f472b6';
               const lastName = player.name ? player.name.split(' ').pop() : '';
               const isSelectedActive = selectedActive?.id === player.id;
-              
+
               return (
                 <g
                   key={player.id}
@@ -1476,15 +1494,37 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
                 >
                   {/* Pulsing sub target highlighting */}
                   {selectedReserve && isHome && (
-                    <circle r="3.2" fill="none" stroke="#ec4899" strokeWidth="0.25" strokeDasharray="0.5 0.5">
-                      <animate attributeName="r" values="2.6;3.6;2.6" dur="1s" repeatCount="indefinite" />
+                    <circle
+                      r="3.2"
+                      fill="none"
+                      stroke="#ec4899"
+                      strokeWidth="0.25"
+                      strokeDasharray="0.5 0.5"
+                    >
+                      <animate
+                        attributeName="r"
+                        values="2.6;3.6;2.6"
+                        dur="1s"
+                        repeatCount="indefinite"
+                      />
                     </circle>
                   )}
 
                   {/* Pulsing active select highlighting */}
                   {isSelectedActive && (
-                    <circle r="3.0" fill="none" stroke="#fbbf24" strokeWidth="0.25" strokeDasharray="0.5 0.5">
-                      <animate attributeName="r" values="2.4;3.2;2.4" dur="1s" repeatCount="indefinite" />
+                    <circle
+                      r="3.0"
+                      fill="none"
+                      stroke="#fbbf24"
+                      strokeWidth="0.25"
+                      strokeDasharray="0.5 0.5"
+                    >
+                      <animate
+                        attributeName="r"
+                        values="2.4;3.2;2.4"
+                        dur="1s"
+                        repeatCount="indefinite"
+                      />
                     </circle>
                   )}
 
@@ -1506,7 +1546,13 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
                   )}
 
                   {/* Avatar / Emoji rendering above player dot */}
-                  <text y="-1.9" textAnchor="middle" fill="#fef08a" fontSize="1.3" fontWeight="bold">
+                  <text
+                    y="-1.9"
+                    textAnchor="middle"
+                    fill="#fef08a"
+                    fontSize="1.3"
+                    fontWeight="bold"
+                  >
                     {player.avatar || ''}
                   </text>
 
@@ -1592,11 +1638,15 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
 
         {/* Score bar */}
         <div className="mt-3 flex items-center justify-center gap-5 rounded-xl border border-[#1b2458] bg-black/40 px-4 py-3">
-          <p className="text-sm font-semibold tracking-wider text-slate-200">{homeTeamName.toUpperCase()}</p>
+          <p className="text-sm font-semibold tracking-wider text-slate-200">
+            {homeTeamName.toUpperCase()}
+          </p>
           <p className="font-['Space_Grotesk'] text-3xl font-bold text-[#f6d87a]">
             {score.home} &ndash; {score.away}
           </p>
-          <p className="text-sm font-semibold tracking-wider text-slate-200">{awayTeamName.toUpperCase()}</p>
+          <p className="text-sm font-semibold tracking-wider text-slate-200">
+            {awayTeamName.toUpperCase()}
+          </p>
         </div>
 
         {/* Match stats */}
@@ -1696,13 +1746,17 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
                     <div className="flex items-center gap-2">
                       <span className="text-base">{p.avatar || '👤'}</span>
                       <div>
-                        <p className="text-xs font-bold text-slate-100">{p.name || `Cầu thủ ${p.id}`}</p>
+                        <p className="text-xs font-bold text-slate-100">
+                          {p.name || `Cầu thủ ${p.id}`}
+                        </p>
                         <p className="text-[10px] font-semibold text-indigo-300">{p.role}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-bold text-slate-400">ST:</span>
-                      <span className={`text-xs font-bold ${stamina > 60 ? 'text-emerald-400' : stamina > 35 ? 'text-amber-400' : 'text-rose-500'}`}>
+                      <span
+                        className={`text-xs font-bold ${stamina > 60 ? 'text-emerald-400' : stamina > 35 ? 'text-amber-400' : 'text-rose-500'}`}
+                      >
                         {stamina}%
                       </span>
                     </div>
@@ -1718,7 +1772,9 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
             <h3 className="font-['Space_Grotesk'] text-sm font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
               <span>🔄</span> CẦU THỦ DỰ BỊ
             </h3>
-            <p className="text-[10px] text-slate-400 mt-1">Chọn 1 cầu thủ dự bị để bắt đầu thay người</p>
+            <p className="text-[10px] text-slate-400 mt-1">
+              Chọn 1 cầu thủ dự bị để bắt đầu thay người
+            </p>
           </div>
 
           <div className="space-y-3 flex-1 overflow-y-auto pr-1 scrollbar-thin">
@@ -1753,7 +1809,9 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-[9px] uppercase tracking-wider text-slate-400">Thể Lực</p>
+                        <p className="text-[9px] uppercase tracking-wider text-slate-400">
+                          Thể Lực
+                        </p>
                         <p className="text-xs font-extrabold text-emerald-400">{stamina}%</p>
                       </div>
                     </div>
@@ -1769,7 +1827,7 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
                   </div>
                 );
               })}
-            
+
             {reserves.filter((p) => p.teamId === 'home').length === 0 && (
               <div className="flex flex-col items-center justify-center py-10 text-slate-500">
                 <span className="text-3xl mb-2">📋</span>
@@ -1802,18 +1860,34 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
                 .map((p) => {
                   const stamina = Math.round((1 - (p.fatigue || 0)) * 100);
                   const moraleVal = p.morale || 1.0;
-                  const moraleEmoji = moraleVal > 1.2 ? '🔥' : moraleVal > 0.95 ? '😊' : moraleVal > 0.7 ? '😐' : '😩';
-                  
+                  const moraleEmoji =
+                    moraleVal > 1.2
+                      ? '🔥'
+                      : moraleVal > 0.95
+                        ? '😊'
+                        : moraleVal > 0.7
+                          ? '😐'
+                          : '😩';
+
                   return (
-                    <div key={p.id} className="flex items-center justify-between rounded-xl bg-black/35 border border-[#1b2458]/40 p-3 hover:bg-indigo-900/10 transition-all">
+                    <div
+                      key={p.id}
+                      className="flex items-center justify-between rounded-xl bg-black/35 border border-[#1b2458]/40 p-3 hover:bg-indigo-900/10 transition-all"
+                    >
                       <div className="flex items-center gap-3">
                         <span className="text-2xl">{p.avatar || '👤'}</span>
                         <div>
                           <div className="flex items-center gap-1.5">
-                            <p className="text-sm font-bold text-white">{p.name || `Cầu thủ ${p.id}`}</p>
-                            <span className="text-xs" title="Tinh thần">{moraleEmoji}</span>
+                            <p className="text-sm font-bold text-white">
+                              {p.name || `Cầu thủ ${p.id}`}
+                            </p>
+                            <span className="text-xs" title="Tinh thần">
+                              {moraleEmoji}
+                            </span>
                           </div>
-                          <p className="text-[11px] font-semibold text-indigo-300 uppercase tracking-widest">{p.role}</p>
+                          <p className="text-[11px] font-semibold text-indigo-300 uppercase tracking-widest">
+                            {p.role}
+                          </p>
                         </div>
                       </div>
 
@@ -1821,14 +1895,26 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
                         <div className="w-24 sm:w-32">
                           <div className="flex justify-between text-[10px] font-semibold text-slate-400 mb-1">
                             <span>Thể Lực</span>
-                            <span className={stamina > 60 ? 'text-emerald-400' : stamina > 35 ? 'text-amber-400' : 'text-rose-500'}>
+                            <span
+                              className={
+                                stamina > 60
+                                  ? 'text-emerald-400'
+                                  : stamina > 35
+                                    ? 'text-amber-400'
+                                    : 'text-rose-500'
+                              }
+                            >
                               {stamina}%
                             </span>
                           </div>
                           <div className="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
                             <div
                               className={`h-full rounded-full transition-all duration-300 ${
-                                stamina > 60 ? 'bg-emerald-500' : stamina > 35 ? 'bg-amber-500' : 'bg-rose-500'
+                                stamina > 60
+                                  ? 'bg-emerald-500'
+                                  : stamina > 35
+                                    ? 'bg-amber-500'
+                                    : 'bg-rose-500'
                               }`}
                               style={{ width: `${stamina}%` }}
                             />
@@ -1852,7 +1938,11 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
             {selectedReserve && (
               <div className="mt-4 rounded-xl bg-pink-900/10 border border-pink-500/20 p-3 text-center">
                 <p className="text-xs font-semibold text-pink-400">
-                  🔄 Đang chọn dự bị: <span className="font-bold text-white">{selectedReserve.avatar} {selectedReserve.name}</span>. Click nút "Thay" bên cạnh cầu thủ muốn thay thế.
+                  🔄 Đang chọn dự bị:{' '}
+                  <span className="font-bold text-white">
+                    {selectedReserve.avatar} {selectedReserve.name}
+                  </span>
+                  . Click nút "Thay" bên cạnh cầu thủ muốn thay thế.
                 </p>
               </div>
             )}
@@ -1893,31 +1983,27 @@ function normalizeOffsideDebug(raw) {
   };
 }
 
-function deriveMatchWebSocketURL(rawURL) {
-  if (!rawURL) return '';
+function resolveMatchSocketConfig(rawURL) {
+  const fallback = {
+    baseUrl: 'http://localhost:3000',
+    path: '/ws',
+  };
+
+  if (!rawURL) return fallback;
 
   try {
     const url = new URL(rawURL);
-    if (url.protocol === 'http:') url.protocol = 'ws:';
-    if (url.protocol === 'https:') url.protocol = 'wss:';
+    if (url.protocol === 'ws:') url.protocol = 'http:';
+    if (url.protocol === 'wss:') url.protocol = 'https:';
     if (url.pathname.endsWith('/sse/match')) {
       url.pathname = url.pathname.replace(/\/sse\/match$/, '/ws');
     }
-    return url.toString();
+    return {
+      baseUrl: url.origin,
+      path: url.pathname && url.pathname !== '/' ? url.pathname : '/ws',
+    };
   } catch {
-    return '';
-  }
-}
-
-function buildMatchWebSocketURL(baseURL, matchId) {
-  if (!matchId) return baseURL;
-  try {
-    const url = new URL(baseURL);
-    url.searchParams.set('matchId', matchId);
-    return url.toString();
-  } catch {
-    const sep = baseURL.includes('?') ? '&' : '?';
-    return `${baseURL}${sep}matchId=${encodeURIComponent(matchId)}`;
+    return fallback;
   }
 }
 

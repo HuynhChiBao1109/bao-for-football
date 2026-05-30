@@ -122,11 +122,9 @@ fifam/
 
 - Start match (`/api/v1/matches/start`)
 - Finalize match (`/api/v1/matches/:matchId/finalize`)
-- Realtime tick stream qua:
-  - WebSocket: `/ws`
-  - SSE: `/sse/match`
+- Realtime tick stream qua Socket.IO gateway: `/ws`
 - Reconnect replay support tick moi nhat theo matchId
-- Realtime substitution endpoint (`/realtime/substitute`)
+- Realtime substitution event: `match.substitute`
 
 ### Gacha
 
