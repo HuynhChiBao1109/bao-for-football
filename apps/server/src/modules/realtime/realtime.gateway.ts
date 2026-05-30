@@ -21,7 +21,13 @@ import {
   RealtimeEnvelope,
 } from "./realtime.events";
 
-@WebSocketGateway({ path: "/ws", cors: { origin: "*" } })
+@WebSocketGateway({
+  path: "/ws",
+  cors: {
+    origin: "*",
+    credentials: false,
+  },
+})
 export class RealtimeGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {

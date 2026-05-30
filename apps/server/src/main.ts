@@ -1,8 +1,22 @@
 import "reflect-metadata";
+import { existsSync } from "fs";
+import { config as loadEnv } from "dotenv";
 import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import { resolve } from "path";
 import { AppModule } from "./app.module";
+
+const envCandidates = [
+  resolve(process.cwd(), ".env"),
+  resolve(process.cwd(), "../.env"),
+  resolve(process.cwd(), "../../.env"),
+];
+
+const envPath = envCandidates.find((item) => existsSync(item));
+if (envPath) {
+  loadEnv({ path: envPath });
+}
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -32,10 +46,20 @@ async function bootstrap() {
   );
   app.enableCors({
     origin: "*",
-    methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
+    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "Accept",
+      "Origin",
+      "X-Requested-With",
+    ],
+    credentials: false,
   });
 
-  const port = Number(process.env.HOST_PORT || 3000);
+  const port = Number(
+    process.env.HOST_PORT || process.env.SERVICE_CORE_PORT || 3000,
+  );
   await app.listen(port);
 }
 

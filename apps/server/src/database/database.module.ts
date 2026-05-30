@@ -10,13 +10,25 @@ import { DATABASE_CONNECTION } from "../common/constants/app.constants";
       provide: DATABASE_CONNECTION,
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => {
-        const host = configService.get<string>("DATABASE_HOST");
-        const port = configService.get<number | string>("DATABASE_PORT");
-        const username = configService.get<string>("DATABASE_USERNAME");
-        const password = configService.get<string>("DATABASE_PASSWORD");
-        const database = configService.get<string>("DATABASE_NAME");
+        const host =
+          configService.get<string>("DATABASE_HOST") ||
+          configService.get<string>("MYSQL_HOST") ||
+          "localhost";
+        const port =
+          configService.get<number | string>("DATABASE_PORT") ||
+          configService.get<number | string>("MYSQL_PORT") ||
+          3306;
+        const username =
+          configService.get<string>("DATABASE_USERNAME") ||
+          configService.get<string>("MYSQL_USER");
+        const password =
+          configService.get<string>("DATABASE_PASSWORD") ||
+          configService.get<string>("MYSQL_PASSWORD");
+        const database =
+          configService.get<string>("DATABASE_NAME") ||
+          configService.get<string>("MYSQL_DATABASE");
 
-        if (!host || !port || !username || !database) {
+        if (!username || !database) {
           return null;
         }
 

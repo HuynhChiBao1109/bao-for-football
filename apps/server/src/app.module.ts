@@ -6,7 +6,7 @@ import {
 } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ServeStaticModule } from "@nestjs/serve-static";
-import { join } from "path";
+import { join, resolve } from "path";
 import { AppController } from "./app.controller";
 import { LoggingMiddleware } from "./common/middleware/logging.middleware";
 import { DatabaseModule } from "./database/database.module";
@@ -25,8 +25,11 @@ import { TacticsModule } from "./modules/tactics/tactics.module";
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath:
-        process.env.NODE_ENV === "development" ? ".env.development" : ".env",
+      envFilePath: [
+        resolve(process.cwd(), ".env"),
+        resolve(process.cwd(), "../.env"),
+        resolve(process.cwd(), "../../.env"),
+      ],
     }),
     ServeStaticModule.forRoot({
       rootPath: join(process.cwd(), "uploads", "image"),
