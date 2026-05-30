@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { DATABASE_CONNECTION } from "../../common/constants/app.constants";
-import { UserStageEntity } from "../../database/entities/ai.entities";
+import { UserStageEntity } from "./entities/ai.entities";
 
 export interface CampaignStage {
   stageNo: number;

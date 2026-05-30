@@ -69,14 +69,8 @@ export class PlayerTemplateEntity {
   @Column({ type: "varchar", length: 191 })
   name!: string;
 
-  @Column({ name: "image_url", type: "varchar", length: 512, nullable: true })
+  @Column({ name: "avatar_url", type: "varchar", length: 512, nullable: true })
   avatarUrl!: string | null;
-
-  @Column({ name: "base_club", type: "varchar", length: 191, nullable: true })
-  baseClub!: string | null;
-
-  @Column({ type: "varchar", length: 64 })
-  season!: string;
 
   @Column({
     name: "country_id",
@@ -89,35 +83,32 @@ export class PlayerTemplateEntity {
   @Column({ name: "club_id", type: "bigint", unsigned: true, nullable: true })
   clubId!: string | null;
 
-  @Column({ name: "base_pace", type: "int", default: 0 })
-  basePace!: number;
+  @Column({ name: "height", type: "int", default: 0 })
+  height!: number;
 
-  @Column({ name: "base_passing", type: "int", default: 0 })
-  basePassing!: number;
+  @Column({ name: "body_type", type: "int", default: 0 })
+  bodyType!: number;
 
-  @Column({ name: "base_long_pass", type: "int", default: 0 })
-  baseLongPass!: number;
+  @Column({ name: "pass", type: "int", default: 0 })
+  pass!: number;
 
-  @Column({ name: "base_vision", type: "int", default: 0 })
-  baseVision!: number;
+  @Column({ name: "long_pass", type: "int", default: 0 })
+  longPass!: number;
 
-  @Column({ name: "base_shooting", type: "int", default: 0 })
-  baseShooting!: number;
+  @Column({ name: "vision", type: "int", default: 0 })
+  vision!: number;
 
-  @Column({ name: "base_defending", type: "int", default: 0 })
-  baseDefending!: number;
+  @Column({ name: "shoot", type: "int", default: 0 })
+  shoot!: number;
 
-  @Column({ name: "base_standing_tackle", type: "int", default: 0 })
-  baseStandingTackle!: number;
+  @Column({ name: "tackle", type: "int", default: 0 })
+  tackle!: number;
 
-  @Column({ name: "base_sliding_tackle", type: "int", default: 0 })
-  baseSlidingTackle!: number;
+  @Column({ name: "balance", type: "int", default: 0 })
+  balance!: number;
 
-  @Column({ name: "base_physical", type: "int", default: 0 })
-  basePhysical!: number;
-
-  @Column({ name: "base_dribbling", type: "int", default: 0 })
-  baseDribbling!: number;
+  @Column({ name: "dribbling", type: "int", default: 0 })
+  dribbling!: number;
 }
 
 @Entity("player_special_skills")

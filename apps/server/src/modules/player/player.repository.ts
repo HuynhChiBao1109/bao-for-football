@@ -1,8 +1,8 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { DATABASE_CONNECTION } from "../../common/constants/app.constants";
-import { PlayerTemplateEntity } from "../../database/entities/player-admin.entities";
-import { UserPlayerEntity } from "../../database/entities/player.entities";
+import { PlayerTemplateEntity } from "../playeradmin/entities/player-admin.entities";
+import { UserPlayerEntity } from "./entities/player.entities";
 
 @Injectable()
 export class PlayerRepository {

@@ -1,14 +1,14 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { DATABASE_CONNECTION } from "../../common/constants/app.constants";
-import { ClubEntity } from "../../database/entities/club.entities";
+import { ClubEntity } from "../club/entities/club.entities";
 import {
   CountryEntity,
   LeagueEntity,
   PlayerSpecialSkillEntity,
   PlayerTemplateEntity,
   SkillEntity,
-} from "../../database/entities/player-admin.entities";
+} from "./entities/player-admin.entities";
 
 @Injectable()
 export class PlayerAdminRepository {

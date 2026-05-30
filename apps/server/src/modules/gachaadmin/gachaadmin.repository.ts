@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { DATABASE_CONNECTION } from "../../common/constants/app.constants";
-import { GachaBannerEntity } from "../../database/entities/gacha.entities";
+import { GachaBannerEntity } from "../gacha/entities/gacha.entities";
 
 export interface GachaBanner {
   id?: number;

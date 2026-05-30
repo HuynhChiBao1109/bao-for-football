@@ -4,7 +4,7 @@ import { DATABASE_CONNECTION } from "../../common/constants/app.constants";
 import {
   TeamLineupEntity,
   TeamTacticsEntity,
-} from "../../database/entities/tactics.entities";
+} from "./entities/tactics.entities";
 
 export interface TacticsLineupSlot {
   slotId: string;

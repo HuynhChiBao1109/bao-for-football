@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { DATABASE_CONNECTION } from "../../common/constants/app.constants";
-import { ClubEntity } from "../../database/entities/club.entities";
+import { ClubEntity } from "./entities/club.entities";
 
 const defaultClubBudget = 360000000;
 

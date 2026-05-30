@@ -22,7 +22,7 @@ export default new DataSource({
   username: process.env.DATABASE_USERNAME || process.env.MYSQL_USER,
   password: process.env.DATABASE_PASSWORD || process.env.MYSQL_PASSWORD,
   database: process.env.DATABASE_NAME || process.env.MYSQL_DATABASE,
-  entities: [__dirname + "/entities/*{.ts,.js}"],
+  entities: [__dirname + "/../modules/**/entities/*{.ts,.js}"],
   migrations: [__dirname + "/migrations/*{.ts,.js}"],
   synchronize: false,
 });

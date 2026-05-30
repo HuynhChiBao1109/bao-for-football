@@ -1,8 +1,8 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { DATABASE_CONNECTION } from "../../common/constants/app.constants";
-import { MatchEntity } from "../../database/entities/match.entities";
-import { TeamEntity } from "../../database/entities/auth.entities";
+import { MatchEntity } from "./entities/match.entities";
+import { TeamEntity } from "../auth/entities/auth.entities";
 
 export interface MatchStats {
   [key: string]: any;

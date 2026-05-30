@@ -51,8 +51,8 @@ Thumbs.db
 docker-compose.override.yml
 
 # Uploads (if generated at runtime)
-uploads/
-public/uploads/
+# uploads/
+# public/uploads/
 
 # Prisma (optional)
 prisma/dev.db

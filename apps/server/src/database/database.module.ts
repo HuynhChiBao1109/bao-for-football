@@ -99,7 +99,7 @@ WHERE table_schema = ?
           username,
           password,
           database,
-          entities: [__dirname + "/entities/*{.ts,.js}"],
+          entities: [__dirname + "/../modules/**/entities/*{.ts,.js}"],
           migrations: [__dirname + "/migrations/*{.ts,.js}"],
           synchronize,
           migrationsRun: !synchronize && isDevelopment,

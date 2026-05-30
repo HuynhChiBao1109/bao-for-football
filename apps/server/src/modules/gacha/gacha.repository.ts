@@ -1,13 +1,10 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { DataSource, In } from "typeorm";
 import { DATABASE_CONNECTION } from "../../common/constants/app.constants";
-import { TeamEntity } from "../../database/entities/auth.entities";
-import {
-  GachaBannerEntity,
-  GachaLogEntity,
-} from "../../database/entities/gacha.entities";
-import { PlayerTemplateEntity } from "../../database/entities/player-admin.entities";
-import { UserPlayerEntity } from "../../database/entities/player.entities";
+import { TeamEntity } from "../auth/entities/auth.entities";
+import { GachaBannerEntity, GachaLogEntity } from "./entities/gacha.entities";
+import { PlayerTemplateEntity } from "../playeradmin/entities/player-admin.entities";
+import { UserPlayerEntity } from "../player/entities/player.entities";
 
 export interface GachaRollResult {
   userId: number;
