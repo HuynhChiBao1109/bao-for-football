@@ -4,6 +4,7 @@ import {
   Injectable,
   NestInterceptor,
 } from "@nestjs/common";
+import { Response } from "express";
 import { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 
@@ -14,35 +15,35 @@ export class ResponseInterceptor implements NestInterceptor {
       return next.handle();
     }
 
+    const response = context.switchToHttp().getResponse<Response>();
+
     return next.handle().pipe(
       map((value: unknown) => {
-        if (value === undefined) {
-          return { data: null };
+        const statusCode = response.statusCode || 200;
+        let message = "success";
+        let data: unknown = value ?? null;
+
+        if (value && typeof value === "object" && !Array.isArray(value)) {
+          const payload = value as Record<string, unknown>;
+
+          if (typeof payload.message === "string" && payload.message.trim()) {
+            message = payload.message;
+          }
+
+          if ("data" in payload) {
+            data = payload.data ?? null;
+          } else {
+            const { message: _, status_code: __, ...rest } = payload;
+            data = Object.keys(rest).length ? rest : null;
+          }
         }
 
-        if (
-          value !== null &&
-          typeof value === "object" &&
-          !Array.isArray(value) &&
-          this.hasEnvelopeKeys(value as Record<string, unknown>)
-        ) {
-          return value;
-        }
-
-        return { data: value };
+        return {
+          status_code: statusCode,
+          message,
+          data,
+        };
       }),
     );
-  }
-
-  private hasEnvelopeKeys(payload: Record<string, unknown>) {
-    return [
-      "data",
-      "message",
-      "error",
-      "token",
-      "user",
-      "path",
-      "timestamp",
-    ].some((key) => key in payload);
   }
 }

@@ -1,4 +1,6 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081';
+const SESSION_KEY = 'fifam-session';
+const LOGIN_PATH = '/login';
 
 export { API_BASE_URL };
 
@@ -27,6 +29,13 @@ export async function apiClient(path: string, options: ApiRequestOptions = {}) {
   const payload = isJSON ? await response.json() : null;
 
   if (!response.ok) {
+    if (response.status === 401 && typeof window !== 'undefined') {
+      localStorage.removeItem(SESSION_KEY);
+      if (window.location.pathname !== LOGIN_PATH) {
+        window.location.assign(LOGIN_PATH);
+      }
+    }
+
     const error = new Error(payload?.error || payload?.message || 'Request failed') as ApiError;
     error.status = response.status;
     error.payload = payload;

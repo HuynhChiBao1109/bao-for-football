@@ -2,7 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { JwtModule } from "@nestjs/jwt";
-import { GoExceptionFilter } from "../../common/filters/go-exception.filter";
+import { GoExceptionFilter } from "../../common/filters/exception.filter";
 import { AuthGuard } from "../../common/guards/auth.guard";
 import { ResponseInterceptor } from "../../common/interceptors/response.interceptor";
 import { AdminGuard } from "./admin.guard";
