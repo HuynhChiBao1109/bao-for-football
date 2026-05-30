@@ -570,13 +570,13 @@ VALUES (?, ?, ?, NOW(), NOW())`,
       throw new Error("skillId or skillName is required");
     }
     const existing = await pivotRepository.findOne({
-      where: { playerTemplateId: String(playerId), skillId },
+      where: { playerTemplateId: String(playerId), skilCode: skillId },
     });
     if (!existing) {
       await pivotRepository.save(
         pivotRepository.create({
           playerTemplateId: String(playerId),
-          skillId,
+          skilCode: skillId,
         }),
       );
     }
@@ -590,7 +590,7 @@ VALUES (?, ?, ?, NOW(), NOW())`,
     const repository = this.dataSource.getRepository(PlayerSpecialSkillEntity);
     await repository.delete({
       playerTemplateId: String(playerId),
-      skillId: String(skillId),
+      skilCode: String(skillId),
     });
   }
 }
