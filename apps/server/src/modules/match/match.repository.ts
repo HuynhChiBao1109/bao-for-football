@@ -83,16 +83,6 @@ export class MatchRepository {
     payload: Partial<MatchRecord>,
   ): Promise<MatchRecord | null> {
     const existing = this.memStore.get(matchId);
-    if (existing?.status === "finished") {
-      throw new Error("match already finalized");
-    }
-
-    if (payload.homeScore != null && payload.homeScore < 0) {
-      throw new Error("homeScore must be greater than or equal to 0");
-    }
-    if (payload.awayScore != null && payload.awayScore < 0) {
-      throw new Error("awayScore must be greater than or equal to 0");
-    }
 
     const result: MatchRecord = {
       ...(existing ?? {
@@ -119,9 +109,6 @@ export class MatchRepository {
     if (!match) {
       return null;
     }
-    if (match.status === "finished") {
-      throw new Error("match already finalized");
-    }
 
     match.status = "finished";
     match.homeScore = result.homeScore ?? 0;
@@ -134,5 +121,37 @@ export class MatchRepository {
     result.endedAt = saved.endedAt ?? result.endedAt;
 
     return result;
+  }
+
+  async findMatchById(matchId: string): Promise<MatchRecord | null> {
+    const existing = this.memStore.get(matchId);
+    if (existing) {
+      return existing;
+    }
+
+    if (!this.dataSource) {
+      return null;
+    }
+
+    const repository = this.dataSource.getRepository(MatchEntity);
+    const match = await repository.findOne({ where: { matchId } });
+    if (!match) {
+      return null;
+    }
+
+    return {
+      matchId: match.matchId,
+      homeClubName: match.homeClubName,
+      awayClubName: match.awayClubName,
+      mode: match.mode,
+      stageNo: match.stageNo ?? undefined,
+      startedAt: match.startedAt,
+      endedAt: match.endedAt ?? undefined,
+      homeScore: match.homeScore ?? undefined,
+      awayScore: match.awayScore ?? undefined,
+      homeStats: match.homeStats ?? undefined,
+      awayStats: match.awayStats ?? undefined,
+      status: match.status,
+    };
   }
 }

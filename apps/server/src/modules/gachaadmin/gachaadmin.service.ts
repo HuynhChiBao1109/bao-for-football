@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from "@nestjs/common";
+import { BadRequestException, Injectable, OnModuleInit } from "@nestjs/common";
 import { mkdirSync } from "fs";
 import { extname, join } from "path";
 import { GachaAdminServiceInterface } from "./interfaces/gachaadmin-service.interface";
@@ -26,7 +26,7 @@ export class GachaAdminService
       !input.playerId ||
       !input.expiredAt
     ) {
-      throw new Error("missing required banner fields");
+      throw new BadRequestException("missing required banner fields");
     }
     return this.repository.createBanner(input);
   }

@@ -1,0 +1,15 @@
+export enum EPlayerPosition {
+  GK = "GK",
+  LB = "LB",
+  CB = "CB",
+  RB = "RB",
+  CDM = "CDM",
+  CM = "CM",
+  AM = "AM",
+  LM = "LM",
+  RM = "RM",
+  ST = "ST",
+  RW = "RW",
+  LW = "RW",
+  SS = "SS",
+}

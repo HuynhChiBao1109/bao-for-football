@@ -42,51 +42,51 @@ export class PlayerRepository {
   private buildBaseStats(template: PlayerTemplateEntity | null | undefined) {
     const source = template as any;
     return {
-      shooting: this.numberOf(source?.baseShooting),
-      passing: this.numberOf(source?.basePassing),
-      longPass: this.numberOf(source?.baseLongPass),
-      vision: this.numberOf(source?.baseVision),
-      attackingAwareness: this.numberOf(source?.baseCounterAttackAwareness),
-      defensiveAwareness: this.numberOf(source?.baseDefending),
-      duels: this.numberOf(source?.baseDuels),
-      pace: this.numberOf(source?.basePace),
-      stamina: this.numberOf(source?.baseStamina),
-      balance: this.numberOf(source?.baseBalance),
-      technique: this.numberOf(source?.baseTechnique),
-      determination: this.numberOf(source?.baseDetermination),
-      strength: this.numberOf(source?.basePhysical),
-      standingTackle: this.numberOf(source?.baseStandingTackle),
-      slidingTackle: this.numberOf(source?.baseSlidingTackle),
-      dribbling: this.numberOf(source?.baseDribbling),
-      curve: this.numberOf(source?.baseCurve),
-      gkParrying: this.numberOf(source?.baseGkParrying),
-      gkReflex: this.numberOf(source?.baseGkReflex),
-      gkReach: this.numberOf(source?.baseGkReach),
+      shooting: this.numberOf(source?.shoot),
+      passing: this.numberOf(source?.pass),
+      longPass: this.numberOf(source?.longPass),
+      vision: this.numberOf(source?.vision),
+      attackingAwareness: 0,
+      defensiveAwareness: this.numberOf(source?.tackle),
+      duels: this.numberOf(source?.tackle),
+      pace: this.numberOf(source?.speed),
+      stamina: this.numberOf(source?.stamina),
+      balance: this.numberOf(source?.balance),
+      technique: this.numberOf(source?.dribbling),
+      determination: 0,
+      strength: this.numberOf(source?.bodyType),
+      standingTackle: this.numberOf(source?.tackle),
+      slidingTackle: this.numberOf(source?.tackle),
+      dribbling: this.numberOf(source?.dribbling),
+      curve: 0,
+      gkParrying: 0,
+      gkReflex: 0,
+      gkReach: 0,
     } as Record<(typeof this.statKeys)[number], number>;
   }
 
   private buildBonusStats(card: UserPlayerEntity) {
     return {
-      shooting: this.numberOf(card.bonusShooting),
-      passing: this.numberOf(card.bonusPassing),
+      shooting: this.numberOf(card.bonusShoot),
+      passing: this.numberOf(card.bonusPass),
       longPass: this.numberOf(card.bonusLongPass),
       vision: this.numberOf(card.bonusVision),
-      attackingAwareness: this.numberOf(card.bonusCounterAttackAwareness),
-      defensiveAwareness: this.numberOf(card.bonusDefending),
-      duels: this.numberOf(card.bonusDuels),
-      pace: this.numberOf(card.bonusPace),
+      attackingAwareness: 0,
+      defensiveAwareness: this.numberOf(card.bonusTackle),
+      duels: this.numberOf(card.bonusTackle),
+      pace: this.numberOf(card.bonusSpeed),
       stamina: this.numberOf(card.bonusStamina),
       balance: this.numberOf(card.bonusBalance),
-      technique: this.numberOf(card.bonusTechnique),
-      determination: this.numberOf(card.bonusDetermination),
-      strength: this.numberOf(card.bonusPhysical),
-      standingTackle: this.numberOf(card.bonusStandingTackle),
-      slidingTackle: this.numberOf(card.bonusSlidingTackle),
+      technique: this.numberOf(card.bonusDribbling),
+      determination: 0,
+      strength: 0,
+      standingTackle: this.numberOf(card.bonusTackle),
+      slidingTackle: this.numberOf(card.bonusTackle),
       dribbling: this.numberOf(card.bonusDribbling),
-      curve: this.numberOf(card.bonusCurve),
-      gkParrying: this.numberOf(card.bonusGkParrying),
-      gkReflex: this.numberOf(card.bonusGkReflex),
-      gkReach: this.numberOf(card.bonusGkReach),
+      curve: 0,
+      gkParrying: 0,
+      gkReflex: 0,
+      gkReach: 0,
     } as Record<(typeof this.statKeys)[number], number>;
   }
 
@@ -109,7 +109,7 @@ export class PlayerRepository {
       imageUrl: template?.avatarUrl ?? "",
       baseClub: template?.baseClub ?? "",
       season: template?.season ?? "",
-      level: this.numberOf(card.level),
+      level: 1,
       currentExp: this.numberOf(card.exp),
       exp: this.numberOf(card.exp),
       currentPoints: this.numberOf(card.currentPoints),
@@ -182,32 +182,6 @@ export class PlayerRepository {
     const normalizedDeltas = Object.fromEntries(
       Object.entries(deltas).map(([key, value]) => [key, Number(value ?? 0)]),
     );
-    const totalDelta = Object.values(normalizedDeltas).reduce(
-      (sum, value) => sum + Number(value),
-      0,
-    );
-
-    if (totalDelta <= 0) {
-      throw new Error("invalid stat allocation");
-    }
-
-    const negativeKey = Object.entries(normalizedDeltas).find(
-      ([, value]) => value < 0,
-    )?.[0];
-    if (negativeKey) {
-      throw new Error(`invalid stat allocation for ${negativeKey}`);
-    }
-
-    const { currentPoints, card } = await this.getAllocationContext(
-      userId,
-      userPlayerId,
-    );
-    if (!card) {
-      throw new Error("card not found");
-    }
-    if (totalDelta > currentPoints) {
-      throw new Error("insufficient current points");
-    }
 
     if (!this.dataSource) {
       const cards = this.memStore.get(userId) ?? [];
@@ -215,9 +189,13 @@ export class PlayerRepository {
         (item) => Number(item.userPlayerId) === Number(userPlayerId),
       );
       if (!card) {
-        throw new Error("card not found");
+        return null;
       }
       card.bonusStats = { ...(card.bonusStats ?? {}), ...normalizedDeltas };
+      const totalDelta = Object.values(normalizedDeltas).reduce(
+        (sum, value) => sum + Number(value),
+        0,
+      );
       card.currentPoints = Number(card.currentPoints ?? 0) - totalDelta;
       return card;
     }
@@ -227,33 +205,24 @@ export class PlayerRepository {
       where: { userId: String(userId), id: String(userPlayerId) },
     });
     if (!entity) {
-      throw new Error("card not found");
+      return null;
     }
 
     const propertyMap: Record<string, keyof UserPlayerEntity> = {
-      shooting: "bonusShooting",
-      passing: "bonusPassing",
+      shooting: "bonusShoot",
+      passing: "bonusPass",
       longPass: "bonusLongPass",
       vision: "bonusVision",
-      gkReach: "bonusGkReach",
-      counterAttackAwareness: "bonusCounterAttackAwareness",
-      attackingAwareness: "bonusCounterAttackAwareness",
-      defending: "bonusDefending",
-      defensiveAwareness: "bonusDefending",
-      gkParrying: "bonusGkParrying",
-      gkReflex: "bonusGkReflex",
-      duels: "bonusDuels",
-      pace: "bonusPace",
+      defending: "bonusTackle",
+      defensiveAwareness: "bonusTackle",
+      duels: "bonusTackle",
+      pace: "bonusSpeed",
       stamina: "bonusStamina",
       balance: "bonusBalance",
-      technique: "bonusTechnique",
-      determination: "bonusDetermination",
-      physical: "bonusPhysical",
-      strength: "bonusPhysical",
-      standingTackle: "bonusStandingTackle",
-      slidingTackle: "bonusSlidingTackle",
+      technique: "bonusDribbling",
+      standingTackle: "bonusTackle",
+      slidingTackle: "bonusTackle",
       dribbling: "bonusDribbling",
-      curve: "bonusCurve",
     };
 
     for (const [key, value] of Object.entries(normalizedDeltas)) {
@@ -264,6 +233,10 @@ export class PlayerRepository {
       const current = Number(entity[mapped] ?? 0);
       (entity[mapped] as number) = current + Number(value);
     }
+    const totalDelta = Object.values(normalizedDeltas).reduce(
+      (sum, value) => sum + Number(value),
+      0,
+    );
     entity.currentPoints -= totalDelta;
     await repository.save(entity);
     return this.findByUserPlayerID(userId, userPlayerId);

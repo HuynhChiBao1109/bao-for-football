@@ -83,7 +83,12 @@ export class AuthRepository {
 
     if (!this.dataSource) {
       if (this.memData.has(username)) {
-        throw new Error("username already exists");
+        const existing = this.memData.get(username)!;
+        return {
+          id: existing.id,
+          username: existing.username,
+          isAdmin: false,
+        };
       }
 
       const user = {
@@ -156,18 +161,18 @@ export class AuthRepository {
     userId: number,
     clubId: number,
     clubName: string,
-  ): Promise<void> {
+  ): Promise<{ ok: boolean; reason?: string; starterClubName?: string }> {
     if (!this.dataSource) {
       const selected = defaultClubs().find((item) => item.id === clubId);
       if (!selected) {
-        throw new Error(`club id ${clubId} not found`);
+        return { ok: false, reason: `club id ${clubId} not found` };
       }
 
       this.memTeams.set(userId, {
         ...selected,
         name: clubName.trim() || selected.name,
       });
-      return;
+      return { ok: true, starterClubName: selected.name };
     }
 
     const clubRepository = this.dataSource.getRepository(ClubEntity);
@@ -175,7 +180,7 @@ export class AuthRepository {
       where: { id: String(clubId) },
     });
     if (!club) {
-      throw new Error(`club id ${clubId} not found`);
+      return { ok: false, reason: `club id ${clubId} not found` };
     }
 
     const starterClubName = String(club.name);
@@ -197,95 +202,81 @@ export class AuthRepository {
       }),
     );
 
-    await this.ensureStarterPlayers(userId, clubId, starterClubName);
+    return { ok: true, starterClubName };
   }
 
-  private async ensureStarterPlayers(
-    userId: number,
-    starterClubId: number,
-    starterClubName: string,
-  ): Promise<void> {
+  async countOwnedPlayers(userId: number): Promise<number> {
     if (!this.dataSource) {
-      return;
+      return 0;
     }
-
     const userPlayerRepository =
       this.dataSource.getRepository(UserPlayerEntity);
+    return userPlayerRepository.count({ where: { userId: String(userId) } });
+  }
+
+  async countTemplatesByClub(clubId: number): Promise<number> {
+    if (!this.dataSource) {
+      return 50;
+    }
     const templateRepository =
       this.dataSource.getRepository(PlayerTemplateEntity);
-    const ownedCount = await userPlayerRepository.count({
-      where: { userId: String(userId) },
-    });
-    if (ownedCount >= 22) {
-      return;
+    return templateRepository.count({ where: { clubId: String(clubId) } });
+  }
+
+  async listOwnedTemplateIds(userId: number): Promise<Set<string>> {
+    if (!this.dataSource) {
+      return new Set<string>();
     }
-
-    const availableCount = await templateRepository.count({
-      where: { clubId: String(starterClubId), season: "normal" },
-    });
-    if (availableCount < 22) {
-      throw new Error(
-        `starter club id ${starterClubId} (${starterClubName}) does not have enough normal player templates`,
-      );
-    }
-
-    const slotsLeft = 50 - ownedCount;
-    if (slotsLeft <= 0) {
-      throw new Error("user cannot own more than 50 player cards");
-    }
-
-    const assignCount = Math.min(22 - ownedCount, slotsLeft);
-
+    const userPlayerRepository =
+      this.dataSource.getRepository(UserPlayerEntity);
     const existingCards = await userPlayerRepository.find({
       where: { userId: String(userId) },
       select: { playerTemplateId: true },
     });
-    const existingTemplateIds = new Set(
-      existingCards.map((item) => item.playerTemplateId),
-    );
-    const availableTemplates = await templateRepository.find({
-      where: { clubId: String(starterClubId), season: "normal" },
-      order: { id: "ASC" },
-      take: 50,
-    });
-    const templatesToAssign = availableTemplates
-      .filter((item) => !existingTemplateIds.has(item.id))
-      .slice(0, assignCount);
+    return new Set(existingCards.map((item) => String(item.playerTemplateId)));
+  }
 
-    if (templatesToAssign.length !== assignCount) {
-      throw new Error(
-        `expected to assign ${assignCount} starter players, assigned ${templatesToAssign.length}`,
-      );
+  async listTemplatesByClub(
+    clubId: number,
+    limit: number,
+  ): Promise<PlayerTemplateEntity[]> {
+    if (!this.dataSource) {
+      return [];
     }
+    const templateRepository =
+      this.dataSource.getRepository(PlayerTemplateEntity);
+    return templateRepository.find({
+      where: { clubId: String(clubId) },
+      order: { id: "ASC" },
+      take: limit,
+    });
+  }
 
+  async createUserPlayers(
+    userId: number,
+    templateIds: string[],
+  ): Promise<void> {
+    if (!this.dataSource || !templateIds.length) {
+      return;
+    }
+    const userPlayerRepository =
+      this.dataSource.getRepository(UserPlayerEntity);
     await userPlayerRepository.save(
-      templatesToAssign.map((template) =>
+      templateIds.map((templateId) =>
         userPlayerRepository.create({
           userId: String(userId),
-          playerTemplateId: template.id,
-          level: 1,
+          playerTemplateId: templateId,
           exp: 0,
           currentPoints: 0,
-          bonusShooting: 0,
-          bonusPassing: 0,
+          bonusShoot: 0,
+          bonusPass: 0,
           bonusLongPass: 0,
           bonusVision: 0,
-          bonusGkReach: 0,
-          bonusCounterAttackAwareness: 0,
-          bonusDefending: 0,
-          bonusGkParrying: 0,
-          bonusGkReflex: 0,
-          bonusDuels: 0,
-          bonusPace: 0,
+          bonusTackle: 0,
           bonusStamina: 0,
           bonusBalance: 0,
-          bonusTechnique: 0,
-          bonusDetermination: 0,
-          bonusPhysical: 0,
-          bonusStandingTackle: 0,
-          bonusSlidingTackle: 0,
           bonusDribbling: 0,
-          bonusCurve: 0,
+          bonusSpeed: 0,
         }),
       ),
     );

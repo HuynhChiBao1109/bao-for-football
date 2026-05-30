@@ -164,7 +164,51 @@ export class AuthService implements AuthServiceInterface {
       throw new BadRequestException("invalid clubId");
     }
 
-    await this.repository.assignClubToUser(userId, clubId, selected.name);
+    const assignment = await this.repository.assignClubToUser(
+      userId,
+      clubId,
+      selected.name,
+    );
+    if (!assignment.ok) {
+      throw new BadRequestException(
+        assignment.reason || "failed to assign club",
+      );
+    }
+
+    const ownedCount = await this.repository.countOwnedPlayers(userId);
+    if (ownedCount < 22) {
+      const availableCount = await this.repository.countTemplatesByClub(clubId);
+      if (availableCount < 22) {
+        throw new BadRequestException(
+          `starter club id ${clubId} (${assignment.starterClubName || selected.name}) does not have enough player templates`,
+        );
+      }
+
+      const slotsLeft = 50 - ownedCount;
+      if (slotsLeft <= 0) {
+        throw new BadRequestException(
+          "user cannot own more than 50 player cards",
+        );
+      }
+
+      const assignCount = Math.min(22 - ownedCount, slotsLeft);
+      const ownedTemplateIds =
+        await this.repository.listOwnedTemplateIds(userId);
+      const templates = await this.repository.listTemplatesByClub(clubId, 50);
+      const templateIdsToAssign = templates
+        .filter((item) => !ownedTemplateIds.has(String(item.id)))
+        .slice(0, assignCount)
+        .map((item) => String(item.id));
+
+      if (templateIdsToAssign.length !== assignCount) {
+        throw new BadRequestException(
+          `expected to assign ${assignCount} starter players, assigned ${templateIdsToAssign.length}`,
+        );
+      }
+
+      await this.repository.createUserPlayers(userId, templateIdsToAssign);
+    }
+
     return this.repository.getTeamAssignment(userId);
   }
 

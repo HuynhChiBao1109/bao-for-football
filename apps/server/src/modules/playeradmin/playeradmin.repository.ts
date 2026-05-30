@@ -8,7 +8,6 @@ import {
   PlayerPositionEntity,
   PlayerSpecialSkillEntity,
   PlayerTemplateEntity,
-  SkillEntity,
 } from "./entities/player-admin.entities";
 
 @Injectable()
@@ -82,7 +81,7 @@ export class PlayerAdminRepository {
       const current = positionsMap.get(key) ?? [];
       current.push({
         position: String(row.position ?? ""),
-        effect: Number(row.effect ?? 1),
+        effect: 1,
       });
       positionsMap.set(key, current);
     }
@@ -99,22 +98,28 @@ export class PlayerAdminRepository {
     const pivotRepository = this.dataSource.getRepository(
       PlayerSpecialSkillEntity,
     );
-    const skillRepository = this.dataSource.getRepository(SkillEntity);
     const pivots = await pivotRepository.find({
       where: { playerTemplateId: In(playerIDs.map((item) => String(item))) },
     });
     const skillIds = Array.from(
-      new Set(pivots.map((item) => String(item.skillId))),
+      new Set(pivots.map((item) => String(item.skilCode))),
     );
-    const skills = skillIds.length
-      ? await skillRepository.find({
-          where: { id: In(skillIds) },
-        })
+    const rows = skillIds.length
+      ? await this.dataSource
+          .createQueryBuilder()
+          .select("skill.id", "id")
+          .addSelect("skill.name", "name")
+          .addSelect("skill.icon_url", "iconUrl")
+          .addSelect("skill.buff_type", "buffType")
+          .addSelect("skill.buff_value", "buffValue")
+          .from("skills", "skill")
+          .where("skill.id IN (:...skillIds)", { skillIds })
+          .getRawMany()
       : [];
-    const skillMap = new Map(skills.map((skill) => [String(skill.id), skill]));
+    const skillMap = new Map(rows.map((skill) => [String(skill.id), skill]));
 
     for (const pivot of pivots) {
-      const skill = skillMap.get(String(pivot.skillId));
+      const skill = skillMap.get(String(pivot.skilCode));
       if (!skill) {
         continue;
       }
@@ -171,27 +176,27 @@ export class PlayerAdminRepository {
       avatar,
       avatarUrl: avatar,
       imageUrl: avatar,
-      baseClub: player.baseClub ?? "",
-      season: player.season,
+      baseClub: source.baseClub ?? "",
+      season: source.season ?? "normal",
       sourceType: String(source.sourceType ?? "base"),
       positions,
       skills,
-      shooting: Number(player.baseShooting ?? 0),
-      passing: Number(player.basePassing ?? 0),
-      longPass: Number(player.baseLongPass ?? 0),
-      vision: Number(player.baseVision ?? 0),
+      shooting: Number(player.shoot ?? 0),
+      passing: Number(player.pass ?? 0),
+      longPass: Number(player.longPass ?? 0),
+      vision: Number(player.vision ?? 0),
       attackingAwareness: Number(source.baseCounterAttackAwareness ?? 0),
-      defensiveAwareness: Number(player.baseDefending ?? 0),
+      defensiveAwareness: Number(player.tackle ?? 0),
       duels: Number(source.baseDuels ?? 0),
-      pace: Number(player.basePace ?? 0),
-      stamina: Number(source.baseStamina ?? 0),
-      balance: Number(source.baseBalance ?? 0),
+      pace: Number(source.speed ?? 0),
+      stamina: Number(source.stamina ?? 0),
+      balance: Number(player.balance ?? 0),
       technique: Number(source.baseTechnique ?? 0),
       determination: Number(source.baseDetermination ?? 0),
-      strength: Number(player.basePhysical ?? 0),
-      standingTackle: Number(player.baseStandingTackle ?? 0),
-      slidingTackle: Number(player.baseSlidingTackle ?? 0),
-      dribbling: Number(player.baseDribbling ?? 0),
+      strength: Number(source.basePhysical ?? 0),
+      standingTackle: Number(player.tackle ?? 0),
+      slidingTackle: Number(player.tackle ?? 0),
+      dribbling: Number(player.dribbling ?? 0),
       curve: Number(source.baseCurve ?? 0),
       gkParrying: Number(source.baseGkParrying ?? 0),
       gkReflex: Number(source.baseGkReflex ?? 0),
@@ -248,7 +253,6 @@ export class PlayerAdminRepository {
         repository.create({
           playerTemplateId: String(playerID),
           position: item.position,
-          effect: item.effect,
         }),
       ),
     );
@@ -304,16 +308,6 @@ export class PlayerAdminRepository {
         countryId: String(filters.countryId),
       });
     }
-    if (filters?.baseClub) {
-      builder.andWhere("LOWER(player.base_club) = :baseClub", {
-        baseClub: String(filters.baseClub).toLowerCase(),
-      });
-    }
-    if (filters?.season) {
-      builder.andWhere("LOWER(player.season) = :season", {
-        season: String(filters.season).toLowerCase(),
-      });
-    }
     const players = await builder.getMany();
     return this.mapPlayersResponse(players);
   }
@@ -345,20 +339,16 @@ export class PlayerAdminRepository {
       repository.create({
         name: body.name,
         avatarUrl: body.avatarUrl ?? body.avatar ?? null,
-        baseClub: body.baseClub ?? null,
-        season: body.season ?? "normal",
         countryId: body.countryId != null ? String(body.countryId) : null,
         clubId: body.clubId != null ? String(body.clubId) : null,
-        basePace: Number(body.pace ?? 0),
-        basePassing: Number(body.passing ?? 0),
-        baseLongPass: Number(body.longPass ?? body.passing ?? 0),
-        baseVision: Number(body.vision ?? body.passing ?? 0),
-        baseShooting: Number(body.shooting ?? 0),
-        baseDefending: Number(body.defending ?? 0),
-        baseStandingTackle: Number(body.standingTackle ?? 0),
-        baseSlidingTackle: Number(body.slidingTackle ?? 0),
-        basePhysical: Number(body.physical ?? body.strength ?? 0),
-        baseDribbling: Number(body.dribbling ?? 0),
+        height: Number(body.height ?? 180),
+        pass: Number(body.passing ?? 75),
+        longPass: Number(body.longPass ?? body.passing ?? 75),
+        vision: Number(body.vision ?? body.passing ?? 75),
+        shoot: Number(body.shooting ?? 75),
+        tackle: Number(body.defending ?? 75),
+        balance: Number(body.balance ?? 75),
+        dribbling: Number(body.dribbling ?? 75),
       }),
     );
     await this.syncPlayerPositions(Number(created.id), body.positions);
@@ -385,33 +375,18 @@ export class PlayerAdminRepository {
     Object.assign(player, {
       name: body.name ?? player.name,
       avatarUrl: body.avatarUrl ?? body.avatar ?? player.avatarUrl,
-      baseClub: body.baseClub ?? player.baseClub,
-      season: body.season ?? player.season,
       countryId:
         body.countryId != null ? String(body.countryId) : player.countryId,
       clubId: body.clubId != null ? String(body.clubId) : player.clubId,
-      basePace: body.pace != null ? Number(body.pace) : player.basePace,
-      basePassing:
-        body.passing != null ? Number(body.passing) : player.basePassing,
-      baseLongPass:
-        body.longPass != null ? Number(body.longPass) : player.baseLongPass,
-      baseVision: body.vision != null ? Number(body.vision) : player.baseVision,
-      baseShooting:
-        body.shooting != null ? Number(body.shooting) : player.baseShooting,
-      baseDefending:
-        body.defending != null ? Number(body.defending) : player.baseDefending,
-      baseStandingTackle:
-        body.standingTackle != null
-          ? Number(body.standingTackle)
-          : player.baseStandingTackle,
-      baseSlidingTackle:
-        body.slidingTackle != null
-          ? Number(body.slidingTackle)
-          : player.baseSlidingTackle,
-      basePhysical:
-        body.physical != null ? Number(body.physical) : player.basePhysical,
-      baseDribbling:
-        body.dribbling != null ? Number(body.dribbling) : player.baseDribbling,
+      height: body.height != null ? Number(body.height) : player.height,
+      pass: body.passing != null ? Number(body.passing) : player.pass,
+      longPass: body.longPass != null ? Number(body.longPass) : player.longPass,
+      vision: body.vision != null ? Number(body.vision) : player.vision,
+      shoot: body.shooting != null ? Number(body.shooting) : player.shoot,
+      tackle: body.defending != null ? Number(body.defending) : player.tackle,
+      balance: body.balance != null ? Number(body.balance) : player.balance,
+      dribbling:
+        body.dribbling != null ? Number(body.dribbling) : player.dribbling,
     });
     const updated = await repository.save(player);
     if (Object.prototype.hasOwnProperty.call(body, "positions")) {
@@ -522,8 +497,16 @@ export class PlayerAdminRepository {
     if (!this.dataSource) {
       return this.memory.skills;
     }
-    const repository = this.dataSource.getRepository(SkillEntity);
-    return repository.find({ order: { id: "DESC" } });
+    return this.dataSource
+      .createQueryBuilder()
+      .select("skill.id", "id")
+      .addSelect("skill.name", "name")
+      .addSelect("skill.icon_url", "iconUrl")
+      .addSelect("skill.buff_type", "buffType")
+      .addSelect("skill.buff_value", "buffValue")
+      .from("skills", "skill")
+      .orderBy("skill.id", "DESC")
+      .getRawMany();
   }
 
   async createSkill(body: any) {
@@ -532,46 +515,61 @@ export class PlayerAdminRepository {
       this.memory.skills.push(created);
       return created;
     }
-    const repository = this.dataSource.getRepository(SkillEntity);
-    return repository.save(
-      repository.create({
+    await this.dataSource
+      .createQueryBuilder()
+      .insert()
+      .into("skills")
+      .values({
         name: body.name,
-        iconUrl: body.iconUrl ?? null,
-        buffType: body.buffType,
-        buffValue: Number(body.buffValue),
-      }),
-    );
+        icon_url: body.iconUrl ?? null,
+        buff_type: body.buffType,
+        buff_value: Number(body.buffValue),
+      })
+      .execute();
+    const [created] = await this.dataSource
+      .createQueryBuilder()
+      .select("skill.id", "id")
+      .addSelect("skill.name", "name")
+      .addSelect("skill.icon_url", "iconUrl")
+      .addSelect("skill.buff_type", "buffType")
+      .addSelect("skill.buff_value", "buffValue")
+      .from("skills", "skill")
+      .where("skill.name = :name", { name: body.name })
+      .orderBy("skill.id", "DESC")
+      .limit(1)
+      .getRawMany();
+    return created ?? null;
   }
 
   async assignSkill(playerId: number, body: any) {
-    if (!body?.skillId && !body?.skillName) {
-      throw new Error("skillId or skillName is required");
-    }
     if (!this.dataSource) {
       return { playerId, ...body };
     }
-    const skillRepository = this.dataSource.getRepository(SkillEntity);
     const pivotRepository = this.dataSource.getRepository(
       PlayerSpecialSkillEntity,
     );
     let skillId = body.skillId != null ? String(body.skillId) : undefined;
     if (!skillId && body.skillName) {
-      const skill = await skillRepository.findOne({
-        where: { name: body.skillName },
-      });
+      const skill = await this.dataSource
+        .createQueryBuilder()
+        .select("skill.id", "id")
+        .from("skills", "skill")
+        .where("skill.name = :name", { name: body.skillName })
+        .limit(1)
+        .getRawOne();
       skillId = skill?.id;
     }
     if (!skillId) {
-      throw new Error("skillId or skillName is required");
+      return this.detailPlayer(playerId);
     }
     const existing = await pivotRepository.findOne({
-      where: { playerTemplateId: String(playerId), skillId },
+      where: { playerTemplateId: String(playerId), skilCode: skillId },
     });
     if (!existing) {
       await pivotRepository.save(
         pivotRepository.create({
           playerTemplateId: String(playerId),
-          skillId,
+          skilCode: skillId,
         }),
       );
     }
@@ -585,7 +583,7 @@ export class PlayerAdminRepository {
     const repository = this.dataSource.getRepository(PlayerSpecialSkillEntity);
     await repository.delete({
       playerTemplateId: String(playerId),
-      skillId: String(skillId),
+      skilCode: String(skillId),
     });
   }
 }

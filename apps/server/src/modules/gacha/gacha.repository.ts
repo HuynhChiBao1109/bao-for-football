@@ -163,7 +163,6 @@ export class GachaRepository {
       repository.create({
         userId: String(userId),
         playerTemplateId: String(playerTemplateId),
-        level: 1,
         exp: 0,
         currentPoints: 0,
       }),

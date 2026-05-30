@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import { PlayerAdminServiceInterface } from "./interfaces/playeradmin-service.interface";
 import { PlayerAdminRepository } from "./playeradmin.repository";
 
@@ -86,6 +86,12 @@ export class PlayerAdminService implements PlayerAdminServiceInterface {
   }
 
   async assignSkill(id: number, body: any) {
+    if (!id || id <= 0) {
+      throw new BadRequestException("playerId is required");
+    }
+    if (!body?.skillId && !body?.skillName) {
+      throw new BadRequestException("skillId or skillName is required");
+    }
     return {
       message: "skill assigned",
       data: await this.repository.assignSkill(id, body),
@@ -93,6 +99,12 @@ export class PlayerAdminService implements PlayerAdminServiceInterface {
   }
 
   async removeSkill(playerId: number, skillId: number) {
+    if (!playerId || playerId <= 0) {
+      throw new BadRequestException("playerId is required");
+    }
+    if (!skillId || skillId <= 0) {
+      throw new BadRequestException("skillId is required");
+    }
     await this.repository.removeSkill(playerId, skillId);
     return { message: "skill removed" };
   }

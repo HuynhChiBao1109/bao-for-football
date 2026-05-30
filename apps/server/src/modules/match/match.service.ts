@@ -42,6 +42,26 @@ export class MatchService implements MatchServiceInterface {
     if (!matchId) {
       throw new BadRequestException("matchId is required");
     }
+
+    if (payload.homeScore != null && Number(payload.homeScore) < 0) {
+      throw new BadRequestException(
+        "homeScore must be greater than or equal to 0",
+      );
+    }
+    if (payload.awayScore != null && Number(payload.awayScore) < 0) {
+      throw new BadRequestException(
+        "awayScore must be greater than or equal to 0",
+      );
+    }
+
+    const existing = await this.repository.findMatchById(matchId);
+    if (!existing) {
+      throw new BadRequestException("match not found");
+    }
+    if (existing.status === "finished") {
+      throw new BadRequestException("match already finalized");
+    }
+
     const record = await this.repository.finalizeMatch(matchId, payload);
     if (!record) {
       throw new BadRequestException("match not found");
