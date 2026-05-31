@@ -1,6 +1,6 @@
-import { Inject, Injectable } from "@nestjs/common";
-import { DataSource } from "typeorm";
-import { DATABASE_CONNECTION } from "../../common/constants/app.constants";
+import { Injectable } from "@nestjs/common";
+import { Repository } from "typeorm";
+import { InjectRepository } from "@nestjs/typeorm";
 import {
   TeamLineupEntity,
   TeamTacticsEntity,
@@ -36,18 +36,16 @@ export class TacticsRepository {
   private readonly memStore = new Map<string, TacticsConfig>();
 
   constructor(
-    @Inject(DATABASE_CONNECTION) private readonly dataSource: DataSource | null,
+    @InjectRepository(TeamTacticsEntity)
+    private readonly tacticsRepository: Repository<TeamTacticsEntity>,
+    @InjectRepository(TeamLineupEntity)
+    private readonly lineupRepository: Repository<TeamLineupEntity>,
   ) {}
 
   async findByTeamID(teamId: string): Promise<TacticsConfig | null> {
     const memo = this.memStore.get(teamId);
 
-    if (!this.dataSource) {
-      return memo ?? null;
-    }
-
-    const tacticsRepository = this.dataSource.getRepository(TeamTacticsEntity);
-    const tactic = await tacticsRepository.findOne({ where: { teamId } });
+    const tactic = await this.tacticsRepository.findOne({ where: { teamId } });
 
     if (!tactic) {
       return memo ?? null;
@@ -78,16 +76,12 @@ export class TacticsRepository {
     config.updatedAt = new Date();
     this.memStore.set(config.teamId, config);
 
-    if (!this.dataSource) {
-      return config;
-    }
-
-    const tacticsRepository = this.dataSource.getRepository(TeamTacticsEntity);
-    const existing = await tacticsRepository.findOne({
+    // Lưu tactics vào database
+    const existing = await this.tacticsRepository.findOne({
       where: { teamId: config.teamId },
     });
-    await tacticsRepository.save(
-      tacticsRepository.create({
+    await this.tacticsRepository.save(
+      this.tacticsRepository.create({
         id: existing?.id,
         teamId: config.teamId,
         formation: config.formation,
@@ -97,22 +91,15 @@ export class TacticsRepository {
         updatedAt: config.updatedAt,
       }),
     );
-
     await this.saveLineup(config.teamId, config.lineup ?? []);
     return config;
   }
 
   private async loadLineup(teamId: string): Promise<TacticsLineupSlot[]> {
-    if (!this.dataSource) {
-      return [];
-    }
-
-    const lineupRepository = this.dataSource.getRepository(TeamLineupEntity);
-    const rows = await lineupRepository.find({
+    const rows = await this.lineupRepository.find({
       where: { teamId },
       order: { slotId: "ASC" },
     });
-
     return rows.map((row) => ({
       slotId: String(row.slotId),
       position: String(row.position),
@@ -124,13 +111,7 @@ export class TacticsRepository {
     teamId: string,
     lineup: TacticsLineupSlot[],
   ): Promise<void> {
-    if (!this.dataSource) {
-      return;
-    }
-
-    const lineupRepository = this.dataSource.getRepository(TeamLineupEntity);
-    await lineupRepository.delete({ teamId });
-
+    await this.lineupRepository.delete({ teamId });
     const records = lineup
       .map((item) => {
         const slotId = item.slotId.trim().toLowerCase();
@@ -138,8 +119,7 @@ export class TacticsRepository {
         if (!slotId || !position || !item.userPlayerId) {
           return null;
         }
-
-        return lineupRepository.create({
+        return this.lineupRepository.create({
           teamId,
           slotId,
           position,
@@ -147,9 +127,8 @@ export class TacticsRepository {
         });
       })
       .filter((item): item is TeamLineupEntity => item !== null);
-
     if (records.length) {
-      await lineupRepository.save(records);
+      await this.lineupRepository.save(records);
     }
   }
 }

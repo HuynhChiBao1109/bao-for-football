@@ -1,18 +1,25 @@
-import { Inject, Injectable } from "@nestjs/common";
-import { DataSource } from "typeorm";
-import { DATABASE_CONNECTION } from "../../common/constants/app.constants";
+import { Injectable } from "@nestjs/common";
+import { Repository } from "typeorm";
 import { ClubEntity } from "./entities/club.entities";
+import { InjectRepository } from "@nestjs/typeorm";
 
 const defaultClubBudget = 360000000;
 
 @Injectable()
 export class ClubRepository {
   constructor(
-    @Inject(DATABASE_CONNECTION) private readonly dataSource: DataSource | null,
+    @InjectRepository(ClubEntity)
+    private readonly clubRepository: Repository<ClubEntity>,
   ) {}
 
   async getByID(id: number) {
-    if (!this.dataSource) {
+    const club = await this.clubRepository
+      .createQueryBuilder("club")
+      .leftJoinAndSelect("club.league", "league")
+      .where("club.id = :id", { id })
+      .getOne();
+
+    if (!club) {
       return {
         id,
         name: "Manchester United",
@@ -22,17 +29,6 @@ export class ClubRepository {
         budget: defaultClubBudget,
         leagueName: "Premier League",
       };
-    }
-
-    const repository = this.dataSource.getRepository(ClubEntity);
-    const club = await repository
-      .createQueryBuilder("club")
-      .leftJoinAndSelect("club.league", "league")
-      .where("club.id = :id", { id })
-      .getOne();
-
-    if (!club) {
-      return null;
     }
 
     return {

@@ -1,6 +1,6 @@
-import { Inject, Injectable } from "@nestjs/common";
-import { DataSource } from "typeorm";
-import { DATABASE_CONNECTION } from "../../common/constants/app.constants";
+import { Injectable } from "@nestjs/common";
+import { Repository } from "typeorm";
+import { InjectRepository } from "@nestjs/typeorm";
 import { PlayerTemplateEntity } from "./entities/player-admin.entities";
 import { UserPlayerEntity } from "./entities/player.entities";
 
@@ -31,7 +31,10 @@ export class PlayerRepository {
   ] as const;
 
   constructor(
-    @Inject(DATABASE_CONNECTION) private readonly dataSource: DataSource | null,
+    @InjectRepository(PlayerTemplateEntity)
+    private readonly playerTemplateRepository: Repository<PlayerTemplateEntity>,
+    @InjectRepository(UserPlayerEntity)
+    private readonly userPlayerRepository: Repository<UserPlayerEntity>,
   ) {}
 
   private numberOf(value: unknown): number {

@@ -1,6 +1,6 @@
-import { Inject, Injectable } from "@nestjs/common";
-import { DataSource } from "typeorm";
-import { DATABASE_CONNECTION } from "../../common/constants/app.constants";
+import { Injectable } from "@nestjs/common";
+import { Repository } from "typeorm";
+import { InjectRepository } from "@nestjs/typeorm";
 import { MatchEntity } from "./entities/match.entities";
 import { TeamEntity } from "../auth/entities/auth.entities";
 
@@ -29,16 +29,14 @@ export class MatchRepository {
   private readonly memStore = new Map<string, MatchRecord>();
 
   constructor(
-    @Inject(DATABASE_CONNECTION) private readonly dataSource: DataSource | null,
+    @InjectRepository(TeamEntity)
+    private readonly teamRepository: Repository<TeamEntity>,
+    @InjectRepository(MatchEntity)
+    private readonly matchRepository: Repository<MatchEntity>,
   ) {}
 
   async getHomeClubName(userId: number): Promise<string> {
-    if (!this.dataSource) {
-      return "Manchester United";
-    }
-
-    const repository = this.dataSource.getRepository(TeamEntity);
-    const team = await repository.findOne({
+    const team = await this.teamRepository.findOne({
       where: { userId: String(userId) },
     });
     return team?.clubName ?? "Manchester United";

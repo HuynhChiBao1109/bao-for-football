@@ -1,6 +1,6 @@
-import { Inject, Injectable } from "@nestjs/common";
-import { DataSource } from "typeorm";
-import { DATABASE_CONNECTION } from "../../common/constants/app.constants";
+import { Injectable } from "@nestjs/common";
+import { Repository } from "typeorm";
+import { InjectRepository } from "@nestjs/typeorm";
 import { UserStageEntity } from "./entities/ai.entities";
 
 export interface CampaignStage {
@@ -40,7 +40,8 @@ export class AiRepository {
   private readonly memStages = new Map<number, CampaignStage[]>();
 
   constructor(
-    @Inject(DATABASE_CONNECTION) private readonly dataSource: DataSource | null,
+    @InjectRepository(UserStageEntity)
+    private readonly userStageRepository: Repository<UserStageEntity>,
   ) {}
 
   private seedStages(): CampaignStage[] {

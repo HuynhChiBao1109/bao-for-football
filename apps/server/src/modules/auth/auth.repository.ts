@@ -1,7 +1,7 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import * as bcrypt from "bcrypt";
-import { DataSource } from "typeorm";
-import { DATABASE_CONNECTION } from "../../common/constants/app.constants";
+import { Repository } from "typeorm";
+import { InjectRepository } from "@nestjs/typeorm";
 import { TeamEntity, UserEntity } from "./entities/auth.entities";
 import { ClubEntity } from "../club/entities/club.entities";
 import { PlayerTemplateEntity } from "../player/entities/player-admin.entities";
@@ -20,7 +20,16 @@ export class AuthRepository {
   private nextID = 1;
 
   constructor(
-    @Inject(DATABASE_CONNECTION) private readonly dataSource: DataSource | null,
+    @InjectRepository(ClubEntity)
+    private readonly clubRepository: Repository<ClubEntity>,
+    @InjectRepository(UserEntity)
+    private readonly userRepository: Repository<UserEntity>,
+    @InjectRepository(TeamEntity)
+    private readonly teamRepository: Repository<TeamEntity>,
+    @InjectRepository(PlayerTemplateEntity)
+    private readonly playerTemplateRepository: Repository<PlayerTemplateEntity>,
+    @InjectRepository(UserPlayerEntity)
+    private readonly userPlayerRepository: Repository<UserPlayerEntity>,
   ) {}
 
   async ensureUserTable(): Promise<void> {
@@ -28,21 +37,14 @@ export class AuthRepository {
   }
 
   async listRegistrationClubs(): Promise<ClubOption[]> {
-    if (!this.dataSource) {
-      return defaultClubs();
-    }
-
-    const repository = this.dataSource.getRepository(ClubEntity);
-    const rows = await repository
+    const rows = await this.clubRepository
       .createQueryBuilder("club")
       .leftJoinAndSelect("club.league", "league")
       .orderBy("club.id", "ASC")
       .getMany();
-
     if (!rows.length) {
       return defaultClubs();
     }
-
     return rows.map((row) => ({
       id: Number(row.id),
       name: row.name,
@@ -60,16 +62,14 @@ export class AuthRepository {
     passwordHash: string;
     createdAt: Date;
   } | null> {
-    if (!this.dataSource) {
+    // Chỉ dùng memory nếu không có userRepository (test/mock)
+    if (!this.userRepository) {
       return this.memData.get(username) ?? null;
     }
-
-    const repository = this.dataSource.getRepository(UserEntity);
-    const user = await repository.findOne({ where: { username } });
+    const user = await this.userRepository.findOne({ where: { username } });
     if (!user) {
       return null;
     }
-
     return {
       id: Number(user.id),
       username: user.username,
@@ -81,7 +81,8 @@ export class AuthRepository {
   async create(username: string, password: string): Promise<AuthUser> {
     const passwordHash = await bcrypt.hash(password, 10);
 
-    if (!this.dataSource) {
+    // Chỉ dùng memory nếu không có userRepository (test/mock)
+    if (!this.userRepository) {
       if (this.memData.has(username)) {
         const existing = this.memData.get(username)!;
         return {
@@ -90,7 +91,6 @@ export class AuthRepository {
           isAdmin: false,
         };
       }
-
       const user = {
         id: this.nextID++,
         username,
@@ -100,10 +100,8 @@ export class AuthRepository {
       this.memData.set(username, user);
       return { id: user.id, username: user.username, isAdmin: false };
     }
-
-    const repository = this.dataSource.getRepository(UserEntity);
-    const saved = await repository.save(
-      repository.create({ username, passwordHash }),
+    const saved = await this.userRepository.save(
+      this.userRepository.create({ username, passwordHash }),
     );
     const insertedId = Number(saved.id);
     return { id: insertedId, username, isAdmin: false };
@@ -118,12 +116,12 @@ export class AuthRepository {
   }
 
   async getTeamAssignment(userId: number): Promise<TeamAssignment | null> {
-    if (!this.dataSource) {
+    // Chỉ dùng memory nếu không có teamRepository (test/mock)
+    if (!this.teamRepository || !this.clubRepository) {
       const club = this.memTeams.get(userId);
       if (!club) {
         return null;
       }
-
       return {
         userId,
         clubId: club.id,
@@ -134,16 +132,13 @@ export class AuthRepository {
         tacticsTeamId: `user-${userId}`,
       };
     }
-
-    const teamRepository = this.dataSource.getRepository(TeamEntity);
-    const clubRepository = this.dataSource.getRepository(ClubEntity);
-    const team = await teamRepository.findOne({
+    const team = await this.teamRepository.findOne({
       where: { userId: String(userId) },
     });
     if (!team) {
       return null;
     }
-    const club = await clubRepository.findOne({
+    const club = await this.clubRepository.findOne({
       where: { name: team.clubName },
     });
     return {
@@ -162,37 +157,32 @@ export class AuthRepository {
     clubId: number,
     clubName: string,
   ): Promise<{ ok: boolean; reason?: string; starterClubName?: string }> {
-    if (!this.dataSource) {
+    // Chỉ dùng memory nếu không có clubRepository (test/mock)
+    if (!this.clubRepository || !this.teamRepository) {
       const selected = defaultClubs().find((item) => item.id === clubId);
       if (!selected) {
         return { ok: false, reason: `club id ${clubId} not found` };
       }
-
       this.memTeams.set(userId, {
         ...selected,
         name: clubName.trim() || selected.name,
       });
       return { ok: true, starterClubName: selected.name };
     }
-
-    const clubRepository = this.dataSource.getRepository(ClubEntity);
-    const club = await clubRepository.findOne({
+    const club = await this.clubRepository.findOne({
       where: { id: String(clubId) },
     });
     if (!club) {
       return { ok: false, reason: `club id ${clubId} not found` };
     }
-
     const starterClubName = String(club.name);
     const starterClubLogo = String(club.logo ?? "");
     const finalClubName = clubName.trim() || starterClubName;
-
-    const teamRepository = this.dataSource.getRepository(TeamEntity);
-    const existingTeam = await teamRepository.findOne({
+    const existingTeam = await this.teamRepository.findOne({
       where: { userId: String(userId) },
     });
-    await teamRepository.save(
-      teamRepository.create({
+    await this.teamRepository.save(
+      this.teamRepository.create({
         id: existingTeam?.id,
         userId: String(userId),
         clubName: finalClubName,
@@ -201,35 +191,32 @@ export class AuthRepository {
         rankPoint: 0,
       }),
     );
-
     return { ok: true, starterClubName };
   }
 
   async countOwnedPlayers(userId: number): Promise<number> {
-    if (!this.dataSource) {
+    if (!this.userPlayerRepository) {
       return 0;
     }
-    const userPlayerRepository =
-      this.dataSource.getRepository(UserPlayerEntity);
-    return userPlayerRepository.count({ where: { userId: String(userId) } });
+    return this.userPlayerRepository.count({
+      where: { userId: String(userId) },
+    });
   }
 
   async countTemplatesByClub(clubId: number): Promise<number> {
-    if (!this.dataSource) {
+    if (!this.playerTemplateRepository) {
       return 50;
     }
-    const templateRepository =
-      this.dataSource.getRepository(PlayerTemplateEntity);
-    return templateRepository.count({ where: { clubId: String(clubId) } });
+    return this.playerTemplateRepository.count({
+      where: { clubId: String(clubId) },
+    });
   }
 
   async listOwnedTemplateIds(userId: number): Promise<Set<string>> {
-    if (!this.dataSource) {
+    if (!this.userPlayerRepository) {
       return new Set<string>();
     }
-    const userPlayerRepository =
-      this.dataSource.getRepository(UserPlayerEntity);
-    const existingCards = await userPlayerRepository.find({
+    const existingCards = await this.userPlayerRepository.find({
       where: { userId: String(userId) },
       select: { playerTemplateId: true },
     });
@@ -240,12 +227,10 @@ export class AuthRepository {
     clubId: number,
     limit: number,
   ): Promise<PlayerTemplateEntity[]> {
-    if (!this.dataSource) {
+    if (!this.playerTemplateRepository) {
       return [];
     }
-    const templateRepository =
-      this.dataSource.getRepository(PlayerTemplateEntity);
-    return templateRepository.find({
+    return this.playerTemplateRepository.find({
       where: { clubId: String(clubId) },
       order: { id: "ASC" },
       take: limit,
@@ -256,14 +241,12 @@ export class AuthRepository {
     userId: number,
     templateIds: string[],
   ): Promise<void> {
-    if (!this.dataSource || !templateIds.length) {
+    if (!this.userPlayerRepository || !templateIds.length) {
       return;
     }
-    const userPlayerRepository =
-      this.dataSource.getRepository(UserPlayerEntity);
-    await userPlayerRepository.save(
+    await this.userPlayerRepository.save(
       templateIds.map((templateId) =>
-        userPlayerRepository.create({
+        this.userPlayerRepository.create({
           userId: String(userId),
           playerTemplateId: templateId,
           exp: 0,

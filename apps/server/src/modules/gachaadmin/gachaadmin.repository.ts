@@ -1,6 +1,6 @@
-import { Inject, Injectable } from "@nestjs/common";
-import { DataSource } from "typeorm";
-import { DATABASE_CONNECTION } from "../../common/constants/app.constants";
+import { Injectable } from "@nestjs/common";
+import { Repository } from "typeorm";
+import { InjectRepository } from "@nestjs/typeorm";
 import { GachaBannerEntity } from "../gacha/entities/gacha.entities";
 
 export interface GachaBanner {
@@ -20,20 +20,15 @@ export class GachaAdminRepository {
   private readonly memStore: GachaBanner[] = [];
 
   constructor(
-    @Inject(DATABASE_CONNECTION) private readonly dataSource: DataSource | null,
+    @InjectRepository(GachaBannerEntity)
+    private readonly gachaBannerRepository: Repository<GachaBannerEntity>,
   ) {}
 
   async listBanners(): Promise<GachaBanner[]> {
-    if (!this.dataSource) {
-      return this.memStore.filter((item) => item.status === 1);
-    }
-
-    const repository = this.dataSource.getRepository(GachaBannerEntity);
-    const rows = await repository.find({
+    const rows = await this.gachaBannerRepository.find({
       where: { status: 1 },
       order: { id: "DESC" },
     });
-
     return rows.map((row) => ({
       id: Number(row.id),
       bannerCode: row.bannerCode,
