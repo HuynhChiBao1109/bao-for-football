@@ -123,22 +123,14 @@ export class PlayerRepository {
   }
 
   async listMyCards(userId: number): Promise<any[]> {
-    if (!this.dataSource) {
-      return this.memStore.get(userId) ?? [];
-    }
-
-    const playerRepository = this.dataSource.getRepository(UserPlayerEntity);
-    const templateRepository =
-      this.dataSource.getRepository(PlayerTemplateEntity);
-    const cards = await playerRepository.find({
+    const cards = await this.userPlayerRepository.find({
       where: { userId: String(userId) },
       order: { id: "ASC" },
     });
     if (!cards.length) {
       return [];
     }
-
-    const templates = await templateRepository.findByIds(
+    const templates = await this.playerTemplateRepository.findByIds(
       cards.map((item) => item.playerTemplateId),
     );
     const templateMap = new Map(templates.map((item) => [item.id, item]));
@@ -164,15 +156,6 @@ export class PlayerRepository {
     userId: number,
     userPlayerId: number,
   ): Promise<{ currentPoints: number; card: any | null }> {
-    if (!this.dataSource) {
-      const cards = this.memStore.get(userId) ?? [];
-      const card =
-        cards.find(
-          (item) => Number(item.userPlayerId) === Number(userPlayerId),
-        ) ?? null;
-      return { currentPoints: Number(card?.currentPoints ?? 0), card };
-    }
-
     const card = await this.findByUserPlayerID(userId, userPlayerId);
     return { currentPoints: Number(card?.currentPoints ?? 0), card };
   }
@@ -185,32 +168,12 @@ export class PlayerRepository {
     const normalizedDeltas = Object.fromEntries(
       Object.entries(deltas).map(([key, value]) => [key, Number(value ?? 0)]),
     );
-
-    if (!this.dataSource) {
-      const cards = this.memStore.get(userId) ?? [];
-      const card = cards.find(
-        (item) => Number(item.userPlayerId) === Number(userPlayerId),
-      );
-      if (!card) {
-        return null;
-      }
-      card.bonusStats = { ...(card.bonusStats ?? {}), ...normalizedDeltas };
-      const totalDelta = Object.values(normalizedDeltas).reduce(
-        (sum, value) => sum + Number(value),
-        0,
-      );
-      card.currentPoints = Number(card.currentPoints ?? 0) - totalDelta;
-      return card;
-    }
-
-    const repository = this.dataSource.getRepository(UserPlayerEntity);
-    const entity = await repository.findOne({
+    const entity = await this.userPlayerRepository.findOne({
       where: { userId: String(userId), id: String(userPlayerId) },
     });
     if (!entity) {
       return null;
     }
-
     const propertyMap: Record<string, keyof UserPlayerEntity> = {
       shooting: "bonusShoot",
       passing: "bonusPass",
@@ -227,7 +190,6 @@ export class PlayerRepository {
       slidingTackle: "bonusTackle",
       dribbling: "bonusDribbling",
     };
-
     for (const [key, value] of Object.entries(normalizedDeltas)) {
       const mapped = propertyMap[key];
       if (!mapped) {
@@ -241,7 +203,7 @@ export class PlayerRepository {
       0,
     );
     entity.currentPoints -= totalDelta;
-    await repository.save(entity);
+    await this.userPlayerRepository.save(entity);
     return this.findByUserPlayerID(userId, userPlayerId);
   }
 }

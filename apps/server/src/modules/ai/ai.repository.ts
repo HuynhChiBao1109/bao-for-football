@@ -64,50 +64,47 @@ export class AiRepository {
   }
 
   async ensureUserStages(userId: number): Promise<CampaignStage[]> {
-    if (this.dataSource) {
-      const repository = this.dataSource.getRepository(UserStageEntity);
-      const existing = await repository.find({
-        where: { userId: String(userId) },
-        order: { stageNo: "ASC" },
-      });
-      if (!existing.length) {
-        const seeded = this.seedStages();
-        await repository.save(
-          seeded.map((stage) =>
-            repository.create({
-              userId: String(userId),
-              stageNo: stage.stageNo,
-              clubId: String(stage.clubId),
-              clubName: stage.clubName,
-              rewardMoney: String(stage.rewardMoney),
-              rewardExp: stage.rewardExp,
-              enemyStatBonus: stage.enemyStatBonus,
-              isUnlocked: stage.isUnlocked,
-              isCleared: stage.isCleared,
-              attempts: stage.attempts,
-              wins: stage.wins,
-            }),
-          ),
-        );
-        return seeded;
-      }
-
-      return existing.map((stage) => ({
-        stageNo: stage.stageNo,
-        clubId: Number(stage.clubId),
-        clubName: stage.clubName,
-        rewardMoney: Number(stage.rewardMoney),
-        rewardExp: stage.rewardExp,
-        enemyStatBonus: stage.enemyStatBonus,
-        isUnlocked: stage.isUnlocked,
-        isCleared: stage.isCleared,
-        attempts: stage.attempts,
-        wins: stage.wins,
-        unlockedAt: stage.unlockedAt?.toISOString(),
-        lastClearedAt: stage.lastClearedAt?.toISOString(),
-        updatedAt: stage.updatedAt?.toISOString(),
-      }));
+    const existing = await this.userStageRepository.find({
+      where: { userId: String(userId) },
+      order: { stageNo: "ASC" },
+    });
+    if (!existing.length) {
+      const seeded = this.seedStages();
+      await this.userStageRepository.save(
+        seeded.map((stage) =>
+          this.userStageRepository.create({
+            userId: String(userId),
+            stageNo: stage.stageNo,
+            clubId: String(stage.clubId),
+            clubName: stage.clubName,
+            rewardMoney: String(stage.rewardMoney),
+            rewardExp: stage.rewardExp,
+            enemyStatBonus: stage.enemyStatBonus,
+            isUnlocked: stage.isUnlocked,
+            isCleared: stage.isCleared,
+            attempts: stage.attempts,
+            wins: stage.wins,
+          }),
+        ),
+      );
+      return seeded;
     }
+
+    return existing.map((stage) => ({
+      stageNo: stage.stageNo,
+      clubId: Number(stage.clubId),
+      clubName: stage.clubName,
+      rewardMoney: Number(stage.rewardMoney),
+      rewardExp: stage.rewardExp,
+      enemyStatBonus: stage.enemyStatBonus,
+      isUnlocked: stage.isUnlocked,
+      isCleared: stage.isCleared,
+      attempts: stage.attempts,
+      wins: stage.wins,
+      unlockedAt: stage.unlockedAt?.toISOString(),
+      lastClearedAt: stage.lastClearedAt?.toISOString(),
+      updatedAt: stage.updatedAt?.toISOString(),
+    }));
 
     if (!this.memStages.has(userId)) {
       this.memStages.set(userId, this.seedStages());
@@ -166,33 +163,30 @@ export class AiRepository {
     }
     stage.updatedAt = new Date().toISOString();
 
-    if (this.dataSource) {
-      const repository = this.dataSource.getRepository(UserStageEntity);
-      const entity = await repository.findOne({
-        where: { userId: String(userId), stageNo },
-      });
-      if (entity) {
-        entity.attempts = stage.attempts;
-        entity.wins = stage.wins;
-        entity.isCleared = stage.isCleared;
-        entity.lastClearedAt = stage.lastClearedAt
-          ? new Date(stage.lastClearedAt)
-          : null;
-        entity.updatedAt = stage.updatedAt
-          ? new Date(stage.updatedAt)
-          : new Date();
-        await repository.save(entity);
-      }
+    const entity = await this.userStageRepository.findOne({
+      where: { userId: String(userId), stageNo },
+    });
+    if (entity) {
+      entity.attempts = stage.attempts;
+      entity.wins = stage.wins;
+      entity.isCleared = stage.isCleared;
+      entity.lastClearedAt = stage.lastClearedAt
+        ? new Date(stage.lastClearedAt)
+        : null;
+      entity.updatedAt = stage.updatedAt
+        ? new Date(stage.updatedAt)
+        : new Date();
+      await this.userStageRepository.save(entity);
+    }
 
-      if (isWin && stages[stageNo]) {
-        const nextEntity = await repository.findOne({
-          where: { userId: String(userId), stageNo: stageNo + 1 },
-        });
-        if (nextEntity && !nextEntity.isUnlocked) {
-          nextEntity.isUnlocked = true;
-          nextEntity.unlockedAt = new Date();
-          await repository.save(nextEntity);
-        }
+    if (isWin && stages[stageNo]) {
+      const nextEntity = await this.userStageRepository.findOne({
+        where: { userId: String(userId), stageNo: stageNo + 1 },
+      });
+      if (nextEntity && !nextEntity.isUnlocked) {
+        nextEntity.isUnlocked = true;
+        nextEntity.unlockedAt = new Date();
+        await this.userStageRepository.save(nextEntity);
       }
     }
 

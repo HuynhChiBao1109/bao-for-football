@@ -54,13 +54,8 @@ export class MatchRepository {
 
     this.memStore.set(record.matchId, record);
 
-    if (!this.dataSource) {
-      return record;
-    }
-
-    const repository = this.dataSource.getRepository(MatchEntity);
-    const saved = await repository.save(
-      repository.create({
+    const saved = await this.matchRepository.save(
+      this.matchRepository.create({
         matchId: record.matchId,
         userId: String(userId),
         homeClubName: record.homeClubName,
@@ -70,9 +65,7 @@ export class MatchRepository {
         status: "running",
       }),
     );
-
     record.startedAt = saved.startedAt;
-
     return record;
   }
 
@@ -98,26 +91,19 @@ export class MatchRepository {
 
     this.memStore.set(matchId, result);
 
-    if (!this.dataSource) {
-      return result;
-    }
-
-    const repository = this.dataSource.getRepository(MatchEntity);
-    const match = await repository.findOne({ where: { matchId } });
+    const match = await this.matchRepository.findOne({ where: { matchId } });
     if (!match) {
       return null;
     }
-
     match.status = "finished";
     match.homeScore = result.homeScore ?? 0;
     match.awayScore = result.awayScore ?? 0;
     match.homeStats = result.homeStats ?? {};
     match.awayStats = result.awayStats ?? {};
     match.endedAt = result.endedAt ?? new Date();
-    const saved = await repository.save(match);
+    const saved = await this.matchRepository.save(match);
     result.startedAt = saved.startedAt;
     result.endedAt = saved.endedAt ?? result.endedAt;
-
     return result;
   }
 
@@ -127,16 +113,10 @@ export class MatchRepository {
       return existing;
     }
 
-    if (!this.dataSource) {
-      return null;
-    }
-
-    const repository = this.dataSource.getRepository(MatchEntity);
-    const match = await repository.findOne({ where: { matchId } });
+    const match = await this.matchRepository.findOne({ where: { matchId } });
     if (!match) {
       return null;
     }
-
     return {
       matchId: match.matchId,
       homeClubName: match.homeClubName,

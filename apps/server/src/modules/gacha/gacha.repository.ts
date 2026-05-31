@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { GachaBannerEntity, GachaLogEntity } from "./entities/gacha.entities";
+import { UserPlayerEntity } from "../player/entities/player.entities";
 
 export interface GachaRollResult {
   userId: number;
@@ -32,6 +33,8 @@ export class GachaRepository {
     @InjectRepository(GachaBannerEntity)
     private readonly gachaBannerRepository: Repository<GachaBannerEntity>,
     // Nếu cần PlayerTemplateEntity, UserPlayerEntity, TeamEntity thì inject thêm ở đây
+    @InjectRepository(UserPlayerEntity)
+    private readonly userPlayerRepository: Repository<UserPlayerEntity>,
   ) {}
 
   async getProgress(userId: number, bannerCode: string) {
@@ -95,5 +98,29 @@ export class GachaRepository {
     return [];
   }
 
-  // Các hàm liên quan TeamEntity, UserPlayerEntity cần inject thêm repository nếu muốn dùng thực tế
+  // --- GachaService required methods ---
+
+  /**
+   * Get the team's budget for a user. Placeholder: always returns 360000000.
+   */
+  async getTeamBudget(userId: number): Promise<number> {
+    // TODO: Replace with real budget lookup if TeamEntity is available
+    return 360000000;
+  }
+
+  /**
+   * Deduct budget from a user's team. Placeholder: always returns true.
+   */
+  async deductBudget(userId: number, amount: number): Promise<boolean> {
+    // TODO: Implement real deduction logic if TeamEntity/budget is available
+    return true;
+  }
+
+  /**
+   * Add a player to the user's collection. Placeholder: no-op.
+   */
+  async addUserPlayer(userId: number, playerId: number): Promise<void> {
+    // TODO: Implement real logic to add a player to user
+    return;
+  }
 }

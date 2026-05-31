@@ -48,16 +48,8 @@ export class GachaAdminRepository {
         : 1;
     const banner: GachaBanner = { ...input, status };
 
-    if (!this.dataSource) {
-      banner.id = this.memStore.length + 1;
-      banner.createdAt = new Date().toISOString();
-      this.memStore.push(banner);
-      return banner;
-    }
-
-    const repository = this.dataSource.getRepository(GachaBannerEntity);
-    const saved = await repository.save(
-      repository.create({
+    const saved = await this.gachaBannerRepository.save(
+      this.gachaBannerRepository.create({
         bannerCode: banner.bannerCode,
         bannerName: banner.bannerName,
         bannerImageUrl: banner.bannerImageUrl,
@@ -66,24 +58,13 @@ export class GachaAdminRepository {
         status: banner.status,
       }),
     );
-
     banner.id = Number(saved.id);
     banner.createdAt = saved.createdAt?.toISOString();
     return banner;
   }
 
   async syncExpiredBanners(): Promise<void> {
-    if (!this.dataSource) {
-      this.memStore.forEach((item) => {
-        if (new Date(item.expiredAt).getTime() <= Date.now()) {
-          item.status = 4;
-        }
-      });
-      return;
-    }
-
-    const repository = this.dataSource.getRepository(GachaBannerEntity);
-    await repository
+    await this.gachaBannerRepository
       .createQueryBuilder()
       .update(GachaBannerEntity)
       .set({ status: 4 })
