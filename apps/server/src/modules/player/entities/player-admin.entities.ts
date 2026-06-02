@@ -8,6 +8,7 @@ import {
 import { EPlayerBody } from "../types/player-body.enum";
 import { EPlayerPosition } from "../types/player-position.enum";
 import { IsEnum } from "class-validator";
+import { EPlayerSkill } from "../types/player-skill.enum";
 
 @Entity("countries")
 export class CountryEntity {
@@ -113,6 +114,9 @@ export class PlayerTemplateEntity {
 
   @OneToMany(() => PlayerPositionEntity, (position) => position.playerId)
   positions!: PlayerPositionEntity[];
+
+  @OneToMany(() => PlayerSkillEntity, (skill) => skill.playerId)
+  skills!: PlayerSkillEntity[];
 }
 
 @Entity("player_positions")
@@ -131,4 +135,22 @@ export class PlayerPositionEntity {
   })
   @IsEnum(EPlayerPosition)
   position!: EPlayerPosition;
+}
+
+@Entity("player_skills")
+@Unique(["playerId", "skill"])
+export class PlayerSkillEntity {
+  @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
+  id!: string;
+
+  @Column({ name: "player_id", type: "bigint", unsigned: true })
+  playerId: string;
+
+  @Column({
+    name: "skill",
+    type: "enum",
+    enum: EPlayerSkill,
+  })
+  @IsEnum(EPlayerSkill)
+  skill!: EPlayerSkill;
 }
