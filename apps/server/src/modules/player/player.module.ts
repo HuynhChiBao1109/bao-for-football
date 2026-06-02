@@ -13,9 +13,6 @@ import {
 import { UserPlayerEntity } from "./entities/player.entities";
 import { PlayerRepository } from "./player.repository";
 import { PlayerService } from "./player.service";
-import { PlayerAdminController } from "./playeradmin.controller";
-import { PlayerAdminRepository } from "./playeradmin.repository";
-import { PlayerAdminService } from "./playeradmin.service";
 
 @Module({
   imports: [
@@ -30,12 +27,10 @@ import { PlayerAdminService } from "./playeradmin.service";
       PlayerSkillEntity,
     ]),
   ],
-  controllers: [PlayerController, PlayerAdminController],
+  controllers: [PlayerController ],
   providers: [
     PlayerRepository,
     PlayerService,
-    PlayerAdminRepository,
-    PlayerAdminService,
   ],
 })
 export class PlayerModule {}
