@@ -47,7 +47,7 @@ export class AuthController {
   }
 
   @Get("me")
-  async me(@CurrentUser() user: TokenClaims | undefined) {
+  async me(@CurrentUser() user: TokenClaims) {
     return {
       data: await this.authService.me(
         Number(user?.userId),
