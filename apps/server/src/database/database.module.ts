@@ -61,7 +61,7 @@ WHERE table_schema = ?
           password,
           database,
           entities: [__dirname + "/../modules/**/entities/*{.ts,.js}"],
-          migrations: [__dirname + "/migrations/*{.ts,.js}"],
+          migrations: [__dirname + "/migrations/*{.ts}"],
           synchronize: true,
           migrationsRun: true,
         });

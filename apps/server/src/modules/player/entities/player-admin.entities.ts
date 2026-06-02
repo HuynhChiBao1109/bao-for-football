@@ -1,6 +1,8 @@
 import {
   Column,
   Entity,
+  JoinColumn,
+  ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
   Unique,
@@ -13,63 +15,90 @@ import { EPlayerSkill } from "../types/player-skill.enum";
 @Entity("countries")
 export class CountryEntity {
   @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
-  id!: string;
+  id: bigint;
 
   @Column({ type: "varchar", length: 191 })
-  name!: string;
-
-  @Column({ type: "varchar", length: 16, nullable: true })
-  code!: string | null;
+  name: string;
 
   @Column({ type: "varchar", length: 512, nullable: true })
-  flag!: string | null;
+  img_url: string | null;
+
+  @OneToMany(() => LeagueEntity, (league) => league.country)
+  leagues?: LeagueEntity[];
+  
+  @OneToMany(() => PlayerTemplateEntity, (player) => player.country)
+  players: PlayerTemplateEntity[];
 }
 
 @Entity("leagues")
 export class LeagueEntity {
   @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
-  id!: string;
+  id: bigint;
 
   @Column({ type: "varchar", length: 191 })
-  name!: string;
+  name: string;
 
   @Column({
     name: "country_id",
     type: "bigint",
     unsigned: true,
-    nullable: true,
   })
-  countryId!: string | null;
+  countryId: bigint | null;
 
   @Column({ type: "varchar", length: 512, nullable: true })
-  logo!: string | null;
+  img_url: string | null;
+
+  @ManyToOne(() => CountryEntity, (country) => country.leagues, { nullable: true })
+  @JoinColumn({ name: "country_id" })
+  country: CountryEntity | null;
+
+  @OneToMany(() => ClubEntity, (club) => club.league)
+  clubs: ClubEntity[];
+}
+
+@Entity("clubs")
+export class ClubEntity {
+  @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
+  id: bigint;
+
+  @Column({ type: "varchar", length: 191 })
+  name: string;
+
+  @Column({ type: "varchar", length: 512 })
+  img_url: string | null;
+
+  @Column({ name: "league_id", type: "bigint", unsigned: true })
+  leagueId: bigint;
+
+  @ManyToOne(() => LeagueEntity, (league) => league.clubs, { nullable: true })
+  @JoinColumn({ name: "league_id" })
+  league: LeagueEntity | null;
 }
 
 @Entity("players")
 @Unique(["name", "season"])
 export class PlayerTemplateEntity {
   @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
-  id: string;
+  id: bigint;
 
   @Column({ type: "varchar", length: 191 })
-  name!: string;
+  name: string;
 
   @Column({ type: "varchar", length: 64, default: "normal" })
-  season!: string;
+  season: string;
 
   @Column({ name: "avatar_url", type: "varchar", length: 512, nullable: true })
-  avatarUrl!: string | null;
+  avatarUrl: string | null;
 
   @Column({
     name: "country_id",
     type: "bigint",
     unsigned: true,
-    nullable: true,
   })
-  countryId!: string | null;
+  countryId: bigint | null;
 
   @Column({ name: "club_id", type: "bigint", unsigned: true, nullable: true })
-  clubId!: string | null;
+  clubId: bigint | null;
 
   @Column({ name: "height", type: "int", default: 180 })
   height!: number;
@@ -80,53 +109,69 @@ export class PlayerTemplateEntity {
     enum: EPlayerBody,
     default: EPlayerBody.NORMAL,
   })
-  bodyType!: EPlayerBody;
+  bodyType: EPlayerBody;
 
   @Column({ name: "pass", type: "int", default: 75 })
-  pass!: number;
+  pass: number;
 
   @Column({ name: "long_pass", type: "int", default: 75 })
-  longPass!: number;
+  longPass: number;
 
   @Column({ name: "vision", type: "int", default: 75 })
-  vision!: number;
+  vision: number;
 
   @Column({ name: "shoot", type: "int", default: 75 })
-  shoot!: number;
+  shoot: number;
 
   @Column({ name: "tackle", type: "int", default: 75 })
-  tackle!: number;
+  tackle: number;
 
   @Column({ name: "balance", type: "int", default: 75 })
-  balance!: number;
+  balance: number;
 
   @Column({ name: "dribbling", type: "int", default: 75 })
-  dribbling!: number;
+  dribbling: number;
 
   @Column({ name: "acceleration", type: "int", default: 75 })
-  acceleration!: number;
+  acceleration: number;
 
   @Column({ name: "speed", type: "int", default: 75 })
-  speed!: number;
+  speed: number;
 
   @Column({ name: "stamina", type: "int", default: 75 })
-  stamina!: number;
+  stamina: number;
 
-  @OneToMany(() => PlayerPositionEntity, (position) => position.playerId)
-  positions!: PlayerPositionEntity[];
+  @ManyToOne(() => CountryEntity, { nullable: true })
+  @JoinColumn({ name: "country_id" })
+  country: CountryEntity | null;
 
-  @OneToMany(() => PlayerSkillEntity, (skill) => skill.playerId)
-  skills!: PlayerSkillEntity[];
+  @ManyToOne(() => LeagueEntity, { nullable: true })
+  @JoinColumn({ name: "league_id" })
+  league: LeagueEntity | null;
+
+  @ManyToOne(() => ClubEntity, { nullable: true })
+  @JoinColumn({ name: "club_id" })
+  club: ClubEntity | null;
+  
+  @OneToMany(() => PlayerPositionEntity, (position) => position.player, {
+    cascade: true,
+  })
+  positions: PlayerPositionEntity[];
+
+  @OneToMany(() => PlayerSkillEntity, (skill) => skill.player, {
+    cascade: true,
+  })
+  skills: PlayerSkillEntity[];
 }
 
 @Entity("player_positions")
 @Unique(["playerId", "position"])
 export class PlayerPositionEntity {
   @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
-  id!: string;
+  id: bigint;
 
   @Column({ name: "player_id", type: "bigint", unsigned: true })
-  playerId: string;
+  playerId: bigint;
 
   @Column({
     name: "position",
@@ -134,17 +179,23 @@ export class PlayerPositionEntity {
     enum: EPlayerPosition,
   })
   @IsEnum(EPlayerPosition)
-  position!: EPlayerPosition;
+  position: EPlayerPosition;
+
+  @ManyToOne(() => PlayerTemplateEntity, (player) => player.positions, {
+    onDelete: "CASCADE",
+  })
+  @JoinColumn({ name: "player_id" })
+  player: PlayerTemplateEntity;
 }
 
 @Entity("player_skills")
 @Unique(["playerId", "skill"])
 export class PlayerSkillEntity {
   @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
-  id!: string;
+  id: bigint;
 
   @Column({ name: "player_id", type: "bigint", unsigned: true })
-  playerId: string;
+  playerId: bigint;
 
   @Column({
     name: "skill",
@@ -152,5 +203,11 @@ export class PlayerSkillEntity {
     enum: EPlayerSkill,
   })
   @IsEnum(EPlayerSkill)
-  skill!: EPlayerSkill;
+  skill: EPlayerSkill;
+
+  @ManyToOne(() => PlayerTemplateEntity, (player) => player.skills, {
+    onDelete: "CASCADE",
+  })
+  @JoinColumn({ name: "player_id" })
+  player: PlayerTemplateEntity;
 }

@@ -3,8 +3,7 @@ import * as bcrypt from "bcrypt";
 import { Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { TeamEntity, UserEntity } from "./entities/auth.entities";
-import { ClubEntity } from "../club/entities/club.entities";
-import { PlayerTemplateEntity } from "../player/entities/player-admin.entities";
+import { ClubEntity, PlayerTemplateEntity } from "../player/entities/player-admin.entities";
 import { UserPlayerEntity } from "../player/entities/player.entities";
 import { AuthUser, ClubOption, TeamAssignment } from "./types";
 
@@ -208,7 +207,7 @@ export class AuthRepository {
       return 50;
     }
     return this.playerTemplateRepository.count({
-      where: { clubId: String(clubId) },
+      where: { clubId: BigInt(clubId) },
     });
   }
 
@@ -231,7 +230,7 @@ export class AuthRepository {
       return [];
     }
     return this.playerTemplateRepository.find({
-      where: { clubId: String(clubId) },
+      where: { clubId: BigInt(clubId) },
       order: { id: "ASC" },
       take: limit,
     });

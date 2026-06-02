@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { Repository, In } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
-import { ClubEntity } from "../club/entities/club.entities";
 import {
+  ClubEntity,
   CountryEntity,
   LeagueEntity,
   PlayerPositionEntity,
@@ -73,28 +73,28 @@ export class PlayerAdminRepository {
   }
 
   private async loadPositionsByPlayerIDs(playerIDs: number[]) {
-    const positionsMap = new Map<
-      string,
-      Array<{ position: string; effect: number }>
-    >();
-    if (!playerIDs.length) {
-      return positionsMap;
-    }
-    const rows = await this.playerPositionRepository.find({
-      where: playerIDs.map((id) => ({ playerId: String(id) })),
-    });
+    // const positionsMap = new Map<
+    //   string,
+    //   Array<{ position: string; effect: number }>
+    // >();
+    // if (!playerIDs.length) {
+    //   return positionsMap;
+    // }
+    // const rows = await this.playerPositionRepository.find({
+    //   where: playerIDs.map((id) => ({ playerId: String(id) })),
+    // });
 
-    for (const row of rows) {
-      const key = String(row.playerId);
-      const current = positionsMap.get(key) ?? [];
-      current.push({
-        position: String(row.position ?? ""),
-        effect: 1,
-      });
-      positionsMap.set(key, current);
-    }
+    // for (const row of rows) {
+    //   const key = String(row.playerId);
+    //   const current = positionsMap.get(key) ?? [];
+    //   current.push({
+    //     position: String(row.position ?? ""),
+    //     effect: 1,
+    //   });
+    //   positionsMap.set(key, current);
+    // }
 
-    return positionsMap;
+    // return positionsMap;
   }
 
   private async loadSkillsByPlayerIDs(playerIDs: number[]) {
@@ -193,40 +193,40 @@ export class PlayerAdminRepository {
   }
 
   private async mapPlayersResponse(players: PlayerTemplateEntity[]) {
-    if (!players.length) {
-      return [];
-    }
+    // if (!players.length) {
+    //   return [];
+    // }
 
-    const playerIDs = players.map((item) => Number(item.id));
-    const countryIDs = Array.from(
-      new Set(
-        players
-          .map((item) => item.countryId)
-          .filter((item): item is string => Boolean(item)),
-      ),
-    );
+    // const playerIDs = players.map((item) => Number(item.id));
+    // const countryIDs = Array.from(
+    //   new Set(
+    //     players
+    //       .map((item) => item.countryId)
+    //       .filter((item): item is bigint => Boolean(item)),
+    //   ),
+    // );
 
-    const [positionsMap, skillsMap, countryMap] = await Promise.all([
-      this.loadPositionsByPlayerIDs(playerIDs),
-      this.loadSkillsByPlayerIDs(playerIDs),
-      this.loadCountriesByIDs(countryIDs),
-    ]);
+    // const [positionsMap, skillsMap, countryMap] = await Promise.all([
+    //   this.loadPositionsByPlayerIDs(playerIDs),
+    //   this.loadSkillsByPlayerIDs(playerIDs),
+    //   this.loadCountriesByIDs(countryIDs),
+    // ]);
 
-    return players.map((player) => {
-      const key = String(player.id);
-      return this.toPlayerResponse(
-        player,
-        positionsMap.get(key) ?? [],
-        [], // skillsMap.get(key) ?? [],
-        countryMap.get(String(player.countryId ?? "")) ?? null,
-      );
-    });
+    // return players.map((player) => {
+    //   const key = String(player.id);
+    //   return this.toPlayerResponse(
+    //     player,
+    //     positionsMap.get(key) ?? [],
+    //     [], // skillsMap.get(key) ?? [],
+    //     countryMap.get(String(player.countryId ?? "")) ?? null,
+    //   );
+    // });
   }
 
   private async syncPlayerPositions(playerID: number, input: EPlayerPosition) {
     const normalized = this.normalizePositions(input);
     await this.playerPositionRepository.delete({
-      playerId: String(playerID),
+      playerId: BigInt(playerID),
     });
     if (!normalized.length) {
       return;
@@ -234,7 +234,7 @@ export class PlayerAdminRepository {
     await this.playerPositionRepository.save(
       normalized.map((item) =>
         this.playerPositionRepository.create({
-          playerId: String(playerID),
+          playerId: BigInt(playerID),
           position: item.position as EPlayerPosition,
         }),
       ),
@@ -261,75 +261,75 @@ export class PlayerAdminRepository {
   }
 
   async detailPlayer(id: number) {
-    // ...existing code...
-    const player = await this.playerTemplateRepository.findOne({
-      where: { id: String(id) },
-    });
-    if (!player) {
-      return null;
-    }
-    const [mapped] = await this.mapPlayersResponse([player]);
-    return mapped;
+    // // ...existing code...
+    // const player = await this.playerTemplateRepository.findOne({
+    //   where: { id: BigInt(id) },
+    // });
+    // if (!player) {
+    //   return null;
+    // }
+    // const [mapped] = await this.mapPlayersResponse([player]);
+    // return mapped;
   }
 
   async createPlayer(body: any) {
-    const created = await this.playerTemplateRepository.save(
-      this.playerTemplateRepository.create({
-        name: body.name,
-        avatarUrl: body.avatarUrl ?? body.avatar ?? null,
-        countryId: body.countryId != null ? String(body.countryId) : null,
-        clubId: body.clubId != null ? String(body.clubId) : null,
-        height: Number(body.height ?? 180),
-        pass: Number(body.passing ?? 75),
-        longPass: Number(body.longPass ?? body.passing ?? 75),
-        vision: Number(body.vision ?? body.passing ?? 75),
-        shoot: Number(body.shooting ?? 75),
-        tackle: Number(body.defending ?? 75),
-        balance: Number(body.balance ?? 75),
-        dribbling: Number(body.dribbling ?? 75),
-      }),
-    );
-    await this.syncPlayerPositions(Number(created.id), body.positions);
-    const [mapped] = await this.mapPlayersResponse([created]);
-    return mapped;
+    // const created = await this.playerTemplateRepository.save(
+    //   this.playerTemplateRepository.create({
+    //     name: body.name,
+    //     avatarUrl: body.avatarUrl ?? body.avatar ?? null,
+    //     countryId: body.countryId != null ? String(body.countryId) : null,
+    //     clubId: body.clubId != null ? String(body.clubId) : null,
+    //     height: Number(body.height ?? 180),
+    //     pass: Number(body.passing ?? 75),
+    //     longPass: Number(body.longPass ?? body.passing ?? 75),
+    //     vision: Number(body.vision ?? body.passing ?? 75),
+    //     shoot: Number(body.shooting ?? 75),
+    //     tackle: Number(body.defending ?? 75),
+    //     balance: Number(body.balance ?? 75),
+    //     dribbling: Number(body.dribbling ?? 75),
+    //   }),
+    // );
+    // await this.syncPlayerPositions(Number(created.id), body.positions);
+    // const [mapped] = await this.mapPlayersResponse([created]);
+    // return mapped;
   }
 
   async updatePlayer(id: number, body: any) {
-    const player = await this.playerTemplateRepository.findOne({
-      where: { id: String(id) },
-    });
-    if (!player) {
-      return null;
-    }
-    Object.assign(player, {
-      name: body.name ?? player.name,
-      avatarUrl: body.avatarUrl ?? body.avatar ?? player.avatarUrl,
-      countryId:
-        body.countryId != null ? String(body.countryId) : player.countryId,
-      clubId: body.clubId != null ? String(body.clubId) : player.clubId,
-      height: body.height != null ? Number(body.height) : player.height,
-      pass: body.passing != null ? Number(body.passing) : player.pass,
-      longPass: body.longPass != null ? Number(body.longPass) : player.longPass,
-      vision: body.vision != null ? Number(body.vision) : player.vision,
-      shoot: body.shooting != null ? Number(body.shooting) : player.shoot,
-      tackle: body.defending != null ? Number(body.defending) : player.tackle,
-      balance: body.balance != null ? Number(body.balance) : player.balance,
-      dribbling:
-        body.dribbling != null ? Number(body.dribbling) : player.dribbling,
-    });
-    const updated = await this.playerTemplateRepository.save(player);
-    if (Object.prototype.hasOwnProperty.call(body, "positions")) {
-      await this.syncPlayerPositions(Number(updated.id), body.positions);
-    }
-    const [mapped] = await this.mapPlayersResponse([updated]);
-    return mapped;
+    // const player = await this.playerTemplateRepository.findOne({
+    //   where: { id: BigInt(id) },
+    // });
+    // if (!player) {
+    //   return null;
+    // }
+    // Object.assign(player, {
+    //   name: body.name ?? player.name,
+    //   avatarUrl: body.avatarUrl ?? body.avatar ?? player.avatarUrl,
+    //   countryId:
+    //     body.countryId != null ? BigInt(body.countryId) : player.countryId,
+    //   clubId: body.clubId != null ? BigInt(body.clubId) : player.clubId,
+    //   height: body.height != null ? Number(body.height) : player.height,
+    //   pass: body.passing != null ? Number(body.passing) : player.pass,
+    //   longPass: body.longPass != null ? Number(body.longPass) : player.longPass,
+    //   vision: body.vision != null ? Number(body.vision) : player.vision,
+    //   shoot: body.shooting != null ? Number(body.shooting) : player.shoot,
+    //   tackle: body.defending != null ? Number(body.defending) : player.tackle,
+    //   balance: body.balance != null ? Number(body.balance) : player.balance,
+    //   dribbling:
+    //     body.dribbling != null ? Number(body.dribbling) : player.dribbling,
+    // });
+    // const updated = await this.playerTemplateRepository.save(player);
+    // if (Object.prototype.hasOwnProperty.call(body, "positions")) {
+    //   await this.syncPlayerPositions(Number(updated.id), body.positions);
+    // }
+    // const [mapped] = await this.mapPlayersResponse([updated]);
+    // return mapped;
   }
 
   async deletePlayer(id: number) {
     await this.playerPositionRepository.delete({
-      playerId: String(id),
+      playerId: BigInt(id),
     });
-    await this.playerTemplateRepository.delete({ id: String(id) });
+    await this.playerTemplateRepository.delete({ id: BigInt(id) });
   }
 
   async listCountries() {
@@ -348,7 +348,7 @@ export class PlayerAdminRepository {
     return this.leagueRepository.save(
       this.leagueRepository.create({
         name: body.name,
-        countryId: body.countryId != null ? String(body.countryId) : null,
+        countryId: body.countryId != null ? BigInt(body.countryId) : null,
         logo: body.logo ?? null,
       }),
     );
@@ -356,31 +356,31 @@ export class PlayerAdminRepository {
 
   async updateLeague(id: number, body: any) {
     const league = await this.leagueRepository.findOne({
-      where: { id: String(id) },
+      where: { id: BigInt(id) },
     });
     if (!league) {
       return null;
     }
     league.name = body.name ?? league.name;
     league.countryId =
-      body.countryId != null ? String(body.countryId) : league.countryId;
+      body.countryId != null ? BigInt(body.countryId) : league.countryId;
     league.logo = body.logo ?? league.logo;
     return this.leagueRepository.save(league);
   }
 
   async deleteLeague(id: number) {
-    await this.leagueRepository.delete({ id: String(id) });
+    await this.leagueRepository.delete({ id: BigInt(id) });
   }
 
   async createClub(body: any) {
-    return this.clubRepository.save(
-      this.clubRepository.create({
-        name: body.name,
-        logo: body.logo ?? null,
-        countryId: body.countryId != null ? String(body.countryId) : null,
-        leagueId: body.leagueId != null ? String(body.leagueId) : null,
-      }),
-    );
+    // return this.clubRepository.save(
+    //   this.clubRepository.create({
+    //     name: body.name,
+    //     logo: body.logo ?? null,
+    //     countryId: body.countryId != null ? BigInt(body.countryId) : null,
+    //     leagueId: body.leagueId != null ? BigInt(body.leagueId) : null,
+    //   }),
+    // );
   }
 
   async listSkills() {

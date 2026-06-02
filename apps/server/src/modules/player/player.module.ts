@@ -1,12 +1,13 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { AuthModule } from "../auth/auth.module";
-import { ClubEntity } from "../club/entities/club.entities";
 import { PlayerController } from "./player.controller";
 import {
+  ClubEntity,
   CountryEntity,
   LeagueEntity,
   PlayerPositionEntity,
+  PlayerSkillEntity,
   PlayerTemplateEntity,
 } from "./entities/player-admin.entities";
 import { UserPlayerEntity } from "./entities/player.entities";
@@ -26,6 +27,7 @@ import { PlayerAdminService } from "./playeradmin.service";
       LeagueEntity,
       ClubEntity,
       PlayerPositionEntity,
+      PlayerSkillEntity,
     ]),
   ],
   controllers: [PlayerController, PlayerAdminController],

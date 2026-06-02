@@ -13,7 +13,6 @@ import { LoggingMiddleware } from "./common/middleware/logging.middleware";
 import { DatabaseModule } from "./database/database.module";
 import { AiModule } from "./modules/ai/ai.module";
 import { AuthModule } from "./modules/auth/auth.module";
-import { ClubModule } from "./modules/club/club.module";
 import { GachaAdminModule } from "./modules/gachaadmin/gachaadmin.module";
 import { GachaModule } from "./modules/gacha/gacha.module";
 import { MatchModule } from "./modules/match/match.module";
@@ -52,7 +51,6 @@ import { TacticsModule } from "./modules/tactics/tactics.module";
     }),
     DatabaseModule,
     AuthModule,
-    ClubModule,
     TacticsModule,
     AiModule,
     GachaModule,
