@@ -1,23 +1,19 @@
 /* eslint-disable no-console */
 const path = require("path");
-const { createRequire } = require("module");
-
-const requireFromServer = createRequire(
-  path.resolve(__dirname, "../apps/server/package.json"),
-);
-const mysql = requireFromServer("mysql2/promise");
-const dotenv = requireFromServer("dotenv");
+const mysql = require("mysql2/promise");
+const dotenv = require("dotenv");
 
 const DEFAULT_MYSQL_DSN =
   "root:1234@tcp(localhost:3306)/fifam_dev?parseTime=true";
 const DEFAULT_API_HOST = "v3.football.api-sports.io";
-const DEFAULT_RAPID_API_KEY = "bb2298594195e93d3891a738150db6a1";
 const DEFAULT_COUNTRY = "england";
 const DEFAULT_LEAGUE = "39";
 const DEFAULT_SEASON = "2024";
-const DEFAULT_PLAYER_STAT = 60;
-const DEFAULT_PLAYER_HEIGHT = 170;
-const UNKNOWN_COUNTRY_ID = 168;
+const DEFAULT_PLAYER_STAT = 75;
+const DEFAULT_PLAYER_HEIGHT = 180;
+const UNKNOWN_COUNTRY_ID = 999999;
+const DEFAULT_SEASON_TYPE = "normal";
+const DEFAULT_BODY_TYPE = "normal";
 
 const REQUEST_TIMEOUT_MS = 30_000;
 
@@ -26,7 +22,7 @@ loadEnv();
 function loadEnv() {
   const candidates = [
     path.resolve(process.cwd(), ".env"),
-    path.resolve(__dirname, "../.env"),
+    path.resolve(__dirname, "../../../.env"),
   ];
 
   for (const file of candidates) {
@@ -109,10 +105,7 @@ function loadConfig() {
       timezone: "Z",
     },
     apiKey,
-    rapidAPIKey: firstNonEmpty(
-      process.env.API_FOOTBALL_KEY,
-      DEFAULT_RAPID_API_KEY,
-    ),
+    rapidAPIKey: firstNonEmpty(process.env.API_FOOTBALL_KEY),
     apiHost: firstNonEmpty(process.env.API_FOOTBALL_HOST, DEFAULT_API_HOST),
     country: firstNonEmpty(process.env.API_FOOTBALL_COUNTRY, DEFAULT_COUNTRY),
     league: firstNonEmpty(process.env.API_FOOTBALL_LEAGUE, DEFAULT_LEAGUE),
@@ -132,6 +125,7 @@ async function requestJSON(config, endpoint) {
         method: "GET",
         headers: {
           "X-RAPIDAPI-KEY": config.rapidAPIKey,
+          "X-RAPIDAPI-HOST": config.apiHost,
         },
         signal: controller.signal,
       });
@@ -245,23 +239,10 @@ async function ensureCountryID(db, id) {
 
   await db.execute(
     `
-INSERT INTO countries (id, name, code, flag, created_at, updated_at)
-VALUES (?, ?, ?, '', NOW(), NOW())`,
-    [id, `Unknown (${id})`, `UNK-${id}`],
+INSERT INTO countries (id, name, img_url)
+VALUES (?, ?, NULL)`,
+    [id, `Unknown (${id})`],
   );
-}
-
-function inferCountryCode(name) {
-  const normalized = String(name || "")
-    .trim()
-    .toLowerCase();
-  if (normalized === "england") {
-    return "GB-ENG";
-  }
-  if (normalized.length < 2) {
-    return "";
-  }
-  return normalized.slice(0, 2).toUpperCase();
 }
 
 async function resolveOrCreateCountry(db, countryName) {
@@ -278,12 +259,11 @@ async function resolveOrCreateCountry(db, countryName) {
     return Number(rows[0].id);
   }
 
-  const code = inferCountryCode(name);
   const [result] = await db.execute(
     `
-INSERT INTO countries (name, code, flag, created_at, updated_at)
-VALUES (?, ?, '', NOW(), NOW())`,
-    [name, code],
+INSERT INTO countries (name, img_url)
+VALUES (?, NULL)`,
+    [name],
   );
 
   return Number(result.insertId);
@@ -300,9 +280,9 @@ async function resolveOrCreateLeague(db, leagueName, countryID) {
 SELECT id
 FROM leagues
 WHERE name = ?
-  AND ((country_id IS NULL AND ? IS NULL) OR country_id = ?)
+  AND country_id = ?
 LIMIT 1`,
-    [name, countryID, countryID],
+    [name, countryID],
   );
 
   if (rows.length > 0) {
@@ -311,8 +291,8 @@ LIMIT 1`,
 
   const [result] = await db.execute(
     `
-INSERT INTO leagues (name, country_id, logo, created_at, updated_at)
-VALUES (?, ?, '', NOW(), NOW())`,
+INSERT INTO leagues (name, country_id, img_url)
+VALUES (?, ?, NULL)`,
     [name, countryID],
   );
 
@@ -320,21 +300,25 @@ VALUES (?, ?, '', NOW(), NOW())`,
 }
 
 async function upsertClub(db, club) {
-  const countryID = await resolveOrCreateCountry(db, club.country);
+  let countryID = await resolveOrCreateCountry(db, club.country);
+  if (!countryID) {
+    countryID = UNKNOWN_COUNTRY_ID;
+  }
+
   const leagueID = await resolveOrCreateLeague(db, club.leagueName, countryID);
 
   await db.execute(
     `
-INSERT INTO clubs (id, name, logo, country_id, league_id, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, NOW(), NOW())
+INSERT INTO clubs (id, name, img_url, league_id)
+VALUES (?, ?, ?, ?)
 ON DUPLICATE KEY UPDATE
   name = VALUES(name),
-  logo = VALUES(logo),
-  country_id = VALUES(country_id),
-  league_id = VALUES(league_id),
-  updated_at = NOW()`,
-    [club.id, club.name, club.logo, countryID, leagueID],
+  img_url = VALUES(img_url),
+  league_id = VALUES(league_id)`,
+    [club.id, club.name, club.logo || null, leagueID],
   );
+
+  return { countryID };
 }
 
 function mapPosition(apiPosition) {
@@ -352,7 +336,9 @@ function mapPosition(apiPosition) {
     case "attacker":
     case "forward":
     case "striker":
-      return "CF";
+      return "ST";
+    case "winger":
+      return "RW";
     default:
       return "";
   }
@@ -366,25 +352,23 @@ async function upsertPrimaryPosition(db, playerTemplateID, apiPosition) {
 
   await db.execute(
     `
-INSERT INTO player_positions (player_template_id, position, effect, created_at, updated_at)
-VALUES (?, ?, 1.00, NOW(), NOW())
+INSERT INTO player_positions (player_id, position)
+VALUES (?, ?)
 ON DUPLICATE KEY UPDATE
-  effect = VALUES(effect),
-  updated_at = NOW()`,
+  position = VALUES(position)`,
     [playerTemplateID, position],
   );
 }
 
-async function upsertPlayerTemplate(db, club, player) {
+async function upsertPlayerTemplate(db, club, player, countryID) {
   const [rows] = await db.query(
     `
 SELECT id
-FROM player_templates
-WHERE club_id = ?
-  AND season = 'normal'
+FROM players
+WHERE season = ?
   AND LOWER(name) = LOWER(?)
 LIMIT 1`,
-    [club.id, player.name],
+    [DEFAULT_SEASON_TYPE, player.name],
   );
 
   let existingID = rows.length > 0 ? Number(rows[0].id) : 0;
@@ -392,54 +376,33 @@ LIMIT 1`,
   if (!existingID) {
     const [result] = await db.execute(
       `
-INSERT INTO player_templates (
+INSERT INTO players (
   name,
-  height_cm,
+  season,
+  avatar_url,
   country_id,
   club_id,
-  base_club,
-  season,
-  image_url,
-  base_shooting,
-  base_passing,
-  base_long_pass,
-  base_vision,
-  base_gk_reach,
-  base_counter_attack_awareness,
-  base_defending,
-  base_gk_parrying,
-  base_gk_reflex,
-  base_duels,
-  base_pace,
-  base_stamina,
-  base_balance,
-  base_technique,
-  base_determination,
-  base_physical,
-  base_standing_tackle,
-  base_sliding_tackle,
-  base_dribbling,
-  base_curve,
-  created_at,
-  updated_at
-) VALUES (?, ?, ?, ?, ?, 'normal', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+  height,
+  body_type,
+  pass,
+  long_pass,
+  vision,
+  shoot,
+  tackle,
+  balance,
+  dribbling,
+  acceleration,
+  speed,
+  stamina
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         player.name,
-        DEFAULT_PLAYER_HEIGHT,
-        UNKNOWN_COUNTRY_ID,
+        DEFAULT_SEASON_TYPE,
+        player.photo || null,
+        countryID || UNKNOWN_COUNTRY_ID,
         club.id,
-        club.name,
-        player.photo,
-        DEFAULT_PLAYER_STAT,
-        DEFAULT_PLAYER_STAT,
-        DEFAULT_PLAYER_STAT,
-        DEFAULT_PLAYER_STAT,
-        DEFAULT_PLAYER_STAT,
-        DEFAULT_PLAYER_STAT,
-        DEFAULT_PLAYER_STAT,
-        DEFAULT_PLAYER_STAT,
-        DEFAULT_PLAYER_STAT,
-        DEFAULT_PLAYER_STAT,
+        DEFAULT_PLAYER_HEIGHT,
+        DEFAULT_BODY_TYPE,
         DEFAULT_PLAYER_STAT,
         DEFAULT_PLAYER_STAT,
         DEFAULT_PLAYER_STAT,
@@ -456,54 +419,34 @@ INSERT INTO player_templates (
   } else {
     await db.execute(
       `
-UPDATE player_templates
+UPDATE players
 SET
   name = ?,
-  height_cm = ?,
+  season = ?,
+  avatar_url = ?,
   country_id = ?,
   club_id = ?,
-  base_club = ?,
-  season = 'normal',
-  image_url = ?,
-  base_shooting = ?,
-  base_passing = ?,
-  base_long_pass = ?,
-  base_vision = ?,
-  base_gk_reach = ?,
-  base_counter_attack_awareness = ?,
-  base_defending = ?,
-  base_gk_parrying = ?,
-  base_gk_reflex = ?,
-  base_duels = ?,
-  base_pace = ?,
-  base_stamina = ?,
-  base_balance = ?,
-  base_technique = ?,
-  base_determination = ?,
-  base_physical = ?,
-  base_standing_tackle = ?,
-  base_sliding_tackle = ?,
-  base_dribbling = ?,
-  base_curve = ?,
-  updated_at = NOW()
+  height = ?,
+  body_type = ?,
+  pass = ?,
+  long_pass = ?,
+  vision = ?,
+  shoot = ?,
+  tackle = ?,
+  balance = ?,
+  dribbling = ?,
+  acceleration = ?,
+  speed = ?,
+  stamina = ?
 WHERE id = ?`,
       [
         player.name,
-        DEFAULT_PLAYER_HEIGHT,
-        UNKNOWN_COUNTRY_ID,
+        DEFAULT_SEASON_TYPE,
+        player.photo || null,
+        countryID || UNKNOWN_COUNTRY_ID,
         club.id,
-        club.name,
-        player.photo,
-        DEFAULT_PLAYER_STAT,
-        DEFAULT_PLAYER_STAT,
-        DEFAULT_PLAYER_STAT,
-        DEFAULT_PLAYER_STAT,
-        DEFAULT_PLAYER_STAT,
-        DEFAULT_PLAYER_STAT,
-        DEFAULT_PLAYER_STAT,
-        DEFAULT_PLAYER_STAT,
-        DEFAULT_PLAYER_STAT,
-        DEFAULT_PLAYER_STAT,
+        DEFAULT_PLAYER_HEIGHT,
+        DEFAULT_BODY_TYPE,
         DEFAULT_PLAYER_STAT,
         DEFAULT_PLAYER_STAT,
         DEFAULT_PLAYER_STAT,
@@ -527,9 +470,9 @@ WHERE id = ?`,
 async function main() {
   const config = loadConfig();
 
-  if (!config.apiKey && !config.rapidAPIKey) {
+  if (!config.rapidAPIKey) {
     throw new Error(
-      "missing API key: set API_FOOTBALL_KEY/APISPORTS_KEY or RAPIDAPI_KEY",
+      "missing API_FOOTBALL_KEY (or APISPORTS_KEY/X_APISPORTS_KEY)",
     );
   }
 
@@ -548,12 +491,12 @@ async function main() {
     let playerCount = 0;
 
     for (const club of clubs) {
-      await upsertClub(db, club);
+      const { countryID } = await upsertClub(db, club);
       clubCount += 1;
 
       const players = await fetchSquadPlayers(config, club.id);
       for (const player of players) {
-        await upsertPlayerTemplate(db, club, player);
+        await upsertPlayerTemplate(db, club, player, countryID);
         playerCount += 1;
       }
 
@@ -562,7 +505,7 @@ async function main() {
       );
     }
 
-    console.log(`done: clubs=${clubCount} player_templates=${playerCount}`);
+    console.log(`done: clubs=${clubCount} players=${playerCount}`);
   } finally {
     await db.end();
   }
