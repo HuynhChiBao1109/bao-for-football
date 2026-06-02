@@ -36,24 +36,24 @@ export class AuthRepository {
     return;
   }
 
-  async listRegistrationClubs(): Promise<ClubOption[]> {
-    const rows = await this.clubRepository
-      .createQueryBuilder("club")
-      .leftJoinAndSelect("club.league", "league")
-      .orderBy("club.id", "ASC")
-      .getMany();
-    if (!rows.length) {
-      return defaultClubs();
-    }
-    return rows.map((row) => ({
-      id: Number(row.id),
-      name: row.name,
-      logo: row.logo ?? "",
-      countryId: row.countryId != null ? Number(row.countryId) : undefined,
-      leagueId: row.leagueId != null ? Number(row.leagueId) : undefined,
-      budget: defaultTeamBudget,
-      leagueName: row.league?.name ?? "",
-    }));
+  async listRegistrationClubs(): Promise<any> {
+    // const rows = await this.clubRepository
+    //   .createQueryBuilder("club")
+    //   .leftJoinAndSelect("club.league", "league")
+    //   .orderBy("club.id", "ASC")
+    //   .getMany();
+    // if (!rows.length) {
+    //   return defaultClubs();
+    // }
+    // return rows.map((row) => ({
+    //   id: Number(row.id),
+    //   name: row.name,
+    //   logo: row.logo ?? "",
+    //   countryId: row.countryId != null ? Number(row.countryId) : undefined,
+    //   leagueId: row.leagueId != null ? Number(row.leagueId) : undefined,
+    //   budget: defaultTeamBudget,
+    //   leagueName: row.league?.name ?? "",
+    // }));
   }
 
   async findByUsername(username: string): Promise<{
@@ -156,42 +156,42 @@ export class AuthRepository {
     userId: number,
     clubId: number,
     clubName: string,
-  ): Promise<{ ok: boolean; reason?: string; starterClubName?: string }> {
-    // Chỉ dùng memory nếu không có clubRepository (test/mock)
-    if (!this.clubRepository || !this.teamRepository) {
-      const selected = defaultClubs().find((item) => item.id === clubId);
-      if (!selected) {
-        return { ok: false, reason: `club id ${clubId} not found` };
-      }
-      this.memTeams.set(userId, {
-        ...selected,
-        name: clubName.trim() || selected.name,
-      });
-      return { ok: true, starterClubName: selected.name };
-    }
-    const club = await this.clubRepository.findOne({
-      where: { id: String(clubId) },
-    });
-    if (!club) {
-      return { ok: false, reason: `club id ${clubId} not found` };
-    }
-    const starterClubName = String(club.name);
-    const starterClubLogo = String(club.logo ?? "");
-    const finalClubName = clubName.trim() || starterClubName;
-    const existingTeam = await this.teamRepository.findOne({
-      where: { userId: String(userId) },
-    });
-    await this.teamRepository.save(
-      this.teamRepository.create({
-        id: existingTeam?.id,
-        userId: String(userId),
-        clubName: finalClubName,
-        image: starterClubLogo,
-        budget: String(defaultTeamBudget),
-        rankPoint: 0,
-      }),
-    );
-    return { ok: true, starterClubName };
+  ): Promise<any> {
+    // // Chỉ dùng memory nếu không có clubRepository (test/mock)
+    // if (!this.clubRepository || !this.teamRepository) {
+    //   const selected = defaultClubs().find((item) => item.id === clubId);
+    //   if (!selected) {
+    //     return { ok: false, reason: `club id ${clubId} not found` };
+    //   }
+    //   this.memTeams.set(userId, {
+    //     ...selected,
+    //     name: clubName.trim() || selected.name,
+    //   });
+    //   return { ok: true, starterClubName: selected.name };
+    // }
+    // const club = await this.clubRepository.findOne({
+    //   where: { id: String(clubId) },
+    // });
+    // if (!club) {
+    //   return { ok: false, reason: `club id ${clubId} not found` };
+    // }
+    // const starterClubName = String(club.name);
+    // const starterClubLogo = String(club.logo ?? "");
+    // const finalClubName = clubName.trim() || starterClubName;
+    // const existingTeam = await this.teamRepository.findOne({
+    //   where: { userId: String(userId) },
+    // });
+    // await this.teamRepository.save(
+    //   this.teamRepository.create({
+    //     id: existingTeam?.id,
+    //     userId: String(userId),
+    //     clubName: finalClubName,
+    //     image: starterClubLogo,
+    //     budget: String(defaultTeamBudget),
+    //     rankPoint: 0,
+    //   }),
+    // );
+    // return { ok: true, starterClubName };
   }
 
   async countOwnedPlayers(userId: number): Promise<number> {
@@ -212,15 +212,15 @@ export class AuthRepository {
     });
   }
 
-  async listOwnedTemplateIds(userId: number): Promise<Set<string>> {
-    if (!this.userPlayerRepository) {
-      return new Set<string>();
-    }
-    const existingCards = await this.userPlayerRepository.find({
-      where: { userId: String(userId) },
-      select: { playerTemplateId: true },
-    });
-    return new Set(existingCards.map((item) => String(item.playerTemplateId)));
+  async listOwnedTemplateIds(userId: number): Promise<any> {
+    // if (!this.userPlayerRepository) {
+    //   return new Set<string>();
+    // }
+    // const existingCards = await this.userPlayerRepository.find({
+    //   where: { userId: String(userId) },
+    //   select: { playerTemplateId: true },
+    // });
+    // return new Set(existingCards.map((item) => String(item.playerTemplateId)));
   }
 
   async listTemplatesByClub(
@@ -237,71 +237,69 @@ export class AuthRepository {
     });
   }
 
-  async createUserPlayers(
-    userId: number,
-    templateIds: string[],
-  ): Promise<void> {
-    if (!this.userPlayerRepository || !templateIds.length) {
-      return;
-    }
-    await this.userPlayerRepository.save(
-      templateIds.map((templateId) =>
-        this.userPlayerRepository.create({
-          userId: String(userId),
-          playerTemplateId: templateId,
-          exp: 0,
-          currentPoints: 0,
-          bonusShoot: 0,
-          bonusPass: 0,
-          bonusLongPass: 0,
-          bonusVision: 0,
-          bonusTackle: 0,
-          bonusStamina: 0,
-          bonusBalance: 0,
-          bonusDribbling: 0,
-          bonusSpeed: 0,
-        }),
-      ),
-    );
+  async createUserPlayers(userId: number, templateIds: string[]): Promise<any> {
+    //   if (!this.userPlayerRepository || !templateIds.length) {
+    //     return;
+    //   }
+    //   await this.userPlayerRepository.save(
+    //     templateIds.map((templateId) =>
+    //       this.userPlayerRepository.create({
+    //         userId: String(userId),
+    //         playerTemplateId: templateId,
+    //         exp: 0,
+    //         currentPoints: 0,
+    //         bonusShoot: 0,
+    //         bonusPass: 0,
+    //         bonusLongPass: 0,
+    //         bonusVision: 0,
+    //         bonusTackle: 0,
+    //         bonusStamina: 0,
+    //         bonusBalance: 0,
+    //         bonusDribbling: 0,
+    //         bonusSpeed: 0,
+    //       }),
+    //     ),
+    //   );
+    // }
   }
-}
 
-function defaultClubs(): ClubOption[] {
-  return [
-    {
-      id: 1,
-      name: "Manchester United",
-      logo: "https://media.api-sports.io/football/teams/33.png",
-      budget: defaultTeamBudget,
-      leagueName: "Premier League",
-    },
-    {
-      id: 2,
-      name: "Manchester City",
-      logo: "https://media.api-sports.io/football/teams/50.png",
-      budget: defaultTeamBudget,
-      leagueName: "Premier League",
-    },
-    {
-      id: 3,
-      name: "Liverpool",
-      logo: "https://media.api-sports.io/football/teams/40.png",
-      budget: defaultTeamBudget,
-      leagueName: "Premier League",
-    },
-    {
-      id: 4,
-      name: "Arsenal",
-      logo: "https://media.api-sports.io/football/teams/42.png",
-      budget: defaultTeamBudget,
-      leagueName: "Premier League",
-    },
-    {
-      id: 5,
-      name: "Chelsea",
-      logo: "https://media.api-sports.io/football/teams/49.png",
-      budget: defaultTeamBudget,
-      leagueName: "Premier League",
-    },
-  ];
+  defaultClubs(): any {
+    // return [
+    //   {
+    //     id: 1,
+    //     name: "Manchester United",
+    //     logo: "https://media.api-sports.io/football/teams/33.png",
+    //     budget: defaultTeamBudget,
+    //     leagueName: "Premier League",
+    //   },
+    //   {
+    //     id: 2,
+    //     name: "Manchester City",
+    //     logo: "https://media.api-sports.io/football/teams/50.png",
+    //     budget: defaultTeamBudget,
+    //     leagueName: "Premier League",
+    //   },
+    //   {
+    //     id: 3,
+    //     name: "Liverpool",
+    //     logo: "https://media.api-sports.io/football/teams/40.png",
+    //     budget: defaultTeamBudget,
+    //     leagueName: "Premier League",
+    //   },
+    //   {
+    //     id: 4,
+    //     name: "Arsenal",
+    //     logo: "https://media.api-sports.io/football/teams/42.png",
+    //     budget: defaultTeamBudget,
+    //     leagueName: "Premier League",
+    //   },
+    //   {
+    //     id: 5,
+    //     name: "Chelsea",
+    //     logo: "https://media.api-sports.io/football/teams/49.png",
+    //     budget: defaultTeamBudget,
+    //     leagueName: "Premier League",
+    //   },
+    // ];
+  }
 }
