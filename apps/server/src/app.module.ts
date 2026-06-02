@@ -11,7 +11,6 @@ import { join, resolve } from "path";
 import { AppController } from "./app.controller";
 import { LoggingMiddleware } from "./common/middleware/logging.middleware";
 import { DatabaseModule } from "./database/database.module";
-import { AiModule } from "./modules/ai/ai.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { GachaModule } from "./modules/gacha/gacha.module";
 import { MatchModule } from "./modules/match/match.module";
@@ -52,7 +51,6 @@ import { TeamModule } from './modules/team/team.module';
     DatabaseModule,
     AuthModule,
     TacticsModule,
-    AiModule,
     GachaModule,
     PlayerModule,
     MatchModule,
