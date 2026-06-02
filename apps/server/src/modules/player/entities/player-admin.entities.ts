@@ -14,10 +14,11 @@ import { EPlayerSkill } from "../types/player-skill.enum";
 import { EPlayerSeason } from "../types/player-season.enum";
 import { ClubEntity } from "./club.entites";
 import { CountryEntity } from "./country.entities";
+import { AbstractEntity } from "src/database/database.abjact";
 
 @Entity("players")
 @Unique(["name", "season"])
-export class PlayerEntity {
+export class PlayerEntity extends AbstractEntity {
   @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
   id: bigint;
 
@@ -107,7 +108,7 @@ export class PlayerEntity {
 
 @Entity("player_positions")
 @Unique(["playerId", "position"])
-export class PlayerPositionEntity {
+export class PlayerPositionEntity extends AbstractEntity {
   @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
   id: bigint;
 
@@ -131,7 +132,7 @@ export class PlayerPositionEntity {
 
 @Entity("player_skills")
 @Unique(["playerId", "skill"])
-export class PlayerSkillEntity {
+export class PlayerSkillEntity extends AbstractEntity {
   @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
   id: bigint;
 
