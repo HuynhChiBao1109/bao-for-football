@@ -16,7 +16,6 @@ import { GachaModule } from "./modules/gacha/gacha.module";
 import { MatchModule } from "./modules/match/match.module";
 import { PlayerModule } from "./modules/player/player.module";
 import { RealtimeModule } from "./modules/realtime/realtime.module";
-import { TacticsModule } from "./modules/tactics/tactics.module";
 import { TeamModule } from './modules/team/team.module';
 
 @Module({
@@ -50,7 +49,6 @@ import { TeamModule } from './modules/team/team.module';
     }),
     DatabaseModule,
     AuthModule,
-    TacticsModule,
     GachaModule,
     PlayerModule,
     MatchModule,
