@@ -38,37 +38,15 @@ import { TacticsModule } from "./modules/tactics/tactics.module";
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const nodeEnv = configService.get<string>("NODE_ENV") || "development";
-        const rawSync = configService.get<string | boolean>("DB_SYNC_ON_START");
-        const synchronize =
-          rawSync == null
-            ? false
-            : ["1", "true", "yes", "on"].includes(
-                String(rawSync).trim().toLowerCase(),
-              );
-
         return {
           type: "mysql" as const,
-          host:
-            configService.get<string>("DATABASE_HOST") ||
-            configService.get<string>("MYSQL_HOST") ||
-            "localhost",
-          port: Number(
-            configService.get<number | string>("DATABASE_PORT") ||
-              configService.get<number | string>("MYSQL_PORT") ||
-              3306,
-          ),
-          username:
-            configService.get<string>("DATABASE_USERNAME") ||
-            configService.get<string>("MYSQL_USER"),
-          password:
-            configService.get<string>("DATABASE_PASSWORD") ||
-            configService.get<string>("MYSQL_PASSWORD"),
-          database:
-            configService.get<string>("DATABASE_NAME") ||
-            configService.get<string>("MYSQL_DATABASE"),
+          host: configService.get<string>("MYSQL_HOST"),
+          port: Number(configService.get<number | string>("MYSQL_PORT")),
+          username: configService.get<string>("MYSQL_USER"),
+          password: configService.get<string>("MYSQL_PASSWORD"),
+          database: configService.get<string>("MYSQL_DATABASE"),
           autoLoadEntities: true,
-          synchronize,
+          synchronize: true,
         };
       },
     }),

@@ -10,6 +10,6 @@ export enum EPlayerPosition {
   RM = "RM",
   ST = "ST",
   RW = "RW",
-  LW = "RW",
+  LW = "LW",
   SS = "SS",
 }

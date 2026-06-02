@@ -1,13 +1,13 @@
 import {
   Column,
   Entity,
-  JoinColumn,
-  ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   Unique,
 } from "typeorm";
 import { EPlayerBody } from "../types/player-body.enum";
 import { EPlayerPosition } from "../types/player-position.enum";
+import { IsEnum } from "class-validator";
 
 @Entity("countries")
 export class CountryEntity {
@@ -48,7 +48,7 @@ export class LeagueEntity {
 @Unique(["name", "season"])
 export class PlayerTemplateEntity {
   @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
-  id!: string;
+  id: string;
 
   @Column({ type: "varchar", length: 191 })
   name!: string;
@@ -110,22 +110,25 @@ export class PlayerTemplateEntity {
 
   @Column({ name: "stamina", type: "int", default: 75 })
   stamina!: number;
+
+  @OneToMany(() => PlayerPositionEntity, (position) => position.playerId)
+  positions!: PlayerPositionEntity[];
 }
 
 @Entity("player_positions")
-@Unique(["playerTemplateId", "position"])
+@Unique(["playerId", "position"])
 export class PlayerPositionEntity {
   @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
   id!: string;
 
-  @Column({ name: "player_template_id", type: "bigint", unsigned: true })
-  playerTemplateId!: string;
+  @Column({ name: "player_id", type: "bigint", unsigned: true })
+  playerId: string;
 
   @Column({
-    name: "position_code",
+    name: "position",
     type: "enum",
     enum: EPlayerPosition,
-    unsigned: true,
   })
-  position!: string;
+  @IsEnum(EPlayerPosition)
+  position!: EPlayerPosition;
 }

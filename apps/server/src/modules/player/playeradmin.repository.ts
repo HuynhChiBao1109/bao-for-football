@@ -8,6 +8,7 @@ import {
   PlayerPositionEntity,
   PlayerTemplateEntity,
 } from "./entities/player-admin.entities";
+import { EPlayerPosition } from "./types/player-position.enum";
 
 @Injectable()
 export class PlayerAdminRepository {
@@ -80,11 +81,11 @@ export class PlayerAdminRepository {
       return positionsMap;
     }
     const rows = await this.playerPositionRepository.find({
-      where: playerIDs.map((id) => ({ playerTemplateId: String(id) })),
+      where: playerIDs.map((id) => ({ playerId: String(id) })),
     });
 
     for (const row of rows) {
-      const key = String(row.playerTemplateId);
+      const key = String(row.playerId);
       const current = positionsMap.get(key) ?? [];
       current.push({
         position: String(row.position ?? ""),
@@ -222,10 +223,10 @@ export class PlayerAdminRepository {
     });
   }
 
-  private async syncPlayerPositions(playerID: number, input: unknown) {
+  private async syncPlayerPositions(playerID: number, input: EPlayerPosition) {
     const normalized = this.normalizePositions(input);
     await this.playerPositionRepository.delete({
-      playerTemplateId: String(playerID),
+      playerId: String(playerID),
     });
     if (!normalized.length) {
       return;
@@ -233,8 +234,8 @@ export class PlayerAdminRepository {
     await this.playerPositionRepository.save(
       normalized.map((item) =>
         this.playerPositionRepository.create({
-          playerTemplateId: String(playerID),
-          position: item.position,
+          playerId: String(playerID),
+          position: item.position as EPlayerPosition,
         }),
       ),
     );
@@ -326,7 +327,7 @@ export class PlayerAdminRepository {
 
   async deletePlayer(id: number) {
     await this.playerPositionRepository.delete({
-      playerTemplateId: String(id),
+      playerId: String(id),
     });
     await this.playerTemplateRepository.delete({ id: String(id) });
   }
