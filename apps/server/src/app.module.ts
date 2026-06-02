@@ -18,6 +18,7 @@ import { MatchModule } from "./modules/match/match.module";
 import { PlayerModule } from "./modules/player/player.module";
 import { RealtimeModule } from "./modules/realtime/realtime.module";
 import { TacticsModule } from "./modules/tactics/tactics.module";
+import { TeamModule } from './modules/team/team.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { TacticsModule } from "./modules/tactics/tactics.module";
     PlayerModule,
     MatchModule,
     RealtimeModule,
+    TeamModule,
   ],
   controllers: [AppController],
 })

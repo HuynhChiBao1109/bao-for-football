@@ -5,7 +5,7 @@ import {
   Injectable,
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import { IS_ADMIN_ONLY_KEY } from "../../common/constants/auth.constants";
+import { IS_ADMIN_ONLY_KEY } from "../constants/auth.constants";
 
 @Injectable()
 export class AdminGuard implements CanActivate {

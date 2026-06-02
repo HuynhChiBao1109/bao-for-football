@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { MatchEntity } from "./entities/match.entities";
-import { TeamEntity } from "../auth/entities/auth.entities";
+import { TeamEntity } from "../team/entities/team.entities";
 
 export interface MatchStats {
   [key: string]: any;
@@ -37,7 +37,7 @@ export class MatchRepository {
 
   async getHomeClubName(userId: number): Promise<string> {
     const team = await this.teamRepository.findOne({
-      where: { userId: String(userId) },
+      where: { userId: BigInt(userId) },
     });
     return team?.clubName ?? "Manchester United";
   }

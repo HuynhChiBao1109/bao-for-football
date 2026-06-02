@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { GachaBannerEntity, GachaLogEntity } from "./entities/gacha.entities";
-import { UserPlayerEntity } from "../player/entities/player.entities";
+import { TeamPlayerEntity } from "../player/entities/player.entities";
 
 export interface GachaRollResult {
   userId: number;
@@ -32,9 +32,9 @@ export class GachaRepository {
     private readonly gachaLogRepository: Repository<GachaLogEntity>,
     @InjectRepository(GachaBannerEntity)
     private readonly gachaBannerRepository: Repository<GachaBannerEntity>,
-    // Nếu cần PlayerTemplateEntity, UserPlayerEntity, TeamEntity thì inject thêm ở đây
-    @InjectRepository(UserPlayerEntity)
-    private readonly userPlayerRepository: Repository<UserPlayerEntity>,
+    // Nếu cần PlayerTemplateEntity, TeamPlayerEntity, TeamEntity thì inject thêm ở đây
+    @InjectRepository(TeamPlayerEntity)
+    private readonly teamPlayerRepository: Repository<TeamPlayerEntity>,
   ) {}
 
   async getProgress(userId: number, bannerCode: string) {

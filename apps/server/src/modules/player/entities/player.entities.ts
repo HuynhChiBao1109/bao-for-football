@@ -2,18 +2,20 @@ import { AbstractEntity } from "src/database/database.abjact";
 import {
   Column,
   Entity,
+  ManyToOne,
   PrimaryGeneratedColumn,
   Unique,
 } from "typeorm";
 import { EPlayerSkill } from "../types/player-skill.enum";
+import { TeamEntity } from "src/modules/team/entities/team.entities";
 
-@Entity("player_users")
-export class UserPlayerEntity extends AbstractEntity {
+@Entity("team_players")
+export class TeamPlayerEntity extends AbstractEntity {
   @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
   id: bigint;
 
-  @Column({ name: "user_id", type: "bigint", unsigned: true })
-  userId: bigint;
+  @Column({ name: "team_id", type: "bigint", unsigned: true })
+  teamId: bigint;
 
   @Column({ name: "player_id", type: "bigint", unsigned: true })
   playerId: bigint;
@@ -35,17 +37,26 @@ export class UserPlayerEntity extends AbstractEntity {
 
   @Column({ name: "bonus_goalkeeping", type: "int", default: 0 })
   bonusGoalkeeping!: number;
+  
+  @ManyToOne(() => TeamPlayerSkillEntity, (skill) => skill.teamPlayerId)
+  skills: TeamPlayerSkillEntity[];
+
+  @ManyToOne(() => TeamEntity, (player) => player.id, { onDelete: "CASCADE" })
+  team: TeamEntity;
 }
 
-@Entity("player_user_skills")
-@Unique(["userPlayerId", "skill"])
-export class UserPlayerSkillEntity extends AbstractEntity {
+@Entity("team_player_skills")
+@Unique(["teamPlayerId", "skill"])
+export class TeamPlayerSkillEntity extends AbstractEntity {
   @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
   id: bigint;
 
-  @Column({ name: "user_player_id", type: "bigint", unsigned: true })
-  userPlayerId: bigint;
+  @Column({ name: "team_player_id", type: "bigint", unsigned: true })
+  teamPlayerId: bigint;
 
   @Column({ name: "skill", type: "enum", enum: EPlayerSkill })
   skill: EPlayerSkill;
+  
+  @ManyToOne(() => TeamPlayerEntity, (player) => player.skills, { onDelete: "CASCADE" })
+  teamPlayer: TeamPlayerEntity;
 }

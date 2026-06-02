@@ -7,7 +7,7 @@ import {
   PlayerPositionEntity,
   PlayerSkillEntity,
 } from "./entities/player-admin.entities";
-import { UserPlayerEntity } from "./entities/player.entities";
+import { TeamPlayerEntity, TeamPlayerSkillEntity } from "./entities/player.entities";
 import { PlayerRepository } from "./player.repository";
 import { PlayerService } from "./player.service";
 import { LeagueEntity } from "./entities/league.entites";
@@ -18,7 +18,8 @@ import { ClubEntity } from "./entities/club.entites";
   imports: [
     AuthModule,
     TypeOrmModule.forFeature([
-      UserPlayerEntity,
+      TeamPlayerEntity,
+      TeamPlayerSkillEntity,
       CountryEntity,
       LeagueEntity,
       ClubEntity,

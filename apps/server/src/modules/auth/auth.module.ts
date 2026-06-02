@@ -6,15 +6,15 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { GoExceptionFilter } from "../../common/filters/exception.filter";
 import { AuthGuard } from "../../common/guards/auth.guard";
 import { ResponseInterceptor } from "../../common/interceptors/response.interceptor";
-import { UserPlayerEntity } from "../player/entities/player.entities";
-import { AdminGuard } from "./admin.guard";
-import { AdminAuthController } from "./admin-auth.controller";
+import { AdminGuard } from "../../common/guards/admin.guard";
 import { AuthController } from "./auth.controller";
-import { TeamEntity, UserEntity } from "./entities/auth.entities";
 import { AuthRepository } from "./auth.repository";
 import { AuthService } from "./auth.service";
 import { PlayerEntity } from "../player/entities/player-admin.entities";
 import { ClubEntity } from "../player/entities/club.entites";
+import { UserEntity } from "./entities/auth.entities";
+import { TeamEntity } from "../team/entities/team.entities";
+import { TeamPlayerEntity } from "../player/entities/player.entities";
 
 @Module({
   imports: [
@@ -23,7 +23,7 @@ import { ClubEntity } from "../player/entities/club.entites";
       UserEntity,
       TeamEntity,
       PlayerEntity,
-      UserPlayerEntity,
+      TeamPlayerEntity,
     ]),
     JwtModule.registerAsync({
       inject: [ConfigService],
@@ -32,7 +32,7 @@ import { ClubEntity } from "../player/entities/club.entites";
       }),
     }),
   ],
-  controllers: [AuthController, AdminAuthController],
+  controllers: [AuthController],
   providers: [
     AuthRepository,
     AuthService,

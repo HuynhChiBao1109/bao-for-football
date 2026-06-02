@@ -2,11 +2,12 @@ import { Injectable } from "@nestjs/common";
 import * as bcrypt from "bcrypt";
 import { Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
-import { TeamEntity, UserEntity } from "./entities/auth.entities";
-import { UserPlayerEntity } from "../player/entities/player.entities";
 import { AuthUser, ClubOption, TeamAssignment } from "./types";
 import { PlayerEntity } from "../player/entities/player-admin.entities";
 import { ClubEntity } from "../player/entities/club.entites";
+import { UserEntity } from "./entities/auth.entities";
+import { TeamEntity } from "../team/entities/team.entities";
+import { TeamPlayerEntity } from "../player/entities/player.entities";
 
 const defaultTeamBudget = 360000000;
 
@@ -28,8 +29,8 @@ export class AuthRepository {
     private readonly teamRepository: Repository<TeamEntity>,
     @InjectRepository(PlayerEntity)
     private readonly playerRepository: Repository<PlayerEntity>,
-    @InjectRepository(UserPlayerEntity)
-    private readonly userPlayerRepository: Repository<UserPlayerEntity>,
+    @InjectRepository(TeamPlayerEntity)
+    private readonly userPlayerRepository: Repository<TeamPlayerEntity>,
   ) {}
 
   async ensureUserTable(): Promise<void> {
@@ -56,55 +57,49 @@ export class AuthRepository {
     // }));
   }
 
-  async findByUsername(username: string): Promise<{
-    id: number;
-    username: string;
-    passwordHash: string;
-    createdAt: Date;
-  } | null> {
-    // Chỉ dùng memory nếu không có userRepository (test/mock)
-    if (!this.userRepository) {
-      return this.memData.get(username) ?? null;
-    }
-    const user = await this.userRepository.findOne({ where: { username } });
-    if (!user) {
-      return null;
-    }
-    return {
-      id: Number(user.id),
-      username: user.username,
-      passwordHash: user.passwordHash,
-      createdAt: user.createdAt,
-    };
+  async findByUsername(username: string): Promise<any> {
+    // // Chỉ dùng memory nếu không có userRepository (test/mock)
+    // if (!this.userRepository) {
+    //   return this.memData.get(username) ?? null;
+    // }
+    // const user = await this.userRepository.findOne({ where: { username } });
+    // if (!user) {
+    //   return null;
+    // }
+    // return {
+    //   id: Number(user.id),
+    //   username: user.username,
+    //   passwordHash: user.passwordHash,
+    //   createdAt: user.createdAt,
+    // };
   }
 
-  async create(username: string, password: string): Promise<AuthUser> {
-    const passwordHash = await bcrypt.hash(password, 10);
-
-    // Chỉ dùng memory nếu không có userRepository (test/mock)
-    if (!this.userRepository) {
-      if (this.memData.has(username)) {
-        const existing = this.memData.get(username)!;
-        return {
-          id: existing.id,
-          username: existing.username,
-          isAdmin: false,
-        };
-      }
-      const user = {
-        id: this.nextID++,
-        username,
-        passwordHash,
-        createdAt: new Date(),
-      };
-      this.memData.set(username, user);
-      return { id: user.id, username: user.username, isAdmin: false };
-    }
-    const saved = await this.userRepository.save(
-      this.userRepository.create({ username, passwordHash }),
-    );
-    const insertedId = Number(saved.id);
-    return { id: insertedId, username, isAdmin: false };
+  async create(username: string, password: string): Promise<any> {
+    // const passwordHash = await bcrypt.hash(password, 10);
+    // // Chỉ dùng memory nếu không có userRepository (test/mock)
+    // if (!this.userRepository) {
+    //   if (this.memData.has(username)) {
+    //     const existing = this.memData.get(username)!;
+    //     return {
+    //       id: existing.id,
+    //       username: existing.username,
+    //       isAdmin: false,
+    //     };
+    //   }
+    //   const user = {
+    //     id: this.nextID++,
+    //     username,
+    //     passwordHash,
+    //     createdAt: new Date(),
+    //   };
+    //   this.memData.set(username, user);
+    //   return { id: user.id, username: user.username, isAdmin: false };
+    // }
+    // const saved = await this.userRepository.save(
+    //   this.userRepository.create({ username, passwordHash }),
+    // );
+    // const insertedId = Number(saved.id);
+    // return { id: insertedId, username, isAdmin: false };
   }
 
   async ensureAdmin(username: string, password: string): Promise<void> {
@@ -115,41 +110,41 @@ export class AuthRepository {
     await this.create(username, password);
   }
 
-  async getTeamAssignment(userId: number): Promise<TeamAssignment | null> {
-    // Chỉ dùng memory nếu không có teamRepository (test/mock)
-    if (!this.teamRepository || !this.clubRepository) {
-      const club = this.memTeams.get(userId);
-      if (!club) {
-        return null;
-      }
-      return {
-        userId,
-        clubId: club.id,
-        clubName: club.name,
-        image: club.logo,
-        budget: club.budget,
-        rankPoint: 0,
-        tacticsTeamId: `user-${userId}`,
-      };
-    }
-    const team = await this.teamRepository.findOne({
-      where: { userId: String(userId) },
-    });
-    if (!team) {
-      return null;
-    }
-    const club = await this.clubRepository.findOne({
-      where: { name: team.clubName },
-    });
-    return {
-      userId,
-      clubId: club?.id != null ? Number(club.id) : undefined,
-      clubName: team.clubName,
-      image: team.image ?? "",
-      budget: Number(team.budget),
-      rankPoint: Number(team.rankPoint ?? 0),
-      tacticsTeamId: `user-${userId}`,
-    };
+  async getTeamAssignment(userId: number): Promise<any> {
+    // // Chỉ dùng memory nếu không có teamRepository (test/mock)
+    // if (!this.teamRepository || !this.clubRepository) {
+    //   const club = this.memTeams.get(userId);
+    //   if (!club) {
+    //     return null;
+    //   }
+    //   return {
+    //     userId,
+    //     clubId: club.id,
+    //     clubName: club.name,
+    //     image: club.logo,
+    //     budget: club.budget,
+    //     rankPoint: 0,
+    //     tacticsTeamId: `user-${userId}`,
+    //   };
+    // }
+    // const team = await this.teamRepository.findOne({
+    //   where: { userId: String(userId) },
+    // });
+    // if (!team) {
+    //   return null;
+    // }
+    // const club = await this.clubRepository.findOne({
+    //   where: { name: team.clubName },
+    // });
+    // return {
+    //   userId,
+    //   clubId: club?.id != null ? Number(club.id) : undefined,
+    //   clubName: team.clubName,
+    //   image: team.image ?? "",
+    //   budget: Number(team.budget),
+    //   rankPoint: Number(team.rankPoint ?? 0),
+    //   tacticsTeamId: `user-${userId}`,
+    // };
   }
 
   async assignClubToUser(
@@ -194,13 +189,13 @@ export class AuthRepository {
     // return { ok: true, starterClubName };
   }
 
-  async countOwnedPlayers(userId: number): Promise<number> {
-    if (!this.userPlayerRepository) {
-      return 0;
-    }
-    return this.userPlayerRepository.count({
-      where: { userId: BigInt(userId) },
-    });
+  async countOwnedPlayers(userId: number): Promise<any> {
+    // if (!this.userPlayerRepository) {
+    //   return 0;
+    // }
+    // return this.userPlayerRepository.count({
+    //   where: { userId: BigInt(userId) },
+    // });
   }
 
   // async countTemplatesByClub(clubId: number): Promise<number> {
