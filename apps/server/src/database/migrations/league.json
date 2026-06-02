@@ -216,26 +216,506 @@
   {
     "name": "La Liga",
     "country": "Spain",
-    "logo": "https://fifam.s3.amazonaws.com/leagues/la-liga.png"
+    "logo": "https://fifam.s3.amazonaws.com/leagues/la-liga.png",
+    "clubs": [
+      {
+        "name": "Real Madrid",
+        "league": "La Liga",
+        "img_url": "https://cdn.sofifa.net/teams/243/60.png"
+      },
+      {
+        "name": "FC Barcelona",
+        "league": "La Liga",
+        "img_url": "https://cdn.sofifa.net/teams/241/60.png"
+      },
+      {
+        "name": "Atlético Madrid",
+        "league": "La Liga",
+        "img_url": "https://cdn.sofifa.net/teams/240/60.png"
+      },
+      {
+        "name": "Athletic Club",
+        "league": "La Liga",
+        "img_url": "https://cdn.sofifa.net/teams/448/60.png"
+      },
+      {
+        "name": "Real Sociedad",
+        "league": "La Liga",
+        "img_url": "https://cdn.sofifa.net/teams/457/60.png"
+      },
+      {
+        "name": "Real Betis",
+        "league": "La Liga",
+        "img_url": "https://cdn.sofifa.net/teams/449/60.png"
+      },
+      {
+        "name": "Sevilla FC",
+        "league": "La Liga",
+        "img_url": "https://cdn.sofifa.net/teams/481/60.png"
+      },
+      {
+        "name": "Villarreal CF",
+        "league": "La Liga",
+        "img_url": "https://cdn.sofifa.net/teams/483/60.png"
+      },
+      {
+        "name": "Valencia CF",
+        "league": "La Liga",
+        "img_url": "https://cdn.sofifa.net/teams/461/60.png"
+      },
+      {
+        "name": "Getafe CF",
+        "league": "La Liga",
+        "img_url": "https://cdn.sofifa.net/teams/1860/60.png"
+      },
+      {
+        "name": "Rayo Vallecano",
+        "league": "La Liga",
+        "img_url": "https://cdn.sofifa.net/teams/480/60.png"
+      },
+      {
+        "name": "CA Osasuna",
+        "league": "La Liga",
+        "img_url": "https://cdn.sofifa.net/teams/479/60.png"
+      },
+      {
+        "name": "RCD Mallorca",
+        "league": "La Liga",
+        "img_url": "https://cdn.sofifa.net/teams/453/60.png"
+      },
+      {
+        "name": "RC Celta de Vigo",
+        "league": "La Liga",
+        "img_url": "https://cdn.sofifa.net/teams/450/60.png"
+      },
+      {
+        "name": "Girona FC",
+        "league": "La Liga",
+        "img_url": "https://cdn.sofifa.net/teams/1868/60.png"
+      },
+      {
+        "name": "Deportivo Alavés",
+        "league": "La Liga",
+        "img_url": "https://cdn.sofifa.net/teams/463/60.png"
+      },
+      {
+        "name": "RCD Espanyol",
+        "league": "La Liga",
+        "img_url": "https://cdn.sofifa.net/teams/452/60.png"
+      },
+      {
+        "name": "Levante UD",
+        "league": "La Liga",
+        "img_url": "https://cdn.sofifa.net/teams/1853/60.png"
+      },
+      {
+        "name": "Elche CF",
+        "league": "La Liga",
+        "img_url": "https://cdn.sofifa.net/teams/10029/60.png"
+      },
+      {
+        "name": "Real Oviedo",
+        "league": "La Liga",
+        "img_url": "https://cdn.sofifa.net/teams/110827/60.png"
+      }
+    ]
   },
   {
     "name": "Serie A",
     "country": "Italy",
-    "logo": "https://fifam.s3.amazonaws.com/leagues/serie-a.png"
+    "logo": "https://fifam.s3.amazonaws.com/leagues/serie-a.png",
+    "clubs": [
+      {
+        "name": "AC Milan",
+        "league": "Serie A",
+        "img_url": "https://cdn.sofifa.net/teams/47/60.png"
+      },
+      {
+        "name": "Inter",
+        "league": "Serie A",
+        "img_url": "https://cdn.sofifa.net/teams/44/60.png"
+      },
+      {
+        "name": "Juventus",
+        "league": "Serie A",
+        "img_url": "https://cdn.sofifa.net/teams/45/60.png"
+      },
+      {
+        "name": "Napoli",
+        "league": "Serie A",
+        "img_url": "https://cdn.sofifa.net/teams/48/60.png"
+      },
+      {
+        "name": "AS Roma",
+        "league": "Serie A",
+        "img_url": "https://cdn.sofifa.net/teams/52/60.png"
+      },
+      {
+        "name": "Lazio",
+        "league": "Serie A",
+        "img_url": "https://cdn.sofifa.net/teams/46/60.png"
+      },
+      {
+        "name": "Atalanta",
+        "league": "Serie A",
+        "img_url": "https://cdn.sofifa.net/teams/39/60.png"
+      },
+      {
+        "name": "Fiorentina",
+        "league": "Serie A",
+        "img_url": "https://cdn.sofifa.net/teams/110374/60.png"
+      },
+      {
+        "name": "Bologna",
+        "league": "Serie A",
+        "img_url": "https://cdn.sofifa.net/teams/189/60.png"
+      },
+      {
+        "name": "Torino",
+        "league": "Serie A",
+        "img_url": "https://cdn.sofifa.net/teams/54/60.png"
+      },
+      {
+        "name": "Udinese",
+        "league": "Serie A",
+        "img_url": "https://cdn.sofifa.net/teams/55/60.png"
+      },
+      {
+        "name": "Genoa",
+        "league": "Serie A",
+        "img_url": "https://cdn.sofifa.net/teams/191/60.png"
+      },
+      {
+        "name": "Como",
+        "league": "Serie A",
+        "img_url": "https://cdn.sofifa.net/teams/1746/60.png"
+      },
+      {
+        "name": "Parma",
+        "league": "Serie A",
+        "img_url": "https://cdn.sofifa.net/teams/50/60.png"
+      },
+      {
+        "name": "Hellas Verona",
+        "league": "Serie A",
+        "img_url": "https://cdn.sofifa.net/teams/206/60.png"
+      },
+      {
+        "name": "Cagliari",
+        "league": "Serie A",
+        "img_url": "https://cdn.sofifa.net/teams/1842/60.png"
+      },
+      {
+        "name": "Lecce",
+        "league": "Serie A",
+        "img_url": "https://cdn.sofifa.net/teams/347/60.png"
+      },
+      {
+        "name": "Sassuolo",
+        "league": "Serie A",
+        "img_url": "https://cdn.sofifa.net/teams/111974/60.png"
+      },
+      {
+        "name": "Pisa",
+        "league": "Serie A",
+        "img_url": "https://cdn.sofifa.net/teams/111434/60.png"
+      },
+      {
+        "name": "Cremonese",
+        "league": "Serie A",
+        "img_url": "https://cdn.sofifa.net/teams/111434/60.png"
+      }
+    ]
   },
   {
     "name": "Bundesliga",
     "country": "Germany",
-    "logo": "https://fifam.s3.amazonaws.com/leagues/bundesliga.png"
+    "logo": "https://fifam.s3.amazonaws.com/leagues/bundesliga.png",
+    "clubs": [
+      {
+        "name": "Bayern Munich",
+        "league": "Bundesliga",
+        "img_url": "https://cdn.sofifa.net/teams/21/60.png"
+      },
+      {
+        "name": "Borussia Dortmund",
+        "league": "Bundesliga",
+        "img_url": "https://cdn.sofifa.net/teams/22/60.png"
+      },
+      {
+        "name": "RB Leipzig",
+        "league": "Bundesliga",
+        "img_url": "https://cdn.sofifa.net/teams/112172/60.png"
+      },
+      {
+        "name": "Bayer 04 Leverkusen",
+        "league": "Bundesliga",
+        "img_url": "https://cdn.sofifa.net/teams/32/60.png"
+      },
+      {
+        "name": "Eintracht Frankfurt",
+        "league": "Bundesliga",
+        "img_url": "https://cdn.sofifa.net/teams/1824/60.png"
+      },
+      {
+        "name": "SC Freiburg",
+        "league": "Bundesliga",
+        "img_url": "https://cdn.sofifa.net/teams/25/60.png"
+      },
+      {
+        "name": "VfB Stuttgart",
+        "league": "Bundesliga",
+        "img_url": "https://cdn.sofifa.net/teams/36/60.png"
+      },
+      {
+        "name": "Borussia Mönchengladbach",
+        "league": "Bundesliga",
+        "img_url": "https://cdn.sofifa.net/teams/23/60.png"
+      },
+      {
+        "name": "VfL Wolfsburg",
+        "league": "Bundesliga",
+        "img_url": "https://cdn.sofifa.net/teams/175/60.png"
+      },
+      {
+        "name": "TSG Hoffenheim",
+        "league": "Bundesliga",
+        "img_url": "https://cdn.sofifa.net/teams/10029/60.png"
+      },
+      {
+        "name": "1. FSV Mainz 05",
+        "league": "Bundesliga",
+        "img_url": "https://cdn.sofifa.net/teams/169/60.png"
+      },
+      {
+        "name": "FC Augsburg",
+        "league": "Bundesliga",
+        "img_url": "https://cdn.sofifa.net/teams/100409/60.png"
+      },
+      {
+        "name": "Werder Bremen",
+        "league": "Bundesliga",
+        "img_url": "https://cdn.sofifa.net/teams/38/60.png"
+      },
+      {
+        "name": "Union Berlin",
+        "league": "Bundesliga",
+        "img_url": "https://cdn.sofifa.net/teams/28/60.png"
+      },
+      {
+        "name": "FC St. Pauli",
+        "league": "Bundesliga",
+        "img_url": "https://cdn.sofifa.net/teams/37/60.png"
+      },
+      {
+        "name": "1. FC Köln",
+        "league": "Bundesliga",
+        "img_url": "https://cdn.sofifa.net/teams/31/60.png"
+      },
+      {
+        "name": "Hamburger SV",
+        "league": "Bundesliga",
+        "img_url": "https://cdn.sofifa.net/teams/28/60.png"
+      },
+      {
+        "name": "1. FC Heidenheim",
+        "league": "Bundesliga",
+        "img_url": "https://cdn.sofifa.net/teams/111235/60.png"
+      },
+      {
+        "name": "Holstein Kiel",
+        "league": "Bundesliga",
+        "img_url": "https://cdn.sofifa.net/teams/576/60.png"
+      },
+      {
+        "name": "Arminia Bielefeld",
+        "league": "Bundesliga",
+        "img_url": "https://cdn.sofifa.net/teams/159/60.png"
+      }
+    ]
   },
   {
     "name": "Eredivisie",
     "country": "Netherlands",
-    "logo": "https://fifam.s3.amazonaws.com/leagues/eredivisie.png"
+    "logo": "https://fifam.s3.amazonaws.com/leagues/eredivisie.png",
+    "clubs": [
+      {
+        "name": "Ajax",
+        "league": "Eredivisie",
+        "img_url": "https://cdn.sofifa.net/teams/245/60.png"
+      },
+      {
+        "name": "PSV Eindhoven",
+        "league": "Eredivisie",
+        "img_url": "https://cdn.sofifa.net/teams/247/60.png"
+      },
+      {
+        "name": "Feyenoord",
+        "league": "Eredivisie",
+        "img_url": "https://cdn.sofifa.net/teams/246/60.png"
+      },
+      {
+        "name": "AZ Alkmaar",
+        "league": "Eredivisie",
+        "img_url": "https://cdn.sofifa.net/teams/1906/60.png"
+      },
+      {
+        "name": "FC Twente",
+        "league": "Eredivisie",
+        "img_url": "https://cdn.sofifa.net/teams/1903/60.png"
+      },
+      {
+        "name": "FC Utrecht",
+        "league": "Eredivisie",
+        "img_url": "https://cdn.sofifa.net/teams/1915/60.png"
+      },
+      {
+        "name": "SC Heerenveen",
+        "league": "Eredivisie",
+        "img_url": "https://cdn.sofifa.net/teams/1907/60.png"
+      },
+      {
+        "name": "NEC Nijmegen",
+        "league": "Eredivisie",
+        "img_url": "https://cdn.sofifa.net/teams/1912/60.png"
+      },
+      {
+        "name": "Go Ahead Eagles",
+        "league": "Eredivisie",
+        "img_url": "https://cdn.sofifa.net/teams/1911/60.png"
+      },
+      {
+        "name": "Sparta Rotterdam",
+        "league": "Eredivisie",
+        "img_url": "https://cdn.sofifa.net/teams/1914/60.png"
+      },
+      {
+        "name": "Fortuna Sittard",
+        "league": "Eredivisie",
+        "img_url": "https://cdn.sofifa.net/teams/634/60.png"
+      },
+      {
+        "name": "PEC Zwolle",
+        "league": "Eredivisie",
+        "img_url": "https://cdn.sofifa.net/teams/1913/60.png"
+      },
+      {
+        "name": "Heracles Almelo",
+        "league": "Eredivisie",
+        "img_url": "https://cdn.sofifa.net/teams/100634/60.png"
+      },
+      {
+        "name": "FC Groningen",
+        "league": "Eredivisie",
+        "img_url": "https://cdn.sofifa.net/teams/1917/60.png"
+      },
+      {
+        "name": "NAC Breda",
+        "league": "Eredivisie",
+        "img_url": "https://cdn.sofifa.net/teams/1904/60.png"
+      },
+      {
+        "name": "Willem II",
+        "league": "Eredivisie",
+        "img_url": "https://cdn.sofifa.net/teams/1909/60.png"
+      },
+      {
+        "name": "Excelsior",
+        "league": "Eredivisie",
+        "img_url": "https://cdn.sofifa.net/teams/1971/60.png"
+      },
+      {
+        "name": "FC Volendam",
+        "league": "Eredivisie",
+        "img_url": "https://cdn.sofifa.net/teams/1910/60.png"
+      },
+      {
+        "name": "RKC Waalwijk",
+        "league": "Eredivisie",
+        "img_url": "https://cdn.sofifa.net/teams/1908/60.png"
+      },
+      {
+        "name": "Almere City FC",
+        "league": "Eredivisie",
+        "img_url": "https://cdn.sofifa.net/teams/112392/60.png"
+      }
+    ]
   },
   {
     "name": "V.League 1",
     "country": "Vietnam",
-    "logo": "https://fifam.s3.amazonaws.com/leagues/v-league-1.png"
+    "logo": "https://fifam.s3.amazonaws.com/leagues/v-league-1.png",
+    "clubs": [
+      {
+        "name": "Hà Nội FC",
+        "league": "V.League 1",
+        "img_url": "https://fifam.s3.amazonaws.com/clubs/ha-noi-fc.png"
+      },
+      {
+        "name": "Thép Xanh Nam Định",
+        "league": "V.League 1",
+        "img_url": "https://fifam.s3.amazonaws.com/clubs/nam-dinh-fc.png"
+      },
+      {
+        "name": "Công An Hà Nội",
+        "league": "V.League 1",
+        "img_url": "https://fifam.s3.amazonaws.com/clubs/cong-an-ha-noi-fc.png"
+      },
+      {
+        "name": "Thể Công Viettel",
+        "league": "V.League 1",
+        "img_url": "https://fifam.s3.amazonaws.com/clubs/the-cong-viettel.png"
+      },
+      {
+        "name": "Đông Á Thanh Hóa",
+        "league": "V.League 1",
+        "img_url": "https://fifam.s3.amazonaws.com/clubs/thanh-hoa-fc.png"
+      },
+      {
+        "name": "Becamex Bình Dương",
+        "league": "V.League 1",
+        "img_url": "https://fifam.s3.amazonaws.com/clubs/binh-duong-fc.png"
+      },
+      {
+        "name": "Hải Phòng FC",
+        "league": "V.League 1",
+        "img_url": "https://fifam.s3.amazonaws.com/clubs/hai-phong-fc.png"
+      },
+      {
+        "name": "Hồng Lĩnh Hà Tĩnh",
+        "league": "V.League 1",
+        "img_url": "https://fifam.s3.amazonaws.com/clubs/ha-tinh-fc.png"
+      },
+      {
+        "name": "Quảng Nam FC",
+        "league": "V.League 1",
+        "img_url": "https://fifam.s3.amazonaws.com/clubs/quang-nam-fc.png"
+      },
+      {
+        "name": "Hoàng Anh Gia Lai",
+        "league": "V.League 1",
+        "img_url": "https://fifam.s3.amazonaws.com/clubs/hagl.png"
+      },
+      {
+        "name": "Sông Lam Nghệ An",
+        "league": "V.League 1",
+        "img_url": "https://fifam.s3.amazonaws.com/clubs/slna.png"
+      },
+      {
+        "name": "TP Hồ Chí Minh FC",
+        "league": "V.League 1",
+        "img_url": "https://fifam.s3.amazonaws.com/clubs/hcm-city-fc.png"
+      },
+      {
+        "name": "SHB Đà Nẵng",
+        "league": "V.League 1",
+        "img_url": "https://fifam.s3.amazonaws.com/clubs/da-nang-fc.png"
+      },
+      {
+        "name": "Quy Nhơn Bình Định",
+        "league": "V.League 1",
+        "img_url": "https://fifam.s3.amazonaws.com/clubs/binh-dinh-fc.png"
+      }
+    ]
   }
 ]
