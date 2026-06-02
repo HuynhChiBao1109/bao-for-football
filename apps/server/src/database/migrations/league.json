@@ -2,12 +2,216 @@
   {
     "name": "Premier League",
     "country": "England",
-    "logo": "https://fifam.s3.amazonaws.com/leagues/premier-league.png"
+    "logo": "https://fifam.s3.amazonaws.com/leagues/premier-league.png",
+    "clubs": [
+      {
+        "name": "Arsenal",
+        "league": "Premier League",
+        "img_url": "https://cdn.sofifa.net/teams/1/60.png"
+      },
+      {
+        "name": "Aston Villa",
+        "league": "Premier League",
+        "img_url": "https://cdn.sofifa.net/teams/2/60.png"
+      },
+      {
+        "name": "AFC Bournemouth",
+        "league": "Premier League",
+        "img_url": "https://cdn.sofifa.net/teams/1943/60.png"
+      },
+      {
+        "name": "Brentford",
+        "league": "Premier League",
+        "img_url": "https://cdn.sofifa.net/teams/1925/60.png"
+      },
+      {
+        "name": "Brighton & Hove Albion",
+        "league": "Premier League",
+        "img_url": "https://cdn.sofifa.net/teams/1808/60.png"
+      },
+      {
+        "name": "Burnley",
+        "league": "Premier League",
+        "img_url": "https://cdn.sofifa.net/teams/1796/60.png"
+      },
+      {
+        "name": "Chelsea",
+        "league": "Premier League",
+        "img_url": "https://cdn.sofifa.net/teams/5/60.png"
+      },
+      {
+        "name": "Crystal Palace",
+        "league": "Premier League",
+        "img_url": "https://cdn.sofifa.net/teams/1799/60.png"
+      },
+      {
+        "name": "Everton",
+        "league": "Premier League",
+        "img_url": "https://cdn.sofifa.net/teams/7/60.png"
+      },
+      {
+        "name": "Fulham",
+        "league": "Premier League",
+        "img_url": "https://cdn.sofifa.net/teams/144/60.png"
+      },
+      {
+        "name": "Leeds United",
+        "league": "Premier League",
+        "img_url": "https://cdn.sofifa.net/teams/8/60.png"
+      },
+      {
+        "name": "Liverpool",
+        "league": "Premier League",
+        "img_url": "https://cdn.sofifa.net/teams/9/60.png"
+      },
+      {
+        "name": "Manchester City",
+        "league": "Premier League",
+        "img_url": "https://cdn.sofifa.net/teams/10/60.png"
+      },
+      {
+        "name": "Manchester United",
+        "league": "Premier League",
+        "img_url": "https://cdn.sofifa.net/teams/11/60.png"
+      },
+      {
+        "name": "Newcastle United",
+        "league": "Premier League",
+        "img_url": "https://cdn.sofifa.net/teams/13/60.png"
+      },
+      {
+        "name": "Nottingham Forest",
+        "league": "Premier League",
+        "img_url": "https://cdn.sofifa.net/teams/14/60.png"
+      },
+      {
+        "name": "Sunderland",
+        "league": "Premier League",
+        "img_url": "https://cdn.sofifa.net/teams/106/60.png"
+      },
+      {
+        "name": "Tottenham Hotspur",
+        "league": "Premier League",
+        "img_url": "https://cdn.sofifa.net/teams/18/60.png"
+      },
+      {
+        "name": "West Ham United",
+        "league": "Premier League",
+        "img_url": "https://cdn.sofifa.net/teams/19/60.png"
+      },
+      {
+        "name": "Wolverhampton Wanderers",
+        "league": "Premier League",
+        "img_url": "https://cdn.sofifa.net/teams/110/60.png"
+      }
+    ]
   },
   {
     "name": "Ligue 1",
     "country": "France",
-    "logo": "https://fifam.s3.amazonaws.com/leagues/ligue-1.png"
+    "logo": "https://fifam.s3.amazonaws.com/leagues/ligue-1.png",
+    "clubs": [
+      {
+        "name": "Paris Saint-Germain",
+        "league": "Ligue 1",
+        "img_url": "https://cdn.sofifa.net/teams/2/60.png"
+      },
+      {
+        "name": "Olympique de Marseille",
+        "league": "Ligue 1",
+        "img_url": "https://cdn.sofifa.net/teams/219/60.png"
+      },
+      {
+        "name": "AS Monaco",
+        "league": "Ligue 1",
+        "img_url": "https://cdn.sofifa.net/teams/69/60.png"
+      },
+      {
+        "name": "Olympique Lyonnais",
+        "league": "Ligue 1",
+        "img_url": "https://cdn.sofifa.net/teams/66/60.png"
+      },
+      {
+        "name": "LOSC Lille",
+        "league": "Ligue 1",
+        "img_url": "https://cdn.sofifa.net/teams/65/60.png"
+      },
+      {
+        "name": "OGC Nice",
+        "league": "Ligue 1",
+        "img_url": "https://cdn.sofifa.net/teams/72/60.png"
+      },
+      {
+        "name": "RC Lens",
+        "league": "Ligue 1",
+        "img_url": "https://cdn.sofifa.net/teams/64/60.png"
+      },
+      {
+        "name": "Stade Rennais",
+        "league": "Ligue 1",
+        "img_url": "https://cdn.sofifa.net/teams/74/60.png"
+      },
+      {
+        "name": "Montpellier HSC",
+        "league": "Ligue 1",
+        "img_url": "https://cdn.sofifa.net/teams/70/60.png"
+      },
+      {
+        "name": "FC Nantes",
+        "league": "Ligue 1",
+        "img_url": "https://cdn.sofifa.net/teams/71/60.png"
+      },
+      {
+        "name": "Stade Brestois 29",
+        "league": "Ligue 1",
+        "img_url": "https://cdn.sofifa.net/teams/378/60.png"
+      },
+      {
+        "name": "Toulouse FC",
+        "league": "Ligue 1",
+        "img_url": "https://cdn.sofifa.net/teams/1809/60.png"
+      },
+      {
+        "name": "RC Strasbourg",
+        "league": "Ligue 1",
+        "img_url": "https://cdn.sofifa.net/teams/76/60.png"
+      },
+      {
+        "name": "Le Havre AC",
+        "league": "Ligue 1",
+        "img_url": "https://cdn.sofifa.net/teams/1819/60.png"
+      },
+      {
+        "name": "FC Metz",
+        "league": "Ligue 1",
+        "img_url": "https://cdn.sofifa.net/teams/68/60.png"
+      },
+      {
+        "name": "Stade de Reims",
+        "league": "Ligue 1",
+        "img_url": "https://cdn.sofifa.net/teams/379/60.png"
+      },
+      {
+        "name": "Angers SCO",
+        "league": "Ligue 1",
+        "img_url": "https://cdn.sofifa.net/teams/1530/60.png"
+      },
+      {
+        "name": "AJ Auxerre",
+        "league": "Ligue 1",
+        "img_url": "https://cdn.sofifa.net/teams/57/60.png"
+      },
+      {
+        "name": "FC Lorient",
+        "league": "Ligue 1",
+        "img_url": "https://cdn.sofifa.net/teams/217/60.png"
+      },
+      {
+        "name": "Clermont Foot 63",
+        "league": "Ligue 1",
+        "img_url": "https://cdn.sofifa.net/teams/110569/60.png"
+      }
+    ]
   },
   {
     "name": "La Liga",

@@ -1,22 +1,22 @@
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { LeagueEntity } from "./league.entites";
+import { PlayerEntity } from "./player-admin.entities";
 
 
-@Entity("clubs")
-export class ClubEntity {
+@Entity("countries")
+export class CountryEntity {
   @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
   id: bigint;
 
   @Column({ type: "varchar", length: 191 })
   name: string;
 
-  @Column({ type: "varchar", length: 512 })
-  img_url: string;
+  @Column({ type: "varchar", length: 512, nullable: true })
+  img_url: string | null;
 
-  @Column({ name: "league_id", type: "bigint", unsigned: true })
-  leagueId: bigint;
+  @OneToMany(() => LeagueEntity, (league) => league.country)
+  leagues?: LeagueEntity[];
 
-  @ManyToOne(() => LeagueEntity, (league) => league.clubs, { nullable: true })
-  @JoinColumn({ name: "league_id" })
-  league: LeagueEntity;
+  @OneToMany(() => PlayerEntity, (player) => player.country)
+  players: PlayerEntity[];
 }

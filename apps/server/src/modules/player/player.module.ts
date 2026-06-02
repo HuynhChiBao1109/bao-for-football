@@ -10,9 +10,9 @@ import {
 import { UserPlayerEntity } from "./entities/player.entities";
 import { PlayerRepository } from "./player.repository";
 import { PlayerService } from "./player.service";
-import { CountryEntity } from "./entities/club.entites";
 import { LeagueEntity } from "./entities/league.entites";
-import { ClubEntity } from "./entities/country.entities";
+import { CountryEntity } from "./entities/country.entities";
+import { ClubEntity } from "./entities/club.entites";
 
 @Module({
   imports: [

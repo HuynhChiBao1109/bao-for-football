@@ -1,6 +1,6 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
-import { ClubEntity } from "./country.entities";
-import { CountryEntity } from "./club.entites";
+import { CountryEntity } from "./country.entities";
+import { ClubEntity } from "./club.entites";
 
 @Entity("leagues")
 export class LeagueEntity {

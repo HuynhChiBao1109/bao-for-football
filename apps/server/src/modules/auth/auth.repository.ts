@@ -5,8 +5,8 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { TeamEntity, UserEntity } from "./entities/auth.entities";
 import { UserPlayerEntity } from "../player/entities/player.entities";
 import { AuthUser, ClubOption, TeamAssignment } from "./types";
-import { ClubEntity } from "../player/entities/country.entities";
 import { PlayerEntity } from "../player/entities/player-admin.entities";
+import { ClubEntity } from "../player/entities/club.entites";
 
 const defaultTeamBudget = 360000000;
 

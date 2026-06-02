@@ -13,8 +13,8 @@ import { AuthController } from "./auth.controller";
 import { TeamEntity, UserEntity } from "./entities/auth.entities";
 import { AuthRepository } from "./auth.repository";
 import { AuthService } from "./auth.service";
-import { ClubEntity } from "../player/entities/country.entities";
 import { PlayerEntity } from "../player/entities/player-admin.entities";
+import { ClubEntity } from "../player/entities/club.entites";
 
 @Module({
   imports: [

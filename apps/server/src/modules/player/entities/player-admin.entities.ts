@@ -12,8 +12,8 @@ import { EPlayerPosition } from "../types/player-position.enum";
 import { IsEnum } from "class-validator";
 import { EPlayerSkill } from "../types/player-skill.enum";
 import { EPlayerSeason } from "../types/player-season.enum";
-import { CountryEntity } from "./club.entites";
-import { ClubEntity } from "./country.entities";
+import { ClubEntity } from "./club.entites";
+import { CountryEntity } from "./country.entities";
 
 @Entity("players")
 @Unique(["name", "season"])
