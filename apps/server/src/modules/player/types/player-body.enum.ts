@@ -1,8 +1,7 @@
 export enum EPlayerBody {
-  NORMAL = "normal",
-  FAT = "fat",
-  THIN = "thin",
-  NORMAL_V2 = "NORMAL",
+  NORMAL = "NORMAL",
+  FAT = "FAT",
+  THIN = "THIN",
   LEAN = "LEAN",
   STOCKY = "STOCKY",
 }
