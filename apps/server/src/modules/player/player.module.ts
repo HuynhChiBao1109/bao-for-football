@@ -7,7 +7,6 @@ import {
   CountryEntity,
   LeagueEntity,
   PlayerPositionEntity,
-  PlayerSpecialSkillEntity,
   PlayerTemplateEntity,
 } from "./entities/player-admin.entities";
 import { UserPlayerEntity } from "./entities/player.entities";
@@ -27,7 +26,6 @@ import { PlayerAdminService } from "./playeradmin.service";
       LeagueEntity,
       ClubEntity,
       PlayerPositionEntity,
-      PlayerSpecialSkillEntity,
     ]),
   ],
   controllers: [PlayerController, PlayerAdminController],

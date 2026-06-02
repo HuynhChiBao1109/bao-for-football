@@ -101,19 +101,15 @@ export class PlayerTemplateEntity {
 
   @Column({ name: "dribbling", type: "int", default: 75 })
   dribbling!: number;
-}
 
-@Entity("player_special_skills")
-@Unique(["playerTemplateId", "skilCode"])
-export class PlayerSpecialSkillEntity {
-  @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
-  id!: string;
+  @Column({ name: "acceleration", type: "int", default: 75 })
+  acceleration!: number;
 
-  @Column({ name: "player_template_id", type: "bigint", unsigned: true })
-  playerTemplateId!: string;
+  @Column({ name: "speed", type: "int", default: 75 })
+  speed!: number;
 
-  @Column({ name: "skil_code", type: "bigint", unsigned: true })
-  skilCode!: string;
+  @Column({ name: "stamina", type: "int", default: 75 })
+  stamina!: number;
 }
 
 @Entity("player_positions")

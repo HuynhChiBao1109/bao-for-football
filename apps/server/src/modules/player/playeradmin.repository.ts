@@ -6,7 +6,6 @@ import {
   CountryEntity,
   LeagueEntity,
   PlayerPositionEntity,
-  PlayerSpecialSkillEntity,
   PlayerTemplateEntity,
 } from "./entities/player-admin.entities";
 
@@ -31,8 +30,6 @@ export class PlayerAdminRepository {
     private readonly playerTemplateRepository: Repository<PlayerTemplateEntity>,
     @InjectRepository(PlayerPositionEntity)
     private readonly playerPositionRepository: Repository<PlayerPositionEntity>,
-    @InjectRepository(PlayerSpecialSkillEntity)
-    private readonly playerSpecialSkillRepository: Repository<PlayerSpecialSkillEntity>,
     // removed dataSource, use repositories only
   ) {}
 
@@ -100,35 +97,35 @@ export class PlayerAdminRepository {
   }
 
   private async loadSkillsByPlayerIDs(playerIDs: number[]) {
-    const skillsMap = new Map<string, any[]>();
-    if (!playerIDs.length) {
-      return skillsMap;
-    }
+    // const skillsMap = new Map<string, any[]>();
+    // if (!playerIDs.length) {
+    //   return skillsMap;
+    // }
 
-    // Get all skill pivots for the given player IDs
-    const pivots = await this.playerSpecialSkillRepository.find({
-      where: { playerTemplateId: In(playerIDs.map((item) => String(item))) },
-    });
-    // Get all unique skill IDs from pivots
-    const skillIds = Array.from(
-      new Set(pivots.map((item) => String(item.skilCode))),
-    );
-    // If you have a SkillEntity and repository, use it here. Otherwise, this will be empty.
-    // For now, just map the skillCode as id and return minimal info.
-    // TODO: Replace with actual skill repository if available.
-    for (const pivot of pivots) {
-      const key = String(pivot.playerTemplateId);
-      const current = skillsMap.get(key) ?? [];
-      current.push({
-        id: Number(pivot.skilCode),
-        name: String(pivot.skilCode),
-        iconUrl: null,
-        buffType: null,
-        buffValue: 0,
-      });
-      skillsMap.set(key, current);
-    }
-    return skillsMap;
+    // // Get all skill pivots for the given player IDs
+    // const pivots = await this.playerSpecialSkillRepository.find({
+    //   where: { playerTemplateId: In(playerIDs.map((item) => String(item))) },
+    // });
+    // // Get all unique skill IDs from pivots
+    // const skillIds = Array.from(
+    //   new Set(pivots.map((item) => String(item.skilCode))),
+    // );
+    // // If you have a SkillEntity and repository, use it here. Otherwise, this will be empty.
+    // // For now, just map the skillCode as id and return minimal info.
+    // // TODO: Replace with actual skill repository if available.
+    // for (const pivot of pivots) {
+    //   const key = String(pivot.playerTemplateId);
+    //   const current = skillsMap.get(key) ?? [];
+    //   current.push({
+    //     id: Number(pivot.skilCode),
+    //     name: String(pivot.skilCode),
+    //     iconUrl: null,
+    //     buffType: null,
+    //     buffValue: 0,
+    //   });
+    //   skillsMap.set(key, current);
+    // }
+    // return skillsMap;
   }
 
   private async loadCountriesByIDs(countryIDs: string[]) {
@@ -219,7 +216,7 @@ export class PlayerAdminRepository {
       return this.toPlayerResponse(
         player,
         positionsMap.get(key) ?? [],
-        skillsMap.get(key) ?? [],
+        [], // skillsMap.get(key) ?? [],
         countryMap.get(String(player.countryId ?? "")) ?? null,
       );
     });
