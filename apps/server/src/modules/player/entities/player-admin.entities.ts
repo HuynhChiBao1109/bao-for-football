@@ -11,6 +11,7 @@ import { EPlayerBody } from "../types/player-body.enum";
 import { EPlayerPosition } from "../types/player-position.enum";
 import { IsEnum } from "class-validator";
 import { EPlayerSkill } from "../types/player-skill.enum";
+import { EPlayerSeason } from "../types/player-season.enum";
 
 @Entity("countries")
 export class CountryEntity {
@@ -25,7 +26,7 @@ export class CountryEntity {
 
   @OneToMany(() => LeagueEntity, (league) => league.country)
   leagues?: LeagueEntity[];
-  
+
   @OneToMany(() => PlayerTemplateEntity, (player) => player.country)
   players: PlayerTemplateEntity[];
 }
@@ -48,7 +49,9 @@ export class LeagueEntity {
   @Column({ type: "varchar", length: 512, nullable: true })
   img_url: string | null;
 
-  @ManyToOne(() => CountryEntity, (country) => country.leagues, { nullable: true })
+  @ManyToOne(() => CountryEntity, (country) => country.leagues, {
+    nullable: true,
+  })
   @JoinColumn({ name: "country_id" })
   country: CountryEntity | null;
 
@@ -84,8 +87,13 @@ export class PlayerTemplateEntity {
   @Column({ type: "varchar", length: 191 })
   name: string;
 
-  @Column({ type: "varchar", length: 64, default: "normal" })
-  season: string;
+  @Column({
+    name: "season",
+    type: "enum",
+    enum: EPlayerSeason,
+  })
+  @IsEnum(EPlayerSeason)
+  season: EPlayerSeason;
 
   @Column({ name: "avatar_url", type: "varchar", length: 512, nullable: true })
   avatarUrl: string | null;
@@ -145,14 +153,10 @@ export class PlayerTemplateEntity {
   @JoinColumn({ name: "country_id" })
   country: CountryEntity | null;
 
-  @ManyToOne(() => LeagueEntity, { nullable: true })
-  @JoinColumn({ name: "league_id" })
-  league: LeagueEntity | null;
-
   @ManyToOne(() => ClubEntity, { nullable: true })
   @JoinColumn({ name: "club_id" })
   club: ClubEntity | null;
-  
+
   @OneToMany(() => PlayerPositionEntity, (position) => position.player, {
     cascade: true,
   })

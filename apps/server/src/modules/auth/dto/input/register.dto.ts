@@ -9,11 +9,4 @@ export class RegisterDto {
   @IsNotEmpty()
   @MinLength(4)
   password!: string;
-
-  @IsOptional()
-  clubId?: number;
-
-  @IsOptional()
-  @IsString()
-  clubName?: string;
 }

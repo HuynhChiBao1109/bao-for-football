@@ -54,7 +54,7 @@ export function LoginPage() {
         setError('Password and confirm password do not match.');
         return;
       }
-      await registerMutation.mutateAsync(registerForm);
+      await registerMutation.mutateAsync({username: registerForm.username, password: registerForm.password});
       setMessage('Đăng ký thành công. Bạn có thể đăng nhập ngay.');
       setTab(AuthTab.Login);
       setLoginForm((prev) => ({ ...prev, username: registerForm.username }));
