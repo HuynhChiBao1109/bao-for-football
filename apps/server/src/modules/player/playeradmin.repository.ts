@@ -130,20 +130,20 @@ export class PlayerAdminRepository {
   }
 
   private async loadCountriesByIDs(countryIDs: string[]) {
-    const countryMap = new Map<string, any>();
-    if (!countryIDs.length) {
-      return countryMap;
-    }
-    const countries = await this.countryRepository.findByIds(countryIDs);
-    for (const country of countries) {
-      countryMap.set(String(country.id), {
-        id: Number(country.id),
-        name: country.name,
-        code: country.code,
-        flag: country.flag,
-      });
-    }
-    return countryMap;
+    // const countryMap = new Map<string, any>();
+    // if (!countryIDs.length) {
+    //   return countryMap;
+    // }
+    // const countries = await this.countryRepository.findByIds(countryIDs);
+    // for (const country of countries) {
+    //   countryMap.set(String(country.id), {
+    //     id: Number(country.id),
+    //     name: country.name,
+    //     code: country.code,
+    //     flag: country.flag,
+    //   });
+    // }
+    // return countryMap;
   }
 
   private toPlayerResponse(
@@ -345,27 +345,27 @@ export class PlayerAdminRepository {
   }
 
   async createLeague(body: any) {
-    return this.leagueRepository.save(
-      this.leagueRepository.create({
-        name: body.name,
-        countryId: body.countryId != null ? BigInt(body.countryId) : null,
-        logo: body.logo ?? null,
-      }),
-    );
+    // return this.leagueRepository.save(
+    //   this.leagueRepository.create({
+    //     name: body.name,
+    //     countryId: body.countryId != null ? BigInt(body.countryId) : null,
+    //     logo: body.logo ?? null,
+    //   }),
+    // );
   }
 
   async updateLeague(id: number, body: any) {
-    const league = await this.leagueRepository.findOne({
-      where: { id: BigInt(id) },
-    });
-    if (!league) {
-      return null;
-    }
-    league.name = body.name ?? league.name;
-    league.countryId =
-      body.countryId != null ? BigInt(body.countryId) : league.countryId;
-    league.logo = body.logo ?? league.logo;
-    return this.leagueRepository.save(league);
+    // const league = await this.leagueRepository.findOne({
+    //   where: { id: BigInt(id) },
+    // });
+    // if (!league) {
+    //   return null;
+    // }
+    // league.name = body.name ?? league.name;
+    // league.countryId =
+    //   body.countryId != null ? BigInt(body.countryId) : league.countryId;
+    // league.logo = body.logo ?? league.logo;
+    // return this.leagueRepository.save(league);
   }
 
   async deleteLeague(id: number) {
