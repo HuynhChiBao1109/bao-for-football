@@ -26,7 +26,11 @@
         "New-Item": true,
         "Out-Null": true,
         "Copy-Item": true,
-        "npx tsc": true
+        "npx tsc": true,
+        "/^node -e 'const fs=require\\(\"fs\"\\);const p=\"apps/server/src/database/migrations/league\\.json\";const data=JSON\\.parse\\(fs\\.readFileSync\\(p,\"utf8\"\\)\\);const seasons=new Set\\(\\),bodies=new Set\\(\\),positions=new Set\\(\\),skills=new Set\\(\\);for\\(const l of data\\)\\{for\\(const c of \\(l\\.clubs\\|\\|\\[\\]\\)\\)\\{const players=Array\\.isArray\\(c\\.players\\)\\?c\\.players:\\[\\];for\\(const raw of players\\)\\{const arr=Array\\.isArray\\(raw\\)\\?raw:\\[raw\\];for\\(const pl of arr\\)\\{if\\(pl==null\\|\\|typeof pl!==\"object\"\\) continue; if\\(pl\\.season\\) seasons\\.add\\(pl\\.season\\); if\\(pl\\.bodyType\\) bodies\\.add\\(pl\\.bodyType\\); if\\(Array\\.isArray\\(pl\\.positions\\)\\) for\\(const v of pl\\.positions\\) positions\\.add\\(v\\); if\\(Array\\.isArray\\(pl\\.skills\\)\\) for\\(const v of pl\\.skills\\) skills\\.add\\(v\\);\\}\\}\\}\\} console\\.log\\(\"seasons\", \\[\\.\\.\\.seasons\\]\\); console\\.log\\(\"bodies\", \\[\\.\\.\\.bodies\\]\\); console\\.log\\(\"positions\", \\[\\.\\.\\.positions\\]\\); console\\.log\\(\"skills\", \\[\\.\\.\\.skills\\]\\);'$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
     },
     "git.ignoreLimitWarning": true
 }

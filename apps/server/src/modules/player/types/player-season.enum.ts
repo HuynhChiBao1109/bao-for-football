@@ -3,4 +3,5 @@ export enum EPlayerSeason {
     ICON = "icon",
     LEGEND = "legend",
     BIG_MATCH = "big_match",
+    CURRENT = "CURRENT",
 }

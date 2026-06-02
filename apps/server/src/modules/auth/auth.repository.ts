@@ -199,7 +199,7 @@ export class AuthRepository {
       return 0;
     }
     return this.userPlayerRepository.count({
-      where: { userId: String(userId) },
+      where: { userId: BigInt(userId) },
     });
   }
 
