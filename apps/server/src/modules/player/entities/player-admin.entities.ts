@@ -53,6 +53,9 @@ export class PlayerTemplateEntity {
   @Column({ type: "varchar", length: 191 })
   name!: string;
 
+  @Column({ type: "varchar", length: 64, default: "normal" })
+  season!: string;
+
   @Column({ name: "avatar_url", type: "varchar", length: 512, nullable: true })
   avatarUrl!: string | null;
 
@@ -114,7 +117,7 @@ export class PlayerSpecialSkillEntity {
 }
 
 @Entity("player_positions")
-@Unique(["playerTemplateId", "positionCode"])
+@Unique(["playerTemplateId", "position"])
 export class PlayerPositionEntity {
   @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
   id!: string;

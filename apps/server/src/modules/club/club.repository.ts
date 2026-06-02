@@ -9,11 +9,11 @@ const defaultClubBudget = 360000000;
 export class ClubRepository {
   constructor(
     @InjectRepository(ClubEntity)
-    private readonly clubRepository: Repository<ClubEntity>,
+    private readonly repository: Repository<ClubEntity>,
   ) {}
 
   async getByID(id: number) {
-    const club = await this.clubRepository
+    const club = await this.repository
       .createQueryBuilder("club")
       .leftJoinAndSelect("club.league", "league")
       .where("club.id = :id", { id })
