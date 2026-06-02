@@ -6,7 +6,6 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { GoExceptionFilter } from "../../common/filters/exception.filter";
 import { AuthGuard } from "../../common/guards/auth.guard";
 import { ResponseInterceptor } from "../../common/interceptors/response.interceptor";
-import { ClubEntity, PlayerTemplateEntity } from "../player/entities/player-admin.entities";
 import { UserPlayerEntity } from "../player/entities/player.entities";
 import { AdminGuard } from "./admin.guard";
 import { AdminAuthController } from "./admin-auth.controller";
@@ -14,6 +13,8 @@ import { AuthController } from "./auth.controller";
 import { TeamEntity, UserEntity } from "./entities/auth.entities";
 import { AuthRepository } from "./auth.repository";
 import { AuthService } from "./auth.service";
+import { ClubEntity } from "../player/entities/country.entities";
+import { PlayerEntity } from "../player/entities/player-admin.entities";
 
 @Module({
   imports: [
@@ -21,7 +22,7 @@ import { AuthService } from "./auth.service";
       ClubEntity,
       UserEntity,
       TeamEntity,
-      PlayerTemplateEntity,
+      PlayerEntity,
       UserPlayerEntity,
     ]),
     JwtModule.registerAsync({

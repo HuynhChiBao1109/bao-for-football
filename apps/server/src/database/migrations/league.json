@@ -1,0 +1,37 @@
+[
+  {
+    "name": "Premier League",
+    "country": "England",
+    "logo": "https://fifam.s3.amazonaws.com/leagues/premier-league.png"
+  },
+  {
+    "name": "Ligue 1",
+    "country": "France",
+    "logo": "https://fifam.s3.amazonaws.com/leagues/ligue-1.png"
+  },
+  {
+    "name": "La Liga",
+    "country": "Spain",
+    "logo": "https://fifam.s3.amazonaws.com/leagues/la-liga.png"
+  },
+  {
+    "name": "Serie A",
+    "country": "Italy",
+    "logo": "https://fifam.s3.amazonaws.com/leagues/serie-a.png"
+  },
+  {
+    "name": "Bundesliga",
+    "country": "Germany",
+    "logo": "https://fifam.s3.amazonaws.com/leagues/bundesliga.png"
+  },
+  {
+    "name": "Eredivisie",
+    "country": "Netherlands",
+    "logo": "https://fifam.s3.amazonaws.com/leagues/eredivisie.png"
+  },
+  {
+    "name": "V.League 1",
+    "country": "Vietnam",
+    "logo": "https://fifam.s3.amazonaws.com/leagues/v-league-1.png"
+  }
+]

@@ -3,9 +3,10 @@ import * as bcrypt from "bcrypt";
 import { Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { TeamEntity, UserEntity } from "./entities/auth.entities";
-import { ClubEntity, PlayerTemplateEntity } from "../player/entities/player-admin.entities";
 import { UserPlayerEntity } from "../player/entities/player.entities";
 import { AuthUser, ClubOption, TeamAssignment } from "./types";
+import { ClubEntity } from "../player/entities/country.entities";
+import { PlayerEntity } from "../player/entities/player-admin.entities";
 
 const defaultTeamBudget = 360000000;
 
@@ -25,8 +26,8 @@ export class AuthRepository {
     private readonly userRepository: Repository<UserEntity>,
     @InjectRepository(TeamEntity)
     private readonly teamRepository: Repository<TeamEntity>,
-    @InjectRepository(PlayerTemplateEntity)
-    private readonly playerTemplateRepository: Repository<PlayerTemplateEntity>,
+    @InjectRepository(PlayerEntity)
+    private readonly playerRepository: Repository<PlayerEntity>,
     @InjectRepository(UserPlayerEntity)
     private readonly userPlayerRepository: Repository<UserPlayerEntity>,
   ) {}
@@ -202,14 +203,14 @@ export class AuthRepository {
     });
   }
 
-  async countTemplatesByClub(clubId: number): Promise<number> {
-    if (!this.playerTemplateRepository) {
-      return 50;
-    }
-    return this.playerTemplateRepository.count({
-      where: { clubId: BigInt(clubId) },
-    });
-  }
+  // async countTemplatesByClub(clubId: number): Promise<number> {
+  //   if (!this.playerTemplateRepository) {
+  //     return 50;
+  //   }
+  //   return this.playerTemplateRepository.count({
+  //     where: { clubId: BigInt(clubId) },
+  //   });
+  // }
 
   async listOwnedTemplateIds(userId: number): Promise<any> {
     // if (!this.userPlayerRepository) {
@@ -222,19 +223,19 @@ export class AuthRepository {
     // return new Set(existingCards.map((item) => String(item.playerTemplateId)));
   }
 
-  async listTemplatesByClub(
-    clubId: number,
-    limit: number,
-  ): Promise<PlayerTemplateEntity[]> {
-    if (!this.playerTemplateRepository) {
-      return [];
-    }
-    return this.playerTemplateRepository.find({
-      where: { clubId: BigInt(clubId) },
-      order: { id: "ASC" },
-      take: limit,
-    });
-  }
+  // async listTemplatesByClub(
+  //   clubId: number,
+  //   limit: number,
+  // ): Promise<PlayerTemplateEntity[]> {
+  //   if (!this.playerTemplateRepository) {
+  //     return [];
+  //   }
+  //   return this.playerTemplateRepository.find({
+  //     where: { clubId: BigInt(clubId) },
+  //     order: { id: "ASC" },
+  //     take: limit,
+  //   });
+  // }
 
   async createUserPlayers(userId: number, templateIds: string[]): Promise<any> {
     //   if (!this.userPlayerRepository || !templateIds.length) {

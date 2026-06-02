@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
-import { PlayerTemplateEntity } from "./entities/player-admin.entities";
 import { UserPlayerEntity } from "./entities/player.entities";
 
 @Injectable()
@@ -31,8 +30,6 @@ export class PlayerRepository {
   ] as const;
 
   constructor(
-    @InjectRepository(PlayerTemplateEntity)
-    private readonly playerTemplateRepository: Repository<PlayerTemplateEntity>,
     @InjectRepository(UserPlayerEntity)
     private readonly userPlayerRepository: Repository<UserPlayerEntity>,
   ) {}
@@ -42,31 +39,31 @@ export class PlayerRepository {
     return Number.isFinite(parsed) ? parsed : 0;
   }
 
-  private buildBaseStats(template: PlayerTemplateEntity | null | undefined) {
-    const source = template as any;
-    return {
-      shooting: this.numberOf(source?.shoot),
-      passing: this.numberOf(source?.pass),
-      longPass: this.numberOf(source?.longPass),
-      vision: this.numberOf(source?.vision),
-      attackingAwareness: 0,
-      defensiveAwareness: this.numberOf(source?.tackle),
-      duels: this.numberOf(source?.tackle),
-      pace: this.numberOf(source?.speed),
-      stamina: this.numberOf(source?.stamina),
-      balance: this.numberOf(source?.balance),
-      technique: this.numberOf(source?.dribbling),
-      determination: 0,
-      strength: this.numberOf(source?.bodyType),
-      standingTackle: this.numberOf(source?.tackle),
-      slidingTackle: this.numberOf(source?.tackle),
-      dribbling: this.numberOf(source?.dribbling),
-      curve: 0,
-      gkParrying: 0,
-      gkReflex: 0,
-      gkReach: 0,
-    } as Record<(typeof this.statKeys)[number], number>;
-  }
+  // private buildBaseStats(template: PlayerTemplateEntity | null | undefined) {
+  //   const source = template as any;
+  //   return {
+  //     shooting: this.numberOf(source?.shoot),
+  //     passing: this.numberOf(source?.pass),
+  //     longPass: this.numberOf(source?.longPass),
+  //     vision: this.numberOf(source?.vision),
+  //     attackingAwareness: 0,
+  //     defensiveAwareness: this.numberOf(source?.tackle),
+  //     duels: this.numberOf(source?.tackle),
+  //     pace: this.numberOf(source?.speed),
+  //     stamina: this.numberOf(source?.stamina),
+  //     balance: this.numberOf(source?.balance),
+  //     technique: this.numberOf(source?.dribbling),
+  //     determination: 0,
+  //     strength: this.numberOf(source?.bodyType),
+  //     standingTackle: this.numberOf(source?.tackle),
+  //     slidingTackle: this.numberOf(source?.tackle),
+  //     dribbling: this.numberOf(source?.dribbling),
+  //     curve: 0,
+  //     gkParrying: 0,
+  //     gkReflex: 0,
+  //     gkReach: 0,
+  //   } as Record<(typeof this.statKeys)[number], number>;
+  // }
 
   private buildBonusStats(card: UserPlayerEntity) {
     // return {

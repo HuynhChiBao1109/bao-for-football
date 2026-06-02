@@ -3,28 +3,28 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { AuthModule } from "../auth/auth.module";
 import { PlayerController } from "./player.controller";
 import {
-  ClubEntity,
-  CountryEntity,
-  LeagueEntity,
+  PlayerEntity,
   PlayerPositionEntity,
   PlayerSkillEntity,
-  PlayerTemplateEntity,
 } from "./entities/player-admin.entities";
 import { UserPlayerEntity } from "./entities/player.entities";
 import { PlayerRepository } from "./player.repository";
 import { PlayerService } from "./player.service";
+import { CountryEntity } from "./entities/club.entites";
+import { LeagueEntity } from "./entities/league.entites";
+import { ClubEntity } from "./entities/country.entities";
 
 @Module({
   imports: [
     AuthModule,
     TypeOrmModule.forFeature([
-      PlayerTemplateEntity,
       UserPlayerEntity,
       CountryEntity,
       LeagueEntity,
       ClubEntity,
       PlayerPositionEntity,
       PlayerSkillEntity,
+      PlayerEntity,
     ]),
   ],
   controllers: [PlayerController ],
