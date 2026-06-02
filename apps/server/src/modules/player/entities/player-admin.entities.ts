@@ -44,7 +44,7 @@ export class LeagueEntity {
   logo!: string | null;
 }
 
-@Entity("player_templates")
+@Entity("players")
 @Unique(["name", "season"])
 export class PlayerTemplateEntity {
   @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
