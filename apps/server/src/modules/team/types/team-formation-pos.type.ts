@@ -1,4 +1,4 @@
-import { EPlayerPosition } from "src/modules/player/types/player-position.enum";
+import { EPlayerPosition } from "src/modules/player/enum/player-position.enum";
 
 export type TeamFormationPos = {
   x: number;

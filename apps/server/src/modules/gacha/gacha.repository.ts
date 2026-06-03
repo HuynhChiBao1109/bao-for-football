@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { GachaBannerEntity, GachaLogEntity } from "./entities/gacha.entities";
-import { UserPlayerEntity } from "../player/entities/player.entities";
+import { UserPlayerEntity } from "../player/entities/player-user.entities";
 
 export interface GachaRollResult {
   userId: number;

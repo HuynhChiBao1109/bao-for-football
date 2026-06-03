@@ -2,7 +2,7 @@ import { Column, Entity, ManyToOne, OneToOne, PrimaryGeneratedColumn } from "typ
 import { ETeamFormation } from "../types/team-formation.enum";
 import { ETeamType } from "../types/team-type.enum";
 import { UserEntity } from "src/modules/user/user.entities";
-import { UserPlayerEntity } from "src/modules/player/entities/player.entities";
+import { UserPlayerEntity } from "src/modules/player/entities/player-user.entities";
 import { TeamEntity } from "./team.entities";
 import { AbstractEntity } from "src/database/database.abjact";
 

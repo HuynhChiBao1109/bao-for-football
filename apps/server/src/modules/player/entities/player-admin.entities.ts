@@ -7,14 +7,15 @@ import {
   PrimaryGeneratedColumn,
   Unique,
 } from "typeorm";
-import { EPlayerBody } from "../types/player-body.enum";
-import { EPlayerPosition } from "../types/player-position.enum";
+import { EPlayerBody } from "../enum/player-body.enum";
+import { EPlayerPosition } from "../enum/player-position.enum";
 import { IsEnum } from "class-validator";
-import { EPlayerSkill } from "../types/player-skill.enum";
-import { EPlayerSeason } from "../types/player-season.enum";
+import { EPlayerSkill } from "../enum/player-skill.enum";
+import { EPlayerSeason } from "../enum/player-season.enum";
 import { ClubEntity } from "./club.entites";
 import { CountryEntity } from "./country.entities";
 import { AbstractEntity } from "src/database/database.abjact";
+import { PlayerPositionFormat } from "../types/player-position-format.type";
 
 @Entity("players")
 @Unique(["name", "season"])
@@ -87,6 +88,9 @@ export class PlayerEntity extends AbstractEntity {
   @Column({ name: "stamina", type: "int", default: 75 })
   stamina: number;
 
+  @Column({ name: "position", type: "json" })
+  position: PlayerPositionFormat[];
+
   @ManyToOne(() => CountryEntity, { nullable: true })
   @JoinColumn({ name: "country_id" })
   country: CountryEntity | null;
@@ -95,39 +99,10 @@ export class PlayerEntity extends AbstractEntity {
   @JoinColumn({ name: "club_id" })
   club: ClubEntity | null;
 
-  @OneToMany(() => PlayerPositionEntity, (position) => position.player, {
-    cascade: true,
-  })
-  positions: PlayerPositionEntity[];
-
   @OneToMany(() => PlayerSkillEntity, (skill) => skill.player, {
     cascade: true,
   })
   skills: PlayerSkillEntity[];
-}
-
-@Entity("player_positions")
-@Unique(["playerId", "position"])
-export class PlayerPositionEntity extends AbstractEntity {
-  @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
-  id: bigint;
-
-  @Column({ name: "player_id", type: "bigint", unsigned: true })
-  playerId: bigint;
-
-  @Column({
-    name: "position",
-    type: "enum",
-    enum: EPlayerPosition,
-  })
-  @IsEnum(EPlayerPosition)
-  position: EPlayerPosition;
-
-  @ManyToOne(() => PlayerEntity, (player) => player.positions, {
-    onDelete: "CASCADE",
-  })
-  @JoinColumn({ name: "player_id" })
-  player: PlayerEntity;
 }
 
 @Entity("player_skills")

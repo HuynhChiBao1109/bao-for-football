@@ -13,7 +13,7 @@ import { AuthService } from "./auth.service";
 import { PlayerEntity } from "../player/entities/player-admin.entities";
 import { ClubEntity } from "../player/entities/club.entites";
 import { TeamEntity } from "../team/entities/team.entities";
-import { UserPlayerEntity } from "../player/entities/player.entities";
+import { UserPlayerEntity } from "../player/entities/player-user.entities";
 
 @Module({
   imports: [

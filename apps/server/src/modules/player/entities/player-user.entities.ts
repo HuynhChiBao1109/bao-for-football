@@ -7,7 +7,7 @@ import {
   PrimaryGeneratedColumn,
   Unique,
 } from "typeorm";
-import { EPlayerSkill } from "../types/player-skill.enum";
+import { EPlayerSkill } from "../enum/player-skill.enum";
 import { TeamEntity } from "src/modules/team/entities/team.entities";
 import { UserEntity } from "src/modules/user/user.entities";
 

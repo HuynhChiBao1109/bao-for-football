@@ -4,7 +4,6 @@ import { AuthModule } from "../auth/auth.module";
 import { PlayerController } from "./player.controller";
 import {
   PlayerEntity,
-  PlayerPositionEntity,
   PlayerSkillEntity,
 } from "./entities/player-admin.entities";
 import { PlayerRepository } from "./player.repository";
@@ -12,7 +11,7 @@ import { PlayerService } from "./player.service";
 import { LeagueEntity } from "./entities/league.entites";
 import { CountryEntity } from "./entities/country.entities";
 import { ClubEntity } from "./entities/club.entites";
-import { UserPlayerEntity, UserPlayerSkillEntity } from "./entities/player.entities";
+import { UserPlayerEntity, UserPlayerSkillEntity } from "./entities/player-user.entities";
 
 @Module({
   imports: [
@@ -23,7 +22,6 @@ import { UserPlayerEntity, UserPlayerSkillEntity } from "./entities/player.entit
       CountryEntity,
       LeagueEntity,
       ClubEntity,
-      PlayerPositionEntity,
       PlayerSkillEntity,
       PlayerEntity,
     ]),

@@ -5,7 +5,7 @@ import { GachaController } from "./gacha.controller";
 import { GachaBannerEntity, GachaLogEntity } from "./entities/gacha.entities";
 import { GachaRepository } from "./gacha.repository";
 import { GachaService } from "./gacha.service";
-import { UserPlayerEntity } from "../player/entities/player.entities";
+import { UserPlayerEntity } from "../player/entities/player-user.entities";
 
 @Module({
   imports: [
