@@ -8,19 +8,13 @@ import {
 @Entity("matches")
 export class MatchEntity {
   @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
-  id!: string;
+  id: bigint;
 
-  @Column({ name: "match_id", type: "varchar", length: 64, unique: true })
-  matchId!: string;
+  @Column({ name: "home_club_id", type: "bigint", unsigned: true })
+  homeClubId: bigint;
 
-  @Column({ name: "user_id", type: "bigint", unsigned: true })
-  userId!: string;
-
-  @Column({ name: "home_club_name", type: "varchar", length: 191 })
-  homeClubName!: string;
-
-  @Column({ name: "away_club_name", type: "varchar", length: 191 })
-  awayClubName!: string;
+  @Column({ name: "away_club_id", type: "bigint", unsigned: true })
+  awayClubId: bigint;
 
   @Column({ type: "varchar", length: 64, default: "casual" })
   mode!: string;
