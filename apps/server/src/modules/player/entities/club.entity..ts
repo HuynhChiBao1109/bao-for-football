@@ -1,5 +1,6 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { LeagueEntity } from "./league.entity";
+import { CampainMatchEntity } from "src/modules/campain/entities/campain-match.entity";
 
 @Entity("clubs")
 export class ClubEntity {
@@ -18,4 +19,7 @@ export class ClubEntity {
   @ManyToOne(() => LeagueEntity, (league) => league.clubs, { nullable: true })
   @JoinColumn({ name: "league_id" })
   league: LeagueEntity;
+
+  @OneToMany(() => CampainMatchEntity, (campainMatch) => campainMatch.competitorClub)
+  campainMatches: CampainMatchEntity[];
 }

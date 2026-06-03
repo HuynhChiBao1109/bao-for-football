@@ -4,6 +4,7 @@ import { ETeamType } from "../types/team-type.enum";
 import { UserEntity } from "src/modules/user/entities/user.entity";
 import { TeamFormationEntity } from "./team-formatition.entity";
 import { AbstractEntity } from "src/database/database.abjact";
+import { CampainEntity } from "src/modules/campain/entities/campain.entity";
 
 @Entity("user_teams")
 export class TeamEntity extends AbstractEntity {
@@ -42,4 +43,7 @@ export class TeamEntity extends AbstractEntity {
 
   @OneToMany(() => TeamFormationEntity, (formation) => formation.team)
   teamFormations: TeamFormationEntity[];
+
+  @OneToMany(() => CampainEntity, (campain) => campain.team)
+  campains: CampainEntity[];
 }

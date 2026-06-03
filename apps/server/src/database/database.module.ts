@@ -1,7 +1,7 @@
 import { Global, Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { DataSource } from "typeorm";
-import { DATABASE_CONNECTION } from "../common/constants/app.constants";
+import { DATABASE_CONNECTION } from "../common/constants/app.constant";
 
 @Global()
 @Module({
