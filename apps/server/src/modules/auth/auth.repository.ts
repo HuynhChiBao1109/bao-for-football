@@ -8,8 +8,6 @@ import { ClubEntity } from "../player/entities/club.entites";
 import { TeamEntity } from "../team/entities/team.entities";
 import { TeamPlayerEntity } from "../player/entities/player.entities";
 
-const defaultTeamBudget = 360000000;
-
 @Injectable()
 export class AuthRepository {
   private readonly memData = new Map<
