@@ -622,6 +622,65 @@ textarea {
   color: var(--text-muted);
 }
 
+.campaign-match-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 12px;
+}
+
+.campaign-match-card {
+  border: 1px solid rgba(88, 166, 255, 0.2);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 90% 12%, rgba(114, 241, 184, 0.16), transparent 28%),
+    linear-gradient(180deg, rgba(10, 27, 44, 0.9), rgba(4, 13, 23, 0.95));
+  padding: 14px;
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.campaign-match-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(114, 241, 184, 0.35);
+  box-shadow: 0 16px 36px -28px rgba(94, 234, 212, 0.6);
+}
+
+.campaign-match-card__stage {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.campaign-match-card__club {
+  margin: 8px 0 0;
+  font-family: 'Orbitron', 'Rajdhani', sans-serif;
+  font-size: 1.04rem;
+  color: #f8fbff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.campaign-match-card__meta {
+  margin-top: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-soft);
+}
+
+.campaign-match-card__meta strong {
+  color: #86efac;
+  font-family: 'Orbitron', 'Rajdhani', sans-serif;
+  letter-spacing: 0.02em;
+}
+
 .scan-line {
   position: relative;
 }

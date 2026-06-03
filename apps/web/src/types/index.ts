@@ -154,6 +154,19 @@ export type AiStage = {
   isCleared: boolean;
 };
 
+export type CampaignMatch = {
+  id: number | string;
+  campainId: number | string;
+  level: number;
+  competitorClubId?: number | string;
+  matchReward: number | string;
+  competitorClub?: {
+    id: number | string;
+    name: string;
+    imgUrl?: string;
+  };
+};
+
 // ─── Gacha ────────────────────────────────────────────────────────────────────
 
 export type GachaBanner = {

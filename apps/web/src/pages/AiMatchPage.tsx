@@ -1,140 +1,88 @@
-import { useState, useMemo } from 'react';
-import {
-  useAiStages,
-  useSubmitStageResult,
-  useStartMatch,
-  useFinalizeMatch,
-} from '../hooks/useAiCampaign';
+import { useEffect, useMemo, useState } from 'react';
+import { useCampainMatches, useCreateCompainNormal } from '../hooks/useAiCampaign';
 import { Banner } from '../components/feedback';
-import { MatchMode } from '../enums/match';
-import MatchView from '../MatchView';
-import type { AiStage } from '../types';
+import { useSession } from '../hooks/useSession';
+import type { CampaignMatch } from '../types';
 
 export function AiMatchPage() {
-  const { data: stages = [], isLoading, error } = useAiStages();
-  const submitResult = useSubmitStageResult();
-  const startMatch = useStartMatch();
-  const finalizeMatch = useFinalizeMatch();
+  const { data: sessionData } = useSession();
+  const teamId = Number(((sessionData?.team as any)?.id ?? 0) as number);
+  const {
+    data: matches = [],
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+  } = useCampainMatches(teamId);
+  const createCompainNormal = useCreateCompainNormal();
 
-  const [selectedStageNo, setSelectedStageNo] = useState<number>(1);
-  const [isFighting, setIsFighting] = useState(false);
-  const [activeMatchID, setActiveMatchID] = useState('');
-  const [resultMessage, setResultMessage] = useState('');
-  const [fightError, setFightError] = useState('');
+  const [bootstrapping, setBootstrapping] = useState(false);
+  const [createError, setCreateError] = useState('');
+  const [initAttempted, setInitAttempted] = useState(false);
 
-  const selected = useMemo(
-    () => stages.find((s) => s.stageNo === selectedStageNo) ?? null,
-    [stages, selectedStageNo],
+  useEffect(() => {
+    setInitAttempted(false);
+    setCreateError('');
+  }, [teamId]);
+
+  useEffect(() => {
+    if (!teamId || isLoading || isFetching || initAttempted || matches.length > 0) {
+      return;
+    }
+
+    setInitAttempted(true);
+    setBootstrapping(true);
+    setCreateError('');
+
+    (async () => {
+      try {
+        await createCompainNormal.mutateAsync({ teamId });
+        await refetch();
+      } catch (err) {
+        setCreateError((err as Error).message);
+      } finally {
+        setBootstrapping(false);
+      }
+    })();
+  }, [
+    createCompainNormal,
+    initAttempted,
+    isFetching,
+    isLoading,
+    matches.length,
+    refetch,
+    teamId,
+  ]);
+
+  const totalReward = useMemo(
+    () =>
+      matches.reduce((sum, item) => {
+        const value = Number(item.matchReward ?? 0);
+        return Number.isFinite(value) ? sum + value : sum;
+      }, 0),
+    [matches],
   );
 
-  async function handleStartMatch() {
-    if (!selected || !selected.isUnlocked || selected.isCleared) return;
-    setFightError('');
-    setResultMessage('');
-    try {
-      const matchId = await startMatch.mutateAsync({
-        awayClubName: selected.clubName,
-        mode: MatchMode.AiCampaign,
-        stageNo: selected.stageNo,
-      });
-      setActiveMatchID(matchId);
-      setIsFighting(true);
-    } catch (err) {
-      setFightError((err as Error).message);
-    }
+  if (!teamId) {
+    return (
+      <p className="game-notice game-notice--muted">
+        Chua xac dinh duoc team hien tai. Vui long tao doi bong truoc.
+      </p>
+    );
   }
 
-  async function handleMatchEnd(result: {
-    didWin: boolean;
-    home?: number;
-    away?: number;
-    homeStats?: object;
-    awayStats?: object;
-    scorers?: unknown[];
-  }) {
-    if (!selected) return;
-    if (activeMatchID) {
-      try {
-        await finalizeMatch.mutateAsync({
-          matchId: activeMatchID,
-          homeScore: Number(result?.home ?? 0),
-          awayScore: Number(result?.away ?? 0),
-          homeStats: result?.homeStats,
-          awayStats: result?.awayStats,
-          scorers: Array.isArray(result?.scorers) ? result.scorers : [],
-        });
-      } catch (err) {
-        setFightError(`Không lưu được lịch sử trận: ${(err as Error).message}`);
-      }
-    }
-
-    try {
-      const data = (await submitResult.mutateAsync({
-        stageNo: selected.stageNo,
-        isWin: Boolean(result?.didWin),
-      })) as
-        | {
-            grantedMoney?: number;
-            grantedExpPerPlayer?: number;
-            rewardedPlayers?: number;
-            unlockedNext?: boolean;
-            nextUnlockedStage?: number;
-          }
-        | undefined;
-
-      if (result?.didWin) {
-        const rewardText = `${Number(data?.grantedMoney ?? 0).toLocaleString()} tiền + ${Number(data?.grantedExpPerPlayer ?? 0)} EXP x ${Number(data?.rewardedPlayers ?? 0)} cầu thủ`;
-        if (data?.unlockedNext) {
-          setResultMessage(
-            `Thắng màn ${selected.stageNo}. Nhận ${rewardText}. Đã mở khóa màn ${data.nextUnlockedStage}.`,
-          );
-        } else {
-          setResultMessage(`Thắng màn ${selected.stageNo}. Nhận ${rewardText}.`);
-        }
-      } else {
-        setResultMessage(`Bạn đã thua màn ${selected.stageNo}. Hãy thử lại.`);
-      }
-    } catch (err) {
-      setFightError((err as Error).message);
-    }
-
-    setIsFighting(false);
-    setActiveMatchID('');
-  }
-
-  if (isLoading)
-    return <p className="game-notice game-notice--info">Đang tải danh sách 50 màn...</p>;
-  if (!selected && !isLoading)
-    return <p className="game-notice game-notice--muted">Chưa có dữ liệu màn AI.</p>;
-
-  if (isFighting && selected) {
+  if (isLoading || bootstrapping) {
     return (
       <section className="space-y-4">
-        <div className="game-panel game-panel--accent overflow-hidden p-4 sm:p-5">
-          <div className="game-panel__content flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="game-header-kicker">Campaign Battle</p>
-              <h2 className="game-title mt-2 text-3xl font-bold text-white">
-                Màn {selected.stageNo}
-              </h2>
-              <p className="mt-2 text-sm text-slate-300">
-                Đối thủ: {selected.clubName} · Buff +{selected.enemyStatBonus}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setIsFighting(false);
-                setActiveMatchID('');
-              }}
-              className="game-button-secondary"
-            >
-              Quay lại chọn màn
-            </button>
+        <article className="game-panel game-panel--accent p-5 sm:p-6">
+          <div className="game-panel__content">
+            <p className="game-header-kicker">Campaign AI</p>
+            <h2 className="game-title mt-3 text-3xl font-bold text-white">Dang khoi tao campaign</h2>
+            <p className="game-copy mt-3">
+              He thong dang tai du lieu tran dau. Neu chua co match, backend se tu tao campaign normal.
+            </p>
           </div>
-        </div>
-        <MatchView embedded onMatchEnd={handleMatchEnd} matchId={activeMatchID} />
-        {fightError && <Banner text={fightError} tone="error" />}
+        </article>
       </section>
     );
   }
@@ -145,87 +93,71 @@ export function AiMatchPage() {
         <div className="game-panel__content">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="game-header-kicker">AI Campaign</p>
+              <p className="game-header-kicker">Campaign AI</p>
               <h2 className="game-title mt-3 text-3xl font-bold text-white">
-                50 màn campaign theo tiến trình thắng-thua
+                Danh sach tran campaign cua doi ban
               </h2>
               <p className="game-copy mt-3 max-w-2xl text-base">
-                Phải thắng màn hiện tại mới mở màn tiếp theo. Mỗi màn có đối thủ CLB random và đội
-                hình 22 cầu thủ với chỉ số tăng dần.
+                Khi vao Campaign, he thong lay danh sach match theo team. Neu chua co se tu dong tao campaign normal,
+                sau do render theo du lieu moi nhat.
               </p>
             </div>
             <div className="game-chip">
-              Màn: <span className="font-semibold text-emerald-300">{selectedStageNo}</span>
+              So tran: <span className="font-semibold text-emerald-300">{matches.length}</span>
             </div>
           </div>
 
           {error && <Banner text={(error as Error).message} tone="error" />}
-          {fightError && <Banner text={fightError} tone="error" />}
-          {resultMessage && <Banner text={resultMessage} tone="success" />}
-
-          <button
-            type="button"
-            disabled={
-              !selected || !selected.isUnlocked || selected.isCleared || startMatch.isPending
-            }
-            onClick={handleStartMatch}
-            className="game-button-primary mt-4 w-full disabled:border-slate-700/70 disabled:bg-slate-900/50 disabled:text-slate-400"
-          >
-            {startMatch.isPending
-              ? 'Đang tạo trận...'
-              : selected?.isCleared
-                ? `Màn ${selectedStageNo} đã hoàn thành`
-                : `Vào thi đấu màn ${selectedStageNo}`}
-          </button>
+          {createError && <Banner text={createError} tone="error" />}
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {stages.map((item) => (
-              <StageButton
-                key={item.stageNo}
-                stage={item}
-                active={item.stageNo === selectedStageNo}
-                onClick={() => setSelectedStageNo(item.stageNo)}
-              />
-            ))}
+            <div className="game-stat-card">
+              <p className="game-stat-card__label">Tong so tran</p>
+              <p className="game-stat-card__value">{matches.length}</p>
+            </div>
+            <div className="game-stat-card">
+              <p className="game-stat-card__label">Tong reward</p>
+              <p className="game-stat-card__value">{totalReward.toLocaleString()}</p>
+            </div>
+            <div className="game-stat-card">
+              <p className="game-stat-card__label">Loai campaign</p>
+              <p className="game-stat-card__value">NORMAL</p>
+            </div>
+            <div className="game-stat-card">
+              <p className="game-stat-card__label">Trang thai</p>
+              <p className="game-stat-card__value">San sang</p>
+            </div>
           </div>
+
+          {matches.length === 0 ? (
+            <p className="game-notice game-notice--muted mt-5">Chua co tran nao trong campaign.</p>
+          ) : (
+            <div className="campaign-match-grid mt-5">
+              {matches.map((item) => (
+                <CampaignMatchCard key={String(item.id)} match={item} />
+              ))}
+            </div>
+          )}
         </div>
       </article>
     </section>
   );
 }
 
-function StageButton({
-  stage,
-  active,
-  onClick,
-}: {
-  stage: AiStage;
-  active: boolean;
-  onClick: () => void;
-}) {
-  const locked = !stage.isUnlocked;
-  const completed = stage.isCleared;
+function CampaignMatchCard({ match }: { match: CampaignMatch }) {
+  const reward = Number(match.matchReward ?? 0);
+  const clubName = match.competitorClub?.name || `Club #${String(match.competitorClubId ?? '-')}`;
+
   return (
-    <button
-      type="button"
-      onClick={!locked ? onClick : undefined}
-      disabled={locked}
-      data-active={active}
-      className={`rounded-[18px] border px-3 py-3 text-left text-sm transition ${
-        active
-          ? 'border-emerald-400/60 bg-emerald-400/10'
-          : completed
-            ? 'border-white/8 bg-black/20 text-slate-400'
-            : locked
-              ? 'border-white/4 bg-black/10 text-slate-600 cursor-not-allowed'
-              : 'border-white/8 bg-black/20 hover:border-white/20'
-      }`}
-    >
-      <p className="font-semibold text-white">Màn {stage.stageNo}</p>
-      <p className="mt-1 text-xs text-slate-400 truncate">{stage.clubName}</p>
-      <p className="mt-1 text-xs">
-        {completed ? '✓ Hoàn thành' : locked ? '🔒 Khóa' : '▶ Khả dụng'}
+    <article className="campaign-match-card">
+      <p className="campaign-match-card__stage">Match {Number(match.level ?? 0)}</p>
+      <p className="campaign-match-card__club" title={clubName}>
+        {clubName}
       </p>
-    </button>
+      <div className="campaign-match-card__meta">
+        <span>Reward</span>
+        <strong>{reward.toLocaleString()}</strong>
+      </div>
+    </article>
   );
 }

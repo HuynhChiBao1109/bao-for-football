@@ -1,92 +1,60 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/apiClient';
 import { useAuth } from './useAuth';
-import type { AiStage } from '../types';
+import type { CampaignMatch } from '../types';
 
-export function useAiStages() {
+function normalizeCampaignMatches(payload: unknown): CampaignMatch[] {
+  if (!Array.isArray(payload)) {
+    return [];
+  }
+
+  const directMatches = payload.filter(
+    (item) => item && typeof item === 'object' && 'campainId' in (item as object),
+  ) as CampaignMatch[];
+  if (directMatches.length > 0) {
+    return directMatches.sort((a, b) => Number(a.level ?? 0) - Number(b.level ?? 0));
+  }
+
+  const fromCampains = payload
+    .flatMap((item) => {
+      if (!item || typeof item !== 'object') {
+        return [] as CampaignMatch[];
+      }
+      const matches = (item as { campainMatches?: CampaignMatch[] }).campainMatches;
+      return Array.isArray(matches) ? matches : [];
+    })
+    .sort((a, b) => Number(a.level ?? 0) - Number(b.level ?? 0));
+
+  return fromCampains;
+}
+
+export function useCampainMatches(teamId: number) {
   const { token } = useAuth();
 
-  return useQuery<AiStage[]>({
-    queryKey: ['aiStages', token],
+  return useQuery<CampaignMatch[]>({
+    queryKey: ['campainMatches', token, teamId],
     queryFn: async () => {
-      const payload = await apiClient('/api/v1/ai/stages', { token });
-      return Array.isArray(payload) ? payload : [];
+      const payload = await apiClient(`/api/v1/campains/team/${teamId}`, { token });
+      return normalizeCampaignMatches(payload);
     },
-    enabled: Boolean(token),
+    enabled: Boolean(token && teamId > 0),
   });
 }
 
-export function useAiStageDetail(stageNo: number | null) {
-  const { token } = useAuth();
-
-  return useQuery<AiStage | null>({
-    queryKey: ['aiStage', stageNo],
-    queryFn: async () => {
-      const payload = await apiClient(`/api/v1/ai/stages/${stageNo}`, { token });
-      return (payload ?? null) as AiStage;
-    },
-    enabled: Boolean(token && stageNo),
-  });
-}
-
-export function useSubmitStageResult() {
+export function useCreateCompainNormal() {
   const { token } = useAuth();
   const qc = useQueryClient();
 
-  return useMutation<unknown, Error, { stageNo: number; isWin: boolean }>({
-    mutationFn: async ({ stageNo, isWin }) => {
-      const payload = await apiClient(`/api/v1/ai/stages/${stageNo}/result`, {
+  return useMutation<CampaignMatch[], Error, { teamId: number }>({
+    mutationFn: async ({ teamId }) => {
+      const payload = await apiClient(`/api/v1/campains/team/${teamId}/normal`, {
         method: 'POST',
         token,
-        body: { isWin },
       });
-      return payload;
+      return normalizeCampaignMatches(payload);
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['aiStages'] });
-      qc.invalidateQueries({ queryKey: ['aiStage'] });
-    },
-  });
-}
-
-export function useStartMatch() {
-  const { token } = useAuth();
-
-  return useMutation<string, Error, { awayClubName: string; mode: string; stageNo: number }>({
-    mutationFn: async (body) => {
-      const payload = await apiClient('/api/v1/matches/start', {
-        method: 'POST',
-        token,
-        body,
-      });
-      const matchId = payload?.matchId;
-      if (!matchId) throw new Error('Server không trả về matchId');
-      return matchId as string;
-    },
-  });
-}
-
-export function useFinalizeMatch() {
-  const { token } = useAuth();
-
-  return useMutation<
-    void,
-    Error,
-    {
-      matchId: string;
-      homeScore: number;
-      awayScore: number;
-      homeStats?: object;
-      awayStats?: object;
-      scorers?: unknown[];
-    }
-  >({
-    mutationFn: async ({ matchId, ...body }) => {
-      await apiClient(`/api/v1/matches/${matchId}/finalize`, {
-        method: 'POST',
-        token,
-        body,
-      });
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: ['campainMatches', token, variables.teamId] });
     },
   });
 }
