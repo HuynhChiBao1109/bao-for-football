@@ -16,6 +16,7 @@ import { GachaModule } from "./modules/gacha/gacha.module";
 import { MatchModule } from "./modules/match/match.module";
 import { PlayerModule } from "./modules/player/player.module";
 import { TeamModule } from './modules/team/team.module';
+import { TourmentModule } from './modules/tourment/tourment.module';
 
 const escapeIdentifier = (value: string) => value.replace(/`/g, "``");
 
@@ -99,6 +100,7 @@ const dropTablesNotInEntities = async (dataSource: DataSource) => {
     PlayerModule,
     MatchModule,
     TeamModule,
+    TourmentModule,
   ],
   controllers: [AppController],
 })

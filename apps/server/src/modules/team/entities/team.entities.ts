@@ -4,6 +4,7 @@ import {
   PrimaryGeneratedColumn,
 } from "typeorm";
 import { ETeamFormation } from "../types/team-formation.enum";
+import { ETeamType } from "../types/team-type.enum";
 
 @Entity("teams")
 export class TeamEntity {
@@ -37,6 +38,9 @@ export class TeamEntity {
   @Column({ name: "shot_ratio", type: "double" })
   shotRatio!: number;
 
-  @Column({ type: "double" })
-  pressure!: number;
+  @Column({ type: "int", default: 50, unsigned: true })
+  pressure: number;
+
+  @Column({ type: "enum", enum: ETeamType })
+  type!: ETeamType;
 }
