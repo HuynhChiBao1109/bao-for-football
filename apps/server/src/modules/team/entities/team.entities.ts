@@ -1,4 +1,3 @@
-import { UserEntity } from "src/modules/auth/entities/auth.entities";
 import {
   Column,
   Entity,
@@ -9,13 +8,16 @@ import {
 import { ETeamFormation } from "../types/team-formation.enum";
 
 @Entity("teams")
-@Unique(["userId"])
+@Unique(["userName"])
 export class TeamEntity {
   @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
   id: bigint;
 
-  @Column({ name: "user_id", type: "bigint", unsigned: true })
-  userId!: bigint;
+  @Column({ type: "varchar", length: 191, unique: true })
+  userName: string;
+
+  @Column({ name: "password_hash", type: "varchar", length: 255 })
+  passwordHash: string;
 
   @Column({ name: "club_name", type: "varchar", length: 191 })
   clubName!: string;
@@ -40,7 +42,4 @@ export class TeamEntity {
 
   @Column({ type: "double" })
   pressure!: number;
-
-  @OneToOne(() => UserEntity, (user) => user.id, { onDelete: "CASCADE" })
-  user: UserEntity;
 }

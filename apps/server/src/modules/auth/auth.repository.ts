@@ -5,7 +5,6 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { AuthUser, ClubOption, TeamAssignment } from "./types";
 import { PlayerEntity } from "../player/entities/player-admin.entities";
 import { ClubEntity } from "../player/entities/club.entites";
-import { UserEntity } from "./entities/auth.entities";
 import { TeamEntity } from "../team/entities/team.entities";
 import { TeamPlayerEntity } from "../player/entities/player.entities";
 
@@ -23,8 +22,6 @@ export class AuthRepository {
   constructor(
     @InjectRepository(ClubEntity)
     private readonly clubRepository: Repository<ClubEntity>,
-    @InjectRepository(UserEntity)
-    private readonly userRepository: Repository<UserEntity>,
     @InjectRepository(TeamEntity)
     private readonly teamRepository: Repository<TeamEntity>,
     @InjectRepository(PlayerEntity)

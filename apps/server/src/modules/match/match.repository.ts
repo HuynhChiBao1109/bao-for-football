@@ -37,7 +37,7 @@ export class MatchRepository {
 
   async getHomeClubName(userId: number): Promise<string> {
     const team = await this.teamRepository.findOne({
-      where: { userId: BigInt(userId) },
+      where: { id: BigInt(userId) },
     });
     return team?.clubName ?? "Manchester United";
   }
