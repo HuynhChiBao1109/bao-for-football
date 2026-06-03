@@ -23,6 +23,11 @@ export class TeamService implements ITeamService {
       throw new BadRequestException("Club not found");
     }
 
+    const existingTeams = await this.repository.getListTeamByUserId(user.id);
+    if (existingTeams.length > 0) {
+      throw new BadRequestException("Can only create one team per user");
+    }
+
     const createTeamData: Partial<TeamEntity> = {
        userId: user.id,
        teamName: club.name,
