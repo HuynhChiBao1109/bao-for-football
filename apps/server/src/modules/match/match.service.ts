@@ -2,6 +2,8 @@ import { BadRequestException, Injectable } from "@nestjs/common";
 import { randomUUID } from "crypto";
 import { MatchServiceInterface } from "./interfaces/match-service.interface";
 import { MatchRecord, MatchRepository } from "./match.repository";
+import { MatchEntity } from "./entities/match.entity";
+import { AuthUser } from "../auth/types";
 
 @Injectable()
 export class MatchService implements MatchServiceInterface {
@@ -9,33 +11,16 @@ export class MatchService implements MatchServiceInterface {
     private readonly repository: MatchRepository,
   ) {}
 
-  async start(
-    userId: number,
-    input: { awayClubName?: string; mode?: string; stageNo?: number },
-  ): Promise<any> {
-    // const matchId = randomUUID();
-    // const homeClubName = await this.repository.getHomeClubName(userId);
-    // const record = await this.repository.createMatch(
-    //   {
-    //     matchId,
-    //     homeClubName,
-    //     awayClubName: input.awayClubName?.trim() || "Black United",
-    //     mode: input.mode?.trim() || "casual",
-    //     stageNo: input.stageNo,
-    //   },
-    //   userId,
-    // );
-    // this.realtimeService.startMatch(
-    //   matchId,
-    //   record.homeClubName,
-    //   record.awayClubName,
-    // );
-    // return record;
+  async startCampaignMatch(
+    user: AuthUser,
+    campaignMatchId: bigint,
+  ): Promise<string> {
+    
   }
 
   async finalize(
     matchId: string,
-    payload: Partial<MatchRecord>,    
+    payload: Partial<MatchEntity>,    
   ): Promise<any> {
     // if (!matchId) {
     //   throw new BadRequestException("matchId is required");
