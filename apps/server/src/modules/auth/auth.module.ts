@@ -9,17 +9,15 @@ import { ResponseInterceptor } from "../../common/interceptors/response.intercep
 import { AuthController } from "./auth.controller";
 import { AuthRepository } from "./auth.repository";
 import { AuthService } from "./auth.service";
-import { PlayerEntity } from "../player/entities/player-admin.entity";
-import { ClubEntity } from "../player/entities/club.entity.";
-import { TeamEntity } from "../team/entities/team.entity";
-import { UserPlayerEntity } from "../player/entities/player-user.entity";
 import { UserEntity } from "../user/entities/user.entity";
+import { TeamModule } from "../team/team.module";
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
       UserEntity
     ]),
+    TeamModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
