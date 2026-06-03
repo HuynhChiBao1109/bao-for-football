@@ -2,13 +2,13 @@ import { AbstractEntity } from "src/database/database.abjact";
 import {
   Column,
   Entity,
+  JoinColumn,
   ManyToOne,
-  OneToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   Unique,
 } from "typeorm";
 import { EPlayerSkill } from "../enum/player-skill.enum";
-import { TeamEntity } from "src/modules/team/entities/team.entity";
 import { UserEntity } from "src/modules/user/entities/user.entity";
 import { PlayerPositionFormat } from "../types/player-position-format.type";
 
@@ -44,14 +44,12 @@ export class UserPlayerEntity extends AbstractEntity {
   @Column({ name: "positions", type: "json" })
   positions: PlayerPositionFormat[];
 
-  @ManyToOne(() => UserPlayerSkillEntity, (skill) => skill.userPlayerId)
+  @OneToMany(() => UserPlayerSkillEntity, (skill) => skill.userPlayer)
   skills: UserPlayerSkillEntity[];
 
-  @ManyToOne(() => UserEntity, (player) => player.id, { onDelete: "CASCADE" })
+  @ManyToOne(() => UserEntity, (user) => user.id, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "user_id" })
   user: UserEntity;
-
-  @OneToOne(() => TeamEntity, (team) => team.id)
-  team: TeamEntity;
 }
 
 @Entity("user_player_skills")
@@ -69,5 +67,6 @@ export class UserPlayerSkillEntity extends AbstractEntity {
   @ManyToOne(() => UserPlayerEntity, (player) => player.skills, {
     onDelete: "CASCADE",
   })
+  @JoinColumn({ name: "user_player_id" })
   userPlayer: UserPlayerEntity;
 }

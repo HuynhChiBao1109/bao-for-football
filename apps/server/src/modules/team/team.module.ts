@@ -9,6 +9,7 @@ import { TeamRepository } from './team.repository';
 import { TeamService } from './team.service';
 import { ReferenceModule } from '../reference/reference.module';
 import { PlayerModule } from '../player/player.module';
+import { TeamController } from './team.controller';
 
 @Module({
   imports: [
@@ -22,7 +23,7 @@ import { PlayerModule } from '../player/player.module';
     ReferenceModule,
     PlayerModule,
   ],
-  controllers: [ ],
+  controllers: [ TeamController],
   providers: [
     TeamRepository,
     TeamService,

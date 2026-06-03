@@ -23,11 +23,11 @@ export class TeamEntity extends AbstractEntity {
   @Column({ name: "formation", type: "enum", enum: ETeamFormation })
   formation: ETeamFormation;
 
-  @Column({ name: "pass_ratio", type: "double" })
-  passRatio!: number;
+  @Column({ name: "pass_ratio", type: "double", default: 0 })
+  passRatio: number;
 
-  @Column({ name: "shot_ratio", type: "double" })
-  shotRatio!: number;
+  @Column({ name: "shot_ratio", type: "double", default: 0 })
+  shotRatio: number;
 
   @Column({ name: "pressure", type: "int", default: 50, unsigned: true })
   pressure: number;
