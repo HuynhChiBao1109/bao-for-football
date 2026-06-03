@@ -1,7 +1,6 @@
 import {
   Column,
   Entity,
-  OneToOne,
   PrimaryGeneratedColumn,
 } from "typeorm";
 import { ETeamFormation } from "../types/team-formation.enum";
