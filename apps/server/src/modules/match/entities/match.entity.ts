@@ -47,6 +47,9 @@ export class MatchEntity extends AbstractEntity {
   @OneToMany(() => MatchEventEntity, (matchEvent) => matchEvent.match)
   matchEvents: MatchEventEntity[];
 
-  @OneToMany(() => MatchPlayerStatsEntity, (stats) => stats.match)
+  @OneToMany(
+    () => MatchPlayerStatsEntity,
+    (matchPlayerStats) => matchPlayerStats.match,
+  )
   matchPlayerStats: MatchPlayerStatsEntity[];
 }

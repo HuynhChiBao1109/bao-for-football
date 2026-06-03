@@ -7,7 +7,6 @@ import {
   PrimaryGeneratedColumn,
 } from "typeorm";
 import { MatchEntity } from "./match.entity";
-import { EMatchEvent } from "../enums";
 
 @Entity("match_player_stats")
 export class MatchPlayerStatsEntity extends AbstractEntity {

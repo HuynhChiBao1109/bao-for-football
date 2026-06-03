@@ -17,7 +17,7 @@ export class MatchEventEntity extends AbstractEntity {
   @Column({ name: "match_id", type: "bigint", unsigned: true })
   matchId: bigint;
 
-  @Column({ name: "event_type", type: "enum", enum: EMatchEvent, length: 255 })
+  @Column({ name: "event", type: "enum", enum: EMatchEvent })
   event: EMatchEvent;
 
   @Column({ name: "minute", type: "int", unsigned: true })
