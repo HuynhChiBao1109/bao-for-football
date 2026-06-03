@@ -3,6 +3,7 @@ import {
   Column,
   Entity,
   ManyToOne,
+  OneToOne,
   PrimaryGeneratedColumn,
   Unique,
 } from "typeorm";
@@ -44,6 +45,9 @@ export class UserPlayerEntity extends AbstractEntity {
 
   @ManyToOne(() => UserEntity, (player) => player.id, { onDelete: "CASCADE" })
   user: UserEntity;
+
+  @OneToOne(() => TeamEntity, (team) => team.id)
+  team: TeamEntity;
 }
 
 @Entity("user_player_skills")

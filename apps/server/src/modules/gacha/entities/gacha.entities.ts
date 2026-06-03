@@ -1,3 +1,4 @@
+import { AbstractEntity } from "src/database/database.abjact";
 import {
   Column,
   CreateDateColumn,
@@ -6,7 +7,7 @@ import {
 } from "typeorm";
 
 @Entity("gacha_banners")
-export class GachaBannerEntity {
+export class GachaBannerEntity extends AbstractEntity{
   @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
   id!: string;
 
@@ -33,7 +34,7 @@ export class GachaBannerEntity {
 }
 
 @Entity("gacha_logs")
-export class GachaLogEntity {
+export class GachaLogEntity extends AbstractEntity{
   @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
   id!: string;
 

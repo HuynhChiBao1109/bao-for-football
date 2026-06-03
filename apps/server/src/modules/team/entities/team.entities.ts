@@ -1,10 +1,12 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { ETeamFormation } from "../types/team-formation.enum";
 import { ETeamType } from "../types/team-type.enum";
 import { UserEntity } from "src/modules/user/user.entities";
+import { TeamFormationEntity } from "./team-formatition.entities";
+import { AbstractEntity } from "src/database/database.abjact";
 
-@Entity("teams")
-export class TeamEntity {
+@Entity("user_teams")
+export class TeamEntity extends AbstractEntity {
   @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
   id: bigint;
 
@@ -37,4 +39,7 @@ export class TeamEntity {
 
   @ManyToOne(() => UserEntity, (user) => user.teams, { onDelete: "CASCADE" })
   user: UserEntity;
+
+  @OneToMany(() => TeamFormationEntity, (formation) => formation.team)
+  teamFormations: TeamFormationEntity[];
 }
