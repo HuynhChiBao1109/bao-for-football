@@ -1,4 +1,4 @@
-export interface PlayerAdminServiceInterface {
+export interface IPlayerAdminService {
   listPlayers(filters: Record<string, any>): Promise<any>;
   detailPlayer(id: number): Promise<any>;
   createPlayer(body: any): Promise<any>;

@@ -1,4 +1,4 @@
-export interface PlayerServiceInterface {
+export interface IPlayerService {
   listMyCards(userId: number): Promise<any>;
   allocateStats(
     userId: number,
