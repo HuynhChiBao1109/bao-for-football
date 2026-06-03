@@ -10,8 +10,8 @@ export class TeamEntity extends AbstractEntity {
   @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
   id: bigint;
 
-  @Column({ name: "user_id", type: "bigint", unsigned: true })
-  userId: bigint;
+  @Column({ name: "user_id", type: "bigint", unsigned: true, nullable: true })
+  userId!: bigint;
 
   @Column({ name: "club_name", type: "varchar", length: 191 })
   clubName!: string;

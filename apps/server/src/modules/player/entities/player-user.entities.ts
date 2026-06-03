@@ -24,22 +24,22 @@ export class UserPlayerEntity extends AbstractEntity {
   playerId: bigint;
 
   @Column({ type: "int", default: 0 })
-  exp!: number;
+  exp: number;
 
   @Column({ name: "bonus_attack", type: "int", default: 0 })
-  bonusAttack!: number;
+  bonusAttack: number;
 
   @Column({ name: "bonus_defense", type: "int", default: 0 })
-  bonusDefense!: number;
+  bonusDefense: number;
 
   @Column({ name: "bonus_agility", type: "int", default: 0 })
-  bonusAgility!: number;
+  bonusAgility: number;
 
   @Column({ name: "bonus_pass", type: "int", default: 0 })
-  bonusPass!: number;
+  bonusPass: number;
 
   @Column({ name: "bonus_goalkeeping", type: "int", default: 0 })
-  bonusGoalkeeping!: number;
+  bonusGoalkeeping: number;
 
   @Column({ name: "positions", type: "json" })
   positions: PlayerPositionFormat[];

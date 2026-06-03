@@ -88,6 +88,18 @@ export class PlayerEntity extends AbstractEntity {
   @Column({ name: "stamina", type: "int", default: 75 })
   stamina: number;
 
+  @Column({ name: "gk_keeping", type: "int", default: 75 })
+  gkKeeping: number;
+
+  @Column({ name: "gk_reflex", type: "int", default: 75 })
+  gkReflex: number;
+
+  @Column({ name: "gk_diving", type: "int", default: 75 })
+  gkDiving: number;
+
+  @Column({ name: "gk_reach", type: "int", default: 75 })
+  gkReach: number;
+
   @Column({ name: "positions", type: "json" })
   positions: PlayerPositionFormat[];
 
