@@ -8,6 +8,7 @@ import { CampainMatchEntity } from '../campain/entities/campain-match.entity';
 import { TeamRepository } from './team.repository';
 import { TeamService } from './team.service';
 import { ReferenceModule } from '../reference/reference.module';
+import { PlayerModule } from '../player/player.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ReferenceModule } from '../reference/reference.module';
        CampainMatchEntity
     ]),
     ReferenceModule,
+    PlayerModule,
   ],
   controllers: [ ],
   providers: [

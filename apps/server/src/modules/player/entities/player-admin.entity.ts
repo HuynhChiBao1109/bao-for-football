@@ -12,7 +12,7 @@ import { EPlayerPosition } from "../enum/player-position.enum";
 import { IsEnum } from "class-validator";
 import { EPlayerSkill } from "../enum/player-skill.enum";
 import { EPlayerSeason } from "../enum/player-season.enum";
-import { ClubEntity } from "../../reference/entities/club.entity.";
+import { ClubEntity } from "../../reference/entities/club.entity";
 import { CountryEntity } from "../../reference/entities/country.entity";
 import { AbstractEntity } from "src/database/database.abjact";
 import { PlayerPositionFormat } from "../types/player-position-format.type";

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiClient } from '../lib/apiClient';
 import { useAuth } from '../hooks/useAuth';
 import { useLoginMutation, useRegisterMutation } from '../hooks/useAuthMutations';
-import { defaultAuthenticatedRoute } from '../routes';
+import { ROUTES, defaultAuthenticatedRoute } from '../routes';
 import { BrandLogo } from '../components/auth';
 import { AuthTab } from '../enums/auth';
 
@@ -33,12 +34,35 @@ export function LoginPage() {
     setError('');
   }, [tab]);
 
+  function hasEmptyTeams(payload: any) {
+    const teams = payload?.team ?? payload?.teams ?? [];
+    if (Array.isArray(teams)) {
+      return teams.length === 0;
+    }
+    if (!teams || typeof teams !== 'object') {
+      return true;
+    }
+    return false;
+  }
+
   async function submitLogin(e: React.FormEvent) {
     e.preventDefault();
     setError('');
     try {
       const data = await loginMutation.mutateAsync(loginForm);
       setSession({ token: data.token, user: data.user });
+
+      if (data.user?.isAdmin) {
+        navigate(defaultAuthenticatedRoute(true), { replace: true });
+        return;
+      }
+
+      const me = await apiClient('/api/v1/auth/me', { token: data.token });
+      if (hasEmptyTeams(me)) {
+        navigate(ROUTES.teamSetup, { replace: true });
+        return;
+      }
+
       navigate(defaultAuthenticatedRoute(Boolean(data.user?.isAdmin)), { replace: true });
     } catch (err: unknown) {
       setError((err as Error).message);

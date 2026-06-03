@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { IReferenceService } from "./interfaces/reference-service.interface";
 import { ReferenceRepository } from "./reference.repository";
-import { ClubEntity } from "./entities/club.entity.";
+import { ClubEntity } from "./entities/club.entity";
 import { LeagueEntity } from "./entities/league.entity";
 import { CountryEntity } from "./entities/country.entity";
 

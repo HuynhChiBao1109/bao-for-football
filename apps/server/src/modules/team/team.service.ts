@@ -4,12 +4,14 @@ import { TeamRepository } from "./team.repository";
 import { TeamEntity } from "./entities/team.entity";
 import { ReferenceService } from "../reference/reference.service";
 import { CreateTeamByClubDTO } from "./dto/create-team-by-club.dto";
+import { PlayerService } from "../player/player.service";
 
 @Injectable()
 export class TeamService implements ITeamService {
   constructor(
     private readonly repository: TeamRepository,
     private readonly referenceService: ReferenceService,
+    private readonly playerService: PlayerService,
   ) {}
 
   async getListTeamByUserId(userId: bigint): Promise<TeamEntity[]> {
@@ -31,9 +33,12 @@ export class TeamService implements ITeamService {
     const createTeamData: Partial<TeamEntity> = {
        userId: user.id,
        teamName: club.name,
+       imgUrl: club.imgUrl,
     }
 
     const newTeam = this.repository.create(createTeamData);
+
+    await this.playerService.insertPlayerToUserByClubId(user, clubId);
 
     return newTeam;
   }

@@ -8,14 +8,33 @@ type Credentials = {
   password: string;
 };
 
+function toAuthPayload(body: Credentials) {
+  return {
+    userName: body.username,
+    password: body.password,
+  };
+}
+
+function normalizeSession(payload: any): Session {
+  const user = payload?.user ?? {};
+  return {
+    token: String(payload?.token ?? ''),
+    user: {
+      id: Number(user?.id ?? 0),
+      username: String(user?.username ?? user?.userName ?? ''),
+      isAdmin: Boolean(user?.isAdmin),
+    },
+  };
+}
+
 export function useLoginMutation() {
   return useMutation<Session, Error, Credentials>({
     mutationFn: async (body) => {
       const payload = await apiClient('/api/v1/auth/login', {
         method: 'POST',
-        body,
+        body: toAuthPayload(body),
       });
-      return payload as Session;
+      return normalizeSession(payload);
     },
   });
 }
@@ -25,7 +44,7 @@ export function useRegisterMutation() {
     mutationFn: async (body) => {
       await apiClient('/api/v1/auth/register', {
         method: 'POST',
-        body,
+        body: toAuthPayload(body),
       });
     },
   });

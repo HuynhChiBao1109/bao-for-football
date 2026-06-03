@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { TeamEntity } from "./entities/team.entity";
 import { Repository } from "typeorm/repository/Repository.js";
 import { InjectRepository } from "@nestjs/typeorm/dist/common/typeorm.decorators";
-import { ClubEntity } from "./entities/club.entity.";
+import { ClubEntity } from "./entities/club.entity";
 import { LeagueEntity } from "./entities/league.entity";
 import { CountryEntity } from "./entities/country.entity";
 

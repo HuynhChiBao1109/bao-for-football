@@ -115,7 +115,8 @@ export type SessionData = {
     budget: number;
     rankPoint: number;
     tacticsTeamId: string;
-  };
+  } | null;
+  teams?: Array<Record<string, unknown>>;
 };
 
 // ─── Tactics ──────────────────────────────────────────────────────────────────

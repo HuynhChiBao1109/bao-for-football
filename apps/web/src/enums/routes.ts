@@ -1,6 +1,7 @@
 export const AppRoute = {
   Login: '/login',
   AdminLogin: '/admin/login',
+  TeamSetup: '/team-setup',
   Club: '/club',
   Players: '/players',
   Tactics: '/tactics',

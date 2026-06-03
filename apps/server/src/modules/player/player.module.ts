@@ -1,6 +1,5 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { AuthModule } from "../auth/auth.module";
 import { PlayerController } from "./player.controller";
 import {
   PlayerEntity,
@@ -10,12 +9,11 @@ import { PlayerRepository } from "./player.repository";
 import { PlayerService } from "./player.service";
 import { LeagueEntity } from "../reference/entities/league.entity";
 import { CountryEntity } from "../reference/entities/country.entity";
-import { ClubEntity } from "../reference/entities/club.entity.";
+import { ClubEntity } from "../reference/entities/club.entity";
 import { UserPlayerEntity, UserPlayerSkillEntity } from "./entities/player-user.entity";
 
 @Module({
   imports: [
-    AuthModule,
     TypeOrmModule.forFeature([
       UserPlayerEntity,
       UserPlayerSkillEntity,
@@ -31,5 +29,6 @@ import { UserPlayerEntity, UserPlayerSkillEntity } from "./entities/player-user.
     PlayerRepository,
     PlayerService,
   ],
+  exports: [PlayerService],
 })
 export class PlayerModule {}

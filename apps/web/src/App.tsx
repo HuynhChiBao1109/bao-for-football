@@ -10,6 +10,8 @@ import { TacticsPage } from './pages/TacticsPage';
 import { GachaPage } from './pages/GachaPage';
 import { AiMatchPage } from './pages/AiMatchPage';
 import { PvpPage } from './pages/PvpPage';
+import { TeamSetupPage } from './pages/TeamSetupPage';
+import { useSession } from './hooks/useSession';
 import { ROUTES } from './routes';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -26,6 +28,43 @@ function RequireAdmin({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function RequireStarterTeam({ children }: { children: React.ReactNode }) {
+  const { session, isAdmin } = useAuth();
+  const { data: sessionData, isLoading } = useSession();
+  const location = useLocation();
+
+  if (!session || isAdmin) {
+    return <>{children}</>;
+  }
+
+  const isTeamSetupPath = location.pathname === ROUTES.teamSetup;
+  const hasAssignedTeam = Boolean(sessionData?.team) || Boolean(sessionData?.teams?.length);
+
+  if (isLoading && !sessionData) {
+    return (
+      <main className="app-shell auth-popup-shell">
+        <div className="app-shell__inner auth-popup-shell__inner">
+          <section className="game-panel game-panel--accent p-6 text-center">
+            <div className="game-panel__content">
+              <p className="game-copy">Dang tai du lieu tai khoan...</p>
+            </div>
+          </section>
+        </div>
+      </main>
+    );
+  }
+
+  if (!hasAssignedTeam && !isTeamSetupPath) {
+    return <Navigate to={ROUTES.teamSetup} replace />;
+  }
+
+  if (hasAssignedTeam && isTeamSetupPath) {
+    return <Navigate to={ROUTES.club} replace />;
+  }
+
+  return <>{children}</>;
+}
+
 function App() {
   const { session, isAdmin } = useAuth();
   const navigate = useNavigate();
@@ -37,7 +76,7 @@ function App() {
       session &&
       (location.pathname === ROUTES.login || location.pathname === ROUTES.adminLogin)
     ) {
-      navigate(isAdmin ? ROUTES.admin : ROUTES.club, { replace: true });
+      navigate(isAdmin ? ROUTES.admin : ROUTES.teamSetup, { replace: true });
     }
   }, [session, isAdmin, location.pathname, navigate]);
 
@@ -49,10 +88,13 @@ function App() {
       <Route
         element={
           <RequireAuth>
-            <AppLayout />
+            <RequireStarterTeam>
+              <AppLayout />
+            </RequireStarterTeam>
           </RequireAuth>
         }
       >
+        <Route path={ROUTES.teamSetup} element={<TeamSetupPage />} />
         <Route path={ROUTES.club} element={<ClubPage />} />
         <Route path={ROUTES.players} element={<PlayersPage />} />
         <Route path={ROUTES.tactics} element={<TacticsPage />} />

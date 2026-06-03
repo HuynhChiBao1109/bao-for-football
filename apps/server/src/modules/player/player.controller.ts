@@ -7,18 +7,4 @@ import { PlayerService } from "./player.service";
 @Controller("api/v1/players")
 export class PlayerController {
   constructor(private readonly playerService: PlayerService) {}
-
-  @Get()
-  async listMyCards(@CurrentUser("id") userId: number) {
-    return this.playerService.listMyCards(Number(userId));
-  }
-
-  @Post(":id/allocate")
-  async allocateStats(
-    @CurrentUser("id") userId: number,
-    @Param("id") id: string,
-    @Body() body: Record<string, number>,
-  ) {
-    return this.playerService.allocateStats(Number(userId), Number(id), body);
-  }
 }

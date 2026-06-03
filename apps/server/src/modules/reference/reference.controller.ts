@@ -8,13 +8,13 @@ import { Public } from "src/common/decorations/public.decoration";
 export class ReferenceController {
   constructor(private readonly referenceService: ReferenceService) {}
 
-  @Get("clubs")
+  @Get("clubs/:leagueId")
   @Public()
   async getListClubByLeague(@Param("leagueId") leagueId: bigint) {
     return this.referenceService.getListClubByLeague(leagueId);
   }
 
-  @Get("leagues")
+  @Get("leagues/:countryId")
   @Public()
   async getListLeagueByCountry(@Param("countryId") countryId: bigint) {
     return this.referenceService.getListLeagueByCountry(countryId);

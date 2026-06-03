@@ -3,6 +3,7 @@ import { AppRoute } from './enums/routes';
 export const ROUTES = {
   login: AppRoute.Login,
   adminLogin: AppRoute.AdminLogin,
+  teamSetup: AppRoute.TeamSetup,
   club: AppRoute.Club,
   players: AppRoute.Players,
   tactics: AppRoute.Tactics,

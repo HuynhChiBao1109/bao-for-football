@@ -10,8 +10,8 @@ export class ClubEntity {
   @Column({ type: "varchar", length: 191 })
   name: string;
 
-  @Column({ type: "varchar", length: 512 })
-  img_url: string;
+  @Column({ name: "img_url", type: "varchar", length: 512 })
+  imgUrl: string;
 
   @Column({ name: "league_id", type: "bigint", unsigned: true })
   leagueId: bigint;
