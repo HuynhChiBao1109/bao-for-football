@@ -7,7 +7,7 @@ import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import { AuthRepository } from "./auth.repository";
 import { IAuthService } from "./interfaces/auth-service.interface";
-import { AuthUser, ClubOption, TeamAssignment, TokenClaims } from "./types";
+import { AuthUser, TokenClaims } from "./types";
 import { RegisterDto } from "./dto/input/register.dto";
 import { LoginDto } from "./dto/input/login.dto";
 import { CryptoUtil } from "src/common/utils";
@@ -76,14 +76,14 @@ export class AuthService implements IAuthService {
     }
 
     const token = await this.signToken({
-      id: Number(user.id),
+      id: user.id,
       userName: user.userName,
       isAdmin: false,
     });
 
     return {
       token,
-      user: { id: Number(user.id), userName: user.userName, isAdmin: false },
+      user: { id: user.id, userName: user.userName, isAdmin: false },
     };
   }
 
@@ -96,7 +96,10 @@ export class AuthService implements IAuthService {
       throw new BadRequestException("user not found");
     }
     const teams = await this.teamService.getListTeamByUserId(user.id);
-    return { user: { id: Number(user.id), userName: user.userName, isAdmin }, team: teams };
+    return {
+      user: { id: user.id, userName: user.userName, isAdmin },
+      team: teams,
+    };
   }
 
   private async signToken(claims: TokenClaims): Promise<string> {
@@ -104,5 +107,16 @@ export class AuthService implements IAuthService {
       secret: this.jwtSecret(),
       expiresIn: "24h",
     });
+  }
+
+  async verifyToken(token: string): Promise<TokenClaims> {
+    try {
+      const claims = await this.jwtService.verifyAsync(token, {
+        secret: this.jwtSecret(),
+      });
+      return claims;
+    } catch (error) {
+      throw new UnauthorizedException("invalid token");
+    }
   }
 }

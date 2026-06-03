@@ -42,7 +42,7 @@ export class AuthRepository {
     const { id, userName: savedUserName } = savedUser;
 
     return {
-      id: Number(id),
+      id,
       userName: savedUserName,
       isAdmin: false,
     };

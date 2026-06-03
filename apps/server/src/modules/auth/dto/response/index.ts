@@ -1,4 +1,5 @@
-import { AuthUser, TeamAssignment } from "../../types";
+import { TeamEntity } from "src/modules/team/entities/team.entity";
+import { AuthUser } from "../../types";
 
 export interface LoginResponseDto {
   token: string;
@@ -7,5 +8,5 @@ export interface LoginResponseDto {
 
 export interface MeResponseDto {
   user: AuthUser;
-  team: TeamAssignment | null;
+  teams: TeamEntity[] | null;
 }

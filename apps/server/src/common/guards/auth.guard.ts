@@ -36,7 +36,10 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException("invalid authorization header");
     }
 
-    const claims = await this.authService.validateToken(token);
+    const claims = await this.authService.verifyToken(token);
+    if (!claims) {
+      throw new UnauthorizedException("invalid token");
+    }
     request.user = claims;
     return true;
   }
