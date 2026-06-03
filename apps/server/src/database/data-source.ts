@@ -22,5 +22,5 @@ export default new DataSource({
   database:  process.env.MYSQL_DATABASE,
   entities: [__dirname + "/../modules/**/entities/*{.ts,.js}"],
   migrations: [__dirname + "/migrations/*{.ts,.js}"],
-  synchronize: true,
+  synchronize: false,
 });

@@ -3,12 +3,10 @@ import {
   Entity,
   OneToOne,
   PrimaryGeneratedColumn,
-  Unique,
 } from "typeorm";
 import { ETeamFormation } from "../types/team-formation.enum";
 
 @Entity("teams")
-@Unique(["userName"])
 export class TeamEntity {
   @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
   id: bigint;

@@ -3,39 +3,6 @@ import { ConfigService } from "@nestjs/config";
 import { DataSource } from "typeorm";
 import { DATABASE_CONNECTION } from "../common/constants/app.constants";
 
-async function dropUnmappedTables(
-  dataSource: DataSource,
-  databaseName: string,
-) {
-  const rows = (await dataSource.query(
-    `
-SELECT table_name AS tableName
-FROM information_schema.tables
-WHERE table_schema = ?
-  AND table_type = 'BASE TABLE'`,
-    [databaseName],
-  )) as Array<{ tableName: string }>;
-
-  const mapped = new Set(
-    dataSource.entityMetadatas.map((meta) => meta.tableName.toLowerCase()),
-  );
-  const protectedTables = new Set(["migrations", "typeorm_metadata"]);
-
-  for (const row of rows) {
-    const tableName = String(row.tableName || "");
-    const normalized = tableName.toLowerCase();
-    if (
-      !tableName ||
-      mapped.has(normalized) ||
-      protectedTables.has(normalized)
-    ) {
-      continue;
-    }
-    const escapedTableName = tableName.replace(/`/g, "``");
-    await dataSource.query(`DROP TABLE IF EXISTS \`${escapedTableName}\``);
-  }
-}
-
 @Global()
 @Module({
   providers: [
@@ -61,16 +28,15 @@ WHERE table_schema = ?
           password,
           database,
           entities: [__dirname + "/../modules/**/entities/*{.ts,.js}"],
-          migrations: [__dirname + "/migrations/*{.ts}"],
-          synchronize: true,
-          migrationsRun: true,
+          // migrations: [__dirname + "/migrations/*{.ts}"],
+          synchronize: false,
+          migrationsRun: false,
         });
 
         try {
           if (!dataSource.isInitialized) {
             await dataSource.initialize();
           }
-          await dropUnmappedTables(dataSource, database);
           return dataSource;
         } catch {
           return null;

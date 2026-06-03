@@ -8,15 +8,55 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { ServeStaticModule } from "@nestjs/serve-static";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { join, resolve } from "path";
+import { DataSource, DataSourceOptions } from "typeorm";
 import { AppController } from "./app.controller";
 import { LoggingMiddleware } from "./common/middleware/logging.middleware";
-import { DatabaseModule } from "./database/database.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { GachaModule } from "./modules/gacha/gacha.module";
 import { MatchModule } from "./modules/match/match.module";
 import { PlayerModule } from "./modules/player/player.module";
 import { RealtimeModule } from "./modules/realtime/realtime.module";
 import { TeamModule } from './modules/team/team.module';
+
+const escapeIdentifier = (value: string) => value.replace(/`/g, "``");
+
+const dropTablesNotInEntities = async (dataSource: DataSource) => {
+  const databaseName = String(dataSource.options.database || "");
+  if (!databaseName) {
+    return;
+  }
+
+  const rows: Array<{ tableName: string }> = await dataSource.query(
+    `SELECT TABLE_NAME as tableName
+     FROM INFORMATION_SCHEMA.TABLES
+     WHERE TABLE_SCHEMA = ?`,
+    [databaseName],
+  );
+
+  const entityTableNames = new Set(
+    dataSource.entityMetadatas.map((metadata) => metadata.tableName),
+  );
+
+  const tablesToDrop = rows
+    .map((row) => row.tableName)
+    .filter((tableName) => tableName !== "typeorm_metadata")
+    .filter((tableName) => !entityTableNames.has(tableName));
+
+  if (!tablesToDrop.length) {
+    return;
+  }
+
+  await dataSource.query("SET FOREIGN_KEY_CHECKS = 0");
+  try {
+    for (const tableName of tablesToDrop) {
+      await dataSource.query(
+        `DROP TABLE IF EXISTS \`${escapeIdentifier(tableName)}\``,
+      );
+    }
+  } finally {
+    await dataSource.query("SET FOREIGN_KEY_CHECKS = 1");
+  }
+};
 
 @Module({
   imports: [
@@ -43,11 +83,18 @@ import { TeamModule } from './modules/team/team.module';
           password: configService.get<string>("MYSQL_PASSWORD"),
           database: configService.get<string>("MYSQL_DATABASE"),
           autoLoadEntities: true,
-          synchronize: true,
+          synchronize: false,
+          migrationsRun: false,
         };
       },
+      dataSourceFactory: async (options) => {
+        const dataSource = new DataSource(options as DataSourceOptions);
+        await dataSource.initialize();
+        await dropTablesNotInEntities(dataSource);
+        await dataSource.synchronize();
+        return dataSource;
+      },
     }),
-    DatabaseModule,
     AuthModule,
     GachaModule,
     PlayerModule,
