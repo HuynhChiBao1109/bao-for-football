@@ -1,12 +1,12 @@
 export interface TokenClaims {
   userId: number;
-  username: string;
+  userName: string;
   isAdmin: boolean;
 }
 
 export interface AuthUser {
   id: number;
-  username: string;
+  userName: string;
   isAdmin: boolean;
 }
 

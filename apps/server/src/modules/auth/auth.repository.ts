@@ -1,31 +1,14 @@
 import { Injectable } from "@nestjs/common";
-import * as bcrypt from "bcrypt";
 import { Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
-import { AuthUser, ClubOption, TeamAssignment } from "./types";
-import { PlayerEntity } from "../player/entities/player-admin.entity";
-import { ClubEntity } from "../player/entities/club.entity.";
-import { TeamEntity } from "../team/entities/team.entity";
-import { UserPlayerEntity } from "../player/entities/player-user.entity";
+import { UserEntity } from "../user/entities/user.entity";
+import { AuthUser } from "./types";
 
 @Injectable()
 export class AuthRepository {
-  private readonly memData = new Map<
-    string,
-    { id: number; username: string; passwordHash: string; createdAt: Date }
-  >();
-  private readonly memTeams = new Map<number, ClubOption>();
-  private nextID = 1;
-
   constructor(
-    @InjectRepository(ClubEntity)
-    private readonly clubRepository: Repository<ClubEntity>,
-    @InjectRepository(TeamEntity)
-    private readonly teamRepository: Repository<TeamEntity>,
-    @InjectRepository(PlayerEntity)
-    private readonly playerRepository: Repository<PlayerEntity>,
-    @InjectRepository(UserPlayerEntity)
-    private readonly userPlayerRepository: Repository<UserPlayerEntity>,
+    @InjectRepository(UserEntity)
+    private readonly userRepository: Repository<UserEntity>,
   ) {}
 
   async ensureUserTable(): Promise<void> {
@@ -52,53 +35,40 @@ export class AuthRepository {
     // }));
   }
 
-  async findByUsername(username: string): Promise<any> {
-    // // Chỉ dùng memory nếu không có userRepository (test/mock)
-    // if (!this.userRepository) {
-    //   return this.memData.get(username) ?? null;
-    // }
-    // const user = await this.userRepository.findOne({ where: { username } });
-    // if (!user) {
-    //   return null;
-    // }
-    // return {
-    //   id: Number(user.id),
-    //   username: user.username,
-    //   passwordHash: user.passwordHash,
-    //   createdAt: user.createdAt,
-    // };
+  async findUserByUserName(username: string): Promise<UserEntity> {
+    return await this.userRepository.findOne({ where: { userName: username } });
   }
 
-  async create(username: string, password: string): Promise<any> {
-    // const passwordHash = await bcrypt.hash(password, 10);
-    // // Chỉ dùng memory nếu không có userRepository (test/mock)
-    // if (!this.userRepository) {
-    //   if (this.memData.has(username)) {
-    //     const existing = this.memData.get(username)!;
-    //     return {
-    //       id: existing.id,
-    //       username: existing.username,
-    //       isAdmin: false,
-    //     };
-    //   }
-    //   const user = {
-    //     id: this.nextID++,
-    //     username,
-    //     passwordHash,
-    //     createdAt: new Date(),
-    //   };
-    //   this.memData.set(username, user);
-    //   return { id: user.id, username: user.username, isAdmin: false };
-    // }
-    // const saved = await this.userRepository.save(
-    //   this.userRepository.create({ username, passwordHash }),
-    // );
-    // const insertedId = Number(saved.id);
-    // return { id: insertedId, username, isAdmin: false };
+  async create(username: string, password: string): Promise<AuthUser> {
+    const passwordHash = await bcrypt.hash(password, 10);
+    // Chỉ dùng memory nếu không có userRepository (test/mock)
+    if (!this.userRepository) {
+      if (this.memData.has(username)) {
+        const existing = this.memData.get(username)!;
+        return {
+          id: existing.id,
+          username: existing.username,
+          isAdmin: false,
+        };
+      }
+      const user = {
+        id: this.nextID++,
+        username,
+        passwordHash,
+        createdAt: new Date(),
+      };
+      this.memData.set(username, user);
+      return { id: user.id, username: user.username, isAdmin: false };
+    }
+    const saved = await this.userRepository.save(
+      this.userRepository.create({ username, passwordHash }),
+    );
+    const insertedId = Number(saved.id);
+    return { id: insertedId, username, isAdmin: false };
   }
 
   async ensureAdmin(username: string, password: string): Promise<void> {
-    const user = await this.findByUsername(username);
+    const user = await this.findUserByUserName(username);
     if (user) {
       return;
     }
