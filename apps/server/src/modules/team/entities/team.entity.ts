@@ -14,8 +14,8 @@ export class TeamEntity extends AbstractEntity {
   @Column({ name: "user_id", type: "bigint", unsigned: true, nullable: true })
   userId!: bigint;
 
-  @Column({ name: "club_name", type: "varchar", length: 191 })
-  clubName!: string;
+  @Column({ name: "team_name", type: "varchar", length: 191 })
+  teamName!: string;
 
   @Column({ name: "img_url", type: "varchar", length: 512, nullable: true })
   imgUrl!: string;

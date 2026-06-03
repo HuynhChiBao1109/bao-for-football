@@ -9,13 +9,13 @@ export class PlayerController {
   constructor(private readonly playerService: PlayerService) {}
 
   @Get()
-  async listMyCards(@CurrentUser("userId") userId: number) {
+  async listMyCards(@CurrentUser("id") userId: number) {
     return this.playerService.listMyCards(Number(userId));
   }
 
   @Post(":id/allocate")
   async allocateStats(
-    @CurrentUser("userId") userId: number,
+    @CurrentUser("id") userId: number,
     @Param("id") id: string,
     @Body() body: Record<string, number>,
   ) {

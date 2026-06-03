@@ -10,7 +10,7 @@ export class MatchController {
 
   @Post("start")
   async start(
-    @CurrentUser("userId") userId: number,
+    @CurrentUser("id") userId: number,
     @Body() body: { awayClubName?: string; mode?: string; stageNo?: number },
   ) {
     const match = await this.matchService.start(Number(userId), body);

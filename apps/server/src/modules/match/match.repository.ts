@@ -39,7 +39,7 @@ export class MatchRepository {
     const team = await this.teamRepository.findOne({
       where: { id: BigInt(userId) },
     });
-    return team?.clubName ?? "Manchester United";
+    return team?.teamName ?? "Manchester United";
   }
 
   async createMatch(

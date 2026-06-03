@@ -10,7 +10,7 @@ export class GachaController {
 
   @Get("progress")
   async getProgress(
-    @CurrentUser("userId") userId: number,
+    @CurrentUser("id") userId: number,
     @Query("bannerCode") bannerCode: string,
   ) {
     return {
@@ -20,7 +20,7 @@ export class GachaController {
 
   @Post("roll")
   async roll(
-    @CurrentUser("userId") userId: number,
+    @CurrentUser("id") userId: number,
     @Body() body: { bannerCode: string },
   ) {
     const result = await this.gachaService.roll(

@@ -3,6 +3,7 @@ import { Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { UserEntity } from "../user/entities/user.entity";
 import { AuthUser } from "./types";
+import { CryptoUtil } from "src/common/utils";
 
 @Injectable()
 export class AuthRepository {
@@ -11,255 +12,39 @@ export class AuthRepository {
     private readonly userRepository: Repository<UserEntity>,
   ) {}
 
-  async ensureUserTable(): Promise<void> {
-    return;
-  }
-
-  async listRegistrationClubs(): Promise<any> {
-    // const rows = await this.clubRepository
-    //   .createQueryBuilder("club")
-    //   .leftJoinAndSelect("club.league", "league")
-    //   .orderBy("club.id", "ASC")
-    //   .getMany();
-    // if (!rows.length) {
-    //   return defaultClubs();
-    // }
-    // return rows.map((row) => ({
-    //   id: Number(row.id),
-    //   name: row.name,
-    //   logo: row.logo ?? "",
-    //   countryId: row.countryId != null ? Number(row.countryId) : undefined,
-    //   leagueId: row.leagueId != null ? Number(row.leagueId) : undefined,
-    //   budget: defaultTeamBudget,
-    //   leagueName: row.league?.name ?? "",
-    // }));
-  }
 
   async findUserByUserName(username: string): Promise<UserEntity> {
     return await this.userRepository.findOne({ where: { userName: username } });
   }
 
-  async create(username: string, password: string): Promise<AuthUser> {
-    const passwordHash = await bcrypt.hash(password, 10);
-    // Chỉ dùng memory nếu không có userRepository (test/mock)
-    if (!this.userRepository) {
-      if (this.memData.has(username)) {
-        const existing = this.memData.get(username)!;
-        return {
-          id: existing.id,
-          username: existing.username,
-          isAdmin: false,
-        };
-      }
-      const user = {
-        id: this.nextID++,
-        username,
-        passwordHash,
-        createdAt: new Date(),
-      };
-      this.memData.set(username, user);
-      return { id: user.id, username: user.username, isAdmin: false };
-    }
-    const saved = await this.userRepository.save(
-      this.userRepository.create({ username, passwordHash }),
-    );
-    const insertedId = Number(saved.id);
-    return { id: insertedId, username, isAdmin: false };
+  async findUserById(id: bigint): Promise<UserEntity> {
+    return await this.userRepository.findOne({ where: { id: id } });
   }
 
-  async ensureAdmin(username: string, password: string): Promise<void> {
-    const user = await this.findUserByUserName(username);
-    if (user) {
-      return;
-    }
-    await this.create(username, password);
-  }
+  async create({
+    userName,
+    password,
+  }: {
+    userName: string;
+    password: string;
+  }): Promise<AuthUser> {
+    const salt = await CryptoUtil.generateSalt();
+    const passwordHash = await CryptoUtil.generateHash(password, salt);
 
-  async getTeamAssignment(userId: number): Promise<any> {
-    // // Chỉ dùng memory nếu không có teamRepository (test/mock)
-    // if (!this.teamRepository || !this.clubRepository) {
-    //   const club = this.memTeams.get(userId);
-    //   if (!club) {
-    //     return null;
-    //   }
-    //   return {
-    //     userId,
-    //     clubId: club.id,
-    //     clubName: club.name,
-    //     image: club.logo,
-    //     budget: club.budget,
-    //     rankPoint: 0,
-    //     tacticsTeamId: `user-${userId}`,
-    //   };
-    // }
-    // const team = await this.teamRepository.findOne({
-    //   where: { userId: String(userId) },
-    // });
-    // if (!team) {
-    //   return null;
-    // }
-    // const club = await this.clubRepository.findOne({
-    //   where: { name: team.clubName },
-    // });
-    // return {
-    //   userId,
-    //   clubId: club?.id != null ? Number(club.id) : undefined,
-    //   clubName: team.clubName,
-    //   image: team.image ?? "",
-    //   budget: Number(team.budget),
-    //   rankPoint: Number(team.rankPoint ?? 0),
-    //   tacticsTeamId: `user-${userId}`,
-    // };
-  }
+    const newUser = this.userRepository.create({
+      userName,
+      passwordHash,
+      salt,
+    });
 
-  async assignClubToUser(
-    userId: number,
-    clubId: number,
-    clubName: string,
-  ): Promise<any> {
-    // // Chỉ dùng memory nếu không có clubRepository (test/mock)
-    // if (!this.clubRepository || !this.teamRepository) {
-    //   const selected = defaultClubs().find((item) => item.id === clubId);
-    //   if (!selected) {
-    //     return { ok: false, reason: `club id ${clubId} not found` };
-    //   }
-    //   this.memTeams.set(userId, {
-    //     ...selected,
-    //     name: clubName.trim() || selected.name,
-    //   });
-    //   return { ok: true, starterClubName: selected.name };
-    // }
-    // const club = await this.clubRepository.findOne({
-    //   where: { id: String(clubId) },
-    // });
-    // if (!club) {
-    //   return { ok: false, reason: `club id ${clubId} not found` };
-    // }
-    // const starterClubName = String(club.name);
-    // const starterClubLogo = String(club.logo ?? "");
-    // const finalClubName = clubName.trim() || starterClubName;
-    // const existingTeam = await this.teamRepository.findOne({
-    //   where: { userId: String(userId) },
-    // });
-    // await this.teamRepository.save(
-    //   this.teamRepository.create({
-    //     id: existingTeam?.id,
-    //     userId: String(userId),
-    //     clubName: finalClubName,
-    //     image: starterClubLogo,
-    //     budget: String(defaultTeamBudget),
-    //     rankPoint: 0,
-    //   }),
-    // );
-    // return { ok: true, starterClubName };
-  }
+    const savedUser = await this.userRepository.save(newUser);
 
-  async countOwnedPlayers(userId: number): Promise<any> {
-    // if (!this.userPlayerRepository) {
-    //   return 0;
-    // }
-    // return this.userPlayerRepository.count({
-    //   where: { userId: BigInt(userId) },
-    // });
-  }
+    const { id, userName: savedUserName } = savedUser;
 
-  // async countTemplatesByClub(clubId: number): Promise<number> {
-  //   if (!this.playerTemplateRepository) {
-  //     return 50;
-  //   }
-  //   return this.playerTemplateRepository.count({
-  //     where: { clubId: BigInt(clubId) },
-  //   });
-  // }
-
-  async listOwnedTemplateIds(userId: number): Promise<any> {
-    // if (!this.userPlayerRepository) {
-    //   return new Set<string>();
-    // }
-    // const existingCards = await this.userPlayerRepository.find({
-    //   where: { userId: String(userId) },
-    //   select: { playerTemplateId: true },
-    // });
-    // return new Set(existingCards.map((item) => String(item.playerTemplateId)));
-  }
-
-  // async listTemplatesByClub(
-  //   clubId: number,
-  //   limit: number,
-  // ): Promise<PlayerTemplateEntity[]> {
-  //   if (!this.playerTemplateRepository) {
-  //     return [];
-  //   }
-  //   return this.playerTemplateRepository.find({
-  //     where: { clubId: BigInt(clubId) },
-  //     order: { id: "ASC" },
-  //     take: limit,
-  //   });
-  // }
-
-  async createUserPlayers(userId: number, templateIds: string[]): Promise<any> {
-    //   if (!this.userPlayerRepository || !templateIds.length) {
-    //     return;
-    //   }
-    //   await this.userPlayerRepository.save(
-    //     templateIds.map((templateId) =>
-    //       this.userPlayerRepository.create({
-    //         userId: String(userId),
-    //         playerTemplateId: templateId,
-    //         exp: 0,
-    //         currentPoints: 0,
-    //         bonusShoot: 0,
-    //         bonusPass: 0,
-    //         bonusLongPass: 0,
-    //         bonusVision: 0,
-    //         bonusTackle: 0,
-    //         bonusStamina: 0,
-    //         bonusBalance: 0,
-    //         bonusDribbling: 0,
-    //         bonusSpeed: 0,
-    //       }),
-    //     ),
-    //   );
-    // }
-  }
-
-  defaultClubs(): any {
-    // return [
-    //   {
-    //     id: 1,
-    //     name: "Manchester United",
-    //     logo: "https://media.api-sports.io/football/teams/33.png",
-    //     budget: defaultTeamBudget,
-    //     leagueName: "Premier League",
-    //   },
-    //   {
-    //     id: 2,
-    //     name: "Manchester City",
-    //     logo: "https://media.api-sports.io/football/teams/50.png",
-    //     budget: defaultTeamBudget,
-    //     leagueName: "Premier League",
-    //   },
-    //   {
-    //     id: 3,
-    //     name: "Liverpool",
-    //     logo: "https://media.api-sports.io/football/teams/40.png",
-    //     budget: defaultTeamBudget,
-    //     leagueName: "Premier League",
-    //   },
-    //   {
-    //     id: 4,
-    //     name: "Arsenal",
-    //     logo: "https://media.api-sports.io/football/teams/42.png",
-    //     budget: defaultTeamBudget,
-    //     leagueName: "Premier League",
-    //   },
-    //   {
-    //     id: 5,
-    //     name: "Chelsea",
-    //     logo: "https://media.api-sports.io/football/teams/49.png",
-    //     budget: defaultTeamBudget,
-    //     leagueName: "Premier League",
-    //   },
-    // ];
+    return {
+      id: Number(id),
+      userName: savedUserName,
+      isAdmin: false,
+    };
   }
 }

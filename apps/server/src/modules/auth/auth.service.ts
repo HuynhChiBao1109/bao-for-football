@@ -6,45 +6,30 @@ import {
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import { AuthRepository } from "./auth.repository";
-import { AuthServiceInterface } from "./interfaces/auth-service.interface";
+import { IAuthService } from "./interfaces/auth-service.interface";
 import { AuthUser, ClubOption, TeamAssignment, TokenClaims } from "./types";
 import { RegisterDto } from "./dto/input/register.dto";
 import { LoginDto } from "./dto/input/login.dto";
+import { CryptoUtil } from "src/common/utils";
+import { TeamEntity } from "../team/entities/team.entity";
+import { TeamService } from "../team/team.service";
 
 @Injectable()
-export class AuthService implements AuthServiceInterface {
+export class AuthService implements IAuthService {
   constructor(
     private readonly repository: AuthRepository,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly teamService: TeamService,
   ) {}
 
   private jwtSecret(): string {
     return this.configService.get<string>("JWT_SECRET") || "fifam-dev-secret";
   }
 
-  private adminUsername(): string {
-    return this.configService.get<string>("ADMIN_USERNAME") || "admin";
-  }
-
-  private adminPassword(): string {
-    return this.configService.get<string>("ADMIN_PASSWORD") || "admin123";
-  }
-
-  async ensureAdmin(): Promise<void> {
-    await this.repository.ensureAdmin(
-      this.adminUsername(),
-      this.adminPassword(),
-    );
-  }
-
-  async listRegistrationClubs(): Promise<ClubOption[]> {
-    return this.repository.listRegistrationClubs();
-  }
-
   async register(data: RegisterDto): Promise<AuthUser> {
     const { userName, password } = data;
-    
+
     const safeUsername = userName.trim();
     const safePassword = password.trim();
 
@@ -54,16 +39,18 @@ export class AuthService implements AuthServiceInterface {
     if (safePassword.length < 4) {
       throw new BadRequestException("password must be at least 4 characters");
     }
-    if (safeUsername === this.adminUsername()) {
-      throw new BadRequestException("reserved username");
-    }
 
     const existing = await this.repository.findUserByUserName(safeUsername);
     if (existing) {
       throw new BadRequestException("username already exists");
     }
 
-    return this.repository.create(safeUsername, safePassword);
+    const newUser = await this.repository.create({
+      userName: safeUsername,
+      password: safePassword,
+    });
+
+    return newUser;
   }
 
   async login(data: LoginDto): Promise<{ token: string; user: AuthUser }> {
@@ -73,107 +60,43 @@ export class AuthService implements AuthServiceInterface {
       throw new BadRequestException("username and password are required");
     }
 
-    const user = await this.repository.findUserByUserName(username);
+    const user = await this.repository.findUserByUserName(userName);
     if (!user) {
-      throw new UnauthorizedException("invalid credentials");
+      throw new BadRequestException("invalid credentials");
     }
 
-    const auth = await import("bcrypt");
-    const matches = await auth.compare(password, user.passwordHash);
-    if (!matches) {
-      throw new UnauthorizedException("invalid credentials");
+    const comparePasswordHash = await CryptoUtil.compareHashWithSalt({
+      value: password,
+      hashedValue: user.passwordHash,
+      salt: user.salt,
+    });
+
+    if (!comparePasswordHash) {
+      throw new BadRequestException("invalid credentials");
     }
 
     const token = await this.signToken({
-      userId: user.id,
+      id: Number(user.id),
       userName: user.userName,
       isAdmin: false,
     });
+
     return {
       token,
-      user: { id: user.id, userName: user.userName, isAdmin: false },
+      user: { id: Number(user.id), userName: user.userName, isAdmin: false },
     };
   }
-  
+
   async me(
-    userId: number,
-    userName: string,
-    isAdmin: boolean,
-  ): Promise<{ user: AuthUser; team: TeamAssignment | null }> {
-    const team = await this.repository.getTeamAssignment(userId);
-    if (team) {
-      team.tacticsTeamId = `user-${userId}`;
+    claims: TokenClaims,
+  ): Promise<{ user: AuthUser; team: TeamEntity[] }> {
+    const { id, userName, isAdmin } = claims;
+    const user = await this.repository.findUserById(BigInt(id));
+    if (!user) {
+      throw new BadRequestException("user not found");
     }
-
-    return {
-      user: { id: userId, username, isAdmin },
-      team,
-    };
-  }
-
-  async assignClub(userId: number, clubId: number): Promise<any> {
-    // if (!userId) {
-    //   throw new BadRequestException("userId is required");
-    // }
-    // if (!clubId || clubId <= 0) {
-    //   throw new BadRequestException("clubId is required");
-    // }
-    // const clubs = await this.repository.listRegistrationClubs();
-    // const selected = clubs.find((item) => item.id === clubId);
-    // if (!selected) {
-    //   throw new BadRequestException("invalid clubId");
-    // }
-    // const assignment = await this.repository.assignClubToUser(
-    //   userId,
-    //   clubId,
-    //   selected.name,
-    // );
-    // if (!assignment.ok) {
-    //   throw new BadRequestException(
-    //     assignment.reason || "failed to assign club",
-    //   );
-    // }
-    // const ownedCount = await this.repository.countOwnedPlayers(userId);
-    // if (ownedCount < 22) {
-    //   const availableCount = await this.repository.countTemplatesByClub(clubId);
-    //   if (availableCount < 22) {
-    //     throw new BadRequestException(
-    //       `starter club id ${clubId} (${assignment.starterClubName || selected.name}) does not have enough player templates`,
-    //     );
-    //   }
-    //   const slotsLeft = 50 - ownedCount;
-    //   if (slotsLeft <= 0) {
-    //     throw new BadRequestException(
-    //       "user cannot own more than 50 player cards",
-    //       );
-    //     }
-    //   const assignCount = Math.min(22 - ownedCount, slotsLeft);
-    //   const ownedTemplateIds =
-    //     await this.repository.listOwnedTemplateIds(userId);
-    //   const templates = await this.repository.listTemplatesByClub(clubId, 50);
-    //   const templateIdsToAssign = templates
-    //     .filter((item) => !ownedTemplateIds.has(String(item.id)))
-    //     .slice(0, assignCount)
-    //     .map((item) => String(item.id));
-    //   if (templateIdsToAssign.length !== assignCount) {
-    //     throw new BadRequestException(
-    //       `expected to assign ${assignCount} starter players, assigned ${templateIdsToAssign.length}`,
-    //     );
-    //   }
-    //   await this.repository.createUserPlayers(userId, templateIdsToAssign);
-    // }
-    // return this.repository.getTeamAssignment(userId);
-  }
-
-  async validateToken(token: string): Promise<TokenClaims> {
-    try {
-      const claims = await this.jwtService.verifyAsync<TokenClaims>(token, {
-        secret: this.jwtSecret(),
-      });
-      return claims;
-    } catch {
-      throw new UnauthorizedException("invalid token");
-    }
+    const teams = await this.teamService.getListTeamByUserId(user.id);
+    return { user: { id: Number(user.id), userName: user.userName, isAdmin }, team: teams };
   }
 
   private async signToken(claims: TokenClaims): Promise<string> {

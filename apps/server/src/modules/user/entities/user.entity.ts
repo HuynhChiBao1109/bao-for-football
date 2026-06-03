@@ -17,6 +17,12 @@ export class UserEntity {
   @Column({ name: "password_hash", type: "varchar", length: 255 })
   passwordHash: string;
 
+  @Column({ name: "salt", type: "varchar", length: 255 })
+  salt: string;
+
+  @Column({ name: "is_admin", type: "boolean", default: false })
+  isAdmin: boolean;
+
   @Column({ type: "bigint", default: 360000000 })
   budget: bigint;
 

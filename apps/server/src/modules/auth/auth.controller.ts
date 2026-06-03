@@ -21,22 +21,11 @@ export class AuthController {
   @Post("login")
   @Public()
   async login(@Body() loginDto: LoginDto) {
-    const result = await this.authService.login(loginDto);
-    return {
-      message: "login successful",
-      token: result.token,
-      user: result.user,
-    };
+    return this.authService.login(loginDto);
   }
 
   @Get("me")
   async me(@CurrentUser() user: TokenClaims) {
-    return {
-      data: await this.authService.me(
-        Number(user?.userId),
-        String(user?.userName ?? ""),
-        Boolean(user?.isAdmin),
-      ),
-    };
+    return this.authService.me({id: user.id, userName: user.userName, isAdmin: user.isAdmin});
   }
 }

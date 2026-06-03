@@ -1,29 +1,11 @@
 import { AuthUser, ClubOption, TeamAssignment, TokenClaims } from "../types";
+import { LoginDto } from "../dto/input/login.dto";
+import { RegisterDto } from "../dto/input/register.dto";
 
-export interface AuthServiceInterface {
-  ensureAdmin(): Promise<void>;
+export interface IAuthService {
+  register(data: RegisterDto): Promise<AuthUser>;
 
-  listRegistrationClubs(): Promise<ClubOption[]>;
+  login(data: LoginDto): Promise<{ token: string; user: AuthUser }>;
 
-  register(userName: string, password: string): Promise<AuthUser>;
-
-  login(
-    userName: string,
-    password: string,
-  ): Promise<{ token: string; user: AuthUser }>;
-
-  adminLogin(
-    userName: string,
-    password: string,
-  ): Promise<{ token: string; user: AuthUser }>;
-
-  me(
-    userId: number,
-    userName: string,
-    isAdmin: boolean,
-  ): Promise<{ user: AuthUser; team: TeamAssignment | null }>;
-  
-  assignClub(userId: number, clubId: number): Promise<TeamAssignment | null>;
-
-  validateToken(token: string): Promise<TokenClaims>;
+  me(claims: TokenClaims): Promise<{ user: AuthUser; team: TeamAssignment[] }>;
 }
