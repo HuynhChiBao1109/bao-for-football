@@ -3,12 +3,13 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToOne,
   PrimaryGeneratedColumn,
 } from "typeorm";
 import { AbstractEntity } from "src/database/database.abjact";
-import { TeamEntity } from "src/modules/team/entities/team.entity";
 import { CampainEntity } from "./campain.entity";
 import { ClubEntity } from "src/modules/player/entities/club.entity.";
+import { MatchEntity } from "src/modules/match/entities/match.entity.";
 
 @Entity("campain_matches")
 export class CampainMatchEntity extends AbstractEntity {
@@ -40,4 +41,7 @@ export class CampainMatchEntity extends AbstractEntity {
   @ManyToOne(() => ClubEntity, (club) => club.campainMatches, { onDelete: "CASCADE" })
   @JoinColumn({ name: "competitor_club_id" })
   competitorClub: ClubEntity;
+
+  @OneToOne(() => MatchEntity, (match) => match.campainMatch)
+  match: MatchEntity;
 }

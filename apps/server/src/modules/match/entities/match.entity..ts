@@ -1,45 +1,39 @@
+import { AbstractEntity } from "src/database/database.abjact";
 import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
+  OneToOne,
   PrimaryGeneratedColumn,
 } from "typeorm";
+import { EMatchStatus } from "../enums/match-status.enum";
+import { CampainMatchEntity } from "src/modules/campain/entities/campain-match.entity";
 
 @Entity("matches")
-export class MatchEntity {
+export class MatchEntity extends AbstractEntity {
   @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
   id: bigint;
 
-  @Column({ name: "home_club_id", type: "bigint", unsigned: true })
-  homeClubId: bigint;
+  @Column({ name: "campain_id", type: "bigint", unsigned: true })
+  campainId!: bigint;
 
-  @Column({ name: "away_club_id", type: "bigint", unsigned: true })
-  awayClubId: bigint;
-
-  @Column({ type: "varchar", length: 64, default: "casual" })
-  mode!: string;
-
-  @Column({ name: "stage_no", type: "int", nullable: true })
-  stageNo!: number | null;
-
-  @Column({ type: "varchar", length: 32, default: "running" })
-  status!: string;
+  @Column({ type: "enum", enum: EMatchStatus, default: EMatchStatus.IN_PROGRESS })
+  status: EMatchStatus;
 
   @Column({ name: "home_score", type: "int", nullable: true })
-  homeScore!: number | null;
+  homeScore: number | null;
 
   @Column({ name: "away_score", type: "int", nullable: true })
-  awayScore!: number | null;
-
-  @Column({ name: "home_stats", type: "simple-json", nullable: true })
-  homeStats!: Record<string, any> | null;
-
-  @Column({ name: "away_stats", type: "simple-json", nullable: true })
-  awayStats!: Record<string, any> | null;
+  awayScore: number | null;
 
   @CreateDateColumn({ name: "started_at", type: "timestamp" })
-  startedAt!: Date;
+  startedAt: Date;
 
   @Column({ name: "ended_at", type: "timestamp", nullable: true })
-  endedAt!: Date | null;
+  endedAt: Date | null;
+
+  @OneToOne(() => CampainMatchEntity, (campainMatch) => campainMatch.match)
+  @JoinColumn({ name: "campain_id" })
+  campainMatch: CampainMatchEntity;
 }
