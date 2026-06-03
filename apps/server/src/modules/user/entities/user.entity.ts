@@ -4,7 +4,7 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from "typeorm";
-import { TeamEntity } from "../team/entities/team.entities";
+import { TeamEntity } from "../../team/entities/team.entity";
 
 @Entity("users")
 export class UserEntity {

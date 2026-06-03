@@ -1,6 +1,6 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
-import { LeagueEntity } from "./league.entites";
-import { PlayerEntity } from "./player-admin.entities";
+import { LeagueEntity } from "./league.entity";
+import { PlayerEntity } from "./player-admin.entity";
 
 
 @Entity("countries")

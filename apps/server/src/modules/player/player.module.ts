@@ -5,13 +5,13 @@ import { PlayerController } from "./player.controller";
 import {
   PlayerEntity,
   PlayerSkillEntity,
-} from "./entities/player-admin.entities";
+} from "./entities/player-admin.entity";
 import { PlayerRepository } from "./player.repository";
 import { PlayerService } from "./player.service";
-import { LeagueEntity } from "./entities/league.entites";
-import { CountryEntity } from "./entities/country.entities";
-import { ClubEntity } from "./entities/club.entites";
-import { UserPlayerEntity, UserPlayerSkillEntity } from "./entities/player-user.entities";
+import { LeagueEntity } from "./entities/league.entity";
+import { CountryEntity } from "./entities/country.entity";
+import { ClubEntity } from "./entities/club.entity.";
+import { UserPlayerEntity, UserPlayerSkillEntity } from "./entities/player-user.entity";
 
 @Module({
   imports: [

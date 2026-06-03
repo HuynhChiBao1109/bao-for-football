@@ -3,10 +3,10 @@ import * as bcrypt from "bcrypt";
 import { Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { AuthUser, ClubOption, TeamAssignment } from "./types";
-import { PlayerEntity } from "../player/entities/player-admin.entities";
-import { ClubEntity } from "../player/entities/club.entites";
-import { TeamEntity } from "../team/entities/team.entities";
-import { UserPlayerEntity } from "../player/entities/player-user.entities";
+import { PlayerEntity } from "../player/entities/player-admin.entity";
+import { ClubEntity } from "../player/entities/club.entity.";
+import { TeamEntity } from "../team/entities/team.entity";
+import { UserPlayerEntity } from "../player/entities/player-user.entity";
 
 @Injectable()
 export class AuthRepository {

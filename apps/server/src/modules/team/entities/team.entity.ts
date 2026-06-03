@@ -1,8 +1,8 @@
 import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { ETeamFormation } from "../types/team-formation.enum";
 import { ETeamType } from "../types/team-type.enum";
-import { UserEntity } from "src/modules/user/user.entities";
-import { TeamFormationEntity } from "./team-formatition.entities";
+import { UserEntity } from "src/modules/user/entities/user.entity";
+import { TeamFormationEntity } from "./team-formatition.entity";
 import { AbstractEntity } from "src/database/database.abjact";
 
 @Entity("user_teams")

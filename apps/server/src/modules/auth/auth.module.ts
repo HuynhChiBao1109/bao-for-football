@@ -10,10 +10,10 @@ import { AdminGuard } from "../../common/guards/admin.guard";
 import { AuthController } from "./auth.controller";
 import { AuthRepository } from "./auth.repository";
 import { AuthService } from "./auth.service";
-import { PlayerEntity } from "../player/entities/player-admin.entities";
-import { ClubEntity } from "../player/entities/club.entites";
-import { TeamEntity } from "../team/entities/team.entities";
-import { UserPlayerEntity } from "../player/entities/player-user.entities";
+import { PlayerEntity } from "../player/entities/player-admin.entity";
+import { ClubEntity } from "../player/entities/club.entity.";
+import { TeamEntity } from "../team/entities/team.entity";
+import { UserPlayerEntity } from "../player/entities/player-user.entity";
 
 @Module({
   imports: [

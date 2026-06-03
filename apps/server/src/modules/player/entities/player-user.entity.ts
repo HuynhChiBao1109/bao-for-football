@@ -8,8 +8,8 @@ import {
   Unique,
 } from "typeorm";
 import { EPlayerSkill } from "../enum/player-skill.enum";
-import { TeamEntity } from "src/modules/team/entities/team.entities";
-import { UserEntity } from "src/modules/user/user.entities";
+import { TeamEntity } from "src/modules/team/entities/team.entity";
+import { UserEntity } from "src/modules/user/entities/user.entity";
 import { PlayerPositionFormat } from "../types/player-position-format.type";
 
 @Entity("user_players")
