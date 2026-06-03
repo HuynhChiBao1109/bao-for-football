@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { ETeamFormation } from "../types/team-formation.enum";
 import { ETeamType } from "../types/team-type.enum";
 import { UserEntity } from "src/modules/user/entities/user.entity";
@@ -39,6 +39,7 @@ export class TeamEntity extends AbstractEntity {
   type!: ETeamType;
 
   @ManyToOne(() => UserEntity, (user) => user.teams, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "user_id" })
   user: UserEntity;
 
   @OneToMany(() => TeamFormationEntity, (formation) => formation.team)

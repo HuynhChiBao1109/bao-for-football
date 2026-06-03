@@ -1,6 +1,6 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { AbstractEntity } from "src/database/database.abjact";
-import { ECampainType } from "src/modules/enum/campain-type.enum";
+import { ECampainType } from "src/modules/campain/enum/campain-type.enum";
 import { TeamEntity } from "src/modules/team/entities/team.entity";
 import { CampainMatchEntity } from "./campain-match.entity";
 
