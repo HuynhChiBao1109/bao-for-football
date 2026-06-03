@@ -45,91 +45,91 @@ export class MatchRepository {
   async createMatch(
     input: Omit<MatchRecord, "startedAt" | "status">,
     userId: number,
-  ): Promise<MatchRecord> {
-    const record: MatchRecord = {
-      ...input,
-      startedAt: new Date(),
-      status: "running",
-    };
+  ): Promise<any> {
+    // const record: MatchRecord = {
+    //   ...input,
+    //   startedAt: new Date(),
+    //   status: "running",
+    // };
 
-    this.memStore.set(record.matchId, record);
+    // this.memStore.set(record.matchId, record);
 
-    const saved = await this.matchRepository.save(
-      this.matchRepository.create({
-        matchId: record.matchId,
-        userId: String(userId),
-        homeClubName: record.homeClubName,
-        awayClubName: record.awayClubName,
-        mode: record.mode,
-        stageNo: record.stageNo ?? null,
-        status: "running",
-      }),
-    );
-    record.startedAt = saved.startedAt;
-    return record;
+    // const saved = await this.matchRepository.save(
+    //   this.matchRepository.create({
+    //     matchId: record.matchId,
+    //     userId: String(userId),
+    //     homeClubName: record.homeClubName,
+    //     awayClubName: record.awayClubName,
+    //     mode: record.mode,
+    //     stageNo: record.stageNo ?? null,
+    //     status: "running",
+    //   }),
+    // );
+    // record.startedAt = saved.startedAt;
+    // return record;
   }
 
   async finalizeMatch(
     matchId: string,
     payload: Partial<MatchRecord>,
-  ): Promise<MatchRecord | null> {
-    const existing = this.memStore.get(matchId);
+  ): Promise<any> {
+    // const existing = this.memStore.get(matchId);
 
-    const result: MatchRecord = {
-      ...(existing ?? {
-        matchId,
-        homeClubName: "",
-        awayClubName: "",
-        mode: "casual",
-        startedAt: new Date(),
-      }),
-      ...payload,
-      matchId,
-      endedAt: new Date(),
-      status: "finished",
-    };
+    // const result: MatchRecord = {
+    //   ...(existing ?? {
+    //     matchId,
+    //     homeClubName: "",
+    //     awayClubName: "",
+    //     mode: "casual",
+    //     startedAt: new Date(),
+    //   }),
+    //   ...payload,
+    //   matchId,
+    //   endedAt: new Date(),
+    //   status: "finished",
+    // };
 
-    this.memStore.set(matchId, result);
+    // this.memStore.set(matchId, result);
 
-    const match = await this.matchRepository.findOne({ where: { matchId } });
-    if (!match) {
-      return null;
-    }
-    match.status = "finished";
-    match.homeScore = result.homeScore ?? 0;
-    match.awayScore = result.awayScore ?? 0;
-    match.homeStats = result.homeStats ?? {};
-    match.awayStats = result.awayStats ?? {};
-    match.endedAt = result.endedAt ?? new Date();
-    const saved = await this.matchRepository.save(match);
-    result.startedAt = saved.startedAt;
-    result.endedAt = saved.endedAt ?? result.endedAt;
-    return result;
+    // const match = await this.matchRepository.findOne({ where: { matchId } });
+    // if (!match) {
+    //   return null;
+    // }
+    // match.status = "finished";
+    // match.homeScore = result.homeScore ?? 0;
+    // match.awayScore = result.awayScore ?? 0;
+    // match.homeStats = result.homeStats ?? {};
+    // match.awayStats = result.awayStats ?? {};
+    // match.endedAt = result.endedAt ?? new Date();
+    // const saved = await this.matchRepository.save(match);
+    // result.startedAt = saved.startedAt;
+    // result.endedAt = saved.endedAt ?? result.endedAt;
+    // return result;
   }
 
-  async findMatchById(matchId: string): Promise<MatchRecord | null> {
-    const existing = this.memStore.get(matchId);
-    if (existing) {
-      return existing;
-    }
+  async findMatchById(matchId: string): Promise<any> {
+    // const existing = this.memStore.get(matchId);
+    // if (existing) {
+    //   return existing;
+    // }
 
-    const match = await this.matchRepository.findOne({ where: { matchId } });
-    if (!match) {
-      return null;
-    }
-    return {
-      matchId: match.matchId,
-      homeClubName: match.homeClubName,
-      awayClubName: match.awayClubName,
-      mode: match.mode,
-      stageNo: match.stageNo ?? undefined,
-      startedAt: match.startedAt,
-      endedAt: match.endedAt ?? undefined,
-      homeScore: match.homeScore ?? undefined,
-      awayScore: match.awayScore ?? undefined,
-      homeStats: match.homeStats ?? undefined,
-      awayStats: match.awayStats ?? undefined,
-      status: match.status,
-    };
+    // const match = await this.matchRepository.findOne({ where: { matchId } });
+    // if (!match) {
+    //   return null;
+    // }
+    // return {
+    //   matchId: match.matchId,
+    //   homeClubName: match.homeClubName,
+    //   awayClubName: match.awayClubName,
+    //   mode: match.mode,
+    //   stageNo: match.stageNo ?? undefined,
+    //   startedAt: match.startedAt,
+    //   endedAt: match.endedAt ?? undefined,
+    //   homeScore: match.homeScore ?? undefined,
+    //   awayScore: match.awayScore ?? undefined,
+    //   homeStats: match.homeStats ?? undefined,
+    //   awayStats: match.awayStats ?? undefined,
+    //   status: match.status,
+    // };
   }
 }
