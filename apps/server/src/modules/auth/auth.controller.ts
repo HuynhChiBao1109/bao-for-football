@@ -4,7 +4,7 @@ import { CurrentUser } from "../../common/decorations/currentUser.decoration";
 import { Public } from "../../common/decorations/public.decoration";
 import { TokenClaims } from "./types";
 import { AuthService } from "./auth.service";
-import { LoginDto } from "./dto/input/login.dto";
+import { LoginDTO } from "./dto/input/login.dto";
 import { RegisterDto } from "./dto/input/register.dto";
 
 @ApiTags("auth")
@@ -20,7 +20,7 @@ export class AuthController {
 
   @Post("login")
   @Public()
-  async login(@Body() loginDto: LoginDto) {
+  async login(@Body() loginDto: LoginDTO) {
     return this.authService.login(loginDto);
   }
 

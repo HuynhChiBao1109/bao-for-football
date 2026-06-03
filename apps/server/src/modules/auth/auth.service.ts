@@ -9,7 +9,7 @@ import { AuthRepository } from "./auth.repository";
 import { IAuthService } from "./interfaces/auth-service.interface";
 import { AuthUser, TokenClaims } from "./types";
 import { RegisterDto } from "./dto/input/register.dto";
-import { LoginDto } from "./dto/input/login.dto";
+import { LoginDTO } from "./dto/input/login.dto";
 import { CryptoUtil } from "src/common/utils";
 import { TeamEntity } from "../team/entities/team.entity";
 import { TeamService } from "../team/team.service";
@@ -53,7 +53,7 @@ export class AuthService implements IAuthService {
     return newUser;
   }
 
-  async login(data: LoginDto): Promise<{ token: string; user: AuthUser }> {
+  async login(data: LoginDTO): Promise<{ token: string; user: AuthUser }> {
     const { userName, password } = data;
 
     if (!userName || !password) {

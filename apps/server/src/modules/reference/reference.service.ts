@@ -20,4 +20,8 @@ export class ReferenceService implements IReferenceService {
   async getListCountry(): Promise<CountryEntity[]> {
     return this.repository.getListCountry();
   }
+
+  async getClubById(clubId: bigint): Promise<ClubEntity> {
+    return this.repository.getClubById(clubId);
+  }
 }

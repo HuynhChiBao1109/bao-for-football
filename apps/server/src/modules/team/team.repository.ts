@@ -15,4 +15,9 @@ export class TeamRepository {
   async getListTeamByUserId(userId: bigint): Promise<TeamEntity[]> {
     return await this.repository.find({ where: { id: userId } });
   }
+
+  async create(data: Partial<TeamEntity>): Promise<TeamEntity> {
+    const newTeam = this.repository.create(data);
+    return this.repository.save(newTeam);
+  }
 }

@@ -3,8 +3,8 @@ import { ApiTags } from "@nestjs/swagger";
 import { ReferenceService } from "./reference.service";
 import { Public } from "src/common/decorations/public.decoration";
 
-@ApiTags("reference")
-@Controller("api/v1/reference")
+@ApiTags("references")
+@Controller("api/v1/references")
 export class ReferenceController {
   constructor(private readonly referenceService: ReferenceService) {}
 

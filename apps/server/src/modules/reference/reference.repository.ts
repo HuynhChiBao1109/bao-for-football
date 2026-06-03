@@ -32,4 +32,8 @@ export class ReferenceRepository {
   async getListCountry(): Promise<CountryEntity[]> {
     return await this.countryRepository.find();
   }
+
+  async getClubById(clubId: bigint): Promise<ClubEntity> {
+    return await this.clubRepository.findOne({ where: { id: clubId } });
+  }
 }
