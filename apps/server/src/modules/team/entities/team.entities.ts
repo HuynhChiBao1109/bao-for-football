@@ -1,35 +1,23 @@
-import {
-  Column,
-  Entity,
-  PrimaryGeneratedColumn,
-} from "typeorm";
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 import { ETeamFormation } from "../types/team-formation.enum";
 import { ETeamType } from "../types/team-type.enum";
+import { UserEntity } from "src/modules/user/user.entities";
 
 @Entity("teams")
 export class TeamEntity {
   @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
   id: bigint;
 
-  @Column({ type: "varchar", length: 191, unique: true })
-  userName: string;
-
-  @Column({ name: "password_hash", type: "varchar", length: 255 })
-  passwordHash: string;
+  @Column({ name: "user_id", type: "bigint", unsigned: true })
+  userId: bigint;
 
   @Column({ name: "club_name", type: "varchar", length: 191 })
   clubName!: string;
 
-  @Column({ type: "varchar", length: 512, nullable: true })
-  image!: string;
+  @Column({ name: "img_url", type: "varchar", length: 512, nullable: true })
+  imgUrl!: string;
 
-  @Column({ type: "bigint", default: 360000000 })
-  budget: bigint;
-
-  @Column({ name: "rank_point", type: "int", default: 0 })
-  rankPoint: number;
-
-  @Column({ type: "enum", enum: ETeamFormation })
+  @Column({ name: "formation", type: "enum", enum: ETeamFormation })
   formation: ETeamFormation;
 
   @Column({ name: "pass_ratio", type: "double" })
@@ -38,9 +26,15 @@ export class TeamEntity {
   @Column({ name: "shot_ratio", type: "double" })
   shotRatio!: number;
 
-  @Column({ type: "int", default: 50, unsigned: true })
+  @Column({ name: "pressure", type: "int", default: 50, unsigned: true })
   pressure: number;
 
-  @Column({ type: "enum", enum: ETeamType })
+  @Column({ name: "rank_point", type: "int", default: 0 })
+  rankPoint: number;
+
+  @Column({ name: "type", type: "enum", enum: ETeamType, default: ETeamType.BOT })
   type!: ETeamType;
+
+  @ManyToOne(() => UserEntity, (user) => user.teams, { onDelete: "CASCADE" })
+  user: UserEntity;
 }

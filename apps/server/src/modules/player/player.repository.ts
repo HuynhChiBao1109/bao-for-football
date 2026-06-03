@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
-import { TeamPlayerEntity } from "./entities/player.entities";
+import { UserPlayerEntity } from "./entities/player.entities";
 
 @Injectable()
 export class PlayerRepository {
@@ -30,8 +30,8 @@ export class PlayerRepository {
   ] as const;
 
   constructor(
-    @InjectRepository(TeamPlayerEntity)
-    private readonly teamPlayerRepository: Repository<TeamPlayerEntity>,
+    @InjectRepository(UserPlayerEntity)
+    private readonly userPlayerRepository: Repository<UserPlayerEntity>,
   ) {}
 
   private numberOf(value: unknown): number {
@@ -65,7 +65,7 @@ export class PlayerRepository {
   //   } as Record<(typeof this.statKeys)[number], number>;
   // }
 
-  private buildBonusStats(card: TeamPlayerEntity) {
+  private buildBonusStats(card: UserPlayerEntity) {
     // return {
     //   shooting: this.numberOf(card.bonusShoot),
     //   passing: this.numberOf(card.bonusPass),
@@ -90,7 +90,7 @@ export class PlayerRepository {
     // } as Record<(typeof this.statKeys)[number], number>;
   }
 
-  private buildCardResponse(card: TeamPlayerEntity, template: any) {
+  private buildCardResponse(card: UserPlayerEntity, template: any) {
     // const baseStats = this.buildBaseStats(template ?? null);
     // const bonusStats = this.buildBonusStats(card);
     // const totalStats = this.statKeys.reduce(

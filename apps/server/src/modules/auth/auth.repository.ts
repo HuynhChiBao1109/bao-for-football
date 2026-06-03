@@ -6,7 +6,7 @@ import { AuthUser, ClubOption, TeamAssignment } from "./types";
 import { PlayerEntity } from "../player/entities/player-admin.entities";
 import { ClubEntity } from "../player/entities/club.entites";
 import { TeamEntity } from "../team/entities/team.entities";
-import { TeamPlayerEntity } from "../player/entities/player.entities";
+import { UserPlayerEntity } from "../player/entities/player.entities";
 
 @Injectable()
 export class AuthRepository {
@@ -24,8 +24,8 @@ export class AuthRepository {
     private readonly teamRepository: Repository<TeamEntity>,
     @InjectRepository(PlayerEntity)
     private readonly playerRepository: Repository<PlayerEntity>,
-    @InjectRepository(TeamPlayerEntity)
-    private readonly userPlayerRepository: Repository<TeamPlayerEntity>,
+    @InjectRepository(UserPlayerEntity)
+    private readonly userPlayerRepository: Repository<UserPlayerEntity>,
   ) {}
 
   async ensureUserTable(): Promise<void> {

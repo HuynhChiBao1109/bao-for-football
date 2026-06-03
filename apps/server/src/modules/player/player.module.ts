@@ -7,19 +7,19 @@ import {
   PlayerPositionEntity,
   PlayerSkillEntity,
 } from "./entities/player-admin.entities";
-import { TeamPlayerEntity, TeamPlayerSkillEntity } from "./entities/player.entities";
 import { PlayerRepository } from "./player.repository";
 import { PlayerService } from "./player.service";
 import { LeagueEntity } from "./entities/league.entites";
 import { CountryEntity } from "./entities/country.entities";
 import { ClubEntity } from "./entities/club.entites";
+import { UserPlayerEntity, UserPlayerSkillEntity } from "./entities/player.entities";
 
 @Module({
   imports: [
     AuthModule,
     TypeOrmModule.forFeature([
-      TeamPlayerEntity,
-      TeamPlayerSkillEntity,
+      UserPlayerEntity,
+      UserPlayerSkillEntity,
       CountryEntity,
       LeagueEntity,
       ClubEntity,

@@ -5,12 +5,12 @@ import { GachaController } from "./gacha.controller";
 import { GachaBannerEntity, GachaLogEntity } from "./entities/gacha.entities";
 import { GachaRepository } from "./gacha.repository";
 import { GachaService } from "./gacha.service";
-import { TeamPlayerEntity } from "../player/entities/player.entities";
+import { UserPlayerEntity } from "../player/entities/player.entities";
 
 @Module({
   imports: [
     AuthModule,
-    TypeOrmModule.forFeature([GachaLogEntity, GachaBannerEntity, TeamPlayerEntity]),
+    TypeOrmModule.forFeature([GachaLogEntity, GachaBannerEntity, UserPlayerEntity]),
   ],
   controllers: [GachaController],
   providers: [GachaRepository, GachaService],

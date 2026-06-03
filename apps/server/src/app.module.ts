@@ -17,6 +17,7 @@ import { MatchModule } from "./modules/match/match.module";
 import { PlayerModule } from "./modules/player/player.module";
 import { TeamModule } from './modules/team/team.module';
 import { TourmentModule } from './modules/tourment/tourment.module';
+import { UserModule } from './modules/user/user.module';
 
 const escapeIdentifier = (value: string) => value.replace(/`/g, "``");
 
@@ -101,6 +102,7 @@ const dropTablesNotInEntities = async (dataSource: DataSource) => {
     MatchModule,
     TeamModule,
     TourmentModule,
+    UserModule,
   ],
   controllers: [AppController],
 })
