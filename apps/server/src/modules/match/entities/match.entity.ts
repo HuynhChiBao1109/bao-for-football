@@ -4,11 +4,14 @@ import {
   CreateDateColumn,
   Entity,
   JoinColumn,
+  OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
 } from "typeorm";
 import { EMatchStatus } from "../enums/match-status.enum";
 import { CampainMatchEntity } from "src/modules/campain/entities/campain-match.entity";
+import { MatchEventEntity } from "./match-event.entity";
+import { MatchPlayerStatsEntity } from "./match-player-stats.entity";
 
 @Entity("matches")
 export class MatchEntity extends AbstractEntity {
@@ -18,7 +21,11 @@ export class MatchEntity extends AbstractEntity {
   @Column({ name: "campain_id", type: "bigint", unsigned: true })
   campainId!: bigint;
 
-  @Column({ type: "enum", enum: EMatchStatus, default: EMatchStatus.IN_PROGRESS })
+  @Column({
+    type: "enum",
+    enum: EMatchStatus,
+    default: EMatchStatus.IN_PROGRESS,
+  })
   status: EMatchStatus;
 
   @Column({ name: "home_score", type: "int", nullable: true })
@@ -36,4 +43,10 @@ export class MatchEntity extends AbstractEntity {
   @OneToOne(() => CampainMatchEntity, (campainMatch) => campainMatch.match)
   @JoinColumn({ name: "campain_id" })
   campainMatch: CampainMatchEntity;
+
+  @OneToMany(() => MatchEventEntity, (matchEvent) => matchEvent.match)
+  matchEvents: MatchEventEntity[];
+
+  @OneToMany(() => MatchPlayerStatsEntity, (stats) => stats.match)
+  matchPlayerStats: MatchPlayerStatsEntity[];
 }

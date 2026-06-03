@@ -12,7 +12,7 @@ export class MatchController {
   @Post("campaign/start")
   async start(
     @CurrentUser() user: AuthUser,
-    @Body("campainId") campainId: BigInt,
+    @Body("campainId") campainId: bigint,
   ) {
     return this.matchService.startCampaignMatch(user, campainId);
   }

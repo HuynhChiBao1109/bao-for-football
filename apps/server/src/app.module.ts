@@ -20,6 +20,7 @@ import { TourmentModule } from './modules/tourment/tourment.module';
 import { UserModule } from './modules/user/user.module';
 import { CampainModule } from './modules/campain/campain.module';
 import { ReferenceModule } from './modules/reference/reference.module';
+import { SocketModule } from './modules/socket/socket.module';
 
 const escapeIdentifier = (value: string) => value.replace(/`/g, "``");
 
@@ -107,6 +108,7 @@ const dropTablesNotInEntities = async (dataSource: DataSource) => {
     UserModule,
     CampainModule,
     ReferenceModule,
+    SocketModule,
   ],
   controllers: [AppController],
 })
