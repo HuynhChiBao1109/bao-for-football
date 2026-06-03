@@ -9,7 +9,7 @@ import {
 import { AbstractEntity } from "src/database/database.abjact";
 import { CampainEntity } from "./campain.entity";
 import { ClubEntity } from "src/modules/reference/entities/club.entity";
-import { MatchEntity } from "src/modules/match/entities/match.entity.";
+import { MatchEntity } from "src/modules/match/entities/match.entity";
 
 @Entity("campain_matches")
 export class CampainMatchEntity extends AbstractEntity {
