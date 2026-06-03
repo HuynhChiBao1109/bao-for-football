@@ -8,9 +8,9 @@ import {
 } from "./entities/player-admin.entity";
 import { PlayerRepository } from "./player.repository";
 import { PlayerService } from "./player.service";
-import { LeagueEntity } from "./entities/league.entity";
-import { CountryEntity } from "./entities/country.entity";
-import { ClubEntity } from "./entities/club.entity.";
+import { LeagueEntity } from "../reference/entities/league.entity";
+import { CountryEntity } from "../reference/entities/country.entity";
+import { ClubEntity } from "../reference/entities/club.entity.";
 import { UserPlayerEntity, UserPlayerSkillEntity } from "./entities/player-user.entity";
 
 @Module({

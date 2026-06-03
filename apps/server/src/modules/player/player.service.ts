@@ -1,9 +1,9 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
-import { PlayerServiceInterface } from "./interfaces/player-service.interface";
+import { IPlayerService } from "./interfaces/player-service.interface";
 import { PlayerRepository } from "./player.repository";
 
 @Injectable()
-export class PlayerService implements PlayerServiceInterface {
+export class PlayerService implements IPlayerService {
   constructor(private readonly repository: PlayerRepository) {}
 
   private readonly allocatableKeys = new Set([
