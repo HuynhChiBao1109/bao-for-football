@@ -88,8 +88,8 @@ export class PlayerEntity extends AbstractEntity {
   @Column({ name: "stamina", type: "int", default: 75 })
   stamina: number;
 
-  @Column({ name: "position", type: "json" })
-  position: PlayerPositionFormat[];
+  @Column({ name: "positions", type: "json" })
+  positions: PlayerPositionFormat[];
 
   @ManyToOne(() => CountryEntity, { nullable: true })
   @JoinColumn({ name: "country_id" })

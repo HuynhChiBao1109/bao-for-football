@@ -68,6 +68,44 @@ function toInt(value, fallback) {
   return Number.isFinite(num) ? Math.trunc(num) : fallback;
 }
 
+function normalizePositions(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter((item) => item && typeof item === "object")
+    .map((item) => ({
+      position: String(item.position || "").trim(),
+      rating: Number(item.rating),
+    }))
+    .filter((item) => item.position && Number.isFinite(item.rating));
+}
+
+function normalizeJsonValue(value) {
+  if (value == null) {
+    return null;
+  }
+
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
+  }
+
+  return value;
+}
+
+function serializeQueryValue(value) {
+  if (Array.isArray(value) || (value && typeof value === "object")) {
+    return JSON.stringify(value);
+  }
+
+  return value;
+}
+
 function normalizePlayer(item, leagueCountryName) {
   const name = String(item?.name || "").trim();
   if (!name) {
@@ -102,6 +140,7 @@ function normalizePlayer(item, leagueCountryName) {
     acceleration: toInt(item?.acceleration, 75),
     speed: toInt(item?.speed, 75),
     stamina: toInt(item?.stamina, 75),
+    positions: normalizePositions(item?.positions),
   };
 }
 
@@ -175,7 +214,9 @@ async function insertBatch(connection, table, columns, rows) {
 
   const chunkSize = 200;
   for (let i = 0; i < rows.length; i += chunkSize) {
-    const chunk = rows.slice(i, i + chunkSize);
+    const chunk = rows
+      .slice(i, i + chunkSize)
+      .map((row) => row.map((value) => serializeQueryValue(value)));
     await connection.query(`INSERT INTO ${table} (${columns}) VALUES ?`, [chunk]);
   }
 }
@@ -374,7 +415,7 @@ async function migrateClubs(connection, leaguesWithCountryId, leagueByName) {
 
 async function migratePlayers(connection, clubsWithRefs, clubByKey, countryIdByName) {
   const [existingRows] = await connection.execute(
-    "SELECT id, name, season, avatar_url, country_id, club_id, height, body_type, `pass`, long_pass, vision, shoot, tackle, balance, dribbling, acceleration, speed, stamina FROM players",
+    "SELECT id, name, season, avatar_url, country_id, club_id, height, body_type, `pass`, long_pass, vision, shoot, tackle, balance, dribbling, acceleration, speed, stamina, positions FROM players",
   );
 
   const existingByKey = new Map();
@@ -417,7 +458,9 @@ async function migratePlayers(connection, clubsWithRefs, clubByKey, countryIdByN
         acceleration: player.acceleration,
         speed: player.speed,
         stamina: player.stamina,
+        positions: normalizePositions(player.positions),
       };
+
 
       const key = `${normalizeKey(record.name)}|${String(record.season)}`;
       const existing = existingByKey.get(key);
@@ -441,6 +484,7 @@ async function migratePlayers(connection, clubsWithRefs, clubByKey, countryIdByN
           record.acceleration,
           record.speed,
           record.stamina,
+          record.positions,
         ]);
         continue;
       }
@@ -460,7 +504,8 @@ async function migratePlayers(connection, clubsWithRefs, clubByKey, countryIdByN
         Number(existing.dribbling) !== Number(record.dribbling) ||
         Number(existing.acceleration) !== Number(record.acceleration) ||
         Number(existing.speed) !== Number(record.speed) ||
-        Number(existing.stamina) !== Number(record.stamina);
+        Number(existing.stamina) !== Number(record.stamina) ||
+        JSON.stringify(normalizeJsonValue(existing.positions)) !== JSON.stringify(record.positions);
 
       if (changed) {
         toUpdate.push([
@@ -479,6 +524,7 @@ async function migratePlayers(connection, clubsWithRefs, clubByKey, countryIdByN
           record.acceleration,
           record.speed,
           record.stamina,
+          JSON.stringify(record.positions),
           existing.id,
         ]);
       }
@@ -488,13 +534,13 @@ async function migratePlayers(connection, clubsWithRefs, clubByKey, countryIdByN
   await insertBatch(
     connection,
     "players",
-    "name, season, avatar_url, country_id, club_id, height, body_type, `pass`, long_pass, vision, shoot, tackle, balance, dribbling, acceleration, speed, stamina",
+    "name, season, avatar_url, country_id, club_id, height, body_type, `pass`, long_pass, vision, shoot, tackle, balance, dribbling, acceleration, speed, stamina, positions",
     toInsert,
   );
 
   for (const values of toUpdate) {
     await connection.execute(
-      "UPDATE players SET avatar_url = ?, country_id = ?, club_id = ?, height = ?, body_type = ?, `pass` = ?, long_pass = ?, vision = ?, shoot = ?, tackle = ?, balance = ?, dribbling = ?, acceleration = ?, speed = ?, stamina = ? WHERE id = ?",
+      "UPDATE players SET avatar_url = ?, country_id = ?, club_id = ?, height = ?, body_type = ?, `pass` = ?, long_pass = ?, vision = ?, shoot = ?, tackle = ?, balance = ?, dribbling = ?, acceleration = ?, speed = ?, stamina = ?, positions = ? WHERE id = ?",
       values,
     );
   }

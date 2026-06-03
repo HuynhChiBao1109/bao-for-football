@@ -10,6 +10,7 @@ import {
 import { EPlayerSkill } from "../enum/player-skill.enum";
 import { TeamEntity } from "src/modules/team/entities/team.entities";
 import { UserEntity } from "src/modules/user/user.entities";
+import { PlayerPositionFormat } from "../types/player-position-format.type";
 
 @Entity("user_players")
 export class UserPlayerEntity extends AbstractEntity {
@@ -39,7 +40,10 @@ export class UserPlayerEntity extends AbstractEntity {
 
   @Column({ name: "bonus_goalkeeping", type: "int", default: 0 })
   bonusGoalkeeping!: number;
-  
+
+  @Column({ name: "positions", type: "json" })
+  positions: PlayerPositionFormat[];
+
   @ManyToOne(() => UserPlayerSkillEntity, (skill) => skill.userPlayerId)
   skills: UserPlayerSkillEntity[];
 
@@ -61,7 +65,9 @@ export class UserPlayerSkillEntity extends AbstractEntity {
 
   @Column({ name: "skill", type: "enum", enum: EPlayerSkill })
   skill: EPlayerSkill;
-  
-  @ManyToOne(() => UserPlayerEntity, (player) => player.skills, { onDelete: "CASCADE" })
+
+  @ManyToOne(() => UserPlayerEntity, (player) => player.skills, {
+    onDelete: "CASCADE",
+  })
   userPlayer: UserPlayerEntity;
 }

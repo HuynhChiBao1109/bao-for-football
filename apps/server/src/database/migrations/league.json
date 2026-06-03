@@ -81,7 +81,17 @@
             "dribbling": 91,
             "acceleration": 91,
             "speed": 90,
-            "stamina": 90
+            "stamina": 90,
+            "positions": [
+              {
+                "position": "RW",
+                "rating": 1
+              },
+              {
+                "position": "ST",
+                "rating": 0.9
+              }
+            ]
           },
           {
             "name": "Virgil van Dijk",
@@ -100,7 +110,17 @@
             "dribbling": 72,
             "acceleration": 75,
             "speed": 82,
-            "stamina": 87
+            "stamina": 87,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              },
+              {
+                "position": "CDM",
+                "rating": 0.7
+              }
+            ]
           },
           {
             "name": "Alisson Becker",
@@ -119,7 +139,13 @@
             "dribbling": 52,
             "acceleration": 60,
             "speed": 58,
-            "stamina": 74
+            "stamina": 74,
+            "positions": [
+              {
+                "position": "GK",
+                "rating": 1
+              }
+            ]
           },
           {
             "name": "Trent Alexander-Arnold",
@@ -138,7 +164,13 @@
             "dribbling": 84,
             "acceleration": 79,
             "speed": 80,
-            "stamina": 88
+            "stamina": 88,
+            "positions": [
+              {
+                "position": "RB",
+                "rating": 1
+              }
+            ]
           },
           {
             "name": "Alexis Mac Allister",
@@ -157,7 +189,17 @@
             "dribbling": 85,
             "acceleration": 78,
             "speed": 77,
-            "stamina": 87
+            "stamina": 87,
+            "positions": [
+              {
+                "position": "CAM",
+                "rating": 1
+              },
+              {
+                "position": "CM",
+                "rating": 0.9
+              }
+            ]
           },
           {
             "name": "Ryan Gravenberch",
@@ -176,7 +218,17 @@
             "dribbling": 87,
             "acceleration": 82,
             "speed": 83,
-            "stamina": 85
+            "stamina": 85,
+            "positions": [
+              {
+                "position": "CDM",
+                "rating": 1
+              },
+              {
+                "position": "CM",
+                "rating": 0.9
+              }
+            ]
           },
           {
             "name": "Dominik Szoboszlai",
@@ -195,7 +247,17 @@
             "dribbling": 86,
             "acceleration": 83,
             "speed": 84,
-            "stamina": 90
+            "stamina": 90,
+            "positions": [
+              {
+                "position": "CAM",
+                "rating": 1
+              },
+              {
+                "position": "CM",
+                "rating": 0.9
+              }
+            ]
           },
           {
             "name": "Curtis Jones",
@@ -214,7 +276,17 @@
             "dribbling": 87,
             "acceleration": 80,
             "speed": 79,
-            "stamina": 84
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              },
+              {
+                "position": "CAM",
+                "rating": 0.9
+              }
+            ]
           },
           {
             "name": "Luis Díaz",
@@ -233,7 +305,17 @@
             "dribbling": 90,
             "acceleration": 91,
             "speed": 92,
-            "stamina": 86
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "LW",
+                "rating": 1
+              },
+              {
+                "position": "ST",
+                "rating": 0.9
+              }
+            ]
           },
           {
             "name": "Cody Gakpo",
@@ -252,7 +334,17 @@
             "dribbling": 87,
             "acceleration": 85,
             "speed": 86,
-            "stamina": 84
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "RW",
+                "rating": 1
+              },
+              {
+                "position": "ST",
+                "rating": 0.9
+              }
+            ]
           },
           {
             "name": "Darwin Núñez",
@@ -271,7 +363,17 @@
             "dribbling": 82,
             "acceleration": 90,
             "speed": 92,
-            "stamina": 88
+            "stamina": 88,
+            "positions": [
+              {
+                "position": "ST",
+                "rating": 1
+              },
+              {
+                "position": "LW",
+                "rating": 0.9
+              }
+            ]
           },
           {
             "name": "Diogo Jota",
@@ -290,7 +392,17 @@
             "dribbling": 86,
             "acceleration": 84,
             "speed": 83,
-            "stamina": 82
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "ST",
+                "rating": 1
+              },
+              {
+                "position": "RW",
+                "rating": 0.9
+              }
+            ]
           },
           {
             "name": "Federico Chiesa",
@@ -309,7 +421,17 @@
             "dribbling": 88,
             "acceleration": 90,
             "speed": 91,
-            "stamina": 84
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "RW",
+                "rating": 1
+              },
+              {
+                "position": "ST",
+                "rating": 0.9
+              }
+            ]
           },
           {
             "name": "Andrew Robertson",
@@ -328,7 +450,13 @@
             "dribbling": 78,
             "acceleration": 82,
             "speed": 84,
-            "stamina": 92
+            "stamina": 92,
+            "positions": [
+              {
+                "position": "LB",
+                "rating": 1
+              }
+            ]
           },
           {
             "name": "Conor Bradley",
@@ -347,7 +475,13 @@
             "dribbling": 78,
             "acceleration": 84,
             "speed": 85,
-            "stamina": 86
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "RB",
+                "rating": 1
+              }
+            ]
           },
           {
             "name": "Ibrahima Konaté",
@@ -366,7 +500,17 @@
             "dribbling": 70,
             "acceleration": 79,
             "speed": 84,
-            "stamina": 82
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              },
+              {
+                "position": "RB",
+                "rating": 0.7
+              }
+            ]
           },
           {
             "name": "Joe Gomez",
@@ -385,7 +529,21 @@
             "dribbling": 72,
             "acceleration": 82,
             "speed": 84,
-            "stamina": 84
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              },
+              {
+                "position": "RB",
+                "rating": 0.9
+              },
+              {
+                "position": "LB",
+                "rating": 0.85
+              }
+            ]
           },
           {
             "name": "Jarell Quansah",
@@ -404,7 +562,17 @@
             "dribbling": 70,
             "acceleration": 75,
             "speed": 78,
-            "stamina": 80
+            "stamina": 80,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              },
+              {
+                "position": "RB",
+                "rating": 0.65
+              }
+            ]
           },
           {
             "name": "Wataru Endo",
@@ -423,7 +591,21 @@
             "dribbling": 76,
             "acceleration": 70,
             "speed": 68,
-            "stamina": 88
+            "stamina": 88,
+            "positions": [
+              {
+                "position": "CDM",
+                "rating": 1
+              },
+              {
+                "position": "CM",
+                "rating": 0.85
+              },
+              {
+                "position": "CB",
+                "rating": 0.75
+              }
+            ]
           },
           {
             "name": "Harvey Elliott",
@@ -442,7 +624,21 @@
             "dribbling": 88,
             "acceleration": 82,
             "speed": 80,
-            "stamina": 80
+            "stamina": 80,
+            "positions": [
+              {
+                "position": "CAM",
+                "rating": 1
+              },
+              {
+                "position": "RW",
+                "rating": 0.95
+              },
+              {
+                "position": "CM",
+                "rating": 0.85
+              }
+            ]
           }
         ]
       },
