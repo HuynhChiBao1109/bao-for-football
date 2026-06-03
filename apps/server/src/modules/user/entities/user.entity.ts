@@ -24,9 +24,6 @@ export class UserEntity {
   @Column({ name: "is_admin", type: "boolean", default: false })
   isAdmin: boolean;
 
-  @Column({ type: "bigint", default: 360000000 })
-  budget: bigint;
-
   @OneToMany(() => TeamEntity, (team) => team.userId)
   teams: TeamEntity[];
 

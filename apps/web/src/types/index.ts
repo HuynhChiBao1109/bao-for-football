@@ -108,15 +108,15 @@ export type SpecialSkill = {
 // ─── Session Data (from /me) ───────────────────────────────────────────────────
 
 export type SessionData = {
-  user?: { id: number; username: string };
+  user?: { id: number; userName: string };
   team?: {
-    clubId: number;
-    clubName: string;
-    budget: number;
+    id: number;
+    userId: number;
+    teamName: string;
+    imgUrl?: string;
     rankPoint: number;
-    tacticsTeamId: string;
+    budget?: number;
   } | null;
-  teams?: Array<Record<string, unknown>>;
 };
 
 // ─── Tactics ──────────────────────────────────────────────────────────────────

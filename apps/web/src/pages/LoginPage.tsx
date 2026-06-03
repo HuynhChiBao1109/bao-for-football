@@ -34,15 +34,8 @@ export function LoginPage() {
     setError('');
   }, [tab]);
 
-  function hasEmptyTeams(payload: any) {
-    const teams = payload?.team ?? payload?.teams ?? [];
-    if (Array.isArray(teams)) {
-      return teams.length === 0;
-    }
-    if (!teams || typeof teams !== 'object') {
-      return true;
-    }
-    return false;
+  function hasNoTeam(payload: any) {
+    return !payload?.team;
   }
 
   async function submitLogin(e: React.FormEvent) {
@@ -58,7 +51,7 @@ export function LoginPage() {
       }
 
       const me = await apiClient('/api/v1/auth/me', { token: data.token });
-      if (hasEmptyTeams(me)) {
+      if (hasNoTeam(me)) {
         navigate(ROUTES.teamSetup, { replace: true });
         return;
       }

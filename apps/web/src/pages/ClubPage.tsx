@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '../hooks/useSession';
 import { useAuth } from '../hooks/useAuth';
-import { useClubDetail } from '../hooks/useClubDetail';
 import { ROUTES } from '../routes';
 import { Banner } from '../components/feedback';
 import { ClubHeader } from '../components/ui/ClubHeader';
@@ -17,11 +16,7 @@ export function ClubPage() {
   const [notice, setNotice] = useState('');
 
   const team = sessionData?.team ?? null;
-  const clubId = team?.clubId;
-
-  const { data: club, isLoading: clubLoading, error: clubError } = useClubDetail(clubId);
-
-  const loading = sessionLoading || clubLoading;
+  const loading = sessionLoading;
 
   function handleLogout() {
     setSession(null);
@@ -52,7 +47,6 @@ export function ClubPage() {
 
         {/* Status messages */}
         {loading && <Banner text="Đang tải dữ liệu đội bóng từ service-core..." tone="info" />}
-        {clubError && <Banner text={(clubError as Error).message} tone="error" />}
         {!loading && !team && (
           <Banner
             text="Tài khoản hiện tại chưa có đội bóng được gán. Hãy chọn CLB khởi đầu để vào game."
@@ -64,9 +58,9 @@ export function ClubPage() {
           <>
             {/* Club Header with Logo, Budget, Rank */}
             <ClubHeader
-              clubName={team.clubName ?? 'CLB của bạn'}
-              clubLogo={club?.logo}
-              budget={Number(team.budget ?? 0)}
+              clubName={team.teamName ?? 'CLB của bạn'}
+              clubLogo={team.imgUrl}
+              budget={team.budget ? Number(team.budget) : 0}
               rankPoint={Number(team.rankPoint ?? 0)}
             />
 

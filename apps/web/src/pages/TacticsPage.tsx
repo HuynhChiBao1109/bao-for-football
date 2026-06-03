@@ -288,9 +288,11 @@ function shortName(value: string): string {
 
 export function TacticsPage() {
   const { data: sessionData } = useSession();
-  const tacticsTeamId =
-    sessionData?.team?.tacticsTeamId ??
-    (sessionData?.user?.id ? `user-${sessionData.user.id}` : '');
+  const tacticsTeamId = sessionData?.team?.id
+    ? `team-${sessionData.team.id}`
+    : sessionData?.user?.id
+      ? `user-${sessionData.user.id}`
+      : '';
 
   const { data: loaded, isLoading, error: loadError } = useTactics(tacticsTeamId || undefined);
   const { data: cards = [], isLoading: isCardsLoading, error: cardError } = usePlayerCards();
@@ -517,7 +519,7 @@ export function TacticsPage() {
           <p className="mt-4 text-sm leading-6 text-slate-300">
             Tactics Team ID:{' '}
             <span className="font-semibold text-emerald-300">{tacticsTeamId || 'N/A'}</span>
-            {sessionData?.team?.clubName ? ` · CLB: ${sessionData.team.clubName}` : ''}
+            {sessionData?.team?.teamName ? ` · CLB: ${sessionData.team.teamName}` : ''}
           </p>
 
           {isLoading && <Banner text="Đang tải config chiến thuật từ server..." tone="info" />}

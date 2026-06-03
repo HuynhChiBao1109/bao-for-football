@@ -8,7 +8,7 @@ import { JwtService } from "@nestjs/jwt";
 import { AuthRepository } from "./auth.repository";
 import { IAuthService } from "./interfaces/auth-service.interface";
 import { AuthUser, TokenClaims } from "./types";
-import { RegisterDto } from "./dto/input/register.dto";
+import { RegisterDTO } from "./dto/input/register.dto";
 import { LoginDTO } from "./dto/input/login.dto";
 import { CryptoUtil } from "src/common/utils";
 import { TeamEntity } from "../team/entities/team.entity";
@@ -27,7 +27,7 @@ export class AuthService implements IAuthService {
     return this.configService.get<string>("JWT_SECRET") || "fifam-dev-secret";
   }
 
-  async register(data: RegisterDto): Promise<AuthUser> {
+  async register(data: RegisterDTO): Promise<AuthUser> {
     const { userName, password } = data;
 
     const safeUsername = userName.trim();
@@ -89,7 +89,7 @@ export class AuthService implements IAuthService {
 
   async me(
     claims: TokenClaims,
-  ): Promise<{ user: AuthUser; team: TeamEntity[] }> {
+  ): Promise<{ user: AuthUser; team: TeamEntity }> {
     const { id, userName, isAdmin } = claims;
     const user = await this.repository.findUserById(BigInt(id));
     if (!user) {
@@ -98,7 +98,7 @@ export class AuthService implements IAuthService {
     const teams = await this.teamService.getListTeamByUserId(user.id);
     return {
       user: { id: user.id, userName: user.userName, isAdmin },
-      team: teams,
+      team: teams[0],
     };
   }
 

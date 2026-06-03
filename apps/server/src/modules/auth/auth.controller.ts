@@ -5,7 +5,7 @@ import { Public } from "../../common/decorations/public.decoration";
 import { TokenClaims } from "./types";
 import { AuthService } from "./auth.service";
 import { LoginDTO } from "./dto/input/login.dto";
-import { RegisterDto } from "./dto/input/register.dto";
+import { RegisterDTO } from "./dto/input/register.dto";
 
 @ApiTags("auth")
 @Controller("api/v1/auth")
@@ -14,7 +14,7 @@ export class AuthController {
 
   @Post("register")
   @Public()
-  async register(@Body() registerDto: RegisterDto) {
+  async register(@Body() registerDto: RegisterDTO) {
     return this.authService.register(registerDto);
   }
 

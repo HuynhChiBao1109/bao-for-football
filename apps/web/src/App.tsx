@@ -38,7 +38,7 @@ function RequireStarterTeam({ children }: { children: React.ReactNode }) {
   }
 
   const isTeamSetupPath = location.pathname === ROUTES.teamSetup;
-  const hasAssignedTeam = Boolean(sessionData?.team) || Boolean(sessionData?.teams?.length);
+  const hasAssignedTeam = Boolean(sessionData?.team);
 
   if (isLoading && !sessionData) {
     return (

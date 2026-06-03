@@ -10,21 +10,26 @@ export function useSession() {
     queryKey: ['session', token],
     queryFn: async () => {
       const payload = await apiClient('/api/v1/auth/me', { token });
-      const data = (payload ?? {}) as SessionData & { teams?: any[] };
-      const teams = Array.isArray((data as any).team)
-        ? ((data as any).team as any[])
-        : Array.isArray(data.teams)
-          ? data.teams
-          : [];
-
-      const normalizedTeam = !Array.isArray((data as any).team)
-        ? (data as any).team
-        : teams[0] ?? null;
+      const data = (payload ?? {}) as any;
 
       return {
         ...data,
-        team: normalizedTeam ?? undefined,
-        teams,
+        user: data?.user
+          ? {
+              id: Number(data.user.id ?? 0),
+              userName: String(data.user.userName ?? data.user.username ?? ''),
+            }
+          : undefined,
+        team: data?.team
+          ? {
+              id: Number(data.team.id ?? 0),
+              userId: Number(data.team.userId ?? 0),
+              teamName: String(data.team.teamName ?? ''),
+              imgUrl: data.team.imgUrl ? String(data.team.imgUrl) : undefined,
+              rankPoint: Number(data.team.rankPoint ?? 0),
+              budget: data.team.budget ? Number(data.team.budget) : undefined,
+            }
+          : null,
       } as SessionData;
     },
     enabled: Boolean(token),
