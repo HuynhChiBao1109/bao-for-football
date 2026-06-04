@@ -1,12 +1,12 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
-import { ETeamFormation } from "../types/team-formation.enum";
-import { ETeamType } from "../types/team-type.enum";
+import { ETeamFormation } from "../enums/team-formation.enum";
+import { ETeamType } from "../enums/team-type.enum";
 import { UserEntity } from "src/modules/user/entities/user.entity";
 import { TeamFormationEntity } from "./team-formatition.entity";
 import { AbstractEntity } from "src/database/database.abjact";
 import { CampainEntity } from "src/modules/campain/entities/campain.entity";
 
-@Entity("user_teams")
+@Entity("teams")
 export class TeamEntity extends AbstractEntity {
   @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
   id: bigint;

@@ -3,7 +3,7 @@ import { UserPlayerEntity } from "src/modules/player/entities/player-user.entity
 import { TeamEntity } from "./team.entity";
 import { AbstractEntity } from "src/database/database.abjact";
 
-@Entity("user_team_formations")
+@Entity("team_formations")
 export class TeamFormationEntity extends AbstractEntity {
   @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
   id: bigint;

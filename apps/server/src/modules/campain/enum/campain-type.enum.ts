@@ -1,3 +1,3 @@
 export enum ECampainType {
-  NORMAL = "normal",
+  NORMAL = 1,
 }

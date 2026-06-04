@@ -16,9 +16,6 @@ export class UserEntity {
   @Column({ name: "salt", type: "varchar", length: 255 })
   salt: string;
 
-  @Column({ name: "is_admin", type: "boolean", default: false })
-  isAdmin: boolean;
-
   @OneToMany(() => TeamEntity, (team) => team.userId)
   teams: TeamEntity[];
 

@@ -3,7 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import { AuthRepository } from "./auth.repository";
 import { IAuthService } from "./interfaces/auth-service.interface";
-import { AuthUser, TokenClaims } from "./types";
+import { AuthUser } from "./types";
 import { RegisterDTO } from "./dto/input/register.dto";
 import { LoginDTO } from "./dto/input/login.dto";
 import { CryptoUtil } from "src/common/utils";
@@ -83,7 +83,7 @@ export class AuthService implements IAuthService {
     };
   }
 
-  async me(claims: TokenClaims): Promise<{ user: AuthUser; team: TeamEntity }> {
+  async me(claims: AuthUser): Promise<{ user: AuthUser; team: TeamEntity }> {
     const { id, userName, isAdmin } = claims;
     const user = await this.repository.findUserById(BigInt(id));
     if (!user) {
@@ -96,14 +96,14 @@ export class AuthService implements IAuthService {
     };
   }
 
-  private async signToken(claims: TokenClaims): Promise<string> {
+  private async signToken(claims: AuthUser): Promise<string> {
     return this.jwtService.signAsync(claims, {
       secret: this.jwtSecret(),
       expiresIn: "24h",
     });
   }
 
-  async verifyToken(token: string): Promise<TokenClaims> {
+  async verifyToken(token: string): Promise<AuthUser> {
     try {
       const claims = await this.jwtService.verifyAsync(token, {
         secret: this.jwtSecret(),

@@ -12,7 +12,7 @@ import { Logger } from "@nestjs/common";
 import { SocketService } from "./socket.service";
 import { Server, Socket } from "socket.io";
 import { AuthService } from "../auth/auth.service";
-import { TokenClaims } from "../auth/types";
+import { AuthUser } from "../auth/types";
 import { ESocketChannel } from "./enums";
 
 @WebSocketGateway({
@@ -108,7 +108,7 @@ export class SocketGateway implements OnGatewayInit, OnGatewayConnection, OnGate
       return client.data.userId;
     }
 
-    const claims = client.data.claims as TokenClaims | undefined;
+    const claims = client.data.claims as AuthUser | undefined;
 
     if (!claims) {
       return null;
@@ -117,7 +117,7 @@ export class SocketGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     return this.normalizeUserId(claims.id);
   }
 
-  private normalizeUserId(userId: TokenClaims["id"]): string {
+  private normalizeUserId(userId: AuthUser["id"]): string {
     return String(userId);
   }
 }

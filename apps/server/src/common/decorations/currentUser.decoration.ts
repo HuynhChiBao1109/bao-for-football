@@ -1,9 +1,9 @@
 import { createParamDecorator, ExecutionContext } from "@nestjs/common";
-import { TokenClaims } from "../../modules/auth/types";
+import { AuthUser } from "../../modules/auth/types";
 
 export const CurrentUser = createParamDecorator(
-  (property: keyof TokenClaims | undefined, context: ExecutionContext) => {
-    const request = context.switchToHttp().getRequest<{ user?: TokenClaims }>();
+  (property: keyof AuthUser | undefined, context: ExecutionContext) => {
+    const request = context.switchToHttp().getRequest<{ user?: AuthUser }>();
     const user = request.user;
     if (!property) {
       return user;
