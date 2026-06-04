@@ -28,9 +28,7 @@ export class GachaService implements GachaServiceInterface {
     if (!playerPool.length) {
       throw new BadRequestException("banner not found");
     }
-    const selectedPlayer = playerPool[
-      Math.floor(Math.random() * playerPool.length)
-    ] ?? {
+    const selectedPlayer = playerPool[Math.floor(Math.random() * playerPool.length)] ?? {
       id: 0,
       name: "Unknown",
       imageUrl: "",

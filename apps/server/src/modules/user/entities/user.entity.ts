@@ -1,9 +1,4 @@
-import {
-  Column,
-  Entity,
-  OneToMany,
-  PrimaryGeneratedColumn,
-} from "typeorm";
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { TeamEntity } from "../../team/entities/team.entity";
 import { UserPlayerEntity } from "src/modules/player/entities/player-user.entity";
 

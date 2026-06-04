@@ -9,13 +9,7 @@ import { AuthUser } from "../auth/types";
 export class MatchService implements MatchServiceInterface {
   constructor(private readonly repository: MatchRepository) {}
 
-  async startCampaignMatch(
-    user: AuthUser,
-    campaignMatchId: bigint,
-  ): Promise<any> {}
+  async startCampaignMatch(user: AuthUser, campaignMatchId: bigint): Promise<any> {}
 
-  async finalize(
-    matchId: string,
-    payload: Partial<MatchEntity>,
-  ): Promise<any> {}
+  async finalize(matchId: string, payload: Partial<MatchEntity>): Promise<any> {}
 }

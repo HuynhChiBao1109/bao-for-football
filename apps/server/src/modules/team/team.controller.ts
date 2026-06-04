@@ -11,6 +11,6 @@ export class TeamController {
 
   @Post("club/:clubId")
   async createByClub(@Param("clubId") clubId: bigint, @CurrentUser() user: AuthUser) {
-    return this.teamService.createByClub({clubId, user});
+    return this.teamService.createByClub({ clubId, user });
   }
 }

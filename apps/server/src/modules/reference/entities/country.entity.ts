@@ -2,7 +2,6 @@ import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { LeagueEntity } from "./league.entity";
 import { PlayerEntity } from "../../player/entities/player-admin.entity";
 
-
 @Entity("countries")
 export class CountryEntity {
   @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })

@@ -9,24 +9,15 @@ export class GachaController {
   constructor(private readonly gachaService: GachaService) {}
 
   @Get("progress")
-  async getProgress(
-    @CurrentUser("id") userId: number,
-    @Query("bannerCode") bannerCode: string,
-  ) {
+  async getProgress(@CurrentUser("id") userId: number, @Query("bannerCode") bannerCode: string) {
     return {
       data: await this.gachaService.getProgress(Number(userId), bannerCode),
     };
   }
 
   @Post("roll")
-  async roll(
-    @CurrentUser("id") userId: number,
-    @Body() body: { bannerCode: string },
-  ) {
-    const result = await this.gachaService.roll(
-      Number(userId),
-      body.bannerCode,
-    );
+  async roll(@CurrentUser("id") userId: number, @Body() body: { bannerCode: string }) {
+    const result = await this.gachaService.roll(Number(userId), body.bannerCode);
     return { message: "roll successful", data: result };
   }
 }

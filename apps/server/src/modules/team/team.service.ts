@@ -31,10 +31,10 @@ export class TeamService implements ITeamService {
     }
 
     const createTeamData: Partial<TeamEntity> = {
-       userId: user.id,
-       teamName: club.name,
-       imgUrl: club.imgUrl,
-    }
+      userId: user.id,
+      teamName: club.name,
+      imgUrl: club.imgUrl,
+    };
 
     const newTeam = this.repository.create(createTeamData);
 

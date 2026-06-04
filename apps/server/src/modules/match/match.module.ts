@@ -12,12 +12,7 @@ import { MatchPlayerStatsEntity } from "./entities/match-player-stats.entity";
 @Module({
   imports: [
     AuthModule,
-    TypeOrmModule.forFeature([
-      TeamEntity,
-      MatchEntity,
-      MatchEventEntity,
-      MatchPlayerStatsEntity,
-    ]),
+    TypeOrmModule.forFeature([TeamEntity, MatchEntity, MatchEventEntity, MatchPlayerStatsEntity]),
   ],
   controllers: [MatchController],
   providers: [MatchRepository, MatchService],

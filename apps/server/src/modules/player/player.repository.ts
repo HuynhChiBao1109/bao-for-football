@@ -28,7 +28,7 @@ export class PlayerRepository {
       where: { id: playerId },
       relations: {
         skills: true,
-      }
+      },
     });
   }
 
@@ -63,7 +63,5 @@ export class PlayerRepository {
     }
 
     return newUserPlayer;
-    
   }
-
 }

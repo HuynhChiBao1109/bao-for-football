@@ -14,9 +14,7 @@ import { TeamModule } from "../team/team.module";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
-      UserEntity
-    ]),
+    TypeOrmModule.forFeature([UserEntity]),
     TeamModule,
     JwtModule.registerAsync({
       inject: [ConfigService],

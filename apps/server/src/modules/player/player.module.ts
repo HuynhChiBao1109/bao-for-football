@@ -1,10 +1,7 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { PlayerController } from "./player.controller";
-import {
-  PlayerEntity,
-  PlayerSkillEntity,
-} from "./entities/player-admin.entity";
+import { PlayerEntity, PlayerSkillEntity } from "./entities/player-admin.entity";
 import { PlayerRepository } from "./player.repository";
 import { PlayerService } from "./player.service";
 import { LeagueEntity } from "../reference/entities/league.entity";
@@ -24,11 +21,8 @@ import { UserPlayerEntity, UserPlayerSkillEntity } from "./entities/player-user.
       PlayerEntity,
     ]),
   ],
-  controllers: [PlayerController ],
-  providers: [
-    PlayerRepository,
-    PlayerService,
-  ],
+  controllers: [PlayerController],
+  providers: [PlayerRepository, PlayerService],
   exports: [PlayerService],
 })
 export class PlayerModule {}

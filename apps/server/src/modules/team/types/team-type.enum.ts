@@ -1,4 +1,4 @@
 export enum ETeamType {
-    USER = "USER",
-    BOT = "BOT",
+  USER = "USER",
+  BOT = "BOT",
 }

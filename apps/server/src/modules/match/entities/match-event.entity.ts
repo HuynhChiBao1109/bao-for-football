@@ -1,11 +1,5 @@
 import { AbstractEntity } from "src/database/database.abjact";
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-} from "typeorm";
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 import { MatchEntity } from "./match.entity";
 import { EMatchEvent } from "../enums";
 

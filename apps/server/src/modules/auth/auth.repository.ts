@@ -12,7 +12,6 @@ export class AuthRepository {
     private readonly userRepository: Repository<UserEntity>,
   ) {}
 
-
   async findUserByUserName(username: string): Promise<UserEntity> {
     return await this.userRepository.findOne({ where: { userName: username } });
   }
@@ -21,13 +20,7 @@ export class AuthRepository {
     return await this.userRepository.findOne({ where: { id: id } });
   }
 
-  async create({
-    userName,
-    password,
-  }: {
-    userName: string;
-    password: string;
-  }): Promise<AuthUser> {
+  async create({ userName, password }: { userName: string; password: string }): Promise<AuthUser> {
     const salt = await CryptoUtil.generateSalt();
     const passwordHash = await CryptoUtil.generateHash(password, salt);
 

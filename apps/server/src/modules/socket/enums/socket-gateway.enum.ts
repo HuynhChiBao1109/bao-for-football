@@ -1,2 +1,3 @@
-export enum ESocketGateway {
-}
+enum ESocketGateway {}
+
+export { ESocketGateway };

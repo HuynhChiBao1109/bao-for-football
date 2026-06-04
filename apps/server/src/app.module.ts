@@ -1,9 +1,4 @@
-import {
-  MiddlewareConsumer,
-  Module,
-  NestModule,
-  RequestMethod,
-} from "@nestjs/common";
+import { MiddlewareConsumer, Module, NestModule, RequestMethod } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { ServeStaticModule } from "@nestjs/serve-static";
 import { TypeOrmModule } from "@nestjs/typeorm";
@@ -15,12 +10,12 @@ import { AuthModule } from "./modules/auth/auth.module";
 import { GachaModule } from "./modules/gacha/gacha.module";
 import { MatchModule } from "./modules/match/match.module";
 import { PlayerModule } from "./modules/player/player.module";
-import { TeamModule } from './modules/team/team.module';
-import { TourmentModule } from './modules/tourment/tourment.module';
-import { UserModule } from './modules/user/user.module';
-import { CampainModule } from './modules/campain/campain.module';
-import { ReferenceModule } from './modules/reference/reference.module';
-import { SocketModule } from './modules/socket/socket.module';
+import { TeamModule } from "./modules/team/team.module";
+import { TourmentModule } from "./modules/tourment/tourment.module";
+import { UserModule } from "./modules/user/user.module";
+import { CampainModule } from "./modules/campain/campain.module";
+import { ReferenceModule } from "./modules/reference/reference.module";
+import { SocketModule } from "./modules/socket/socket.module";
 
 const escapeIdentifier = (value: string) => value.replace(/`/g, "``");
 
@@ -53,9 +48,7 @@ const dropTablesNotInEntities = async (dataSource: DataSource) => {
   await dataSource.query("SET FOREIGN_KEY_CHECKS = 0");
   try {
     for (const tableName of tablesToDrop) {
-      await dataSource.query(
-        `DROP TABLE IF EXISTS \`${escapeIdentifier(tableName)}\``,
-      );
+      await dataSource.query(`DROP TABLE IF EXISTS \`${escapeIdentifier(tableName)}\``);
     }
   } finally {
     await dataSource.query("SET FOREIGN_KEY_CHECKS = 1");

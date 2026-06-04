@@ -13,15 +13,14 @@ import { SocketService } from "./socket.service";
 import { Server, Socket } from "socket.io";
 import { AuthService } from "../auth/auth.service";
 import { TokenClaims } from "../auth/types";
+import { ESocketChannel } from "./enums";
 
 @WebSocketGateway({
   cors: {
     origin: "*",
   },
 })
-export class SocketGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
-{
+export class SocketGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
@@ -60,15 +59,15 @@ export class SocketGateway
       return;
     }
 
-    client.join(this.getUserRoom(userId));
-    this.logger.debug(`socket ${client.id} joined ${this.getUserRoom(userId)}`);
+    client.join(`${ESocketChannel.USER}${userId}`);
+    this.logger.debug(`socket ${client.id} joined ${ESocketChannel.USER}${userId}`);
   }
 
   handleDisconnect(client: Socket) {
     const userId = this.getUserId(client);
 
     if (userId) {
-      this.logger.debug(`socket ${client.id} disconnected from ${this.getUserRoom(userId)}`);
+      this.logger.debug(`socket ${client.id} disconnected from ${ESocketChannel.USER}${userId}`);
     }
   }
 
@@ -120,9 +119,5 @@ export class SocketGateway
 
   private normalizeUserId(userId: TokenClaims["id"]): string {
     return String(userId);
-  }
-
-  private getUserRoom(userId: string): string {
-    return `user:${userId}`;
   }
 }

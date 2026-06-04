@@ -10,10 +10,7 @@ export class MatchController {
   constructor(private readonly matchService: MatchService) {}
 
   @Post("campaign/start")
-  async start(
-    @CurrentUser() user: AuthUser,
-    @Body("campainId") campainId: bigint,
-  ) {
+  async start(@CurrentUser() user: AuthUser, @Body("campainId") campainId: bigint) {
     return this.matchService.startCampaignMatch(user, campainId);
   }
 }

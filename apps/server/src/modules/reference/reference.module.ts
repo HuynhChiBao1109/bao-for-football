@@ -8,9 +8,7 @@ import { ReferenceRepository } from "./reference.repository";
 import { ReferenceService } from "./reference.service";
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([ClubEntity, LeagueEntity, CountryEntity]),
-  ],
+  imports: [TypeOrmModule.forFeature([ClubEntity, LeagueEntity, CountryEntity])],
   controllers: [ReferenceController],
   providers: [ReferenceRepository, ReferenceService],
   exports: [ReferenceService],

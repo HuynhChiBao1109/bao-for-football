@@ -26,6 +26,10 @@ export class AuthController {
 
   @Get("me")
   async me(@CurrentUser() user: TokenClaims) {
-    return this.authService.me({id: user.id, userName: user.userName, isAdmin: user.isAdmin});
+    return this.authService.me({
+      id: user.id,
+      userName: user.userName,
+      isAdmin: user.isAdmin,
+    });
   }
 }

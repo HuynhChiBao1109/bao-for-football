@@ -1,11 +1,4 @@
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  OneToOne,
-  PrimaryGeneratedColumn,
-} from "typeorm";
+import { Column, Entity, JoinColumn, ManyToOne, OneToOne, PrimaryGeneratedColumn } from "typeorm";
 import { AbstractEntity } from "src/database/database.abjact";
 import { CampainEntity } from "./campain.entity";
 import { ClubEntity } from "src/modules/reference/entities/club.entity";
@@ -38,7 +31,9 @@ export class CampainMatchEntity extends AbstractEntity {
   @JoinColumn({ name: "campain_id" })
   campain: CampainEntity;
 
-  @ManyToOne(() => ClubEntity, (club) => club.campainMatches, { onDelete: "CASCADE" })
+  @ManyToOne(() => ClubEntity, (club) => club.campainMatches, {
+    onDelete: "CASCADE",
+  })
   @JoinColumn({ name: "competitor_club_id" })
   competitorClub: ClubEntity;
 

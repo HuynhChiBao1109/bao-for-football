@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  UnauthorizedException,
-} from "@nestjs/common";
+import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import { AuthRepository } from "./auth.repository";
@@ -87,9 +83,7 @@ export class AuthService implements IAuthService {
     };
   }
 
-  async me(
-    claims: TokenClaims,
-  ): Promise<{ user: AuthUser; team: TeamEntity }> {
+  async me(claims: TokenClaims): Promise<{ user: AuthUser; team: TeamEntity }> {
     const { id, userName, isAdmin } = claims;
     const user = await this.repository.findUserById(BigInt(id));
     if (!user) {

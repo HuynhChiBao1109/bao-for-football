@@ -5,7 +5,6 @@ import { ClubEntity } from "./entities/club.entity";
 import { LeagueEntity } from "./entities/league.entity";
 import { CountryEntity } from "./entities/country.entity";
 
-
 @Injectable()
 export class ReferenceRepository {
   constructor(
@@ -18,7 +17,6 @@ export class ReferenceRepository {
     @InjectRepository(CountryEntity)
     private readonly countryRepository: Repository<CountryEntity>,
   ) {}
-
 
   async getListClubByLeague(leagueId: bigint): Promise<ClubEntity[]> {
     return await this.clubRepository.find({ where: { leagueId } });

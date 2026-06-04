@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
+import { useAuth } from './hooks/useAuth';
 
 const F = { w: 100, h: 64 };
 const { baseUrl: MATCH_SOCKET_BASE_URL, path: MATCH_SOCKET_PATH } = resolveMatchSocketConfig(
@@ -342,6 +343,7 @@ const INITIAL_MATCH_STATS = {
 };
 
 function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
+  const { token } = useAuth();
   const [connState, setConnState] = useState('Connecting...');
   const [score, setScore] = useState({ home: 0, away: 0 });
   const [elapsedMS, setElapsedMS] = useState(0);
@@ -398,16 +400,19 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
   const eventQueueTimerRef = useRef(0);
   const socketRef = useRef(null);
 
-  const socketQuery = useMemo(() => {
-    return matchId ? { matchId } : undefined;
-  }, [matchId]);
-
   // keep phase ref in sync
   useEffect(() => {
     matchPhaseRef.current = matchPhase;
   }, [matchPhase]);
 
   useEffect(() => {
+    if (!token) {
+      setConnState('Missing auth token');
+      socketRef.current?.close();
+      socketRef.current = null;
+      return undefined;
+    }
+
     setConnState('Connecting...');
     setScore({ home: 0, away: 0 });
     setElapsedMS(0);
@@ -654,7 +659,7 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
       socket = io(MATCH_SOCKET_BASE_URL, {
         path: MATCH_SOCKET_PATH,
         transports: ['websocket'],
-        query: socketQuery,
+        auth: { token },
         autoConnect: false,
         reconnection: false,
       });
@@ -693,7 +698,7 @@ function MatchView({ embedded = false, onMatchEnd, matchId = '' }) {
       socket?.close();
       socketRef.current = null;
     };
-  }, [matchId, onMatchEnd, socketQuery]);
+  }, [matchId, onMatchEnd, token]);
 
   // auto-clear popup after its configured duration
   useEffect(() => {

@@ -34,11 +34,16 @@ export class TeamEntity extends AbstractEntity {
 
   @Column({ name: "rank_point", type: "int", default: 0 })
   rankPoint: number;
-  
+
   @Column({ type: "bigint", default: 360000000 })
   budget: bigint;
 
-  @Column({ name: "type", type: "enum", enum: ETeamType, default: ETeamType.BOT })
+  @Column({
+    name: "type",
+    type: "enum",
+    enum: ETeamType,
+    default: ETeamType.BOT,
+  })
   type!: ETeamType;
 
   @ManyToOne(() => UserEntity, (user) => user.teams, { onDelete: "CASCADE" })

@@ -1,2 +1,3 @@
-export enum ESocketEvent {
-}
+enum ESocketEvent {}
+
+export { ESocketEvent };
