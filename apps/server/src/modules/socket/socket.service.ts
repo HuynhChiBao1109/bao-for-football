@@ -1,26 +1,26 @@
 import { Injectable } from "@nestjs/common";
-import { CreateSocketDto } from "./dto/create-socket.dto";
-import { UpdateSocketDto } from "./dto/update-socket.dto";
+import { Server } from "socket.io";
+import { EmitRoomDTO } from "./dto/emit-room.dto";
 
 @Injectable()
 export class SocketService {
-  create(createSocketDto: CreateSocketDto) {
-    return "This action adds a new socket";
+  private server: Server;
+
+  setServer(server: Server) {
+    this.server = server;
   }
 
-  findAll() {
-    return `This action returns all socket`;
+  broadcast(event: string, data: any) {
+    this.server.emit(event, data);
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} socket`;
+  emitToRoom(data: EmitRoomDTO) {
+    const { roomId, event, data: eventData } = data;
+
+    this.server.to(roomId).emit(event, eventData);
   }
 
-  update(id: number, updateSocketDto: UpdateSocketDto) {
-    return `This action updates a #${id} socket`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} socket`;
+  emitToSocket(socketId: string, event: string, data: any) {
+    this.server.to(socketId).emit(event, data);
   }
 }
