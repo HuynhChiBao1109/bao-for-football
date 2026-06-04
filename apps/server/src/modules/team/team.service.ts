@@ -5,6 +5,7 @@ import { TeamEntity } from "./entities/team.entity";
 import { ReferenceService } from "../reference/reference.service";
 import { CreateTeamByClubDTO } from "./dto/create-team-by-club.dto";
 import { PlayerService } from "../player/player.service";
+import { ETeamType } from "./enums/team-type.enum";
 
 @Injectable()
 export class TeamService implements ITeamService {
@@ -34,6 +35,7 @@ export class TeamService implements ITeamService {
       userId: user.id,
       teamName: club.name,
       imgUrl: club.imgUrl,
+      type: ETeamType.USER,
     };
 
     const newTeam = this.repository.create(createTeamData);
