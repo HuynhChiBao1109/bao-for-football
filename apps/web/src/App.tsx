@@ -12,6 +12,7 @@ import { AiMatchPage } from './pages/AiMatchPage';
 import { PvpPage } from './pages/PvpPage';
 import { TeamSetupPage } from './pages/TeamSetupPage';
 import { useSession } from './hooks/useSession';
+import { useSocketSession } from './hooks/useSocketSession';
 import { ROUTES } from './routes';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -69,6 +70,8 @@ function App() {
   const { session, isAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  useSocketSession();
 
   // Redirect authenticated users away from login
   useEffect(() => {

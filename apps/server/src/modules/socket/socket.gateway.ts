@@ -1,34 +1,128 @@
-import { WebSocketGateway, SubscribeMessage, MessageBody } from '@nestjs/websockets';
-import { SocketService } from './socket.service';
-import { CreateSocketDto } from './dto/create-socket.dto';
-import { UpdateSocketDto } from './dto/update-socket.dto';
+import {
+  WebSocketGateway,
+  SubscribeMessage,
+  MessageBody,
+  OnGatewayConnection,
+  OnGatewayDisconnect,
+  OnGatewayInit,
+  WebSocketServer,
+  ConnectedSocket,
+} from "@nestjs/websockets";
+import { Logger } from "@nestjs/common";
+import { SocketService } from "./socket.service";
+import { Server, Socket } from "socket.io";
+import { AuthService } from "../auth/auth.service";
+import { TokenClaims } from "../auth/types";
 
-@WebSocketGateway()
-export class SocketGateway {
-  constructor(private readonly socketService: SocketService) {}
+@WebSocketGateway({
+  cors: {
+    origin: "*",
+  },
+})
+export class SocketGateway
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+{
+  @WebSocketServer()
+  server: Server;
 
-  @SubscribeMessage('createSocket')
-  create(@MessageBody() createSocketDto: CreateSocketDto) {
-    return this.socketService.create(createSocketDto);
+  private readonly logger = new Logger(SocketGateway.name);
+
+  constructor(
+    private readonly socketService: SocketService,
+    private readonly authService: AuthService,
+  ) {}
+
+  afterInit(server: Server) {
+    server.use(async (client, next) => {
+      const token = this.extractToken(client);
+
+      if (!token) {
+        next(new Error("missing auth token"));
+        return;
+      }
+
+      try {
+        const claims = await this.authService.verifyToken(token);
+        client.data.claims = claims;
+        client.data.userId = this.normalizeUserId(claims.id);
+        next();
+      } catch {
+        next(new Error("invalid auth token"));
+      }
+    });
   }
 
-  @SubscribeMessage('findAllSocket')
-  findAll() {
-    return this.socketService.findAll();
+  handleConnection(client: Socket) {
+    const userId = this.getUserId(client);
+
+    if (!userId) {
+      client.disconnect(true);
+      return;
+    }
+
+    client.join(this.getUserRoom(userId));
+    this.logger.debug(`socket ${client.id} joined ${this.getUserRoom(userId)}`);
   }
 
-  @SubscribeMessage('findOneSocket')
-  findOne(@MessageBody() id: number) {
-    return this.socketService.findOne(id);
+  handleDisconnect(client: Socket) {
+    const userId = this.getUserId(client);
+
+    if (userId) {
+      this.logger.debug(`socket ${client.id} disconnected from ${this.getUserRoom(userId)}`);
+    }
   }
 
-  @SubscribeMessage('updateSocket')
-  update(@MessageBody() updateSocketDto: UpdateSocketDto) {
-    return this.socketService.update(updateSocketDto.id, updateSocketDto);
+  @SubscribeMessage("ping")
+  handlePing(@MessageBody() data: any, @ConnectedSocket() client: Socket) {
+    console.log("Ping:", data);
+
+    return {
+      event: "pong",
+      data: "Hello FE",
+    };
   }
 
-  @SubscribeMessage('removeSocket')
-  remove(@MessageBody() id: number) {
-    return this.socketService.remove(id);
+  private extractToken(client: Socket): string | null {
+    const authToken = client.handshake.auth?.token;
+
+    if (typeof authToken === "string" && authToken.trim()) {
+      return authToken.trim();
+    }
+
+    const authorization = client.handshake.headers.authorization;
+
+    if (typeof authorization !== "string") {
+      return null;
+    }
+
+    const [prefix, token] = authorization.split(" ");
+
+    if (prefix !== "Bearer" || !token) {
+      return null;
+    }
+
+    return token;
+  }
+
+  private getUserId(client: Socket): string | null {
+    if (typeof client.data.userId === "string" && client.data.userId) {
+      return client.data.userId;
+    }
+
+    const claims = client.data.claims as TokenClaims | undefined;
+
+    if (!claims) {
+      return null;
+    }
+
+    return this.normalizeUserId(claims.id);
+  }
+
+  private normalizeUserId(userId: TokenClaims["id"]): string {
+    return String(userId);
+  }
+
+  private getUserRoom(userId: string): string {
+    return `user:${userId}`;
   }
 }
