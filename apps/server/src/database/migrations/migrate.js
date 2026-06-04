@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const mysql = require("mysql2/promise");
+const bcrypt = require("bcrypt");
 const { config } = require("dotenv");
 
 const PLAYER_SEASONS = new Set(["normal", "icon", "legend", "big_match", "CURRENT"]);
@@ -551,6 +552,139 @@ async function migratePlayers(connection, clubsWithRefs, clubByKey, countryIdByN
   };
 }
 
+// Ensure admin user exists (username: admin, password: 123). Returns admin user id.
+async function migrateAdminUser(connection) {
+  const [rows] = await connection.execute(
+    "SELECT id FROM users WHERE userName = ?",
+    ["admin"],
+  );
+
+  if (rows.length > 0) {
+    console.log("Admin user already exists, reusing existing admin.");
+    return rows[0].id;
+  }
+
+  const salt = await bcrypt.genSalt(10);
+  const passwordHash = await bcrypt.hash("123", salt);
+
+  const [result] = await connection.execute(
+    "INSERT INTO users (userName, password_hash, salt) VALUES (?, ?, ?)",
+    ["admin", passwordHash, salt],
+  );
+
+  console.log(`Admin user created with id: ${result.insertId}`);
+  return result.insertId;
+}
+
+// Create a BOT team for each club under the given admin user.
+async function migrateTeams(connection, clubsWithRefs, clubByKey, adminId) {
+  const [existingRows] = await connection.execute(
+    "SELECT id, team_name FROM teams WHERE user_id = ? AND type = 2",
+    [adminId],
+  );
+  const existingByName = new Set(existingRows.map((r) => normalizeKey(r.team_name)));
+
+  const toInsert = [];
+  for (const club of clubsWithRefs) {
+    const dbClub = clubByKey.get(`${normalizeKey(club.name)}|${String(club.leagueId)}`);
+    if (!dbClub) continue;
+
+    if (!existingByName.has(normalizeKey(club.name))) {
+      // columns: user_id, team_name, img_url, formation(F442=1), pass_ratio, shot_ratio, pressure, rank_point, budget, type(BOT=2)
+      toInsert.push([adminId, club.name, club.img_url || null, 1, 0, 0, 50, 0, 360000000, 2]);
+    }
+  }
+
+  await insertBatch(
+    connection,
+    "teams",
+    "user_id, team_name, img_url, formation, pass_ratio, shot_ratio, pressure, rank_point, budget, type",
+    toInsert,
+  );
+
+  return { inserted: toInsert.length };
+}
+
+// Insert user_players (and their skills) for each club's players under the admin user.
+async function migrateUserPlayersForAdmin(connection, clubsWithRefs, clubByKey, adminId) {
+  // Collect all DB club IDs from the migrated clubs
+  const clubDbIds = [];
+  for (const club of clubsWithRefs) {
+    const dbClub = clubByKey.get(`${normalizeKey(club.name)}|${String(club.leagueId)}`);
+    if (dbClub) clubDbIds.push(dbClub.id);
+  }
+
+  if (clubDbIds.length === 0) return { inserted: 0 };
+
+  // Fetch all players belonging to these clubs
+  const [allPlayers] = await connection.query(
+    "SELECT id, positions FROM players WHERE club_id IN (?)",
+    [clubDbIds],
+  );
+
+  if (allPlayers.length === 0) return { inserted: 0 };
+
+  // Find which players admin already owns
+  const [existingRows] = await connection.execute(
+    "SELECT player_id FROM user_players WHERE user_id = ?",
+    [adminId],
+  );
+  const existingPlayerIds = new Set(existingRows.map((r) => String(r.player_id)));
+
+  // Build rows to insert
+  const toInsert = [];
+  for (const player of allPlayers) {
+    if (existingPlayerIds.has(String(player.id))) continue;
+    const positions =
+      typeof player.positions === "string" ? player.positions : JSON.stringify(player.positions);
+    // columns: user_id, player_id, exp, bonus_attack, bonus_defense, bonus_agility, bonus_pass, bonus_goalkeeping, positions
+    toInsert.push([adminId, player.id, 0, 0, 0, 0, 0, 0, positions]);
+  }
+
+  if (toInsert.length === 0) return { inserted: 0 };
+
+  await insertBatch(
+    connection,
+    "user_players",
+    "user_id, player_id, exp, bonus_attack, bonus_defense, bonus_agility, bonus_pass, bonus_goalkeeping, positions",
+    toInsert,
+  );
+
+  // Retrieve the newly inserted user_player IDs
+  const newPlayerIds = toInsert.map((row) => row[1]);
+  const [newUserPlayers] = await connection.query(
+    "SELECT id, player_id FROM user_players WHERE user_id = ? AND player_id IN (?)",
+    [adminId, newPlayerIds],
+  );
+
+  // Fetch all relevant player skills in one query
+  const [allSkillRows] = await connection.query(
+    "SELECT player_id, skill FROM player_skills WHERE player_id IN (?)",
+    [newPlayerIds],
+  );
+  const skillsByPlayerId = new Map();
+  for (const row of allSkillRows) {
+    const key = String(row.player_id);
+    if (!skillsByPlayerId.has(key)) skillsByPlayerId.set(key, []);
+    skillsByPlayerId.get(key).push(row.skill);
+  }
+
+  // Batch insert user_player_skills
+  const skillsToInsert = [];
+  for (const userPlayer of newUserPlayers) {
+    const skills = skillsByPlayerId.get(String(userPlayer.player_id)) || [];
+    for (const skill of skills) {
+      skillsToInsert.push([userPlayer.id, skill]);
+    }
+  }
+
+  if (skillsToInsert.length > 0) {
+    await insertBatch(connection, "user_player_skills", "user_player_id, skill", skillsToInsert);
+  }
+
+  return { inserted: toInsert.length };
+}
+
 async function runMigration() {
   loadEnv();
 
@@ -574,6 +708,20 @@ async function runMigration() {
       countryIdByName,
     );
 
+    const adminId = await migrateAdminUser(connection);
+    const teamResult = await migrateTeams(
+      connection,
+      clubResult.data,
+      clubResult.clubByKey,
+      adminId,
+    );
+    const userPlayerResult = await migrateUserPlayersForAdmin(
+      connection,
+      clubResult.data,
+      clubResult.clubByKey,
+      adminId,
+    );
+
     await connection.commit();
 
     console.log(
@@ -587,6 +735,12 @@ async function runMigration() {
     );
     console.log(
       `Player migration completed. Inserted: ${playerResult.inserted}, updated: ${playerResult.updated}.`,
+    );
+    console.log(
+      `Team (BOT) migration completed. Inserted: ${teamResult.inserted}.`,
+    );
+    console.log(
+      `User-player migration for admin completed. Inserted: ${userPlayerResult.inserted}.`,
     );
   } catch (error) {
     await connection.rollback();
