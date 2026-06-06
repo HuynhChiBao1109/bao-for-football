@@ -1,31 +1,31 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Rajdhani:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700&display=swap');
 @import 'tailwindcss';
 
 :root {
-  --bg-0: #07111d;
-  --bg-1: #0b1930;
-  --bg-2: #112748;
-  --surface: rgba(8, 18, 32, 0.82);
-  --surface-soft: rgba(11, 24, 41, 0.74);
-  --surface-strong: rgba(5, 13, 23, 0.92);
-  --line: rgba(110, 180, 255, 0.18);
-  --line-strong: rgba(110, 180, 255, 0.36);
-  --text-main: #eef6ff;
-  --text-muted: #91a6bf;
-  --text-soft: #c9d7e8;
-  --accent: #34d399;
-  --accent-2: #5eead4;
-  --warning: #f7c66c;
-  --danger: #fb7185;
-  --hero: #72f1b8;
-  --hero-2: #58a6ff;
-  --shadow-panel: 0 26px 80px -38px rgba(0, 0, 0, 0.85);
-  --shadow-glow: 0 0 0 1px rgba(114, 241, 184, 0.06), 0 22px 60px -32px rgba(88, 166, 255, 0.65);
+  --bg-0: #050816;
+  --bg-1: #08112a;
+  --bg-2: #0f1d42;
+  --surface: rgba(8, 16, 38, 0.82);
+  --surface-soft: rgba(10, 21, 48, 0.76);
+  --surface-strong: rgba(5, 10, 24, 0.92);
+  --line: rgba(77, 138, 255, 0.26);
+  --line-strong: rgba(77, 138, 255, 0.5);
+  --text-main: #e8f3ff;
+  --text-muted: #86a2d0;
+  --text-soft: #c9ddff;
+  --accent: #49d3ff;
+  --accent-2: #6e80ff;
+  --warning: #8de9ff;
+  --danger: #ff7b7b;
+  --hero: #4cb5ff;
+  --hero-2: #5c7cff;
+  --shadow-panel: 0 34px 90px -46px rgba(0, 2, 12, 0.9);
+  --shadow-glow: 0 0 0 1px rgba(73, 211, 255, 0.12), 0 28px 66px -30px rgba(92, 124, 255, 0.65);
   --radius-xl: 28px;
   --radius-lg: 20px;
-  font-family: 'Rajdhani', 'Segoe UI', sans-serif;
+  font-family: 'Barlow', 'Segoe UI', sans-serif;
   color: var(--text-main);
-  background: #040b14;
+  background: #050816;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -44,10 +44,10 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    radial-gradient(circle at 14% 16%, rgba(114, 241, 184, 0.18), transparent 22%),
-    radial-gradient(circle at 82% 18%, rgba(88, 166, 255, 0.22), transparent 24%),
-    radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.08), transparent 32%),
-    linear-gradient(180deg, #06111d 0%, #07111d 28%, #09192b 62%, #05101a 100%);
+    linear-gradient(135deg, rgba(5, 8, 22, 0.86), rgba(8, 13, 34, 0.78)),
+    radial-gradient(circle at 18% 16%, rgba(73, 211, 255, 0.22), transparent 24%),
+    radial-gradient(circle at 82% 15%, rgba(92, 124, 255, 0.25), transparent 24%),
+    url('/app/background.png') center / cover no-repeat fixed;
 }
 
 body::before,
@@ -60,19 +60,19 @@ body::after {
 }
 
 body::before {
-  opacity: 0.22;
+  opacity: 0.3;
   background:
-    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
-  background-size: 56px 56px;
-  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.8), transparent 92%);
+    linear-gradient(rgba(115, 184, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(115, 184, 255, 0.045) 1px, transparent 1px);
+  background-size: 68px 68px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.75), transparent 94%);
 }
 
 body::after {
-  opacity: 0.35;
+  opacity: 0.58;
   background:
-    radial-gradient(circle at 50% 115%, rgba(52, 211, 153, 0.2), transparent 28%),
-    linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.24) 100%);
+    radial-gradient(circle at 50% 120%, rgba(73, 211, 255, 0.24), transparent 28%),
+    linear-gradient(180deg, rgba(3, 8, 24, 0.16) 0%, rgba(2, 4, 12, 0.76) 100%);
 }
 
 #root {
@@ -108,15 +108,64 @@ textarea {
   content: '';
   pointer-events: none;
   position: absolute;
-  top: -48px;
-  right: -120px;
-  width: min(52vw, 640px);
-  height: min(52vw, 640px);
+  top: -42px;
+  right: -82px;
+  width: min(48vw, 520px);
+  height: min(48vw, 520px);
   z-index: 0;
-  opacity: 0.12;
-  background: url('/logo.png') center / contain no-repeat;
-  filter: saturate(0.9) contrast(1.06) drop-shadow(0 24px 70px rgba(0, 0, 0, 0.45));
-  transform: rotate(-5deg);
+  opacity: 0.2;
+  background: url('/app/logo.png') center / contain no-repeat;
+  filter: saturate(0.85) contrast(1.08) drop-shadow(0 24px 70px rgba(0, 0, 0, 0.58));
+  transform: rotate(-7deg);
+}
+
+.wuxia-shell__mist {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(circle at 8% 86%, rgba(73, 211, 255, 0.2), transparent 26%),
+    radial-gradient(circle at 90% 74%, rgba(92, 124, 255, 0.2), transparent 24%),
+    linear-gradient(180deg, rgba(4, 8, 22, 0.26), rgba(4, 8, 22, 0.78));
+}
+
+.wuxia-shell__flare {
+  position: fixed;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.4;
+  filter: blur(2px);
+  animation: wuxiaFloat 7.4s ease-in-out infinite;
+}
+
+.wuxia-shell__flare--left {
+  left: -60px;
+  top: 32%;
+  background: radial-gradient(circle, rgba(73, 211, 255, 0.38), rgba(73, 211, 255, 0));
+}
+
+.wuxia-shell__flare--right {
+  right: -42px;
+  top: 56%;
+  background: radial-gradient(circle, rgba(92, 124, 255, 0.36), rgba(92, 124, 255, 0));
+  animation-delay: 1.4s;
+}
+
+@keyframes wuxiaFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.34;
+  }
+
+  50% {
+    transform: translateY(-18px);
+    opacity: 0.58;
+  }
 }
 
 .app-shell__inner {
@@ -176,7 +225,7 @@ textarea {
 
 .brand-logo__title {
   margin: 0;
-  font-family: 'Orbitron', 'Rajdhani', sans-serif;
+  font-family: 'Bebas Neue', 'Barlow', sans-serif;
   font-weight: 700;
   font-size: clamp(1rem, 1.5vw, 1.4rem);
   line-height: 1.15;
@@ -197,8 +246,8 @@ textarea {
   border: 1px solid var(--line);
   border-radius: var(--radius-xl);
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.035), transparent 38%),
-    linear-gradient(180deg, rgba(12, 28, 44, 0.9), rgba(5, 12, 22, 0.92));
+    linear-gradient(145deg, rgba(73, 211, 255, 0.09), transparent 34%),
+    linear-gradient(180deg, rgba(9, 19, 44, 0.92), rgba(5, 11, 26, 0.95));
   box-shadow: var(--shadow-panel);
   backdrop-filter: blur(18px);
 }
@@ -209,17 +258,17 @@ textarea {
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(circle at top right, rgba(114, 241, 184, 0.12), transparent 30%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 20%);
+    radial-gradient(circle at top right, rgba(73, 211, 255, 0.22), transparent 34%),
+    linear-gradient(180deg, rgba(208, 230, 255, 0.08), transparent 20%);
 }
 
 .game-panel--accent {
-  border-color: rgba(114, 241, 184, 0.22);
+  border-color: rgba(73, 211, 255, 0.46);
   box-shadow: var(--shadow-panel), var(--shadow-glow);
 }
 
 .game-panel--soft {
-  background: linear-gradient(180deg, rgba(11, 24, 41, 0.82), rgba(5, 12, 22, 0.86));
+  background: linear-gradient(180deg, rgba(8, 17, 39, 0.84), rgba(4, 10, 24, 0.9));
 }
 
 .game-panel__content {
@@ -235,12 +284,12 @@ textarea {
   font-weight: 700;
   letter-spacing: 0.32em;
   text-transform: uppercase;
-  color: var(--accent-2);
+  color: #95d2ff;
 }
 
 .game-header-title,
 .game-title {
-  font-family: 'Orbitron', 'Rajdhani', sans-serif;
+  font-family: 'Bebas Neue', 'Barlow', sans-serif;
   letter-spacing: 0.02em;
 }
 
@@ -259,9 +308,9 @@ textarea {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid rgba(114, 241, 184, 0.2);
+  border: 1px solid rgba(73, 211, 255, 0.26);
   border-radius: 999px;
-  background: rgba(5, 17, 28, 0.74);
+  background: rgba(8, 18, 43, 0.76);
   padding: 8px 14px;
   font-size: 13px;
   color: var(--text-soft);
@@ -274,9 +323,9 @@ textarea {
 .game-stat-card {
   border: 1px solid var(--line);
   border-radius: 22px;
-  background: rgba(5, 16, 28, 0.74);
+  background: rgba(8, 15, 36, 0.78);
   padding: 16px 18px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 1px 0 rgba(255, 246, 224, 0.05);
 }
 
 .game-stat-card__label {
@@ -288,7 +337,7 @@ textarea {
 
 .game-stat-card__value {
   margin-top: 8px;
-  font-family: 'Orbitron', 'Rajdhani', sans-serif;
+  font-family: 'Bebas Neue', 'Barlow', sans-serif;
   font-size: clamp(1.15rem, 2.3vw, 1.8rem);
   color: white;
 }
@@ -317,22 +366,22 @@ textarea {
 }
 
 .game-button-primary {
-  border: 1px solid rgba(114, 241, 184, 0.4);
-  background: linear-gradient(180deg, #1ccf88 0%, #0e8f60 100%);
-  color: #02120d;
-  box-shadow: 0 18px 40px -20px rgba(28, 207, 136, 0.72);
+  border: 1px solid rgba(73, 211, 255, 0.45);
+  background: linear-gradient(180deg, #56d9ff 0%, #2573ff 100%);
+  color: #001634;
+  box-shadow: 0 18px 44px -20px rgba(37, 115, 255, 0.8);
 }
 
 .game-button-secondary {
-  border: 1px solid rgba(88, 166, 255, 0.28);
-  background: linear-gradient(180deg, rgba(17, 40, 69, 0.96), rgba(10, 25, 42, 0.98));
-  color: white;
+  border: 1px solid rgba(73, 211, 255, 0.24);
+  background: linear-gradient(180deg, rgba(15, 27, 58, 0.95), rgba(7, 15, 34, 0.98));
+  color: #dceaff;
 }
 
 .game-button-ghost {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-soft);
+  border: 1px solid rgba(73, 211, 255, 0.2);
+  background: rgba(93, 159, 255, 0.08);
+  color: #c6deff;
 }
 
 .game-button-primary:hover,
@@ -360,9 +409,9 @@ textarea {
 .game-nav-button {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(88, 166, 255, 0.2);
+  border: 1px solid rgba(73, 211, 255, 0.24);
   border-radius: 18px;
-  background: rgba(7, 18, 31, 0.8);
+  background: rgba(8, 16, 37, 0.84);
   padding: 14px 16px;
   text-align: left;
   color: var(--text-soft);
@@ -388,15 +437,165 @@ textarea {
 
 .game-nav-button:hover {
   transform: translateY(-1px);
-  border-color: rgba(94, 234, 212, 0.4);
+  border-color: rgba(73, 211, 255, 0.5);
   color: white;
 }
 
 .game-nav-button[data-active='true'] {
-  border-color: rgba(114, 241, 184, 0.4);
-  background: linear-gradient(180deg, rgba(17, 52, 53, 0.96), rgba(8, 21, 32, 0.98));
+  border-color: rgba(73, 211, 255, 0.5);
+  background: linear-gradient(180deg, rgba(15, 48, 82, 0.96), rgba(8, 21, 44, 0.98));
   color: white;
-  box-shadow: 0 18px 36px -26px rgba(114, 241, 184, 0.75);
+  box-shadow: 0 18px 36px -26px rgba(73, 211, 255, 0.75);
+}
+
+.wuxia-events {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 45;
+  width: min(320px, calc(100vw - 24px));
+  pointer-events: auto;
+}
+
+.wuxia-events__title {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  text-align: right;
+  color: rgba(153, 214, 255, 0.92);
+}
+
+.wuxia-events__list {
+  display: grid;
+  gap: 8px;
+}
+
+.wuxia-event-chip {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(73, 211, 255, 0.36);
+  border-radius: 16px;
+  padding: 10px 12px;
+  color: #e9f5ff;
+  background: linear-gradient(120deg, rgba(11, 26, 52, 0.92), rgba(6, 15, 33, 0.95));
+  box-shadow: 0 18px 35px -24px rgba(0, 0, 0, 0.8);
+  transform: translateY(calc(var(--event-index, 0) * -3px));
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    filter 0.2s ease;
+}
+
+.wuxia-event-chip:hover {
+  transform: translateY(-4px);
+  border-color: rgba(73, 211, 255, 0.68);
+  filter: brightness(1.06);
+}
+
+.wuxia-event-chip__icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  font-size: 18px;
+  background: linear-gradient(135deg, rgba(73, 211, 255, 0.26), rgba(92, 124, 255, 0.2));
+  box-shadow: inset 0 0 0 1px rgba(174, 225, 255, 0.24);
+}
+
+.wuxia-event-chip__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  text-align: left;
+}
+
+.wuxia-event-chip__text strong {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wuxia-event-chip__text small {
+  margin-top: 2px;
+  font-size: 11px;
+  color: rgba(186, 221, 255, 0.86);
+}
+
+.wuxia-event-chip__spark {
+  position: absolute;
+  right: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #80d8ff;
+  box-shadow: 0 0 0 0 rgba(128, 216, 255, 0.58);
+  animation: wuxiaSpark 1.9s infinite;
+}
+
+.wuxia-event-modal {
+  max-width: 660px;
+}
+
+.wuxia-event-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wuxia-event-modal__title {
+  margin: 10px 0 0;
+  font-size: clamp(1.7rem, 4vw, 2.3rem);
+}
+
+.wuxia-event-modal__body {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+}
+
+.wuxia-event-modal__logo {
+  width: 92px;
+  height: 92px;
+  border-radius: 20px;
+  border: 1px solid rgba(73, 211, 255, 0.32);
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.wuxia-event-modal__subtitle {
+  margin: 0;
+  color: #bde6ff;
+  font-weight: 600;
+}
+
+.wuxia-event-modal__reward {
+  margin: 8px 0;
+  color: #9cd9ff;
+  font-size: 14px;
+}
+
+@keyframes wuxiaSpark {
+  0% {
+    box-shadow: 0 0 0 0 rgba(128, 216, 255, 0.58);
+  }
+
+  70% {
+    box-shadow: 0 0 0 12px rgba(128, 216, 255, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 213, 143, 0);
+  }
 }
 
 .game-nav-button[data-active='true']::after {
@@ -409,9 +608,9 @@ textarea {
 .game-textarea,
 .game-number-input {
   width: 100%;
-  border: 1px solid rgba(88, 166, 255, 0.22);
+  border: 1px solid rgba(73, 211, 255, 0.28);
   border-radius: 16px;
-  background: rgba(2, 12, 23, 0.84);
+  background: rgba(6, 15, 35, 0.88);
   padding: 12px 14px;
   color: white;
   outline: none;
@@ -425,8 +624,8 @@ textarea {
 .game-select:focus,
 .game-textarea:focus,
 .game-number-input:focus {
-  border-color: rgba(114, 241, 184, 0.44);
-  box-shadow: 0 0 0 3px rgba(94, 234, 212, 0.12);
+  border-color: rgba(73, 211, 255, 0.58);
+  box-shadow: 0 0 0 3px rgba(73, 211, 255, 0.16);
 }
 
 .game-field-label {
@@ -493,17 +692,17 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 20px;
   border-collapse: collapse;
-  background: rgba(4, 11, 20, 0.72);
+  background: rgba(6, 12, 30, 0.78);
 }
 
 .game-table thead {
-  background: rgba(11, 31, 50, 0.95);
+  background: rgba(10, 26, 58, 0.95);
 }
 
 .game-table th,
 .game-table td {
   padding: 14px 16px;
-  border-bottom: 1px solid rgba(110, 180, 255, 0.09);
+  border-bottom: 1px solid rgba(77, 138, 255, 0.13);
 }
 
 .game-table tbody tr {
@@ -515,12 +714,12 @@ textarea {
 }
 
 .game-table tbody tr[data-active='true'] {
-  background: linear-gradient(90deg, rgba(19, 59, 58, 0.48), rgba(8, 24, 36, 0.72));
+  background: linear-gradient(90deg, rgba(20, 66, 108, 0.5), rgba(9, 23, 44, 0.78));
 }
 
 .game-scroll {
   scrollbar-width: thin;
-  scrollbar-color: rgba(114, 241, 184, 0.35) transparent;
+  scrollbar-color: rgba(73, 211, 255, 0.4) transparent;
 }
 
 .game-scroll::-webkit-scrollbar {
@@ -530,7 +729,7 @@ textarea {
 
 .game-scroll::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: rgba(114, 241, 184, 0.32);
+  background: rgba(73, 211, 255, 0.36);
 }
 
 .game-modal-backdrop {
@@ -568,7 +767,7 @@ textarea {
 
 .team-setup-section-title {
   margin: 0;
-  font-family: 'Orbitron', 'Rajdhani', sans-serif;
+  font-family: 'Bebas Neue', 'Barlow', sans-serif;
   font-size: 1.15rem;
   letter-spacing: 0.02em;
   color: #f8fbff;
@@ -585,9 +784,9 @@ textarea {
 .team-club-card {
   width: 100%;
   text-align: left;
-  border: 1px solid rgba(88, 166, 255, 0.22);
+  border: 1px solid rgba(73, 211, 255, 0.28);
   border-radius: 16px;
-  background: linear-gradient(180deg, rgba(9, 26, 45, 0.9), rgba(5, 16, 28, 0.95));
+  background: linear-gradient(180deg, rgba(10, 27, 55, 0.92), rgba(5, 13, 30, 0.96));
   padding: 12px 14px;
   color: var(--text-soft);
   transition:
@@ -598,15 +797,15 @@ textarea {
 }
 
 .team-club-card:hover {
-  border-color: rgba(114, 241, 184, 0.35);
+  border-color: rgba(73, 211, 255, 0.45);
   transform: translateY(-1px);
 }
 
 .team-club-card[data-active='true'] {
-  border-color: rgba(114, 241, 184, 0.45);
-  background: linear-gradient(180deg, rgba(15, 52, 58, 0.95), rgba(7, 25, 36, 0.98));
+  border-color: rgba(73, 211, 255, 0.56);
+  background: linear-gradient(180deg, rgba(14, 52, 88, 0.95), rgba(7, 25, 45, 0.98));
   color: white;
-  box-shadow: 0 20px 36px -28px rgba(94, 234, 212, 0.55);
+  box-shadow: 0 20px 36px -28px rgba(73, 211, 255, 0.58);
 }
 
 .team-club-card__name {
@@ -629,11 +828,11 @@ textarea {
 }
 
 .campaign-match-card {
-  border: 1px solid rgba(88, 166, 255, 0.2);
+  border: 1px solid rgba(73, 211, 255, 0.24);
   border-radius: 18px;
   background:
-    radial-gradient(circle at 90% 12%, rgba(114, 241, 184, 0.16), transparent 28%),
-    linear-gradient(180deg, rgba(10, 27, 44, 0.9), rgba(4, 13, 23, 0.95));
+    radial-gradient(circle at 90% 12%, rgba(73, 211, 255, 0.2), transparent 28%),
+    linear-gradient(180deg, rgba(10, 27, 56, 0.92), rgba(4, 13, 31, 0.96));
   padding: 14px;
   transition:
     border-color 0.2s ease,
@@ -643,8 +842,8 @@ textarea {
 
 .campaign-match-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(114, 241, 184, 0.35);
-  box-shadow: 0 16px 36px -28px rgba(94, 234, 212, 0.6);
+  border-color: rgba(73, 211, 255, 0.5);
+  box-shadow: 0 16px 36px -28px rgba(73, 211, 255, 0.62);
 }
 
 .campaign-match-card__stage {
@@ -657,7 +856,7 @@ textarea {
 
 .campaign-match-card__club {
   margin: 8px 0 0;
-  font-family: 'Orbitron', 'Rajdhani', sans-serif;
+  font-family: 'Bebas Neue', 'Barlow', sans-serif;
   font-size: 1.04rem;
   color: #f8fbff;
   white-space: nowrap;
@@ -676,8 +875,8 @@ textarea {
 }
 
 .campaign-match-card__meta strong {
-  color: #86efac;
-  font-family: 'Orbitron', 'Rajdhani', sans-serif;
+  color: #7ad4ff;
+  font-family: 'Bebas Neue', 'Barlow', sans-serif;
   letter-spacing: 0.02em;
 }
 
@@ -710,12 +909,12 @@ textarea {
   height: 10px;
   border-radius: 999px;
   background: var(--accent);
-  box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.45);
+  box-shadow: 0 0 0 0 rgba(73, 211, 255, 0.45);
   animation: pulseDot 2.2s infinite;
 }
 
 .text-shadow-soft {
-  text-shadow: 0 0 18px rgba(114, 241, 184, 0.18);
+  text-shadow: 0 0 18px rgba(73, 211, 255, 0.22);
 }
 
 @keyframes floatCard {
@@ -731,15 +930,15 @@ textarea {
 
 @keyframes pulseDot {
   0% {
-    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.42);
+    box-shadow: 0 0 0 0 rgba(73, 211, 255, 0.42);
   }
 
   70% {
-    box-shadow: 0 0 0 12px rgba(52, 211, 153, 0);
+    box-shadow: 0 0 0 12px rgba(73, 211, 255, 0);
   }
 
   100% {
-    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0);
+    box-shadow: 0 0 0 0 rgba(73, 211, 255, 0);
   }
 }
 

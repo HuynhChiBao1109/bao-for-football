@@ -26,26 +26,17 @@ export function ClubPage() {
 
   return (
     <section className="club-page">
-      {/* Background and decorative elements */}
-      <div className="club-page__background">
-        <div className="club-page__blur-element club-page__blur--1" />
-        <div className="club-page__blur-element club-page__blur--2" />
-        <div className="club-page__blur-element club-page__blur--3" />
-      </div>
-
       <div className="club-page__content">
-        {/* Header section */}
         <div className="club-page__header">
           <div>
-            <p className="game-header-kicker">⚽ Football Manager</p>
-            <h1 className="game-title">Trung tâm điều hành CLB</h1>
+            <p className="game-header-kicker">Blue Lock Hub</p>
+            <h1 className="game-title">Control Room</h1>
           </div>
           <button type="button" onClick={handleLogout} className="game-button-ghost">
-            Nghỉ ngơi
+            Logout
           </button>
         </div>
 
-        {/* Status messages */}
         {loading && <Banner text="Đang tải dữ liệu đội bóng từ service-core..." tone="info" />}
         {!loading && !team && (
           <Banner
@@ -56,7 +47,6 @@ export function ClubPage() {
 
         {!loading && team && (
           <>
-            {/* Club Header with Logo, Budget, Rank */}
             <ClubHeader
               clubName={team.teamName ?? 'CLB của bạn'}
               clubLogo={team.imgUrl}
@@ -64,94 +54,89 @@ export function ClubPage() {
               rankPoint={Number(team.rankPoint ?? 0)}
             />
 
-            {/* Main grid - 3 columns layout */}
             <div className="club-page__grid">
-              {/* Left Column - Team Management */}
               <ModuleCard
-                title="Quản lí"
-                subtitle="Đội hình"
-                icon="👥"
+                title="Build"
+                subtitle="Squad Lab"
+                icon="🧩"
                 column="left"
                 actions={[
                   {
-                    label: 'Quản lí chiến thuật',
-                    description: 'Tinh chỉnh đội hình, nhịp độ và preset chiến thuật thi đấu.',
-                    icon: '⚙️',
+                    label: 'Tactics',
+                    description: 'Set form va nhip do.',
+                    icon: '🎯',
                     onClick: () => navigate(ROUTES.tactics),
                   },
                   {
-                    label: 'Quản lí cầu thủ',
-                    description: 'Xem stats, nâng cấp level và phân bổ điểm kỹ năng.',
-                    icon: '📊',
+                    label: 'Players',
+                    description: 'Nang cap va chia stat.',
+                    icon: '📈',
                     onClick: () => navigate(ROUTES.players),
                   },
                 ]}
               />
 
-              {/* Center Column - Matches */}
               <ModuleCard
-                title="Thi"
-                subtitle="Đấu"
-                icon="⚽"
+                title="Battle"
+                subtitle="Match Arena"
+                icon="🔥"
                 column="center"
                 actions={[
                   {
-                    label: 'Campaign',
-                    description: 'Vào chuỗi màn AI để farm thưởng và đẩy tiến độ đội.',
-                    icon: '🤖',
+                    label: 'AI Campaign',
+                    description: 'Farm nhanh theo stage.',
+                    icon: '🧠',
                     onClick: () => navigate(ROUTES.aiMatch),
                   },
                   {
                     label: 'League',
-                    description: 'Vào chuỗi màn League để farm thưởng và đẩy tiến độ đội.',
-                    icon: '🤖',
+                    description: 'Danh gia phong do mua.',
+                    icon: '🏟️',
                     onClick: () => navigate(ROUTES.leagueMatch),
                   },
                   {
-                    label: 'Champion ship',
-                    description: 'Vào chuỗi màn Champion ship để farm thưởng và đẩy tiến độ đội.',
-                    icon: '🤖',
+                    label: 'Championship',
+                    description: 'Knock-out lay cup.',
+                    icon: '👑',
                     onClick: () => navigate(ROUTES.championShipMatch),
                   },
                   {
                     label: 'PvP',
-                    description: 'Vào rank match để leo hạng và đối đầu người chơi khác.',
-                    icon: '🏆',
+                    description: 'Leo rank real-time.',
+                    icon: '⚔️',
                     onClick: () => navigate(ROUTES.pvp),
                   },
                 ]}
               />
 
-              {/* Right Column - Shop & Events */}
               <ModuleCard
-                title="Cửa"
-                subtitle="Hàng"
+                title="Store"
+                subtitle="Loot Zone"
                 icon="🎁"
                 column="right"
                 actions={[
                   {
                     label: 'Gacha',
-                    description: 'Roll banner',
+                    description: 'Roll banner ngay.',
                     icon: '✨',
                     onClick: () => navigate(ROUTES.gacha),
                   },
                   {
                     label: 'Shop',
-                    description: 'Mua bán vật phẩm và nâng cấp trang bị cho đội.',
+                    description: 'Vat pham va booster.',
                     icon: '🛒',
-                    onClick: () => setNotice('Mục Mua sắm đang phát triển, vui lòng quay lại sau.'),
+                    onClick: () => setNotice('Shop dang cap nhat.'),
                   },
                   {
                     label: 'Events',
-                    description: 'Sự kiện theo mùa với phần thưởng hấp dẫn.',
-                    icon: '🎪',
-                    onClick: () => setNotice('Mục Events đang phát triển, vui lòng quay lại sau.'),
+                    description: 'Quest gioi han mua.',
+                    icon: '🎫',
+                    onClick: () => setNotice('Events theo mua dang mo rong.'),
                   },
                 ]}
               />
             </div>
 
-            {/* Notification banner */}
             {notice && <Banner text={notice} tone="muted" />}
           </>
         )}

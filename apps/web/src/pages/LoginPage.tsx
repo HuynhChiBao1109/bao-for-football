@@ -71,7 +71,10 @@ export function LoginPage() {
         setError('Password and confirm password do not match.');
         return;
       }
-      await registerMutation.mutateAsync({username: registerForm.username, password: registerForm.password});
+      await registerMutation.mutateAsync({
+        username: registerForm.username,
+        password: registerForm.password,
+      });
       setMessage('Đăng ký thành công. Bạn có thể đăng nhập ngay.');
       setTab(AuthTab.Login);
       setLoginForm((prev) => ({ ...prev, username: registerForm.username }));
@@ -87,12 +90,10 @@ export function LoginPage() {
           <div className="game-panel__content">
             <BrandLogo className="justify-center" compact />
             <h1 className="game-title mt-4 text-center text-3xl font-bold text-white sm:text-4xl">
-              {tab === AuthTab.Login ? 'User Login' : 'Create Account'}
+              {tab === AuthTab.Login ? 'BLUE LOCK LOGIN' : 'CREATE PROFILE'}
             </h1>
             <p className="game-copy mt-2 text-center text-sm sm:text-base">
-              {tab === AuthTab.Login
-                ? 'Đăng nhập để vào game dashboard.'
-                : 'Tạo tài khoản mới và chọn câu lạc bộ khởi đầu.'}
+              {tab === AuthTab.Login ? 'Vao tran ngay.' : 'Tao tai khoan moi.'}
             </p>
 
             <div className="mt-5 flex gap-2 rounded-[20px] border border-white/8 bg-black/20 p-2">

@@ -126,13 +126,8 @@ export function PlayersPage() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="game-header-kicker">Player Lab</p>
-              <h2 className="game-title mt-3 text-3xl font-bold text-white">
-                Quản lí cầu thủ, cấp độ và chỉ số
-              </h2>
-              <p className="game-copy mt-3 max-w-2xl text-base">
-                Chọn thẻ cầu thủ, kiểm tra tiến trình level, cộng kỹ năng và xem toàn bộ chỉ số
-                nền/tăng thêm/tổng trong cùng một bảng điều khiển.
-              </p>
+              <h2 className="game-title mt-3 text-3xl font-bold text-white">Player Stats</h2>
+              <p className="game-copy mt-3 max-w-2xl text-base">Chon cau thu va chia diem.</p>
             </div>
             <button type="button" onClick={() => refetch()} className="game-button-secondary">
               Tải lại

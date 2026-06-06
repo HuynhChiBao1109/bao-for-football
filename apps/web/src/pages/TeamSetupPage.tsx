@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useReferenceClubs, useReferenceCountries, useReferenceLeagues, useCreateTeamByClubMutation } from '../hooks/useReference';
+import {
+  useReferenceClubs,
+  useReferenceCountries,
+  useReferenceLeagues,
+  useCreateTeamByClubMutation,
+} from '../hooks/useReference';
 
 export function TeamSetupPage() {
   const [selectedCountryId, setSelectedCountryId] = useState<number | null>(null);
@@ -55,12 +60,12 @@ export function TeamSetupPage() {
     <section className="team-setup-page">
       <header className="team-setup-page__hero game-panel game-panel--accent scan-line p-5 sm:p-7">
         <div className="game-panel__content">
-          <p className="game-header-kicker">Team Onboarding</p>
+          <p className="game-header-kicker">Start Squad</p>
           <h1 className="game-title mt-3 text-3xl font-bold text-white sm:text-4xl">
-            Tai khoan chua co doi bong
+            Chon CLB khoi dau
           </h1>
           <p className="game-copy mt-3 max-w-3xl text-base sm:text-lg">
-            Hay chon CLB khoi dau de vao game theo thu tu Quoc gia, Giai dau, CLB, sau do tao doi bong.
+            Quoc gia {'->'} Giai dau {'->'} CLB.
           </p>
         </div>
       </header>
@@ -68,7 +73,7 @@ export function TeamSetupPage() {
       <div className="team-setup-grid mt-5">
         <article className="game-panel game-panel--soft p-5 sm:p-6">
           <div className="game-panel__content space-y-4">
-            <h2 className="team-setup-section-title">1. Chon Quoc gia</h2>
+            <h2 className="team-setup-section-title">1. Quoc gia</h2>
             <select
               className="game-select"
               value={selectedCountryId ?? ''}
@@ -84,7 +89,7 @@ export function TeamSetupPage() {
               ))}
             </select>
 
-            <h2 className="team-setup-section-title mt-2">2. Chon Giai dau</h2>
+            <h2 className="team-setup-section-title mt-2">2. Giai dau</h2>
             <select
               className="game-select"
               value={selectedLeagueId ?? ''}
@@ -102,7 +107,7 @@ export function TeamSetupPage() {
             </select>
 
             <div className="game-stat-card mt-2">
-              <p className="game-stat-card__label">Thong tin dang chon</p>
+              <p className="game-stat-card__label">Preview</p>
               <p className="mt-2 text-sm text-slate-200">
                 Quoc gia: <strong>{selectedCountry?.name ?? 'Chua chon'}</strong>
               </p>
@@ -118,12 +123,10 @@ export function TeamSetupPage() {
 
         <article className="game-panel game-panel--accent p-5 sm:p-6">
           <div className="game-panel__content">
-            <h2 className="team-setup-section-title">3. Chon CLB</h2>
+            <h2 className="team-setup-section-title">3. CLB</h2>
 
             {!selectedLeagueId ? (
-              <p className="game-notice game-notice--info mt-4">
-                Hay chon Quoc gia va Giai dau truoc khi chon CLB.
-              </p>
+              <p className="game-notice game-notice--info mt-4">Chon Quoc gia va Giai dau truoc.</p>
             ) : (
               <div className="team-club-list mt-4 game-scroll">
                 {(clubsQuery.data ?? []).map((club) => (
@@ -135,7 +138,9 @@ export function TeamSetupPage() {
                     onClick={() => setSelectedClubId(club.id)}
                   >
                     <span className="team-club-card__name">{club.name}</span>
-                    <span className="team-club-card__league">{selectedLeague?.name ?? 'League'}</span>
+                    <span className="team-club-card__league">
+                      {selectedLeague?.name ?? 'League'}
+                    </span>
                   </button>
                 ))}
 

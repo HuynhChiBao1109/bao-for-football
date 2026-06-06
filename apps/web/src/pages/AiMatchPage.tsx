@@ -7,13 +7,7 @@ import type { CampaignMatch } from '../types';
 export function AiMatchPage() {
   const { data: sessionData } = useSession();
   const teamId = Number(((sessionData?.team as any)?.id ?? 0) as number);
-  const {
-    data: matches = [],
-    isLoading,
-    isFetching,
-    error,
-    refetch,
-  } = useCampainMatches(teamId);
+  const { data: matches = [], isLoading, isFetching, error, refetch } = useCampainMatches(teamId);
   const createCompainNormal = useCreateCompainNormal();
 
   const [bootstrapping, setBootstrapping] = useState(false);
@@ -44,15 +38,7 @@ export function AiMatchPage() {
         setBootstrapping(false);
       }
     })();
-  }, [
-    createCompainNormal,
-    initAttempted,
-    isFetching,
-    isLoading,
-    matches.length,
-    refetch,
-    teamId,
-  ]);
+  }, [createCompainNormal, initAttempted, isFetching, isLoading, matches.length, refetch, teamId]);
 
   const totalReward = useMemo(
     () =>
@@ -77,10 +63,10 @@ export function AiMatchPage() {
         <article className="game-panel game-panel--accent p-5 sm:p-6">
           <div className="game-panel__content">
             <p className="game-header-kicker">Campaign AI</p>
-            <h2 className="game-title mt-3 text-3xl font-bold text-white">Dang khoi tao campaign</h2>
-            <p className="game-copy mt-3">
-              He thong dang tai du lieu tran dau. Neu chua co match, backend se tu tao campaign normal.
-            </p>
+            <h2 className="game-title mt-3 text-3xl font-bold text-white">
+              Dang khoi tao campaign
+            </h2>
+            <p className="game-copy mt-3">Dang dong bo du lieu match.</p>
           </div>
         </article>
       </section>
@@ -94,13 +80,7 @@ export function AiMatchPage() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="game-header-kicker">Campaign AI</p>
-              <h2 className="game-title mt-3 text-3xl font-bold text-white">
-                Danh sach tran campaign cua doi ban
-              </h2>
-              <p className="game-copy mt-3 max-w-2xl text-base">
-                Khi vao Campaign, he thong lay danh sach match theo team. Neu chua co se tu dong tao campaign normal,
-                sau do render theo du lieu moi nhat.
-              </p>
+              <h2 className="game-title mt-3 text-3xl font-bold text-white">AI Match List</h2>
             </div>
             <div className="game-chip">
               So tran: <span className="font-semibold text-emerald-300">{matches.length}</span>

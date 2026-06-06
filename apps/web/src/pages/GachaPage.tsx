@@ -59,12 +59,8 @@ export function GachaPage() {
       <section className="game-panel game-panel--accent overflow-hidden p-5 sm:p-6">
         <div className="game-panel__content">
           <p className="game-header-kicker">Scout Capsule</p>
-          <h2 className="game-title mt-3 text-3xl font-bold text-white">
-            Phòng quay tuyển trạch cầu thủ
-          </h2>
-          <p className="game-copy mt-3 max-w-2xl text-base">
-            Chọn banner đang hoạt động, nổ capsule và nhận cầu thủ cùng thông tin pity của bạn.
-          </p>
+          <h2 className="game-title mt-3 text-3xl font-bold text-white">Gacha Room</h2>
+          <p className="game-copy mt-3 max-w-2xl text-base">Chon banner, roll, nhan cau thu.</p>
         </div>
       </section>
 
@@ -72,7 +68,7 @@ export function GachaPage() {
         <div className="space-y-6">
           {/* Banner list */}
           <section>
-            <p className="game-header-kicker mb-3">Banner đang hoạt động</p>
+            <p className="game-header-kicker mb-3">Active Banners</p>
             {bannersLoading && <Banner text="Đang tải danh sách banner..." tone="info" />}
             {bannersError && <Banner text={(bannersError as Error).message} tone="error" />}
             {!bannersLoading && banners.length === 0 && (
@@ -165,7 +161,7 @@ export function GachaPage() {
                           <p className="text-xs text-slate-400 mt-1">ID: {result.playerId}</p>
                         </div>
 
-                        <h3 className="font-['Orbitron'] text-3xl font-bold text-white">
+                        <h3 className="game-title text-3xl font-bold text-white">
                           {result.rarity}
                         </h3>
                         <p className="text-sm text-slate-300">
@@ -203,7 +199,7 @@ export function GachaPage() {
         {/* Roll history */}
         <aside className="game-panel overflow-hidden p-5">
           <div className="game-panel__content">
-            <p className="game-header-kicker">Lịch sử roll</p>
+            <p className="game-header-kicker">Roll History</p>
             <div className="mt-4 space-y-2">
               {history.length === 0 && (
                 <p className="rounded-[18px] border border-dashed border-white/12 bg-black/20 px-4 py-5 text-sm text-slate-400">

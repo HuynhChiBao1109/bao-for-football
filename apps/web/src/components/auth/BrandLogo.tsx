@@ -7,7 +7,7 @@ export function BrandLogo({ className = '', compact = false }: BrandLogoProps) {
   return (
     <div className={`brand-logo ${compact ? 'brand-logo--compact' : ''} ${className}`.trim()}>
       <img
-        src="/logo.png"
+        src="/app/logo.png"
         alt="Football Manager Simulator"
         className="brand-logo__image"
         loading="lazy"
