@@ -7,6 +7,7 @@ export class SocketService {
   private server: Server;
 
   setServer(server: Server) {
+    console.log("Socket server initialized");
     this.server = server;
   }
 
@@ -15,6 +16,10 @@ export class SocketService {
   }
 
   emitToRoom(data: EmitRoomDTO) {
+    if (!this.server) {
+      console.warn("Socket server not initialized yet");
+      return;
+    }
     const { roomId, event, data: eventData } = data;
 
     this.server.to(roomId).emit(event, eventData);

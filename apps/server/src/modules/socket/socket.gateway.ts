@@ -32,6 +32,8 @@ export class SocketGateway implements OnGatewayInit, OnGatewayConnection, OnGate
   ) {}
 
   afterInit(server: Server) {
+    this.socketService.setServer(server);
+
     server.use(async (client, next) => {
       const token = this.extractToken(client);
 
