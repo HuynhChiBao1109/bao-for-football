@@ -10,13 +10,13 @@ export class ReferenceController {
 
   @Get("clubs/:leagueId")
   @Public()
-  async getListClubByLeague(@Param("leagueId") leagueId: bigint) {
+  async getListClubByLeague(@Param("leagueId") leagueId: number) {
     return this.referenceService.getListClubByLeague(leagueId);
   }
 
   @Get("leagues/:countryId")
   @Public()
-  async getListLeagueByCountry(@Param("countryId") countryId: bigint) {
+  async getListLeagueByCountry(@Param("countryId") countryId: number) {
     return this.referenceService.getListLeagueByCountry(countryId);
   }
 

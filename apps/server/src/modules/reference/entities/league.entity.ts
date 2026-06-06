@@ -4,18 +4,18 @@ import { ClubEntity } from "./club.entity";
 
 @Entity("leagues")
 export class LeagueEntity {
-  @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
-  id: bigint;
+  @PrimaryGeneratedColumn({ type: "int", unsigned: true })
+  id: number;
 
   @Column({ type: "varchar", length: 191 })
   name: string;
 
   @Column({
     name: "country_id",
-    type: "bigint",
+    type: "int",
     unsigned: true,
   })
-  countryId: bigint | null;
+  countryId: number | null;
 
   @Column({ type: "varchar", length: 512, nullable: true })
   img_url: string | null;

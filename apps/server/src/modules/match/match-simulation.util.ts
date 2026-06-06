@@ -5,9 +5,9 @@ import { EMatchEvent } from "./enums";
 type Side = "home" | "away";
 
 export type SimulationRosterPlayer = {
-  userPlayerId: bigint;
-  playerId: bigint;
-  teamId: bigint;
+  userPlayerId: number;
+  playerId: number;
+  teamId: number;
   name: string;
   avatarUrl: string | null;
   positions: Array<{ position: string; effect: number }>;
@@ -31,7 +31,7 @@ export type SimulationRosterPlayer = {
 };
 
 export type SimulationTeamInput = {
-  id: bigint;
+  id: number;
   name: string;
   formation: ETeamFormation | null;
   passRatio: number;
@@ -41,9 +41,9 @@ export type SimulationTeamInput = {
 };
 
 export type MatchRenderPlayer = {
-  userPlayerId: string;
-  playerId: string;
-  teamId: string;
+  userPlayerId: number;
+  playerId: number;
+  teamId: number;
   side: Side;
   role: string;
   displayRole: string;
@@ -67,7 +67,7 @@ export type MatchSnapshot = {
   ball: {
     x: number;
     y: number;
-    ownerPlayerId: string | null;
+    ownerPlayerId: number | null;
     speed: number;
   };
   homePlayers: MatchRenderPlayer[];
@@ -76,8 +76,8 @@ export type MatchSnapshot = {
     event: EMatchEvent | null;
     label: string;
     teamSide: Side | null;
-    actorPlayerId: string | null;
-    secondaryPlayerId: string | null;
+    actorPlayerId: number | null;
+    secondaryPlayerId: number | null;
     skill: EPlayerSkill | null;
   };
 };
@@ -85,14 +85,14 @@ export type MatchSnapshot = {
 export type SimulationEventDraft = {
   event: EMatchEvent;
   minute: number;
-  teamId: bigint | null;
-  actorPlayerId: bigint | null;
-  secondaryPlayerId: bigint | null;
+  teamId: number | null;
+  actorPlayerId: number | null;
+  secondaryPlayerId: number | null;
   payload: Record<string, unknown> | null;
 };
 
 export type SimulationPlayerStatsDraft = {
-  playerId: bigint;
+  playerId: number;
   goals: number;
   assists: number;
   yellowCards: number;
@@ -194,10 +194,10 @@ export function simulateMatch(
   const homeLineup = selectLineup(homeTeam, "home");
   const awayLineup = selectLineup(awayTeam, "away");
 
-  const statsMap = new Map<string, SimulationPlayerStatsDraft>();
+  const statsMap = new Map<number, SimulationPlayerStatsDraft>();
   [...homeLineup, ...awayLineup].forEach((player) => {
     statsMap.set(player.userPlayerId, {
-      playerId: BigInt(player.userPlayerId),
+      playerId: player.userPlayerId,
       goals: 0,
       assists: 0,
       yellowCards: 0,
@@ -229,8 +229,8 @@ export function simulateMatch(
   const awayStrength = buildTeamStrength(awayLineup, awayTeam);
 
   pushEvent(events, EMatchEvent.MATCH_START, 0, null, null, null, {
-    homeTeamId: String(homeTeam.id),
-    awayTeamId: String(awayTeam.id),
+    homeTeamId: homeTeam.id,
+    awayTeamId: awayTeam.id,
   });
   pushEvent(events, EMatchEvent.FIRST_HALF_START, 0, homeTeam.id, null, null, null);
 
@@ -345,8 +345,8 @@ export function simulateMatch(
             EMatchEvent.GOAL,
             minute,
             attackingTeam.id,
-            BigInt(scorer.userPlayerId),
-            supportPlayer ? BigInt(supportPlayer.userPlayerId) : null,
+            scorer.userPlayerId,
+            supportPlayer ? supportPlayer.userPlayerId : null,
             {
               skill: skillActivated ? EPlayerSkill.SHOOT_THUNDER : null,
               homeScore,
@@ -367,7 +367,7 @@ export function simulateMatch(
             EMatchEvent.CORNER_AWARDED,
             minute,
             attackingTeam.id,
-            BigInt(scorer.userPlayerId),
+            scorer.userPlayerId,
             null,
             null,
           );
@@ -393,8 +393,8 @@ export function simulateMatch(
           event,
           minute,
           defendingTeam.id,
-          BigInt(defender.userPlayerId),
-          BigInt(ballOwner.userPlayerId),
+          defender.userPlayerId,
+          ballOwner.userPlayerId,
           null,
         );
 
@@ -413,7 +413,7 @@ export function simulateMatch(
           EMatchEvent.OFFSIDE,
           minute,
           attackingTeam.id,
-          BigInt(ballOwner.userPlayerId),
+          ballOwner.userPlayerId,
           null,
           null,
         );
@@ -482,9 +482,9 @@ function selectLineup(team: SimulationTeamInput, side: Side): InternalLineupPlay
     const picked = pool.splice(bestIndex, 1)[0] ?? team.players[lineup.length];
     const anchors = slotAnchors(slot, side);
     lineup.push({
-      userPlayerId: String(picked.userPlayerId),
-      playerId: String(picked.playerId),
-      teamId: String(team.id),
+      userPlayerId: picked.userPlayerId,
+      playerId: picked.playerId,
+      teamId: team.id,
       side,
       role: slot.role,
       displayRole: slot.label,
@@ -605,7 +605,7 @@ function pickAttackingPlayer(lineup: InternalLineupPlayer[], random: () => numbe
 
 function pickSupportPlayer(
   lineup: InternalLineupPlayer[],
-  excludeId: string,
+  excludeId: number,
   random: () => number,
 ) {
   const weighted = lineup
@@ -672,7 +672,7 @@ function computeDefenseScore(defender: SimulationRosterPlayer, keeper: Simulatio
 }
 
 function incrementMinutes(
-  statsMap: Map<string, SimulationPlayerStatsDraft>,
+  statsMap: Map<number, SimulationPlayerStatsDraft>,
   homeLineup: InternalLineupPlayer[],
   awayLineup: InternalLineupPlayer[],
 ) {
@@ -685,7 +685,7 @@ function incrementMinutes(
 }
 
 function incrementPossessionStats(
-  statsMap: Map<string, SimulationPlayerStatsDraft>,
+  statsMap: Map<number, SimulationPlayerStatsDraft>,
   attackingLineup: InternalLineupPlayer[],
   random: () => number,
 ) {
@@ -710,8 +710,8 @@ function incrementPossessionStats(
 }
 
 function addShot(
-  statsMap: Map<string, SimulationPlayerStatsDraft>,
-  playerId: string,
+  statsMap: Map<number, SimulationPlayerStatsDraft>,
+  playerId: number,
   onTarget: boolean,
 ) {
   const row = statsMap.get(playerId);
@@ -723,9 +723,9 @@ function addShot(
 }
 
 function addGoal(
-  statsMap: Map<string, SimulationPlayerStatsDraft>,
-  scorerId: string,
-  assistId: string | null,
+  statsMap: Map<number, SimulationPlayerStatsDraft>,
+  scorerId: number,
+  assistId: number | null,
 ) {
   const scorer = statsMap.get(scorerId);
   if (scorer) {
@@ -740,9 +740,9 @@ function addGoal(
 }
 
 function addFoul(
-  statsMap: Map<string, SimulationPlayerStatsDraft>,
-  defenderId: string,
-  attackerId: string,
+  statsMap: Map<number, SimulationPlayerStatsDraft>,
+  defenderId: number,
+  attackerId: number,
 ) {
   const defender = statsMap.get(defenderId);
   const attacker = statsMap.get(attackerId);
@@ -754,21 +754,21 @@ function addFoul(
   }
 }
 
-function addYellow(statsMap: Map<string, SimulationPlayerStatsDraft>, playerId: string) {
+function addYellow(statsMap: Map<number, SimulationPlayerStatsDraft>, playerId: number) {
   const row = statsMap.get(playerId);
   if (row) {
     row.yellowCards += 1;
   }
 }
 
-function addOffside(statsMap: Map<string, SimulationPlayerStatsDraft>, playerId: string) {
+function addOffside(statsMap: Map<number, SimulationPlayerStatsDraft>, playerId: number) {
   const row = statsMap.get(playerId);
   if (row) {
     row.offsides += 1;
   }
 }
 
-function finalizeRatings(statsMap: Map<string, SimulationPlayerStatsDraft>) {
+function finalizeRatings(statsMap: Map<number, SimulationPlayerStatsDraft>) {
   statsMap.forEach((row) => {
     row.rating = Number(
       Math.max(
@@ -872,7 +872,7 @@ function projectLineup(
   lineup: InternalLineupPlayer[],
   minute: number,
   possession: Side,
-  focusPlayerId: string | null,
+  focusPlayerId: number | null,
   random: () => number,
 ): MatchRenderPlayer[] {
   return lineup.map((player, index) => {
@@ -903,10 +903,10 @@ function pushEvent(
   events: SimulationEventDraft[],
   event: EMatchEvent,
   minute: number,
-  teamId: bigint | null,
-  actorPlayerId: bigint | null,
-  secondaryPlayerId: bigint | null,
-  payload: Record<string, unknown> | null,
+  teamId: number,
+  actorPlayerId: number,
+  secondaryPlayerId: number,
+  payload: Record<string, unknown>,
 ) {
   events.push({ event, minute, teamId, actorPlayerId, secondaryPlayerId, payload });
 }

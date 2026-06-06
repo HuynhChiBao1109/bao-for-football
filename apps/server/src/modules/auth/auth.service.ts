@@ -85,9 +85,9 @@ export class AuthService implements IAuthService {
 
   async me(claims: AuthUser): Promise<{ user: AuthUser; team: TeamEntity }> {
     const { id, userName, isAdmin } = claims;
-    const user = await this.repository.findUserById(BigInt(id));
+    const user = await this.repository.findUserById(id);
     if (!user) {
-      throw new BadRequestException("user not found");
+      throw new UnauthorizedException("user not found");
     }
     const teams = await this.teamService.getListTeamByUserId(user.id);
     return {

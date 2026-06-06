@@ -10,12 +10,12 @@ import { ECampainType } from "./enum/campain-type.enum";
 export class CampainService implements ICampainService {
   constructor(private readonly repository: CampainRepository) {}
 
-  async getListCampainByTeamId(teamId: bigint): Promise<CampainEntity[]> {
+  async getListCampainByTeamId(teamId: number): Promise<CampainEntity[]> {
     const listCampain = await this.repository.getListCampainByTeamId(teamId);
     return listCampain;
   }
 
-  async createCompainNormal(teamId: bigint, user: AuthUser): Promise<CampainMatchEntity[]> {
+  async createCompainNormal(teamId: number, user: AuthUser): Promise<CampainMatchEntity[]> {
     const isExistCampain = await this.repository.getCompainByTeamAndType(
       teamId,
       ECampainType.NORMAL,

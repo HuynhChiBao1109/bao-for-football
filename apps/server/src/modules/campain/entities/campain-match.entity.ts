@@ -7,24 +7,24 @@ import { TeamEntity } from "src/modules/team/entities/team.entity";
 
 @Entity("campain_matches")
 export class CampainMatchEntity extends AbstractEntity {
-  @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
-  id: bigint;
+  @PrimaryGeneratedColumn({ type: "int", unsigned: true })
+  id: number;
 
   @Column({
     name: "campain_id",
-    type: "bigint",
+    type: "int",
     unsigned: true,
   })
-  campainId: bigint;
+  campainId: number;
 
   @Column({ name: "level", type: "int" })
   level: number;
 
-  @Column({ name: "competitor_id", type: "bigint", unsigned: true })
-  competitorId: bigint;
+  @Column({ name: "competitor_id", type: "int", unsigned: true })
+  competitorId: number;
 
-  @Column({ name: "reward", type: "bigint", unsigned: true })
-  matchReward: bigint;
+  @Column({ name: "reward", type: "int", unsigned: true })
+  matchReward: number;
 
   @ManyToOne(() => CampainEntity, (campain) => campain.campainMatches, {
     onDelete: "CASCADE",

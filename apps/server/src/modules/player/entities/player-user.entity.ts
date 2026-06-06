@@ -14,14 +14,14 @@ import { PlayerPositionFormat } from "../types/player-position-format.type";
 
 @Entity("user_players")
 export class UserPlayerEntity extends AbstractEntity {
-  @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
-  id: bigint;
+  @PrimaryGeneratedColumn({ type: "int", unsigned: true })
+  id: number;
 
-  @Column({ name: "user_id", type: "bigint", unsigned: true })
-  userId: bigint;
+  @Column({ name: "user_id", type: "int", unsigned: true })
+  userId: number;
 
-  @Column({ name: "player_id", type: "bigint", unsigned: true })
-  playerId: bigint;
+  @Column({ name: "player_id", type: "int", unsigned: true })
+  playerId: number;
 
   @Column({ type: "int", default: 0 })
   exp: number;
@@ -55,11 +55,11 @@ export class UserPlayerEntity extends AbstractEntity {
 @Entity("user_player_skills")
 @Unique(["userPlayerId", "skill"])
 export class UserPlayerSkillEntity extends AbstractEntity {
-  @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
-  id: bigint;
+  @PrimaryGeneratedColumn({ type: "int", unsigned: true })
+  id: number;
 
-  @Column({ name: "user_player_id", type: "bigint", unsigned: true })
-  userPlayerId: bigint;
+  @Column({ name: "user_player_id", type: "int", unsigned: true })
+  userPlayerId: number;
 
   @Column({ name: "skill", type: "enum", enum: EPlayerSkill })
   skill: EPlayerSkill;

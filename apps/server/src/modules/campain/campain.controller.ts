@@ -10,12 +10,12 @@ export class CampainController {
   constructor(private readonly campainService: CampainService) {}
 
   @Get("team/:teamId")
-  async getListCampainByTeamId(@Param("teamId") teamId: bigint) {
+  async getListCampainByTeamId(@Param("teamId") teamId: number) {
     return this.campainService.getListCampainByTeamId(teamId);
   }
 
   @Post("team/:teamId/normal")
-  async createCompainNormal(@Param("teamId") teamId: bigint, @CurrentUser() user: AuthUser) {
+  async createCompainNormal(@Param("teamId") teamId: number, @CurrentUser() user: AuthUser) {
     return this.campainService.createCompainNormal(teamId, user);
   }
 }

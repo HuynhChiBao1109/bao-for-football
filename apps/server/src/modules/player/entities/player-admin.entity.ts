@@ -20,8 +20,8 @@ import { PlayerPositionFormat } from "../types/player-position-format.type";
 @Entity("players")
 @Unique(["name", "season"])
 export class PlayerEntity extends AbstractEntity {
-  @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
-  id: bigint;
+  @PrimaryGeneratedColumn({ type: "int", unsigned: true })
+  id: number;
 
   @Column({ type: "varchar", length: 191 })
   name: string;
@@ -39,13 +39,13 @@ export class PlayerEntity extends AbstractEntity {
 
   @Column({
     name: "country_id",
-    type: "bigint",
+    type: "int",
     unsigned: true,
   })
-  countryId: bigint | null;
+  countryId: number | null;
 
-  @Column({ name: "club_id", type: "bigint", unsigned: true, nullable: true })
-  clubId: bigint | null;
+  @Column({ name: "club_id", type: "int", unsigned: true, nullable: true })
+  clubId: number | null;
 
   @Column({ name: "height", type: "int", default: 180 })
   height!: number;
@@ -120,11 +120,11 @@ export class PlayerEntity extends AbstractEntity {
 @Entity("player_skills")
 @Unique(["playerId", "skill"])
 export class PlayerSkillEntity extends AbstractEntity {
-  @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
-  id: bigint;
+  @PrimaryGeneratedColumn({ type: "int", unsigned: true })
+  id: number;
 
-  @Column({ name: "player_id", type: "bigint", unsigned: true })
-  playerId: bigint;
+  @Column({ name: "player_id", type: "int", unsigned: true })
+  playerId: number;
 
   @Column({
     name: "skill",

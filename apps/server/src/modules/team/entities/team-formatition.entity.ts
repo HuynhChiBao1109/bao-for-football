@@ -5,14 +5,14 @@ import { AbstractEntity } from "src/database/database.abjact";
 
 @Entity("team_formations")
 export class TeamFormationEntity extends AbstractEntity {
-  @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
-  id: bigint;
+  @PrimaryGeneratedColumn({ type: "int", unsigned: true })
+  id: number;
 
-  @Column({ name: "team_id", type: "bigint", unsigned: true })
-  teamId: bigint;
+  @Column({ name: "team_id", type: "int", unsigned: true })
+  teamId: number;
 
-  @Column({ name: "user_player_id", type: "bigint", unsigned: true })
-  userPlayerId!: bigint;
+  @Column({ name: "user_player_id", type: "int", unsigned: true })
+  userPlayerId!: number;
 
   @Column({
     name: "position",

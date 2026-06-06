@@ -1,6 +1,6 @@
 import { AuthUser } from "src/modules/auth/types";
 
 export class CreateTeamByClubDTO {
-  clubId: bigint;
+  clubId: number;
   user: AuthUser;
 }

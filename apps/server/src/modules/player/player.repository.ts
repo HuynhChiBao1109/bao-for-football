@@ -17,13 +17,13 @@ export class PlayerRepository {
     private readonly userPlayerSkillRepository: Repository<UserPlayerSkillEntity>,
   ) {}
 
-  async getListPlayerByClubId(clubId: bigint): Promise<PlayerEntity[]> {
+  async getListPlayerByClubId(clubId: number): Promise<PlayerEntity[]> {
     return await this.playerRepository.find({
       where: { clubId },
     });
   }
 
-  async getPlayerById(playerId: bigint): Promise<PlayerEntity> {
+  async getPlayerById(playerId: number): Promise<PlayerEntity> {
     return await this.playerRepository.findOne({
       where: { id: playerId },
       relations: {
@@ -32,7 +32,7 @@ export class PlayerRepository {
     });
   }
 
-  async createPlayerUser(userId: bigint, playerId: bigint): Promise<UserPlayerEntity> {
+  async createPlayerUser(userId: number, playerId: number): Promise<UserPlayerEntity> {
     const player = await this.getPlayerById(playerId);
     if (!player) {
       throw new BadRequestException("Player not found");

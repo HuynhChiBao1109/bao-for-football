@@ -15,7 +15,7 @@ export class TeamService implements ITeamService {
     private readonly playerService: PlayerService,
   ) {}
 
-  async getListTeamByUserId(userId: bigint): Promise<TeamEntity[]> {
+  async getListTeamByUserId(userId: number): Promise<TeamEntity[]> {
     return await this.repository.getListTeamByUserId(userId);
   }
 

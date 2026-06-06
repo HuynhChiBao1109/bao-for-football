@@ -4,14 +4,14 @@ import { MatchEntity } from "./match.entity";
 
 @Entity("match_player_stats")
 export class MatchPlayerStatsEntity extends AbstractEntity {
-  @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
-  id: bigint;
+  @PrimaryGeneratedColumn({ type: "int", unsigned: true })
+  id: number;
 
-  @Column({ name: "match_id", type: "bigint", unsigned: true })
-  matchId: bigint;
+  @Column({ name: "match_id", type: "int", unsigned: true })
+  matchId: number;
 
-  @Column({ name: "player_id", type: "bigint", unsigned: true })
-  playerId: bigint;
+  @Column({ name: "player_id", type: "int", unsigned: true })
+  playerId: number;
 
   @Column({ name: "goals", type: "int", unsigned: true, default: 0 })
   goals: number;

@@ -41,7 +41,7 @@ export class MatchRepository {
     private readonly playerRepository: Repository<PlayerEntity>,
   ) {}
 
-  async findMatchById(matchId: bigint): Promise<MatchEntity | null> {
+  async findMatchById(matchId: number): Promise<MatchEntity | null> {
     return this.matchRepository.findOne({
       where: { id: matchId },
       relations: {
@@ -56,11 +56,11 @@ export class MatchRepository {
     });
   }
 
-  async findMatchByCampaignMatchId(campaignMatchId: bigint): Promise<MatchEntity | null> {
+  async findMatchByCampaignMatchId(campaignMatchId: number): Promise<MatchEntity | null> {
     return this.matchRepository.findOne({ where: { campainId: campaignMatchId } });
   }
 
-  async findCampaignMatchById(campaignMatchId: bigint): Promise<CampainMatchEntity | null> {
+  async findCampaignMatchById(campaignMatchId: number): Promise<CampainMatchEntity | null> {
     return this.campainMatchRepository.findOne({
       where: { id: campaignMatchId },
       relations: {
@@ -77,7 +77,7 @@ export class MatchRepository {
     return this.matchRepository.save(newMatch);
   }
 
-  async update(matchId: bigint, payload: Partial<MatchEntity>): Promise<void> {
+  async update(matchId: number, payload: Partial<MatchEntity>): Promise<void> {
     await this.matchRepository.update({ id: matchId }, payload);
   }
 
@@ -101,15 +101,15 @@ export class MatchRepository {
     return this.matchPlayerStatsRepository.save(entities);
   }
 
-  async getTeamFormations(teamId: bigint): Promise<TeamFormationEntity[]> {
+  async getTeamFormations(teamId: number): Promise<TeamFormationEntity[]> {
     return this.teamFormationRepository.find({ where: { teamId } });
   }
 
-  async getUserPlayersByUserId(userId: bigint): Promise<UserPlayerEntity[]> {
+  async getUserPlayersByUserId(userId: number): Promise<UserPlayerEntity[]> {
     return this.userPlayerRepository.find({ where: { userId } });
   }
 
-  async getUserPlayerSkills(userPlayerIds: bigint[]): Promise<UserPlayerSkillEntity[]> {
+  async getUserPlayerSkills(userPlayerIds: number[]): Promise<UserPlayerSkillEntity[]> {
     if (!userPlayerIds.length) {
       return [];
     }
@@ -120,7 +120,7 @@ export class MatchRepository {
       .getMany();
   }
 
-  async getPlayersByIds(playerIds: bigint[]): Promise<PlayerEntity[]> {
+  async getPlayersByIds(playerIds: number[]): Promise<PlayerEntity[]> {
     if (!playerIds.length) {
       return [];
     }

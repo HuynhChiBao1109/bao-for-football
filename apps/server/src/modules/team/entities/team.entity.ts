@@ -9,11 +9,11 @@ import { CampainMatchEntity } from "src/modules/campain/entities/campain-match.e
 
 @Entity("teams")
 export class TeamEntity extends AbstractEntity {
-  @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
-  id: bigint;
+  @PrimaryGeneratedColumn({ type: "int", unsigned: true })
+  id: number;
 
-  @Column({ name: "user_id", type: "bigint", unsigned: true, nullable: true })
-  userId!: bigint;
+  @Column({ name: "user_id", type: "int", unsigned: true, nullable: true })
+  userId!: number;
 
   @Column({ name: "team_name", type: "varchar", length: 191 })
   teamName!: string;
@@ -36,8 +36,8 @@ export class TeamEntity extends AbstractEntity {
   @Column({ name: "rank_point", type: "int", default: 0 })
   rankPoint: number;
 
-  @Column({ type: "bigint", default: 360000000 })
-  budget: bigint;
+  @Column({ type: "int", default: 360000000 })
+  budget: number;
 
   @Column({
     name: "type",

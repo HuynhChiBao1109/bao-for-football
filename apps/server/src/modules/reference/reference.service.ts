@@ -9,11 +9,11 @@ import { CountryEntity } from "./entities/country.entity";
 export class ReferenceService implements IReferenceService {
   constructor(private readonly repository: ReferenceRepository) {}
 
-  async getListClubByLeague(leagueId: bigint): Promise<ClubEntity[]> {
+  async getListClubByLeague(leagueId: number): Promise<ClubEntity[]> {
     return this.repository.getListClubByLeague(leagueId);
   }
 
-  async getListLeagueByCountry(countryId: bigint): Promise<LeagueEntity[]> {
+  async getListLeagueByCountry(countryId: number): Promise<LeagueEntity[]> {
     return this.repository.getListLeagueByCountry(countryId);
   }
 
@@ -21,7 +21,7 @@ export class ReferenceService implements IReferenceService {
     return this.repository.getListCountry();
   }
 
-  async getClubById(clubId: bigint): Promise<ClubEntity> {
+  async getClubById(clubId: number): Promise<ClubEntity> {
     return this.repository.getClubById(clubId);
   }
 }

@@ -4,8 +4,8 @@ import { PlayerEntity } from "../../player/entities/player-admin.entity";
 
 @Entity("countries")
 export class CountryEntity {
-  @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
-  id: bigint;
+  @PrimaryGeneratedColumn({ type: "int", unsigned: true })
+  id: number;
 
   @Column({ type: "varchar", length: 191 })
   name: string;

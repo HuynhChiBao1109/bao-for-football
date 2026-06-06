@@ -5,11 +5,11 @@ import { EMatchEvent } from "../enums";
 
 @Entity("match_events")
 export class MatchEventEntity extends AbstractEntity {
-  @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
-  id: bigint;
+  @PrimaryGeneratedColumn({ type: "int", unsigned: true })
+  id: number;
 
-  @Column({ name: "match_id", type: "bigint", unsigned: true })
-  matchId: bigint;
+  @Column({ name: "match_id", type: "int", unsigned: true })
+  matchId: number;
 
   @Column({ name: "event", type: "enum", enum: EMatchEvent })
   event: EMatchEvent;
@@ -17,14 +17,14 @@ export class MatchEventEntity extends AbstractEntity {
   @Column({ name: "minute", type: "int", unsigned: true })
   minute: number;
 
-  @Column({ name: "team_id", type: "bigint", unsigned: true, nullable: true })
-  teamId: bigint | null;
+  @Column({ name: "team_id", type: "int", unsigned: true, nullable: true })
+  teamId: number | null;
 
-  @Column({ name: "actor_player_id", type: "bigint", unsigned: true, nullable: true })
-  actorPlayerId: bigint | null;
+  @Column({ name: "actor_player_id", type: "int", unsigned: true, nullable: true })
+  actorPlayerId: number | null;
 
-  @Column({ name: "secondary_player_id", type: "bigint", unsigned: true, nullable: true })
-  secondaryPlayerId: bigint | null;
+  @Column({ name: "secondary_player_id", type: "int", unsigned: true, nullable: true })
+  secondaryPlayerId: number | null;
 
   @Column({ name: "payload", type: "json", nullable: true })
   payload: Record<string, unknown> | null;

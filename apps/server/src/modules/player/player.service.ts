@@ -7,7 +7,7 @@ import { AuthUser } from "../auth/types";
 export class PlayerService implements IPlayerService {
   constructor(private readonly repository: PlayerRepository) {}
 
-  async insertPlayerToUserByClubId(user: AuthUser, clubId: bigint): Promise<void> {
+  async insertPlayerToUserByClubId(user: AuthUser, clubId: number): Promise<void> {
     const listPlayerByClub = await this.repository.getListPlayerByClubId(clubId);
 
     if (listPlayerByClub.length === 0) {

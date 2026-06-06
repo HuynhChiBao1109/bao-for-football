@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { MatchServiceInterface } from "./interfaces/match-service.interface";
+import { IMatchService } from "./interfaces/match-service.interface";
 import { MatchRepository } from "./match.repository";
 import { MatchEntity } from "./entities/match.entity";
 import { AuthUser } from "../auth/types";
@@ -17,7 +17,7 @@ import { SocketService } from "../socket/socket.service";
 import { ETeamFormation } from "../team/enums/team-formation.enum";
 
 @Injectable()
-export class MatchService implements MatchServiceInterface {
+export class MatchService implements IMatchService {
   private readonly activeTimers = new Map<string, NodeJS.Timeout>();
   private readonly matchMinuteMs = Number(process.env.MATCH_MINUTE_MS ?? 20_000);
 
@@ -26,7 +26,7 @@ export class MatchService implements MatchServiceInterface {
     private readonly socketService: SocketService,
   ) {}
 
-  async startCampaignMatch(user: AuthUser, campaignMatchId: bigint): Promise<any> {
+  async startCampaignMatch(user: AuthUser, campaignMatchId: number): Promise<any> {
     if (!campaignMatchId) {
       throw new BadRequestException("campainMatchId is required");
     }
@@ -88,7 +88,7 @@ export class MatchService implements MatchServiceInterface {
         pressure: Number(awayTeam.pressure ?? 50),
         players: awayPlayers,
       },
-      Number(campaignMatch.id % BigInt(2147483647)),
+      campaignMatch.id,
     );
 
     const match = await this.repository.create({
@@ -152,7 +152,7 @@ export class MatchService implements MatchServiceInterface {
     };
   }
 
-  async getById(matchId: bigint): Promise<MatchEntity> {
+  async getById(matchId: number): Promise<MatchEntity> {
     const match = await this.repository.findMatchById(matchId);
     if (!match) {
       throw new NotFoundException("Match not found");
@@ -165,10 +165,9 @@ export class MatchService implements MatchServiceInterface {
     return match;
   }
 
-  async finalize(matchId: string, payload: Partial<MatchEntity>): Promise<any> {
-    const id = BigInt(matchId);
-    await this.repository.update(id, payload);
-    const match = await this.repository.findMatchById(id);
+  async finalize(matchId: number, payload: Partial<MatchEntity>): Promise<MatchEntity> {
+    await this.repository.update(matchId, payload);
+    const match = await this.repository.findMatchById(matchId);
     if (!match) {
       throw new NotFoundException("Match not found");
     }
@@ -176,8 +175,8 @@ export class MatchService implements MatchServiceInterface {
   }
 
   private async buildTeamRoster(
-    teamId: bigint,
-    userId: bigint | null | undefined,
+    teamId: number,
+    userId: number | null | undefined,
     teamName: string,
   ): Promise<SimulationRosterPlayer[]> {
     if (!userId) {

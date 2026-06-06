@@ -3,8 +3,8 @@ import { LeagueEntity } from "./league.entity";
 
 @Entity("clubs")
 export class ClubEntity {
-  @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
-  id: bigint;
+  @PrimaryGeneratedColumn({ type: "int", unsigned: true })
+  id: number;
 
   @Column({ type: "varchar", length: 191 })
   name: string;
@@ -12,8 +12,8 @@ export class ClubEntity {
   @Column({ name: "img_url", type: "varchar", length: 512 })
   imgUrl: string;
 
-  @Column({ name: "league_id", type: "bigint", unsigned: true })
-  leagueId: bigint;
+  @Column({ name: "league_id", type: "int", unsigned: true })
+  leagueId: number;
 
   @ManyToOne(() => LeagueEntity, (league) => league.clubs, { nullable: true })
   @JoinColumn({ name: "league_id" })

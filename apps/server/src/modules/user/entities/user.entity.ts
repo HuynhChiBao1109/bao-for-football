@@ -4,8 +4,8 @@ import { UserPlayerEntity } from "src/modules/player/entities/player-user.entity
 
 @Entity("users")
 export class UserEntity {
-  @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
-  id: bigint;
+  @PrimaryGeneratedColumn({ type: "int", unsigned: true })
+  id: number;
 
   @Column({ type: "varchar", length: 191, unique: true })
   userName: string;

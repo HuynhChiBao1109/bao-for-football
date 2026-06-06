@@ -16,7 +16,7 @@ export class AuthRepository {
     return await this.userRepository.findOne({ where: { userName: username } });
   }
 
-  async findUserById(id: bigint): Promise<UserEntity> {
+  async findUserById(id: number): Promise<UserEntity> {
     return await this.userRepository.findOne({ where: { id: id } });
   }
 

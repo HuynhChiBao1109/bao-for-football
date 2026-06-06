@@ -11,7 +11,7 @@ export class TeamRepository {
     private readonly repository: Repository<TeamEntity>,
   ) {}
 
-  async getListTeamByUserId(userId: bigint): Promise<TeamEntity[]> {
+  async getListTeamByUserId(userId: number): Promise<TeamEntity[]> {
     return await this.repository.find({ where: { userId: userId } });
   }
 
@@ -20,11 +20,11 @@ export class TeamRepository {
     return this.repository.save(newTeam);
   }
 
-  async getById(id: bigint): Promise<TeamEntity | null> {
+  async getById(id: number): Promise<TeamEntity | null> {
     return this.repository.findOne({ where: { id } });
   }
 
-  async getBotTeams(limit = 10, excludeTeamId?: bigint): Promise<TeamEntity[]> {
+  async getBotTeams(limit = 10, excludeTeamId?: number): Promise<TeamEntity[]> {
     return this.repository
       .find({
         where: {

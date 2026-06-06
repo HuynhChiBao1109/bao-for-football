@@ -10,7 +10,7 @@ export class TeamController {
   constructor(private readonly teamService: TeamService) {}
 
   @Post("club/:clubId")
-  async createByClub(@Param("clubId") clubId: bigint, @CurrentUser() user: AuthUser) {
+  async createByClub(@Param("clubId") clubId: number, @CurrentUser() user: AuthUser) {
     return this.teamService.createByClub({ clubId, user });
   }
 }

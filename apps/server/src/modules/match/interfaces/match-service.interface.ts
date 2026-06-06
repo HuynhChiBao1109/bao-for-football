@@ -1,13 +1,13 @@
 import { AuthUser } from "src/modules/auth/types";
 import { MatchEntity } from "../entities/match.entity";
 
-export interface MatchServiceInterface {
+export interface IMatchService {
   startCampaignMatch(
     user: AuthUser,
-    campaignMatchId: bigint,
+    campaignMatchId: number,
   ): Promise<{ matchId: string; status: string; latestSnapshot: unknown }>;
 
-  getById(matchId: bigint): Promise<MatchEntity>;
+  getById(matchId: number): Promise<MatchEntity>;
 
-  finalize(matchId: string, payload: Partial<MatchEntity>): Promise<MatchEntity>;
+  finalize(matchId: number, payload: Partial<MatchEntity>): Promise<MatchEntity>;
 }

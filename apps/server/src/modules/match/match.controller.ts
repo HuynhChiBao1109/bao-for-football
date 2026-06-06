@@ -12,14 +12,14 @@ export class MatchController {
   @Post("campaign/start")
   async start(
     @CurrentUser() user: AuthUser,
-    @Body("campainMatchId") campainMatchId?: bigint,
-    @Body("campainId") legacyCampainId?: bigint,
+    @Body("campainMatchId") campainMatchId?: number,
+    @Body("campainId") legacyCampainId?: number,
   ) {
     return this.matchService.startCampaignMatch(user, campainMatchId ?? legacyCampainId);
   }
 
   @Get(":matchId")
-  async getById(@Param("matchId") matchId: bigint) {
+  async getById(@Param("matchId") matchId: number) {
     return this.matchService.getById(matchId);
   }
 }

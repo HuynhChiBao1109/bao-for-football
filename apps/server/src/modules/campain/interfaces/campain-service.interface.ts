@@ -3,7 +3,7 @@ import { CampainMatchEntity } from "../entities/campain-match.entity";
 import { CampainEntity } from "../entities/campain.entity";
 
 export interface ICampainService {
-  getListCampainByTeamId(teamId: bigint): Promise<CampainEntity[]>;
+  getListCampainByTeamId(teamId: number): Promise<CampainEntity[]>;
 
-  createCompainNormal(teamId: bigint, user: AuthUser): Promise<CampainMatchEntity[]>;
+  createCompainNormal(teamId: number, user: AuthUser): Promise<CampainMatchEntity[]>;
 }

@@ -9,6 +9,7 @@
     "dev": "cross-env NODE_ENV=development nest start --watch",
     "start:prod": "node dist/main",
     "typeorm": "typeorm-ts-node-commonjs -d src/database/data-source.ts",
+    "start:debug": "nest start --debug --watch",
     "migration:run": "npm run typeorm -- migration:run",
     "migration:revert": "npm run typeorm -- migration:revert",
     "format": "prettier --write \"src/**/*.ts\"",

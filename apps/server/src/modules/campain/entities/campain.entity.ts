@@ -6,8 +6,8 @@ import { CampainMatchEntity } from "./campain-match.entity";
 
 @Entity("campains")
 export class CampainEntity extends AbstractEntity {
-  @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
-  id: bigint;
+  @PrimaryGeneratedColumn({ type: "int", unsigned: true })
+  id: number;
 
   @Column({
     name: "type",
@@ -20,8 +20,8 @@ export class CampainEntity extends AbstractEntity {
   @Column({ name: "level", type: "int" })
   level: number;
 
-  @Column({ name: "team_id", type: "bigint", unsigned: true })
-  teamId: bigint;
+  @Column({ name: "team_id", type: "int", unsigned: true })
+  teamId: number;
 
   @ManyToOne(() => TeamEntity, (team) => team.campains, { onDelete: "CASCADE" })
   @JoinColumn({ name: "team_id" })

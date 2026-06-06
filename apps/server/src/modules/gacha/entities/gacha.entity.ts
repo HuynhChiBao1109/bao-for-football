@@ -3,7 +3,7 @@ import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from "typeor
 
 @Entity("gacha_banners")
 export class GachaBannerEntity extends AbstractEntity {
-  @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
+  @PrimaryGeneratedColumn({ type: "int", unsigned: true })
   id!: string;
 
   @Column({ name: "banner_code", type: "varchar", length: 64 })
@@ -15,7 +15,7 @@ export class GachaBannerEntity extends AbstractEntity {
   @Column({ name: "banner_image_url", type: "varchar", length: 512 })
   bannerImageUrl!: string;
 
-  @Column({ name: "player_id", type: "bigint", unsigned: true })
+  @Column({ name: "player_id", type: "int", unsigned: true })
   playerId!: string;
 
   @Column({ name: "expired_at", type: "datetime" })
@@ -30,10 +30,10 @@ export class GachaBannerEntity extends AbstractEntity {
 
 @Entity("gacha_logs")
 export class GachaLogEntity extends AbstractEntity {
-  @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
+  @PrimaryGeneratedColumn({ type: "int", unsigned: true })
   id!: string;
 
-  @Column({ name: "user_id", type: "bigint", unsigned: true })
+  @Column({ name: "user_id", type: "int", unsigned: true })
   userId!: string;
 
   @Column({ name: "banner_code", type: "varchar", length: 64 })

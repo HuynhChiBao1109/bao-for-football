@@ -20,7 +20,7 @@ export class CampainRepository {
     private readonly teamRepository: Repository<TeamEntity>,
   ) {}
 
-  async getListCampainByTeamId(teamId: bigint) {
+  async getListCampainByTeamId(teamId: number) {
     const listCampain = await this.repository.find({
       where: {
         teamId,
@@ -40,7 +40,7 @@ export class CampainRepository {
     return listCampain;
   }
 
-  async createCompainNormal(teamId: bigint): Promise<CampainMatchEntity[]> {
+  async createCompainNormal(teamId: number): Promise<CampainMatchEntity[]> {
     const createCampain = this.repository.create({
       teamId,
       type: ECampainType.NORMAL,
@@ -70,7 +70,7 @@ export class CampainRepository {
       campainMatch.level = i;
       const competitorTeam = filteredBotTeams[(i - 1) % filteredBotTeams.length];
       campainMatch.competitorId = competitorTeam.id;
-      campainMatch.matchReward = BigInt(1000 * 1000 * i);
+      campainMatch.matchReward = 1000 * 1000 * i;
       listCampainMatch.push(campainMatch);
     }
 
@@ -79,7 +79,7 @@ export class CampainRepository {
     return listCampainMatch;
   }
 
-  async getCompainByTeamAndType(teamId: bigint, type: ECampainType): Promise<CampainEntity> {
+  async getCompainByTeamAndType(teamId: number, type: ECampainType): Promise<CampainEntity> {
     const campain = await this.repository.findOne({
       where: {
         teamId,

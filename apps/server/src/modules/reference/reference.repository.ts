@@ -18,11 +18,11 @@ export class ReferenceRepository {
     private readonly countryRepository: Repository<CountryEntity>,
   ) {}
 
-  async getListClubByLeague(leagueId: bigint): Promise<ClubEntity[]> {
+  async getListClubByLeague(leagueId: number): Promise<ClubEntity[]> {
     return await this.clubRepository.find({ where: { leagueId } });
   }
 
-  async getListLeagueByCountry(countryId: bigint): Promise<LeagueEntity[]> {
+  async getListLeagueByCountry(countryId: number): Promise<LeagueEntity[]> {
     return await this.leagueRepository.find({ where: { countryId } });
   }
 
@@ -30,7 +30,7 @@ export class ReferenceRepository {
     return await this.countryRepository.find();
   }
 
-  async getClubById(clubId: bigint): Promise<ClubEntity> {
+  async getClubById(clubId: number): Promise<ClubEntity> {
     return await this.clubRepository.findOne({ where: { id: clubId } });
   }
 }

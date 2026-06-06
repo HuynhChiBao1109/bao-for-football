@@ -16,17 +16,17 @@ import { TeamEntity } from "src/modules/team/entities/team.entity";
 
 @Entity("matches")
 export class MatchEntity extends AbstractEntity {
-  @PrimaryGeneratedColumn({ type: "bigint", unsigned: true })
-  id: bigint;
+  @PrimaryGeneratedColumn({ type: "int", unsigned: true })
+  id: number;
 
-  @Column({ name: "campain_id", type: "bigint", unsigned: true })
-  campainId!: bigint;
+  @Column({ name: "campain_id", type: "int", unsigned: true })
+  campainId!: number;
 
-  @Column({ name: "home_team_id", type: "bigint", unsigned: true, nullable: true })
-  homeTeamId: bigint | null;
+  @Column({ name: "home_team_id", type: "int", unsigned: true, nullable: true })
+  homeTeamId: number;
 
-  @Column({ name: "away_team_id", type: "bigint", unsigned: true, nullable: true })
-  awayTeamId: bigint | null;
+  @Column({ name: "away_team_id", type: "int", unsigned: true, nullable: true })
+  awayTeamId: number;
 
   @Column({ name: "current_minute", type: "int", unsigned: true, default: 0 })
   currentMinute: number;
