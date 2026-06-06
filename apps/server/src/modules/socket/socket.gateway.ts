@@ -13,7 +13,7 @@ import { SocketService } from "./socket.service";
 import { Server, Socket } from "socket.io";
 import { AuthService } from "../auth/auth.service";
 import { AuthUser } from "../auth/types";
-import { ESocketChannel } from "./enums";
+import { ESocketChannel, ESocketEvent } from "./enums";
 
 @WebSocketGateway({
   cors: {
@@ -79,6 +79,33 @@ export class SocketGateway implements OnGatewayInit, OnGatewayConnection, OnGate
       event: "pong",
       data: "Hello FE",
     };
+  }
+
+  @SubscribeMessage(ESocketEvent.MATCH_JOIN)
+  handleJoinMatch(
+    @MessageBody() data: { matchId?: string | number },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const matchId = data?.matchId ? String(data.matchId) : "";
+    if (!matchId) {
+      return { event: ESocketEvent.MATCH_JOIN, data: { ok: false } };
+    }
+
+    client.join(`${ESocketChannel.MATCH}${matchId}`);
+    return { event: ESocketEvent.MATCH_JOIN, data: { ok: true, matchId } };
+  }
+
+  @SubscribeMessage(ESocketEvent.MATCH_LEAVE)
+  handleLeaveMatch(
+    @MessageBody() data: { matchId?: string | number },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const matchId = data?.matchId ? String(data.matchId) : "";
+    if (matchId) {
+      client.leave(`${ESocketChannel.MATCH}${matchId}`);
+    }
+
+    return { event: ESocketEvent.MATCH_LEAVE, data: { ok: true, matchId } };
   }
 
   private extractToken(client: Socket): string | null {

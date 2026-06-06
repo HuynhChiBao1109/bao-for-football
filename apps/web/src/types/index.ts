@@ -158,13 +158,95 @@ export type CampaignMatch = {
   id: number | string;
   campainId: number | string;
   level: number;
-  competitorClubId?: number | string;
+  competitorId?: number | string;
   matchReward: number | string;
-  competitorClub?: {
+  competitor?: {
     id: number | string;
     name: string;
     imgUrl?: string;
+    type?: number | string;
   };
+};
+
+export type MatchPitchPlayer = {
+  id: string;
+  name: string;
+  avatarUrl?: string | null;
+  position: string;
+  x: number;
+  y: number;
+  hasBall: boolean;
+  activeSkill?: number | null;
+};
+
+export type MatchSnapshot = {
+  minute: number;
+  second?: number;
+  clockLabel: string;
+  phase?: string;
+  homeScore: number;
+  awayScore: number;
+  possession: 'home' | 'away';
+  ball: {
+    x: number;
+    y: number;
+    ownerPlayerId: string | null;
+    speed?: number;
+    ownerSide?: 'home' | 'away' | null;
+  };
+  highlight: {
+    event: number | null;
+    label: string;
+    teamSide?: 'home' | 'away' | null;
+    actorPlayerId?: string | null;
+    secondaryPlayerId?: string | null;
+    skill?: number | null;
+  };
+  homePlayers: MatchPitchPlayer[];
+  awayPlayers: MatchPitchPlayer[];
+};
+
+export type MatchEventRecord = {
+  id?: number | string;
+  minute: number;
+  event: number;
+  teamId?: number | string | null;
+  actorPlayerId?: number | string | null;
+  secondaryPlayerId?: number | string | null;
+  payload?: Record<string, unknown> | null;
+};
+
+export type MatchPlayerStats = {
+  id?: number | string;
+  playerId: number | string;
+  goals: number;
+  assists: number;
+  rating: number;
+  shots: number;
+  passes: number;
+  tackles: number;
+};
+
+export type MatchState = {
+  id: number | string;
+  status: string;
+  homeTeamId?: number | string;
+  awayTeamId?: number | string;
+  homeScore: number;
+  awayScore: number;
+  currentMinute: number;
+  clockSeconds: number;
+  latestSnapshot?: MatchSnapshot | null;
+  homeLineup?: Array<Record<string, unknown>> | null;
+  awayLineup?: Array<Record<string, unknown>> | null;
+  matchEvents?: MatchEventRecord[];
+  matchPlayerStats?: MatchPlayerStats[];
+};
+
+export type MatchStartResponse = {
+  matchId: string;
+  status: string;
+  latestSnapshot?: MatchSnapshot | null;
 };
 
 // ─── Gacha ────────────────────────────────────────────────────────────────────

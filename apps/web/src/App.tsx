@@ -14,6 +14,7 @@ import { TeamSetupPage } from './pages/TeamSetupPage';
 import { useSession } from './hooks/useSession';
 import { useSocketSession } from './hooks/useSocketSession';
 import { ROUTES } from './routes';
+import { MatchView } from './MatchView';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { session } = useAuth();
@@ -103,6 +104,7 @@ function App() {
         <Route path={ROUTES.tactics} element={<TacticsPage />} />
         <Route path={ROUTES.gacha} element={<GachaPage />} />
         <Route path={ROUTES.aiMatch} element={<AiMatchPage />} />
+        <Route path={ROUTES.matchLive} element={<MatchView />} />
         <Route path={ROUTES.pvp} element={<PvpPage />} />
         <Route
           path={ROUTES.admin}

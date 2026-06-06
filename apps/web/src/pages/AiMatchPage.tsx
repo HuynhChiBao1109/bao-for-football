@@ -1,14 +1,19 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, startTransition } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCampainMatches, useCreateCompainNormal } from '../hooks/useAiCampaign';
 import { Banner } from '../components/feedback';
 import { useSession } from '../hooks/useSession';
 import type { CampaignMatch } from '../types';
+import { useStartCampaignMatch } from '../hooks/useMatch';
+import { matchLivePath } from '../routes';
 
 export function AiMatchPage() {
+  const navigate = useNavigate();
   const { data: sessionData } = useSession();
   const teamId = Number(((sessionData?.team as any)?.id ?? 0) as number);
   const { data: matches = [], isLoading, isFetching, error, refetch } = useCampainMatches(teamId);
   const createCompainNormal = useCreateCompainNormal();
+  const startMatch = useStartCampaignMatch();
 
   const [bootstrapping, setBootstrapping] = useState(false);
   const [createError, setCreateError] = useState('');
@@ -114,7 +119,17 @@ export function AiMatchPage() {
           ) : (
             <div className="campaign-match-grid mt-5">
               {matches.map((item) => (
-                <CampaignMatchCard key={String(item.id)} match={item} />
+                <CampaignMatchCard
+                  key={String(item.id)}
+                  match={item}
+                  isStarting={startMatch.isPending}
+                  onStart={async () => {
+                    const response = await startMatch.mutateAsync({ campainMatchId: item.id });
+                    startTransition(() => {
+                      navigate(matchLivePath(response.matchId));
+                    });
+                  }}
+                />
               ))}
             </div>
           )}
@@ -124,9 +139,17 @@ export function AiMatchPage() {
   );
 }
 
-function CampaignMatchCard({ match }: { match: CampaignMatch }) {
+function CampaignMatchCard({
+  match,
+  onStart,
+  isStarting,
+}: {
+  match: CampaignMatch;
+  onStart: () => Promise<void>;
+  isStarting: boolean;
+}) {
   const reward = Number(match.matchReward ?? 0);
-  const clubName = match.competitorClub?.name || `Club #${String(match.competitorClubId ?? '-')}`;
+  const clubName = match.competitor?.name || `BOT #${String(match.competitorId ?? '-')}`;
 
   return (
     <article className="campaign-match-card">
@@ -138,6 +161,16 @@ function CampaignMatchCard({ match }: { match: CampaignMatch }) {
         <span>Reward</span>
         <strong>{reward.toLocaleString()}</strong>
       </div>
+      <button
+        type="button"
+        className="game-button-primary mt-3 w-full"
+        disabled={isStarting}
+        onClick={() => {
+          void onStart();
+        }}
+      >
+        {isStarting ? 'Starting...' : 'Start Match'}
+      </button>
     </article>
   );
 }

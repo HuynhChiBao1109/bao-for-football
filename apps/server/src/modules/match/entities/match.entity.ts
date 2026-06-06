@@ -12,6 +12,7 @@ import { EMatchStatus } from "../enums/match-status.enum";
 import { CampainMatchEntity } from "src/modules/campain/entities/campain-match.entity";
 import { MatchEventEntity } from "./match-event.entity";
 import { MatchPlayerStatsEntity } from "./match-player-stats.entity";
+import { TeamEntity } from "src/modules/team/entities/team.entity";
 
 @Entity("matches")
 export class MatchEntity extends AbstractEntity {
@@ -20,6 +21,18 @@ export class MatchEntity extends AbstractEntity {
 
   @Column({ name: "campain_id", type: "bigint", unsigned: true })
   campainId!: bigint;
+
+  @Column({ name: "home_team_id", type: "bigint", unsigned: true, nullable: true })
+  homeTeamId: bigint | null;
+
+  @Column({ name: "away_team_id", type: "bigint", unsigned: true, nullable: true })
+  awayTeamId: bigint | null;
+
+  @Column({ name: "current_minute", type: "int", unsigned: true, default: 0 })
+  currentMinute: number;
+
+  @Column({ name: "clock_seconds", type: "int", unsigned: true, default: 0 })
+  clockSeconds: number;
 
   @Column({
     type: "enum",
@@ -40,9 +53,29 @@ export class MatchEntity extends AbstractEntity {
   @Column({ name: "ended_at", type: "timestamp", nullable: true })
   endedAt: Date | null;
 
+  @Column({ name: "home_lineup", type: "json", nullable: true })
+  homeLineup: Record<string, unknown>[] | null;
+
+  @Column({ name: "away_lineup", type: "json", nullable: true })
+  awayLineup: Record<string, unknown>[] | null;
+
+  @Column({ name: "latest_snapshot", type: "json", nullable: true })
+  latestSnapshot: Record<string, unknown> | null;
+
+  @Column({ name: "timeline", type: "json", nullable: true })
+  timeline: Record<string, unknown>[] | null;
+
   @OneToOne(() => CampainMatchEntity, (campainMatch) => campainMatch.match)
   @JoinColumn({ name: "campain_id" })
   campainMatch: CampainMatchEntity;
+
+  @OneToOne(() => TeamEntity, { nullable: true })
+  @JoinColumn({ name: "home_team_id" })
+  homeTeam: TeamEntity | null;
+
+  @OneToOne(() => TeamEntity, { nullable: true })
+  @JoinColumn({ name: "away_team_id" })
+  awayTeam: TeamEntity | null;
 
   @OneToMany(() => MatchEventEntity, (matchEvent) => matchEvent.match)
   matchEvents: MatchEventEntity[];

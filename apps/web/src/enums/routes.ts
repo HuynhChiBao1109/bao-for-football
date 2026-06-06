@@ -11,6 +11,7 @@ export const AppRoute = {
   Admin: '/admin',
   LeagueMatch: '/match/league',
   ChampionShipMatch: '/match/championship',
+  MatchLive: '/match/live/:matchId',
 } as const;
 
 export type AppRoute = (typeof AppRoute)[keyof typeof AppRoute];

@@ -17,6 +17,18 @@ export class MatchEventEntity extends AbstractEntity {
   @Column({ name: "minute", type: "int", unsigned: true })
   minute: number;
 
+  @Column({ name: "team_id", type: "bigint", unsigned: true, nullable: true })
+  teamId: bigint | null;
+
+  @Column({ name: "actor_player_id", type: "bigint", unsigned: true, nullable: true })
+  actorPlayerId: bigint | null;
+
+  @Column({ name: "secondary_player_id", type: "bigint", unsigned: true, nullable: true })
+  secondaryPlayerId: bigint | null;
+
+  @Column({ name: "payload", type: "json", nullable: true })
+  payload: Record<string, unknown> | null;
+
   @ManyToOne(() => MatchEntity, (match) => match.matchEvents, {
     onDelete: "CASCADE",
   })

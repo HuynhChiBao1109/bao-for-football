@@ -41,6 +41,10 @@ export function useCampainMatches(teamId: number) {
   });
 }
 
+export function resolveCampaignCompetitorName(match: CampaignMatch) {
+  return match.competitor?.name || `BOT #${String(match.competitorId ?? '-')}`;
+}
+
 export function useCreateCompainNormal() {
   const { token } = useAuth();
   const qc = useQueryClient();

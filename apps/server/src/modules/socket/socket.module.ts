@@ -6,5 +6,6 @@ import { SocketGateway } from "./socket.gateway";
 @Module({
   imports: [AuthModule],
   providers: [SocketGateway, SocketService],
+  exports: [SocketService],
 })
 export class SocketModule {}

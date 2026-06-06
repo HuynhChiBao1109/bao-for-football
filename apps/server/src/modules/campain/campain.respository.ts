@@ -4,7 +4,8 @@ import { InjectRepository } from "@nestjs/typeorm/dist/common/typeorm.decorators
 import { CampainEntity } from "./entities/campain.entity";
 import { CampainMatchEntity } from "./entities/campain-match.entity";
 import { ECampainType } from "./enum/campain-type.enum";
-import { ClubEntity } from "../reference/entities/club.entity";
+import { TeamEntity } from "../team/entities/team.entity";
+import { ETeamType } from "../team/enums/team-type.enum";
 
 @Injectable()
 export class CampainRepository {
@@ -15,8 +16,8 @@ export class CampainRepository {
     @InjectRepository(CampainMatchEntity)
     private readonly campainMatchRepository: Repository<CampainMatchEntity>,
 
-    @InjectRepository(ClubEntity)
-    private readonly clubRepository: Repository<ClubEntity>,
+    @InjectRepository(TeamEntity)
+    private readonly teamRepository: Repository<TeamEntity>,
   ) {}
 
   async getListCampainByTeamId(teamId: bigint) {
@@ -26,7 +27,7 @@ export class CampainRepository {
       },
       relations: {
         campainMatches: {
-          competitorClub: true,
+          competitor: true,
         },
       },
       order: {
@@ -47,12 +48,17 @@ export class CampainRepository {
     });
     const newCampain = await this.repository.save(createCampain);
 
-    const clubs = await this.clubRepository.find({
+    const botTeams = await this.teamRepository.find({
+      where: {
+        type: ETeamType.BOT,
+      },
       order: { id: "ASC" },
       take: 10,
     });
 
-    if (!clubs.length) {
+    const filteredBotTeams = botTeams.filter((team) => team.id !== teamId);
+
+    if (!filteredBotTeams.length) {
       return [];
     }
 
@@ -62,8 +68,8 @@ export class CampainRepository {
       const campainMatch = new CampainMatchEntity();
       campainMatch.campainId = newCampain.id;
       campainMatch.level = i;
-      const competitorClub = clubs[(i - 1) % clubs.length];
-      campainMatch.competitorClubId = competitorClub.id;
+      const competitorTeam = filteredBotTeams[(i - 1) % filteredBotTeams.length];
+      campainMatch.competitorId = competitorTeam.id;
       campainMatch.matchReward = BigInt(1000 * 1000 * i);
       listCampainMatch.push(campainMatch);
     }
@@ -80,7 +86,9 @@ export class CampainRepository {
         type,
       },
       relations: {
-        campainMatches: true,
+        campainMatches: {
+          competitor: true,
+        },
       },
     });
     return campain;

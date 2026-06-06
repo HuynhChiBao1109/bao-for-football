@@ -5,6 +5,7 @@ import { UserEntity } from "src/modules/user/entities/user.entity";
 import { TeamFormationEntity } from "./team-formatition.entity";
 import { AbstractEntity } from "src/database/database.abjact";
 import { CampainEntity } from "src/modules/campain/entities/campain.entity";
+import { CampainMatchEntity } from "src/modules/campain/entities/campain-match.entity";
 
 @Entity("teams")
 export class TeamEntity extends AbstractEntity {
@@ -55,4 +56,7 @@ export class TeamEntity extends AbstractEntity {
 
   @OneToMany(() => CampainEntity, (campain) => campain.team)
   campains: CampainEntity[];
+
+  @OneToMany(() => CampainMatchEntity, (campainMatch) => campainMatch.competitor)
+  campainMatches: CampainMatchEntity[];
 }

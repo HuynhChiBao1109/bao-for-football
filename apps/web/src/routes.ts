@@ -10,10 +10,15 @@ export const ROUTES = {
   aiMatch: AppRoute.AiMatch,
   leagueMatch: AppRoute.LeagueMatch,
   championShipMatch: AppRoute.ChampionShipMatch,
+  matchLive: AppRoute.MatchLive,
   pvp: AppRoute.Pvp,
   gacha: AppRoute.Gacha,
   admin: AppRoute.Admin,
 } as const;
+
+export function matchLivePath(matchId: number | string) {
+  return `/match/live/${matchId}`;
+}
 
 export function defaultAuthenticatedRoute(isAdmin: boolean) {
   return isAdmin ? ROUTES.admin : ROUTES.club;
