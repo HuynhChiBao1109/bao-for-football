@@ -41,7 +41,7 @@ export function EventPopups() {
 
   return (
     <>
-      <aside className="wuxia-events" aria-label="Su kien noi bat">
+      {/* <aside className="wuxia-events" aria-label="Su kien noi bat">
         <p className="wuxia-events__title">Blue Lock Events</p>
         <div className="wuxia-events__list">
           {EVENTS.map((event, index) => (
@@ -63,7 +63,7 @@ export function EventPopups() {
             </button>
           ))}
         </div>
-      </aside>
+      </aside> */}
 
       {activeEvent && (
         <div className="game-modal-backdrop" onClick={() => setActiveEvent(null)}>

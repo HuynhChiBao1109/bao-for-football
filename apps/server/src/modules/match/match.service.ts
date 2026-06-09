@@ -5,6 +5,7 @@ import { MatchEntity } from "./entities/match.entity";
 import { AuthUser } from "../auth/types";
 import { EMatchStatus } from "./enums";
 import {
+  FRAME_DURATION_MS,
   MatchSnapshot,
   simulateMatch,
   SimulationRosterPlayer,
@@ -19,6 +20,7 @@ import { ETeamFormation } from "../team/enums/team-formation.enum";
 @Injectable()
 export class MatchService implements IMatchService {
   private readonly activeTimers = new Map<string, NodeJS.Timeout>();
+  private readonly timelineCache = new Map<string, MatchSnapshot[]>();
   private readonly matchMinuteMs = Number(process.env.MATCH_MINUTE_MS ?? 20_000);
 
   constructor(
@@ -49,15 +51,9 @@ export class MatchService implements IMatchService {
 
     const existingMatch = await this.repository.findMatchByCampaignMatchId(campaignMatchId);
     if (existingMatch) {
-      if (existingMatch.status === EMatchStatus.IN_PROGRESS) {
-        this.ensurePlayback(existingMatch);
-      }
-
-      return {
-        matchId: String(existingMatch.id),
-        status: existingMatch.status,
-        latestSnapshot: existingMatch.latestSnapshot,
-      };
+      this.stopPlayback(String(existingMatch.id));
+      this.timelineCache.delete(String(existingMatch.id));
+      await this.repository.deleteById(existingMatch.id);
     }
 
     const [homePlayers, awayPlayers] = await Promise.all([
@@ -103,45 +99,48 @@ export class MatchService implements IMatchService {
       homeLineup: simulation.homeLineup,
       awayLineup: simulation.awayLineup,
       latestSnapshot: simulation.timeline[0] ?? null,
-      timeline: simulation.timeline,
+      timeline: null,
     });
 
-    await this.repository.saveEvents(
-      simulation.events.map((event) => ({
-        matchId: match.id,
-        event: event.event,
-        minute: event.minute,
-        teamId: event.teamId,
-        actorPlayerId: event.actorPlayerId,
-        secondaryPlayerId: event.secondaryPlayerId,
-        payload: event.payload,
-      })),
-    );
+    this.timelineCache.set(String(match.id), simulation.timeline);
 
-    await this.repository.savePlayerStats(
-      simulation.playerStats.map((stat) => ({
-        matchId: match.id,
-        playerId: stat.playerId,
-        goals: stat.goals,
-        assists: stat.assists,
-        yellowCards: stat.yellowCards,
-        redCards: stat.redCards,
-        passes: stat.passes,
-        passAccuracy: stat.passAccuracy,
-        tackles: stat.tackles,
-        tackleAccuracy: stat.tackleAccuracy,
-        interceptions: stat.interceptions,
-        minutesPlayed: stat.minutesPlayed,
-        shots: stat.shots,
-        shotAccuracy: stat.shotAccuracy,
-        dribbles: stat.dribbles,
-        dribbleAccuracy: stat.dribbleAccuracy,
-        foulsCommitted: stat.foulsCommitted,
-        foulsSuffered: stat.foulsSuffered,
-        offsides: stat.offsides,
-        rating: stat.rating,
-      })),
-    );
+    await Promise.all([
+      this.repository.saveEvents(
+        simulation.events.map((event) => ({
+          matchId: match.id,
+          event: event.event,
+          minute: event.minute,
+          teamId: event.teamId,
+          actorPlayerId: event.actorPlayerId,
+          secondaryPlayerId: event.secondaryPlayerId,
+          payload: event.payload,
+        })),
+      ),
+      this.repository.savePlayerStats(
+        simulation.playerStats.map((stat) => ({
+          matchId: match.id,
+          playerId: stat.playerId,
+          goals: stat.goals,
+          assists: stat.assists,
+          yellowCards: stat.yellowCards,
+          redCards: stat.redCards,
+          passes: stat.passes,
+          passAccuracy: stat.passAccuracy,
+          tackles: stat.tackles,
+          tackleAccuracy: stat.tackleAccuracy,
+          interceptions: stat.interceptions,
+          minutesPlayed: stat.minutesPlayed,
+          shots: stat.shots,
+          shotAccuracy: stat.shotAccuracy,
+          dribbles: stat.dribbles,
+          dribbleAccuracy: stat.dribbleAccuracy,
+          foulsCommitted: stat.foulsCommitted,
+          foulsSuffered: stat.foulsSuffered,
+          offsides: stat.offsides,
+          rating: stat.rating,
+        })),
+      ),
+    ]);
 
     this.startPlayback(match, simulation.timeline);
 
@@ -257,11 +256,17 @@ export class MatchService implements IMatchService {
   }
 
   private ensurePlayback(match: MatchEntity) {
-    if (!match.timeline || this.activeTimers.has(String(match.id))) {
+    const matchId = String(match.id);
+    if (this.activeTimers.has(matchId)) {
       return;
     }
 
-    this.startPlayback(match, match.timeline as MatchSnapshot[]);
+    const timeline = this.timelineCache.get(matchId) ?? (match.timeline as MatchSnapshot[] | null);
+    if (!timeline?.length) {
+      return;
+    }
+
+    this.startPlayback(match, timeline);
   }
 
   private startPlayback(match: MatchEntity, timeline: MatchSnapshot[]) {
@@ -272,8 +277,9 @@ export class MatchService implements IMatchService {
 
     const roomId = `${ESocketChannel.MATCH}${matchId}`;
     let cursor = 0;
+    this.activeTimers.set(matchId, setTimeout(() => undefined, 0));
 
-    const tick = async () => {
+    const playFrame = async () => {
       const snapshot = timeline[cursor];
       if (!snapshot) {
         this.stopPlayback(matchId);
@@ -297,7 +303,7 @@ export class MatchService implements IMatchService {
         data: { matchId, snapshot },
       });
 
-      if (snapshot.highlight?.event) {
+      if (snapshot.highlight?.event || snapshot.highlight?.skill) {
         this.socketService.emitToRoom({
           roomId,
           event: ESocketEvent.MATCH_EVENT,
@@ -320,19 +326,21 @@ export class MatchService implements IMatchService {
       }
 
       cursor += 1;
+      const nextSnapshot = timeline[cursor];
+      const delayMs = Math.max(480, snapshot.durationMs ?? FRAME_DURATION_MS);
+      const timer = setTimeout(() => {
+        void playFrame();
+      }, delayMs);
+      this.activeTimers.set(matchId, timer);
     };
 
-    void tick();
-    const timer = setInterval(() => {
-      void tick();
-    }, this.matchMinuteMs);
-    this.activeTimers.set(matchId, timer);
+    void playFrame();
   }
 
   private stopPlayback(matchId: string) {
     const timer = this.activeTimers.get(matchId);
     if (timer) {
-      clearInterval(timer);
+      clearTimeout(timer);
       this.activeTimers.delete(matchId);
     }
   }

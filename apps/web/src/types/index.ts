@@ -168,6 +168,24 @@ export type CampaignMatch = {
   };
 };
 
+export type PlayerMoveIntent =
+  | 'anchor'
+  | 'run'
+  | 'press'
+  | 'support'
+  | 'chase'
+  | 'idle'
+  | 'kickoff'
+  | 'recover';
+
+export type PlayerMotion = {
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+  intent: PlayerMoveIntent;
+};
+
 export type MatchPitchPlayer = {
   id: string;
   name: string;
@@ -177,9 +195,19 @@ export type MatchPitchPlayer = {
   y: number;
   hasBall: boolean;
   activeSkill?: number | null;
+  move?: PlayerMotion;
 };
 
 export type MatchSnapshot = {
+  frameId?: number;
+  tick?: number;
+  durationMs?: number;
+  matchStep?:
+    | 'first_half_start'
+    | 'play'
+    | 'half_time'
+    | 'second_half_start'
+    | 'full_time';
   minute: number;
   second?: number;
   clockLabel: string;
@@ -190,9 +218,13 @@ export type MatchSnapshot = {
   ball: {
     x: number;
     y: number;
+    fromX?: number;
+    fromY?: number;
     ownerPlayerId: string | null;
     speed?: number;
     ownerSide?: 'home' | 'away' | null;
+    trajectory?: Array<{ x: number; y: number }>;
+    skillTrajectory?: number | null;
   };
   highlight: {
     event: number | null;

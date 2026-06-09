@@ -81,6 +81,10 @@ export class MatchRepository {
     await this.matchRepository.update({ id: matchId }, payload);
   }
 
+  async deleteById(matchId: number): Promise<void> {
+    await this.matchRepository.delete({ id: matchId });
+  }
+
   async saveEvents(events: Partial<MatchEventEntity>[]): Promise<MatchEventEntity[]> {
     if (!events.length) {
       return [];

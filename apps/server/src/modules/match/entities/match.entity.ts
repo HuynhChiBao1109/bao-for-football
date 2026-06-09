@@ -65,21 +65,27 @@ export class MatchEntity extends AbstractEntity {
   @Column({ name: "timeline", type: "json", nullable: true })
   timeline: Record<string, unknown>[] | null;
 
-  @OneToOne(() => CampainMatchEntity, (campainMatch) => campainMatch.match)
+  @OneToOne(() => CampainMatchEntity, (campainMatch) => campainMatch.match, {
+    onDelete: "CASCADE",
+  })
   @JoinColumn({ name: "campain_id" })
   campainMatch: CampainMatchEntity;
 
-  @OneToOne(() => TeamEntity, { nullable: true })
+  @OneToOne(() => TeamEntity, { nullable: true, onDelete: "CASCADE" })
   @JoinColumn({ name: "home_team_id" })
   homeTeam: TeamEntity | null;
 
-  @OneToOne(() => TeamEntity, { nullable: true })
+  @OneToOne(() => TeamEntity, { nullable: true, onDelete: "CASCADE" })
   @JoinColumn({ name: "away_team_id" })
   awayTeam: TeamEntity | null;
 
-  @OneToMany(() => MatchEventEntity, (matchEvent) => matchEvent.match)
+  @OneToMany(() => MatchEventEntity, (matchEvent) => matchEvent.match, {
+    onDelete: "CASCADE",
+  })
   matchEvents: MatchEventEntity[];
 
-  @OneToMany(() => MatchPlayerStatsEntity, (matchPlayerStats) => matchPlayerStats.match)
+  @OneToMany(() => MatchPlayerStatsEntity, (matchPlayerStats) => matchPlayerStats.match, {
+    onDelete: "CASCADE",
+  })
   matchPlayerStats: MatchPlayerStatsEntity[];
 }
