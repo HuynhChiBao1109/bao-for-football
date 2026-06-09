@@ -24,7 +24,16 @@ type MatchStep =
   | "full_time";
 type PlayActionType = "pass" | "shoot" | "block" | "goal" | "save";
 
-export type PlayerMoveIntent = "run" | "press" | "support" | "anchor" | "chase" | "kickoff";
+export type PlayerMoveIntent =
+  | "run"
+  | "press"
+  | "support"
+  | "anchor"
+  | "chase"
+  | "kickoff"
+  | "cover"
+  | "mark"
+  | "overlap";
 
 export type PlayerMotion = {
   fromX: number;
@@ -780,26 +789,19 @@ function projectPlayers(input: {
       target = { x: input.ball.x, y: input.ball.y };
       intent = input.matchStep.includes("start") ? "kickoff" : "run";
     } else if (isPress) {
-      target = { x: input.ball.x, y: input.ball.y };
+      target = getPressTarget(player, input.ball);
       intent = "press";
     } else if (onAttack) {
-      target = {
-        x: input.ball.x + (index % 2 === 0 ? -10 : 10),
-        y: input.ball.y + (player.side === "home" ? 8 : -8),
-      };
-      intent = "support";
-    } else if (player.role === "GK") {
-      target = { x: clamp(input.ball.x, 35, 65), y: player.side === "home" ? 88 : 12 };
-      intent = "chase";
+      const movement = getAttackingTarget(player, input.ball);
+      target = movement.target;
+      intent = movement.intent;
     } else {
-      target = {
-        x: lerp(player.anchors.x, input.ball.x, 0.45),
-        y: lerp(player.anchors.y, input.ball.y, 0.45),
-      };
-      intent = "press";
+      const movement = getDefensiveTarget(player, input.ball);
+      target = movement.target;
+      intent = movement.intent;
     }
 
-    const speedFactor = clamp((player.raw.stats.speed + player.raw.stats.acceleration) / 220, 0.32, 0.76);
+    const speedFactor = getRoleMoveFactor(player, intent);
     const toX = clamp(lerp(prev.x, target.x, speedFactor), 5, 95);
     const toY = clamp(lerp(prev.y, target.y, speedFactor), 5, 95);
     return {
@@ -820,6 +822,199 @@ function projectPlayers(input: {
       move: { fromX: prev.x, fromY: prev.y, toX, toY, intent },
     };
   });
+}
+
+function getAttackingTarget(
+  player: InternalLineupPlayer,
+  ball: TrajectoryPoint,
+): { target: TrajectoryPoint; intent: PlayerMoveIntent } {
+  const role = normalizeRole(player.role);
+  const direction = attackDirection(player.side);
+  const sameFlank = isSameFlank(player.anchors.x, ball.x);
+
+  if (role === "GK") {
+    return {
+      target: {
+        x: clamp(lerp(player.anchors.x, ball.x, 0.1), 42, 58),
+        y: ownGoalY(player.side) - direction * 4,
+      },
+      intent: "anchor",
+    };
+  }
+
+  if (role === "CB") {
+    return {
+      target: {
+        x: clamp(lerp(player.anchors.x, ball.x, 0.12), player.anchors.x - 8, player.anchors.x + 8),
+        y: clamp(player.anchors.y + direction * 8, 18, 82),
+      },
+      intent: "cover",
+    };
+  }
+
+  if (role === "FB") {
+    return {
+      target: {
+        x: clamp(player.anchors.x + (sameFlank ? (player.anchors.x < 50 ? -2 : 2) : (50 - player.anchors.x) * 0.16), 8, 92),
+        y: clamp(player.anchors.y + direction * (sameFlank ? 18 : 8), 14, 86),
+      },
+      intent: sameFlank ? "overlap" : "support",
+    };
+  }
+
+  if (role === "CM") {
+    return {
+      target: {
+        x: clamp(lerp(player.anchors.x, ball.x, 0.34), 24, 76),
+        y: clamp(lerp(player.anchors.y, ball.y - direction * 8, 0.34), 22, 78),
+      },
+      intent: "support",
+    };
+  }
+
+  if (role === "W") {
+    return {
+      target: {
+        x: clamp(sameFlank ? player.anchors.x : lerp(player.anchors.x, 50, 0.35), 8, 92),
+        y: clamp(sameFlank ? ball.y + direction * 13 : player.anchors.y + direction * 8, 8, 92),
+      },
+      intent: sameFlank ? "run" : "support",
+    };
+  }
+
+  return {
+    target: {
+      x: clamp(lerp(player.anchors.x, ball.x, 0.28), 34, 66),
+      y: clamp(direction < 0 ? Math.min(player.anchors.y, ball.y + direction * 16) : Math.max(player.anchors.y, ball.y + direction * 16), 7, 93),
+    },
+    intent: "run",
+  };
+}
+
+function getDefensiveTarget(
+  player: InternalLineupPlayer,
+  ball: TrajectoryPoint,
+): { target: TrajectoryPoint; intent: PlayerMoveIntent } {
+  const role = normalizeRole(player.role);
+  const direction = attackDirection(player.side);
+  const ownY = ownGoalY(player.side);
+  const danger = dangerLevel(player.side, ball.y);
+  const sameFlank = isSameFlank(player.anchors.x, ball.x);
+
+  if (role === "GK") {
+    return {
+      target: {
+        x: clamp(lerp(50, ball.x, danger > 0.55 ? 0.28 : 0.16), 37, 63),
+        y: clamp(ownY - direction * (danger > 0.62 ? 4 : 2), 8, 92),
+      },
+      intent: "chase",
+    };
+  }
+
+  if (role === "CB") {
+    return {
+      target: {
+        x: clamp(lerp(player.anchors.x, ball.x, sameFlank ? 0.32 : 0.18), 25, 75),
+        y: clamp(lerp(player.anchors.y, ball.y + direction * 13, danger > 0.55 ? 0.42 : 0.24), 14, 86),
+      },
+      intent: "cover",
+    };
+  }
+
+  if (role === "FB") {
+    return {
+      target: {
+        x: clamp(sameFlank ? lerp(player.anchors.x, ball.x, 0.42) : player.anchors.x + (50 - player.anchors.x) * 0.16, 7, 93),
+        y: clamp(lerp(player.anchors.y, ball.y + direction * 10, sameFlank ? 0.36 : 0.18), 12, 88),
+      },
+      intent: sameFlank ? "mark" : "cover",
+    };
+  }
+
+  if (role === "CM") {
+    return {
+      target: {
+        x: clamp(lerp(player.anchors.x, ball.x, 0.36), 22, 78),
+        y: clamp(lerp(player.anchors.y, ball.y + direction * 8, 0.34), 18, 82),
+      },
+      intent: "mark",
+    };
+  }
+
+  if (role === "W") {
+    return {
+      target: {
+        x: clamp(sameFlank ? lerp(player.anchors.x, ball.x, 0.28) : lerp(player.anchors.x, 50, 0.24), 8, 92),
+        y: clamp(player.anchors.y - direction * 10, 16, 84),
+      },
+      intent: sameFlank ? "mark" : "cover",
+    };
+  }
+
+  return {
+    target: {
+      x: clamp(lerp(player.anchors.x, ball.x, 0.22), 32, 68),
+      y: clamp(player.anchors.y - direction * 7, 16, 84),
+    },
+    intent: "cover",
+  };
+}
+
+function getPressTarget(player: InternalLineupPlayer, ball: TrajectoryPoint): TrajectoryPoint {
+  const role = normalizeRole(player.role);
+  if (role === "GK") {
+    return {
+      x: clamp(lerp(player.anchors.x, ball.x, 0.24), 35, 65),
+      y: ownGoalY(player.side) - attackDirection(player.side) * 4,
+    };
+  }
+
+  const maxStep = role === "CB" ? 18 : role === "FB" ? 22 : 26;
+  return {
+    x: clamp(ball.x, player.anchors.x - maxStep, player.anchors.x + maxStep),
+    y: clamp(ball.y, player.anchors.y - maxStep, player.anchors.y + maxStep),
+  };
+}
+
+function getRoleMoveFactor(player: InternalLineupPlayer, intent: PlayerMoveIntent): number {
+  const role = normalizeRole(player.role);
+  const athletic = clamp((player.raw.stats.speed + player.raw.stats.acceleration) / 220, 0.28, 0.7);
+  const roleBase =
+    role === "GK" ? 0.24 :
+    role === "CB" ? 0.34 :
+    role === "FB" ? 0.42 :
+    role === "CM" ? 0.4 :
+    role === "W" ? 0.48 :
+    0.46;
+  const intentBoost = intent === "press" || intent === "run" || intent === "overlap" ? 0.1 : 0;
+  return clamp(roleBase + athletic * 0.28 + intentBoost, 0.24, 0.76);
+}
+
+function normalizeRole(role: string): "GK" | "CB" | "FB" | "CM" | "W" | "ST" {
+  if (role === "GK") return "GK";
+  if (role.includes("CB")) return "CB";
+  if (role === "LB" || role === "RB") return "FB";
+  if (role.includes("CM") || role === "CM" || role === "LM" || role === "RM") return "CM";
+  if (role === "LW" || role === "RW") return "W";
+  return "ST";
+}
+
+function attackDirection(side: Side) {
+  return side === "home" ? -1 : 1;
+}
+
+function ownGoalY(side: Side) {
+  return side === "home" ? 92 : 8;
+}
+
+function dangerLevel(side: Side, ballY: number) {
+  return side === "home" ? clamp((ballY - 50) / 42, 0, 1) : clamp((50 - ballY) / 42, 0, 1);
+}
+
+function isSameFlank(playerX: number, ballX: number) {
+  if (playerX < 35) return ballX < 50;
+  if (playerX > 65) return ballX > 50;
+  return ballX >= 35 && ballX <= 65;
 }
 
 function createInitialPositionState(home: InternalLineupPlayer[], away: InternalLineupPlayer[]): PositionState {

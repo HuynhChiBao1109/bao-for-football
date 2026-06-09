@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react';
+import { useState } from 'react';
 
 type EventInfo = {
   id: string;
@@ -35,6 +35,8 @@ const EVENTS: EventInfo[] = [
     detail: 'Lam chuoi quest de day pity nhanh va mo banner gioi han trong ngay.',
   },
 ];
+
+void EVENTS;
 
 export function EventPopups() {
   const [activeEvent, setActiveEvent] = useState<EventInfo | null>(null);

@@ -174,6 +174,9 @@ export type PlayerMoveIntent =
   | 'press'
   | 'support'
   | 'chase'
+  | 'cover'
+  | 'mark'
+  | 'overlap'
   | 'idle'
   | 'kickoff'
   | 'recover';

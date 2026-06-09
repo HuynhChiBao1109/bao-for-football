@@ -270,8 +270,14 @@
   border-color: #ffd07a;
 }
 
+.match-player[data-intent='mark'] .match-player__body,
+.match-player[data-intent='cover'] .match-player__body {
+  border-color: rgba(190, 230, 255, 0.86);
+}
+
 .match-player[data-intent='run'] .match-player__body,
-.match-player[data-intent='kickoff'] .match-player__body {
+.match-player[data-intent='kickoff'] .match-player__body,
+.match-player[data-intent='overlap'] .match-player__body {
   border-color: #6ee7ff;
 }
 
