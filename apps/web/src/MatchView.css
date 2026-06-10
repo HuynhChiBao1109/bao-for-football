@@ -448,6 +448,7 @@
 }
 
 .player-coord,
+.player-move,
 .ball-coord {
   position: absolute;
   z-index: 7;
@@ -468,6 +469,35 @@
   top: -15px;
   left: 50%;
   transform: translateX(-50%);
+}
+
+.player-move {
+  left: 50%;
+  bottom: -17px;
+  border-color: rgba(124, 247, 255, 0.28);
+  background: rgba(6, 24, 26, 0.74);
+  color: #9bf7ff;
+  text-transform: uppercase;
+}
+
+.player-move--press,
+.player-move--mark {
+  border-color: rgba(255, 170, 81, 0.34);
+  background: rgba(48, 25, 7, 0.76);
+  color: #ffd38f;
+}
+
+.player-move--run,
+.player-move--overlap {
+  border-color: rgba(90, 255, 164, 0.3);
+  background: rgba(4, 33, 20, 0.76);
+  color: #a7ffd0;
+}
+
+.player-move--kickoff {
+  border-color: rgba(255, 245, 163, 0.32);
+  background: rgba(42, 36, 7, 0.78);
+  color: #fff5a3;
 }
 
 .ball-coord {
@@ -532,6 +562,13 @@
     0 10px 20px rgba(0, 0, 0, 0.36);
 }
 
+.match-ball--pass {
+  box-shadow:
+    -14px 0 18px rgba(124, 247, 255, 0.34),
+    0 0 20px rgba(255, 245, 165, 0.9),
+    0 10px 18px rgba(0, 0, 0, 0.34);
+}
+
 .match-ball--shot::after {
   position: absolute;
   right: 70%;
@@ -541,6 +578,18 @@
   content: '';
   border-radius: 999px;
   background: linear-gradient(90deg, transparent, rgba(255, 232, 125, 0.7));
+  transform: translateY(-50%);
+}
+
+.match-ball--pass::after {
+  position: absolute;
+  right: 68%;
+  top: 50%;
+  width: 34px;
+  height: 2px;
+  content: '';
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(124, 247, 255, 0.62));
   transform: translateY(-50%);
 }
 
@@ -647,6 +696,15 @@
 .match-event--goal {
   border-left-color: #ffe66d;
   background: rgba(255, 221, 77, 0.12);
+}
+
+.match-event--start {
+  border-left-color: #b9f8d0;
+}
+
+.match-event--pass {
+  border-left-color: #7cf7ff;
+  background: rgba(124, 247, 255, 0.08);
 }
 
 .match-event--shot {
@@ -817,6 +875,10 @@
   .player-coord {
     top: -12px;
     font-size: 0.48rem;
+  }
+
+  .player-move {
+    display: none;
   }
 
   .pitch-debug-grid__x,

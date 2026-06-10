@@ -155,6 +155,7 @@ export function useMatchSocket(matchId: string | undefined) {
     matchId: string;
     events: LiveMatchEvent[];
   } | null>(null);
+  const completedFrameIdRef = useRef(-1);
   const [liveStatus, setLiveStatus] = useState<{ matchId: string; status: string } | null>(null);
 
   const initialSnapshot = useMemo(() => {
@@ -167,6 +168,7 @@ export function useMatchSocket(matchId: string | undefined) {
 
   useEffect(() => {
     initialFrameIdRef.current = frameIdOf(initialSnapshot);
+    completedFrameIdRef.current = frameIdOf(initialSnapshot);
   }, [initialSnapshot]);
 
   const initialEvents = useMemo(() => [], []);
@@ -215,6 +217,11 @@ export function useMatchSocket(matchId: string | undefined) {
       if (!matchId) {
         return;
       }
+
+      completedFrameIdRef.current = Math.max(
+        completedFrameIdRef.current,
+        frameIdOf(completedSnapshot),
+      );
 
       setTickBuffer((current) => {
         if (!current || current.matchId !== matchId) {
@@ -277,6 +284,19 @@ export function useMatchSocket(matchId: string | undefined) {
         const queue = [...current.queue, snapshotTick]
           .sort(sortSnapshots)
           .slice(-MAX_TICK_QUEUE);
+
+        if (
+          queue.length === 1 &&
+          frameIdOf(current.active) <= completedFrameIdRef.current
+        ) {
+          promoteSnapshotEvent(snapshotTick);
+          return {
+            ...current,
+            active: snapshotTick,
+            queue: [],
+            lastAcceptedFrameId: nextFrameId,
+          };
+        }
 
         return {
           ...current,

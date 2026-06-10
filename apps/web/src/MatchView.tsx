@@ -6,6 +6,12 @@ import { useGetNextMatchTick } from './hooks/useMatch';
 import { useMatchSocket, type LiveMatchEvent } from './hooks/useMatchSocket';
 import type { MatchPitchPlayer, MatchSnapshot } from './types';
 
+const MATCH_EVENT = {
+  FIRST_HALF_START: 2,
+  PASS: 35,
+  SHOOT: 36,
+} as const;
+
 function clampPercent(value: number) {
   return Math.min(100, Math.max(0, value));
 }
@@ -31,7 +37,34 @@ function isGoalEvent(snapshot: MatchSnapshot | null) {
 }
 
 function isShotEvent(snapshot: MatchSnapshot | null) {
-  return snapshot?.highlight?.event === 36 || snapshot?.ball?.speed;
+  return snapshot?.highlight?.event === MATCH_EVENT.SHOOT;
+}
+
+function isPassEvent(snapshot: MatchSnapshot | null) {
+  return snapshot?.highlight?.event === MATCH_EVENT.PASS;
+}
+
+function getEventView(eventCode: number | null | undefined) {
+  switch (eventCode) {
+    case MATCH_EVENT.FIRST_HALF_START:
+      return { title: 'Start half', className: 'match-event--start' };
+    case MATCH_EVENT.PASS:
+      return { title: 'Pass', className: 'match-event--pass' };
+    case MATCH_EVENT.SHOOT:
+      return { title: 'Shot', className: 'match-event--shot' };
+    case 7:
+      return { title: 'Goal', className: 'match-event--goal' };
+    default:
+      return { title: eventCode ? `Event ${eventCode}` : 'Tick', className: 'match-event--standard' };
+  }
+}
+
+function formatMoveIntent(intent: string | undefined) {
+  if (!intent) {
+    return '';
+  }
+
+  return intent.replaceAll('_', ' ');
 }
 
 function Scoreboard({
@@ -146,6 +179,11 @@ const PlayerCircle = memo(function PlayerCircle({
       <span className="player-coord">
         x:{formatCoord(player.x)} y:{formatCoord(player.y)}
       </span>
+      {player.move?.intent && player.move.intent !== 'anchor' ? (
+        <span className={`player-move player-move--${player.move.intent}`}>
+          {formatMoveIntent(player.move.intent)}
+        </span>
+      ) : null}
       <span className="player-name">{player.name}</span>
     </div>
   );
@@ -156,7 +194,11 @@ function Ball({ snapshot }: { snapshot: MatchSnapshot }) {
 
   return (
     <div
-      className={isShotEvent(snapshot) ? 'match-ball match-ball--shot' : 'match-ball'}
+      className={[
+        'match-ball',
+        isShotEvent(snapshot) ? 'match-ball--shot' : '',
+        isPassEvent(snapshot) ? 'match-ball--pass' : '',
+      ].join(' ')}
       style={style}
       aria-label="Ball"
     >
@@ -192,14 +234,15 @@ function EventFeed({ events }: { events: LiveMatchEvent[] }) {
           <p className="match-events__empty">Waiting for match events.</p>
         ) : (
           events.map((event) => {
+            const view = getEventView(event.event);
             return (
               <article
-                className="match-event match-event--standard"
+                className={`match-event ${view.className}`}
                 key={event.id}
               >
                 <span className="match-event__minute">{event.minute}'</span>
                 <div>
-                  <strong>{event.event ? `Event ${event.event}` : 'Tick'}</strong>
+                  <strong>{view.title}</strong>
                   <p>{event.label}</p>
                 </div>
               </article>

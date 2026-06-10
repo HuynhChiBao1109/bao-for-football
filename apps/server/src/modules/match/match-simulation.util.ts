@@ -16,12 +16,7 @@ export const FRAMES_PER_ACTION = 5;
 export const ACTIONS_PER_HALF = 14;
 
 type Side = "home" | "away";
-type MatchStep =
-  | "first_half_start"
-  | "play"
-  | "half_time"
-  | "second_half_start"
-  | "full_time";
+type MatchStep = "first_half_start" | "play" | "half_time" | "second_half_start" | "full_time";
 type PlayActionType = "pass" | "shoot" | "block" | "goal" | "save";
 
 export type PlayerMoveIntent =
@@ -362,9 +357,17 @@ export function simulateMatch(
   });
 
   addPass(statsMap, homeKickoff.userPlayerId, true);
-  pushEvent(events, EMatchEvent.PASS, 0, homeTeam.id, homeKickoff.userPlayerId, homeKickoffPartner.userPlayerId, {
-    label: "Tick 2: pass giao bong",
-  });
+  pushEvent(
+    events,
+    EMatchEvent.PASS,
+    0,
+    homeTeam.id,
+    homeKickoff.userPlayerId,
+    homeKickoffPartner.userPlayerId,
+    {
+      label: "Tick 2: pass giao bong",
+    },
+  );
   pushFrames({
     count: 1,
     tick: 2,
@@ -402,7 +405,9 @@ export function generateNextMatchTick(input: {
   awayLineup: MatchRenderPlayer[];
   homeTeamId: number | null;
 }): MatchNextTickResult | null {
-  const previousTicks = [...input.previousTicks].sort((left, right) => left.frameId - right.frameId);
+  const previousTicks = [...input.previousTicks].sort(
+    (left, right) => left.frameId - right.frameId,
+  );
   const frameId = previousTicks.length;
   const latestTick = previousTicks.at(-1);
   const homeLineup = input.homeLineup.map(toInternalLineupPlayer);
@@ -417,7 +422,9 @@ export function generateNextMatchTick(input: {
     homeLineup.find((player) => player.role !== "GK") ??
     homeLineup[0];
   const homeKickoffPartner =
-    homeLineup.find((player) => player.userPlayerId !== homeKickoff.userPlayerId && player.role !== "GK") ??
+    homeLineup.find(
+      (player) => player.userPlayerId !== homeKickoff.userPlayerId && player.role !== "GK",
+    ) ??
     homeLineup[1] ??
     homeKickoff;
   const previousPositionState = latestTick
@@ -467,59 +474,79 @@ export function generateNextMatchTick(input: {
     };
   }
 
-  if (latestTick.tick < 2) {
-    const actorId = Number(latestTick.highlight?.actorPlayerId ?? homeKickoff.userPlayerId);
-    const receiverId = Number(latestTick.highlight?.secondaryPlayerId ?? homeKickoffPartner.userPlayerId);
-    const actor = homeLineup.find((player) => player.userPlayerId === actorId) ?? homeKickoff;
-    const receiver =
-      homeLineup.find((player) => player.userPlayerId === receiverId) ??
-      homeKickoffPartner;
-    const snapshot = buildSnapshot({
-      frameId,
-      minute: 0,
-      second: 24,
-      tick: 2,
-      matchStep: "play",
-      phase: "first_half",
-      homeScore: Number(latestTick.homeScore ?? 0),
-      awayScore: Number(latestTick.awayScore ?? 0),
-      possession: "home",
-      homeLineup,
-      awayLineup,
-      ballOwner: receiver,
-      ball: { x: receiver.anchors.x, y: receiver.anchors.y },
-      ballPath: pathBetween(
-        { x: latestTick.ball.x, y: latestTick.ball.y },
-        { x: receiver.anchors.x, y: receiver.anchors.y },
-      ),
-      highlight: createHighlight(
-        EMatchEvent.PASS,
-        "Tick 2: pass giao bong",
-        "home",
-        actor.userPlayerId,
-        receiver.userPlayerId,
-        null,
-      ),
-      activeSkill: null,
-      focusId: receiver.userPlayerId,
-      pressId: null,
-      positionState: previousPositionState,
-    });
+  const possession = latestTick.possession ?? "home";
+  const attacking = possession === "home" ? homeLineup : awayLineup;
+  const defending = possession === "home" ? awayLineup : homeLineup;
+  const actorId = Number(latestTick.ball.ownerPlayerId ?? latestTick.highlight?.secondaryPlayerId);
+  const actor =
+    attacking.find((player) => player.userPlayerId === actorId) ??
+    findNearestPlayer(attacking, latestTick.ball, (player) => player.role !== "GK") ??
+    attacking[0];
+  const receiver = pickDebugPassReceiver({
+    lineup: attacking,
+    actor,
+    previousPositionState,
+    ball: latestTick.ball,
+    tick: latestTick.tick,
+  });
+  const receiverPreviousPosition =
+    previousPositionState.players.get(receiver.userPlayerId) ?? receiver.anchors;
+  const ballTarget = getDebugPassTarget({
+    receiver,
+    receiverPreviousPosition,
+    ball: latestTick.ball,
+    tick: latestTick.tick,
+    possession,
+  });
+  const pressDefender =
+    findNearestPlayer(defending, ballTarget, (player) => player.role !== "GK") ?? defending[0];
+  const nextTickValue = latestTick.tick + 2;
+  const second = nextTickValue * 12;
+  const minute = Math.floor(second / 60);
+  const snapshot = buildSnapshot({
+    frameId,
+    minute,
+    second,
+    tick: nextTickValue,
+    matchStep: "play",
+    phase: "first_half",
+    homeScore: Number(latestTick.homeScore ?? 0),
+    awayScore: Number(latestTick.awayScore ?? 0),
+    possession,
+    homeLineup,
+    awayLineup,
+    ballOwner: receiver,
+    ball: ballTarget,
+    ballPath: pathBetween({ x: latestTick.ball.x, y: latestTick.ball.y }, ballTarget),
+    highlight: createHighlight(
+      EMatchEvent.PASS,
+      `Tick ${nextTickValue}: ${actor.shortName} chuyen cho ${receiver.shortName}`,
+      possession,
+      actor.userPlayerId,
+      receiver.userPlayerId,
+      null,
+    ),
+    activeSkill: null,
+    focusId: receiver.userPlayerId,
+    pressId: pressDefender?.userPlayerId ?? null,
+    positionState: previousPositionState,
+  });
 
-    return {
-      snapshot,
-      event: {
-        event: EMatchEvent.PASS,
-        minute: 0,
-        teamId: input.homeTeamId,
-        actorPlayerId: actor.userPlayerId,
-        secondaryPlayerId: receiver.userPlayerId,
-        payload: { label: snapshot.highlight.label },
+  return {
+    snapshot,
+    event: {
+      event: EMatchEvent.PASS,
+      minute,
+      teamId: actor.teamId,
+      actorPlayerId: actor.userPlayerId,
+      secondaryPlayerId: receiver.userPlayerId,
+      payload: {
+        label: snapshot.highlight.label,
+        from: { x: latestTick.ball.x, y: latestTick.ball.y },
+        to: ballTarget,
       },
-    };
-  }
-
-  return null;
+    },
+  };
 }
 
 function pushActionFrames(
@@ -598,78 +625,255 @@ function playSimpleAction(input: {
     addPass(input.statsMap, actor.userPlayerId, completed);
     if (!completed) {
       addInterception(input.statsMap, defender.userPlayerId);
-      action = makeAction("block", EMatchEvent.INTERCEPTION, `${defender.shortName} cat duong chuyen`, possession, actor, receiver, defender, keeper, null);
-      pushEvent(input.events, EMatchEvent.INTERCEPTION, input.minute, defendingTeam.id, defender.userPlayerId, actor.userPlayerId, { label: action.label });
+      action = makeAction(
+        "block",
+        EMatchEvent.INTERCEPTION,
+        `${defender.shortName} cat duong chuyen`,
+        possession,
+        actor,
+        receiver,
+        defender,
+        keeper,
+        null,
+      );
+      pushEvent(
+        input.events,
+        EMatchEvent.INTERCEPTION,
+        input.minute,
+        defendingTeam.id,
+        defender.userPlayerId,
+        actor.userPlayerId,
+        { label: action.label },
+      );
       return finishAction(input, action, homeScore, awayScore);
     }
-    action = makeAction("pass", EMatchEvent.PASS, `${actor.shortName} chuyen bong`, possession, actor, receiver, defender, keeper, null);
-    pushEvent(input.events, EMatchEvent.PASS, input.minute, attackingTeam.id, actor.userPlayerId, receiver.userPlayerId, { label: action.label });
+    action = makeAction(
+      "pass",
+      EMatchEvent.PASS,
+      `${actor.shortName} chuyen bong`,
+      possession,
+      actor,
+      receiver,
+      defender,
+      keeper,
+      null,
+    );
+    pushEvent(
+      input.events,
+      EMatchEvent.PASS,
+      input.minute,
+      attackingTeam.id,
+      actor.userPlayerId,
+      receiver.userPlayerId,
+      { label: action.label },
+    );
   } else if (roll < 0.62) {
     const skill = tryActivateSkill(actor.raw.skills, actor.role, "dribble", input.random);
-    const activation = skill ? resolveSkillActivation(skill, createSkillContext(actor, defender, keeper, input.random)) : null;
+    const activation = skill
+      ? resolveSkillActivation(skill, createSkillContext(actor, defender, keeper, input.random))
+      : null;
     const success =
       activation?.dribbleSuccess ??
-      actor.raw.stats.dribbling + actor.raw.stats.balance * 0.25 + (activation?.attackBonus ?? 0) + input.random() * 24 >
-        defender.raw.stats.tackle + defender.raw.stats.speed * 0.2 - (activation?.defensePenalty ?? 0) + 4;
+      actor.raw.stats.dribbling +
+        actor.raw.stats.balance * 0.25 +
+        (activation?.attackBonus ?? 0) +
+        input.random() * 24 >
+        defender.raw.stats.tackle +
+          defender.raw.stats.speed * 0.2 -
+          (activation?.defensePenalty ?? 0) +
+          4;
 
     addDribble(input.statsMap, actor.userPlayerId, success);
     if (!success) addTackle(input.statsMap, defender.userPlayerId);
-    action = makeAction(success ? "pass" : "block", EMatchEvent.DRIBBLE, skill ? `${actor.shortName} dung ${getSkillLabel(skill)}` : `${actor.shortName} qua nguoi`, possession, actor, success ? partner : null, defender, keeper, skill);
-    if (skill) pushSkillEvent(input.events, input.minute, attackingTeam.id, actor.userPlayerId, defender.userPlayerId, action);
-    pushEvent(input.events, EMatchEvent.DRIBBLE, input.minute, attackingTeam.id, actor.userPlayerId, defender.userPlayerId, {
-      label: action.label,
-      success,
+    action = makeAction(
+      success ? "pass" : "block",
+      EMatchEvent.DRIBBLE,
+      skill ? `${actor.shortName} dung ${getSkillLabel(skill)}` : `${actor.shortName} qua nguoi`,
+      possession,
+      actor,
+      success ? partner : null,
+      defender,
+      keeper,
       skill,
-      skillLabel: action.skillLabel,
-    });
+    );
+    if (skill)
+      pushSkillEvent(
+        input.events,
+        input.minute,
+        attackingTeam.id,
+        actor.userPlayerId,
+        defender.userPlayerId,
+        action,
+      );
+    pushEvent(
+      input.events,
+      EMatchEvent.DRIBBLE,
+      input.minute,
+      attackingTeam.id,
+      actor.userPlayerId,
+      defender.userPlayerId,
+      {
+        label: action.label,
+        success,
+        skill,
+        skillLabel: action.skillLabel,
+      },
+    );
   } else if (roll < 0.76 + shotBias * 0.18) {
     const skill = tryActivateSkill(actor.raw.skills, actor.role, "shoot", input.random);
-    const activation = skill ? resolveSkillActivation(skill, createSkillContext(actor, defender, keeper, input.random)) : null;
+    const activation = skill
+      ? resolveSkillActivation(skill, createSkillContext(actor, defender, keeper, input.random))
+      : null;
     const shotSuccess =
-      actor.raw.stats.shoot + actor.raw.stats.dribbling * 0.3 + (activation?.attackBonus ?? 0) + input.random() * 30 >
-      defender.raw.stats.tackle * 0.45 + keeper.raw.stats.gkKeeping + keeper.raw.stats.gkReflex * 0.35 - (activation?.defensePenalty ?? 0) + 10;
+      actor.raw.stats.shoot +
+        actor.raw.stats.dribbling * 0.3 +
+        (activation?.attackBonus ?? 0) +
+        input.random() * 30 >
+      defender.raw.stats.tackle * 0.45 +
+        keeper.raw.stats.gkKeeping +
+        keeper.raw.stats.gkReflex * 0.35 -
+        (activation?.defensePenalty ?? 0) +
+        10;
 
     addShot(input.statsMap, actor.userPlayerId, shotSuccess);
-    if (skill) pushSkillEvent(input.events, input.minute, attackingTeam.id, actor.userPlayerId, keeper.userPlayerId, makeAction("shoot", EMatchEvent.SKILL_USED, `${actor.shortName} dung ${getSkillLabel(skill)}`, possession, actor, partner, defender, keeper, skill));
+    if (skill)
+      pushSkillEvent(
+        input.events,
+        input.minute,
+        attackingTeam.id,
+        actor.userPlayerId,
+        keeper.userPlayerId,
+        makeAction(
+          "shoot",
+          EMatchEvent.SKILL_USED,
+          `${actor.shortName} dung ${getSkillLabel(skill)}`,
+          possession,
+          actor,
+          partner,
+          defender,
+          keeper,
+          skill,
+        ),
+      );
 
     if (shotSuccess && input.random() > (skill === EPlayerSkill.SHOOT_THUNDER ? 0.42 : 0.55)) {
       if (possession === "home") homeScore += 1;
       else awayScore += 1;
       addGoal(input.statsMap, actor.userPlayerId, partner?.userPlayerId ?? null);
-      action = makeAction("goal", EMatchEvent.GOAL, `${actor.shortName} ghi ban!`, possession, actor, partner, defender, keeper, skill);
-      pushEvent(input.events, EMatchEvent.GOAL, input.minute, attackingTeam.id, actor.userPlayerId, partner?.userPlayerId ?? null, {
-        label: action.label,
-        homeScore,
-        awayScore,
+      action = makeAction(
+        "goal",
+        EMatchEvent.GOAL,
+        `${actor.shortName} ghi ban!`,
+        possession,
+        actor,
+        partner,
+        defender,
+        keeper,
         skill,
-        skillLabel: action.skillLabel,
-      });
+      );
+      pushEvent(
+        input.events,
+        EMatchEvent.GOAL,
+        input.minute,
+        attackingTeam.id,
+        actor.userPlayerId,
+        partner?.userPlayerId ?? null,
+        {
+          label: action.label,
+          homeScore,
+          awayScore,
+          skill,
+          skillLabel: action.skillLabel,
+        },
+      );
     } else if (input.random() > 0.5) {
-      action = makeAction("save", EMatchEvent.GOALKEEPER_SAVE, `${keeper.shortName} cuu thua`, possession, actor, partner, defender, keeper, skill);
-      pushEvent(input.events, EMatchEvent.GOALKEEPER_SAVE, input.minute, defendingTeam.id, keeper.userPlayerId, actor.userPlayerId, {
-        label: action.label,
+      action = makeAction(
+        "save",
+        EMatchEvent.GOALKEEPER_SAVE,
+        `${keeper.shortName} cuu thua`,
+        possession,
+        actor,
+        partner,
+        defender,
+        keeper,
         skill,
-        skillLabel: action.skillLabel,
-      });
+      );
+      pushEvent(
+        input.events,
+        EMatchEvent.GOALKEEPER_SAVE,
+        input.minute,
+        defendingTeam.id,
+        keeper.userPlayerId,
+        actor.userPlayerId,
+        {
+          label: action.label,
+          skill,
+          skillLabel: action.skillLabel,
+        },
+      );
     } else {
       addTackle(input.statsMap, defender.userPlayerId);
-      action = makeAction("block", EMatchEvent.BLOCK, `${defender.shortName} chan bong`, possession, actor, partner, defender, keeper, skill);
-      pushEvent(input.events, EMatchEvent.BLOCK, input.minute, defendingTeam.id, defender.userPlayerId, actor.userPlayerId, {
-        label: action.label,
+      action = makeAction(
+        "block",
+        EMatchEvent.BLOCK,
+        `${defender.shortName} chan bong`,
+        possession,
+        actor,
+        partner,
+        defender,
+        keeper,
+        skill,
+      );
+      pushEvent(
+        input.events,
+        EMatchEvent.BLOCK,
+        input.minute,
+        defendingTeam.id,
+        defender.userPlayerId,
+        actor.userPlayerId,
+        {
+          label: action.label,
+          skill,
+          skillLabel: action.skillLabel,
+        },
+      );
+    }
+    pushEvent(
+      input.events,
+      EMatchEvent.SHOOT,
+      input.minute,
+      attackingTeam.id,
+      actor.userPlayerId,
+      null,
+      {
+        label: `${actor.shortName} sut`,
         skill,
         skillLabel: action.skillLabel,
-      });
-    }
-    pushEvent(input.events, EMatchEvent.SHOOT, input.minute, attackingTeam.id, actor.userPlayerId, null, {
-      label: `${actor.shortName} sut`,
-      skill,
-      skillLabel: action.skillLabel,
-    });
+      },
+    );
   } else {
     const receiver = partner ?? actor;
     addPass(input.statsMap, actor.userPlayerId, true);
-    action = makeAction("pass", EMatchEvent.PASS, `${actor.shortName} giu nhip va chuyen bong`, possession, actor, receiver, defender, keeper, null);
-    pushEvent(input.events, EMatchEvent.PASS, input.minute, attackingTeam.id, actor.userPlayerId, receiver.userPlayerId, { label: action.label });
+    action = makeAction(
+      "pass",
+      EMatchEvent.PASS,
+      `${actor.shortName} giu nhip va chuyen bong`,
+      possession,
+      actor,
+      receiver,
+      defender,
+      keeper,
+      null,
+    );
+    pushEvent(
+      input.events,
+      EMatchEvent.PASS,
+      input.minute,
+      attackingTeam.id,
+      actor.userPlayerId,
+      receiver.userPlayerId,
+      { label: action.label },
+    );
   }
 
   return finishAction(input, action, homeScore, awayScore);
@@ -751,6 +955,102 @@ function toInternalLineupPlayer(player: MatchRenderPlayer): InternalLineupPlayer
   };
 }
 
+function pickDebugPassReceiver(input: {
+  lineup: InternalLineupPlayer[];
+  actor: InternalLineupPlayer;
+  previousPositionState: PositionState;
+  ball: TrajectoryPoint;
+  tick: number;
+}) {
+  const candidates = input.lineup.filter(
+    (player) => player.userPlayerId !== input.actor.userPlayerId && player.role !== "GK",
+  );
+
+  if (!candidates.length) {
+    return input.actor;
+  }
+
+  const ranked = candidates
+    .map((player, index) => {
+      const previous =
+        input.previousPositionState.players.get(player.userPlayerId) ?? player.anchors;
+      const distanceToBall = distance(previous, input.ball);
+      const role = normalizeRole(player.role);
+      const roleWeight =
+        role === "ST" ? 10 : role === "W" ? 8 : role === "CM" ? 6 : role === "FB" ? 3 : 1;
+      const laneRotation = ((input.tick / 2 + index) % candidates.length) * 0.72;
+      return {
+        player,
+        score: roleWeight + laneRotation - distanceToBall * 0.035,
+      };
+    })
+    .sort((left, right) => right.score - left.score);
+
+  return ranked[0]?.player ?? candidates[0];
+}
+
+function getDebugPassTarget(input: {
+  receiver: InternalLineupPlayer;
+  receiverPreviousPosition: TrajectoryPoint;
+  ball: TrajectoryPoint;
+  tick: number;
+  possession: Side;
+}): TrajectoryPoint {
+  const direction = attackDirection(input.possession);
+  const role = normalizeRole(input.receiver.role);
+  const widthPull =
+    role === "W" || role === "FB"
+      ? input.receiver.anchors.x < 50
+        ? -5
+        : 5
+      : (50 - input.receiverPreviousPosition.x) * 0.12;
+  const progress =
+    role === "CB" ? 5 : role === "FB" ? 7 : role === "CM" ? 8 : role === "W" ? 11 : 9;
+  const supportOffset = ((input.tick / 2) % 3) - 1;
+
+  return {
+    x: clamp(
+      lerp(input.receiverPreviousPosition.x, input.receiver.anchors.x, 0.22) +
+        widthPull +
+        supportOffset * 2,
+      7,
+      93,
+    ),
+    y: clamp(
+      Math.min(
+        94,
+        Math.max(
+          6,
+          lerp(input.receiverPreviousPosition.y, input.receiver.anchors.y, 0.18) +
+            direction * progress,
+        ),
+      ),
+      6,
+      94,
+    ),
+  };
+}
+
+function findNearestPlayer(
+  lineup: InternalLineupPlayer[],
+  point: TrajectoryPoint,
+  predicate: (player: InternalLineupPlayer) => boolean = () => true,
+) {
+  return (
+    lineup
+      .filter(predicate)
+      .map((player) => ({
+        player,
+        value: distance(player.anchors, point),
+      }))
+      .sort((left, right) => left.value - right.value)[0]?.player ?? null
+  );
+}
+
+function distance(left: TrajectoryPoint, right: TrajectoryPoint) {
+  return Math.hypot(left.x - right.x, left.y - right.y);
+}
+
 function createSkillContext(
   actor: InternalLineupPlayer,
   defender: InternalLineupPlayer,
@@ -776,19 +1076,38 @@ function buildBallPath(action: ResolvedAction, random: () => number): Trajectory
   const goalY = action.possession === "home" ? 14 : 86;
 
   if (action.skill === EPlayerSkill.SHOOT_THUNDER) {
-    return buildThunderShotTrajectory(actorPos.x, actorPos.y, goalY, action.possession, FRAMES_PER_ACTION, random).slice(1);
+    return buildThunderShotTrajectory(
+      actorPos.x,
+      actorPos.y,
+      goalY,
+      action.possession,
+      FRAMES_PER_ACTION,
+      random,
+    ).slice(1);
   }
   if (action.skill === EPlayerSkill.DRIBBLE_MAGIC) {
     const target = action.partner?.anchors ?? {
       x: clamp(actorPos.x + (random() > 0.5 ? 12 : -12), 8, 92),
       y: clamp(actorPos.y + (action.possession === "home" ? -12 : 12), 8, 92),
     };
-    return buildMagicDribbleTrajectory(actorPos.x, actorPos.y, target.x, target.y, FRAMES_PER_ACTION, random).slice(1);
+    return buildMagicDribbleTrajectory(
+      actorPos.x,
+      actorPos.y,
+      target.x,
+      target.y,
+      FRAMES_PER_ACTION,
+      random,
+    ).slice(1);
   }
   if (action.type === "pass" && action.partner) {
     return pathBetween(actorPos, action.partner.anchors);
   }
-  if (action.type === "goal" || action.type === "save" || action.type === "block" || action.type === "shoot") {
+  if (
+    action.type === "goal" ||
+    action.type === "save" ||
+    action.type === "block" ||
+    action.type === "shoot"
+  ) {
     const stopY = action.type === "goal" ? goalY : lerp(actorPos.y, goalY, 0.72);
     const stopX =
       action.type === "block"
@@ -989,7 +1308,12 @@ function getAttackingTarget(
   if (role === "FB") {
     return {
       target: {
-        x: clamp(player.anchors.x + (sameFlank ? (player.anchors.x < 50 ? -2 : 2) : (50 - player.anchors.x) * 0.16), 8, 92),
+        x: clamp(
+          player.anchors.x +
+            (sameFlank ? (player.anchors.x < 50 ? -2 : 2) : (50 - player.anchors.x) * 0.16),
+          8,
+          92,
+        ),
         y: clamp(player.anchors.y + direction * (sameFlank ? 18 : 8), 14, 86),
       },
       intent: sameFlank ? "overlap" : "support",
@@ -1019,7 +1343,13 @@ function getAttackingTarget(
   return {
     target: {
       x: clamp(lerp(player.anchors.x, ball.x, 0.28), 34, 66),
-      y: clamp(direction < 0 ? Math.min(player.anchors.y, ball.y + direction * 16) : Math.max(player.anchors.y, ball.y + direction * 16), 7, 93),
+      y: clamp(
+        direction < 0
+          ? Math.min(player.anchors.y, ball.y + direction * 16)
+          : Math.max(player.anchors.y, ball.y + direction * 16),
+        7,
+        93,
+      ),
     },
     intent: "run",
   };
@@ -1049,7 +1379,11 @@ function getDefensiveTarget(
     return {
       target: {
         x: clamp(lerp(player.anchors.x, ball.x, sameFlank ? 0.32 : 0.18), 25, 75),
-        y: clamp(lerp(player.anchors.y, ball.y + direction * 13, danger > 0.55 ? 0.42 : 0.24), 14, 86),
+        y: clamp(
+          lerp(player.anchors.y, ball.y + direction * 13, danger > 0.55 ? 0.42 : 0.24),
+          14,
+          86,
+        ),
       },
       intent: "cover",
     };
@@ -1058,7 +1392,13 @@ function getDefensiveTarget(
   if (role === "FB") {
     return {
       target: {
-        x: clamp(sameFlank ? lerp(player.anchors.x, ball.x, 0.42) : player.anchors.x + (50 - player.anchors.x) * 0.16, 7, 93),
+        x: clamp(
+          sameFlank
+            ? lerp(player.anchors.x, ball.x, 0.42)
+            : player.anchors.x + (50 - player.anchors.x) * 0.16,
+          7,
+          93,
+        ),
         y: clamp(lerp(player.anchors.y, ball.y + direction * 10, sameFlank ? 0.36 : 0.18), 12, 88),
       },
       intent: sameFlank ? "mark" : "cover",
@@ -1078,7 +1418,11 @@ function getDefensiveTarget(
   if (role === "W") {
     return {
       target: {
-        x: clamp(sameFlank ? lerp(player.anchors.x, ball.x, 0.28) : lerp(player.anchors.x, 50, 0.24), 8, 92),
+        x: clamp(
+          sameFlank ? lerp(player.anchors.x, ball.x, 0.28) : lerp(player.anchors.x, 50, 0.24),
+          8,
+          92,
+        ),
         y: clamp(player.anchors.y - direction * 10, 16, 84),
       },
       intent: sameFlank ? "mark" : "cover",
@@ -1114,12 +1458,17 @@ function getRoleMoveFactor(player: InternalLineupPlayer, intent: PlayerMoveInten
   const role = normalizeRole(player.role);
   const athletic = clamp((player.raw.stats.speed + player.raw.stats.acceleration) / 220, 0.28, 0.7);
   const roleBase =
-    role === "GK" ? 0.24 :
-    role === "CB" ? 0.34 :
-    role === "FB" ? 0.42 :
-    role === "CM" ? 0.4 :
-    role === "W" ? 0.48 :
-    0.46;
+    role === "GK"
+      ? 0.24
+      : role === "CB"
+        ? 0.34
+        : role === "FB"
+          ? 0.42
+          : role === "CM"
+            ? 0.4
+            : role === "W"
+              ? 0.48
+              : 0.46;
   const intentBoost = intent === "press" || intent === "run" || intent === "overlap" ? 0.1 : 0;
   return clamp(roleBase + athletic * 0.28 + intentBoost, 0.24, 0.76);
 }
@@ -1151,15 +1500,22 @@ function isSameFlank(playerX: number, ballX: number) {
   return ballX >= 35 && ballX <= 65;
 }
 
-function createInitialPositionState(home: InternalLineupPlayer[], away: InternalLineupPlayer[]): PositionState {
+function createInitialPositionState(
+  home: InternalLineupPlayer[],
+  away: InternalLineupPlayer[],
+): PositionState {
   const players = new Map<number, { x: number; y: number }>();
-  [...home, ...away].forEach((player) => players.set(player.userPlayerId, { x: player.anchors.x, y: player.anchors.y }));
+  [...home, ...away].forEach((player) =>
+    players.set(player.userPlayerId, { x: player.anchors.x, y: player.anchors.y }),
+  );
   return { players, ball: { x: 50, y: 50 } };
 }
 
 function extractPositionState(snapshot: MatchSnapshot): PositionState {
   const players = new Map<number, { x: number; y: number }>();
-  [...snapshot.homePlayers, ...snapshot.awayPlayers].forEach((player) => players.set(player.userPlayerId, { x: player.x, y: player.y }));
+  [...snapshot.homePlayers, ...snapshot.awayPlayers].forEach((player) =>
+    players.set(player.userPlayerId, { x: player.x, y: player.y }),
+  );
   return { players, ball: { x: snapshot.ball.x, y: snapshot.ball.y } };
 }
 
@@ -1211,7 +1567,9 @@ function stripInternalLineup(lineup: InternalLineupPlayer[]): MatchRenderPlayer[
 }
 
 function selectLineup(team: SimulationTeamInput, side: Side): InternalLineupPlayer[] {
-  const formation = FORMATION_LAYOUTS[team.formation ?? ETeamFormation.F433] ?? FORMATION_LAYOUTS[ETeamFormation.F433];
+  const formation =
+    FORMATION_LAYOUTS[team.formation ?? ETeamFormation.F433] ??
+    FORMATION_LAYOUTS[ETeamFormation.F433];
   const pool = [...team.players];
   return formation.map((slot, index) => {
     const bestIndex = pool.reduce(
@@ -1222,7 +1580,8 @@ function selectLineup(team: SimulationTeamInput, side: Side): InternalLineupPlay
       { index: 0, score: Number.NEGATIVE_INFINITY },
     ).index;
     const picked = pool.splice(bestIndex, 1)[0] ?? team.players[index];
-    const anchors = side === "home" ? { x: slot.x, y: slot.y } : { x: 100 - slot.x, y: 100 - slot.y };
+    const anchors =
+      side === "home" ? { x: slot.x, y: slot.y } : { x: 100 - slot.x, y: 100 - slot.y };
     return {
       userPlayerId: picked.userPlayerId,
       playerId: picked.playerId,
@@ -1250,14 +1609,25 @@ function playerFitScore(player: SimulationRosterPlayer, slot: FormationSlot): nu
     const normalized = String(item.position || "").toUpperCase();
     return preferred.includes(normalized) ? Math.max(best, Number(item.effect ?? 0)) : best;
   }, 0);
-  if (slot.role === "GK") return positionScore * 100 + player.stats.gkKeeping + player.stats.gkReflex;
-  return positionScore * 100 + player.stats.shoot * 0.55 + player.stats.pass * 0.35 + player.stats.speed * 0.1;
+  if (slot.role === "GK")
+    return positionScore * 100 + player.stats.gkKeeping + player.stats.gkReflex;
+  return (
+    positionScore * 100 +
+    player.stats.shoot * 0.55 +
+    player.stats.pass * 0.35 +
+    player.stats.speed * 0.1
+  );
 }
 
 function pickAttacker(lineup: InternalLineupPlayer[], random: () => number) {
   const pool = lineup.filter((player) => player.role !== "GK");
   const weighted = pool.flatMap((player) => {
-    const weight = player.role.includes("ST") || player.role.includes("W") ? 3 : player.role.includes("M") ? 2 : 1;
+    const weight =
+      player.role.includes("ST") || player.role.includes("W")
+        ? 3
+        : player.role.includes("M")
+          ? 2
+          : 1;
     return Array.from({ length: weight }, () => player);
   });
   return weighted[Math.floor(random() * weighted.length)] ?? pool[0] ?? lineup[0];
@@ -1270,7 +1640,12 @@ function pickPartner(lineup: InternalLineupPlayer[], excludeId: number, random: 
 
 function pickDefender(lineup: InternalLineupPlayer[], random: () => number) {
   const pool = lineup.filter((player) => player.role !== "GK");
-  const weighted = pool.flatMap((player) => Array.from({ length: player.role.includes("B") || player.role.includes("CB") ? 3 : 1 }, () => player));
+  const weighted = pool.flatMap((player) =>
+    Array.from(
+      { length: player.role.includes("B") || player.role.includes("CB") ? 3 : 1 },
+      () => player,
+    ),
+  );
   return weighted[Math.floor(random() * weighted.length)] ?? lineup[0];
 }
 
@@ -1314,7 +1689,11 @@ function addShot(stats: Map<number, SimulationPlayerStatsDraft>, id: number, ok:
   }
 }
 
-function addGoal(stats: Map<number, SimulationPlayerStatsDraft>, scorerId: number, assistId: number | null) {
+function addGoal(
+  stats: Map<number, SimulationPlayerStatsDraft>,
+  scorerId: number,
+  assistId: number | null,
+) {
   const scorer = stats.get(scorerId);
   if (scorer) scorer.goals += 1;
   if (assistId) {
