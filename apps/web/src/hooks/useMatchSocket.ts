@@ -3,7 +3,7 @@ import { ESocketEvent } from '../enums/socket';
 import { normalizeSnapshot } from '../lib/normalizeMatchSnapshot';
 import { useMatch } from './useMatch';
 import { useSocketSession } from './useSocketSession';
-import type { MatchSnapshot } from '../types';
+import type { MatchSnapshot, MatchState } from '../types';
 
 const MAX_TICK_QUEUE = 80;
 const MAX_EVENTS = 16;
@@ -103,6 +103,45 @@ function sortSnapshots(left: MatchSnapshot, right: MatchSnapshot) {
   return frameIdOf(left) - frameIdOf(right);
 }
 
+function buildLineupSnapshot(match: MatchState | undefined): MatchSnapshot | null {
+  const homePlayers = Array.isArray(match?.homeLineup) ? match.homeLineup : [];
+  const awayPlayers = Array.isArray(match?.awayLineup) ? match.awayLineup : [];
+
+  if (!homePlayers.length || !awayPlayers.length) {
+    return null;
+  }
+
+  return normalizeSnapshot({
+    frameId: -1,
+    tick: -1,
+    durationMs: 0,
+    matchStep: 'first_half_start',
+    minute: Number(match?.currentMinute ?? 0),
+    second: Number(match?.clockSeconds ?? 0),
+    clockLabel: '00:00',
+    phase: 'first_half',
+    homeScore: Number(match?.homeScore ?? 0),
+    awayScore: Number(match?.awayScore ?? 0),
+    possession: 'home',
+    ball: {
+      x: 50,
+      y: 50,
+      ownerPlayerId: null,
+      speed: 0,
+    },
+    highlight: {
+      event: null,
+      label: '',
+      teamSide: null,
+      actorPlayerId: null,
+      secondaryPlayerId: null,
+      skill: null,
+    },
+    homePlayers: homePlayers as unknown as MatchSnapshot['homePlayers'],
+    awayPlayers: awayPlayers as unknown as MatchSnapshot['awayPlayers'],
+  });
+}
+
 export function useMatchSocket(matchId: string | undefined) {
   const { socket, isConnected } = useSocketSession();
   const { data, isLoading, error } = useMatch(matchId);
@@ -118,10 +157,13 @@ export function useMatchSocket(matchId: string | undefined) {
   } | null>(null);
   const [liveStatus, setLiveStatus] = useState<{ matchId: string; status: string } | null>(null);
 
-  const initialSnapshot = useMemo(
-    () => (data?.latestSnapshot ? normalizeSnapshot(data.latestSnapshot) : null),
-    [data],
-  );
+  const initialSnapshot = useMemo(() => {
+    if (data?.latestSnapshot) {
+      return normalizeSnapshot(data.latestSnapshot);
+    }
+
+    return buildLineupSnapshot(data);
+  }, [data]);
 
   useEffect(() => {
     initialFrameIdRef.current = frameIdOf(initialSnapshot);
