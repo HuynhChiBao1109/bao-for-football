@@ -1,21 +1,9 @@
-import { memo, useMemo, type CSSProperties } from 'react';
+import { memo, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useParams } from 'react-router-dom';
 import './MatchView.css';
 import { useMatchMotion } from './hooks/useMatchMotion';
 import { useMatchSocket, type LiveMatchEvent } from './hooks/useMatchSocket';
 import type { MatchPitchPlayer, MatchSnapshot } from './types';
-
-const EVENT_LABELS: Record<number, { label: string; tone: string }> = {
-  7: { label: 'Goal', tone: 'goal' },
-  8: { label: 'Free kick', tone: 'standard' },
-  35: { label: 'Pass', tone: 'standard' },
-  36: { label: 'Shot', tone: 'shot' },
-  37: { label: 'Block', tone: 'defense' },
-  38: { label: 'Save', tone: 'defense' },
-  39: { label: 'Dribble', tone: 'skill' },
-  40: { label: 'Interception', tone: 'defense' },
-  41: { label: 'Skill', tone: 'skill' },
-};
 
 function clampPercent(value: number) {
   return Math.min(100, Math.max(0, value));
@@ -33,10 +21,6 @@ function formatStatus(status: string | undefined, snapshot: MatchSnapshot | null
   return value.replaceAll('_', ' ');
 }
 
-function eventMeta(event: number | null | undefined) {
-  return event ? EVENT_LABELS[event] ?? { label: `Event ${event}`, tone: 'standard' } : null;
-}
-
 function isGoalEvent(snapshot: MatchSnapshot | null) {
   return snapshot?.highlight?.event === 7;
 }
@@ -49,10 +33,12 @@ function Scoreboard({
   snapshot,
   status,
   isConnected,
+  queuedTicks,
 }: {
   snapshot: MatchSnapshot | null;
   status: string;
   isConnected: boolean;
+  queuedTicks: number;
 }) {
   return (
     <header className="match-scoreboard">
@@ -70,6 +56,7 @@ function Scoreboard({
         <span className="match-scoreboard__status">
           {formatStatus(status, snapshot)}
           <span className={isConnected ? 'match-live-dot is-on' : 'match-live-dot'} />
+          {queuedTicks > 0 ? <small>{queuedTicks} ticks</small> : null}
         </span>
       </div>
       <div className="match-scoreboard__team match-scoreboard__team--away">
@@ -154,6 +141,19 @@ function GoalOverlay({ show, label }: { show: boolean; label: string }) {
   );
 }
 
+function CountdownOverlay({ count }: { count: number }) {
+  if (count <= 0) {
+    return null;
+  }
+
+  return (
+    <div className="match-countdown" role="status" aria-live="polite">
+      <span>Kickoff in</span>
+      <strong>{count}</strong>
+    </div>
+  );
+}
+
 function EventFeed({ events }: { events: LiveMatchEvent[] }) {
   return (
     <aside className="match-events" aria-label="Match events">
@@ -166,15 +166,14 @@ function EventFeed({ events }: { events: LiveMatchEvent[] }) {
           <p className="match-events__empty">Waiting for match events.</p>
         ) : (
           events.map((event) => {
-            const meta = eventMeta(event.event);
             return (
               <article
-                className={`match-event match-event--${meta?.tone ?? 'standard'}`}
+                className="match-event match-event--standard"
                 key={event.id}
               >
                 <span className="match-event__minute">{event.minute}'</span>
                 <div>
-                  <strong>{meta?.label ?? 'Update'}</strong>
+                  <strong>{event.event ? `Event ${event.event}` : 'Tick'}</strong>
                   <p>{event.label}</p>
                 </div>
               </article>
@@ -217,22 +216,57 @@ function MatchPitch({ snapshot }: { snapshot: MatchSnapshot }) {
 
 export function MatchView() {
   const { matchId } = useParams();
-  const { snapshot, events, status, isConnected, isLoading, error } = useMatchSocket(matchId);
-  const renderedSnapshot = useMatchMotion(snapshot);
+  const [countdown, setCountdown] = useState(3);
+  const {
+    snapshot,
+    events,
+    status,
+    isConnected,
+    isLoading,
+    error,
+    queuedTicks,
+    ackActiveTick,
+  } = useMatchSocket(matchId);
+  const isCountdownDone = countdown <= 0;
+  const renderedSnapshot = useMatchMotion(isCountdownDone ? snapshot : null, {
+    onTickComplete: ackActiveTick,
+  });
+  const visibleEvents = isCountdownDone ? events : [];
+
+  useEffect(() => {
+    setCountdown(3);
+    const timer = window.setInterval(() => {
+      setCountdown((current) => {
+        if (current <= 1) {
+          window.clearInterval(timer);
+          return 0;
+        }
+        return current - 1;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [matchId]);
 
   return (
     <main className="match-view">
-      <Scoreboard snapshot={renderedSnapshot} status={status} isConnected={isConnected} />
+      <Scoreboard
+        snapshot={renderedSnapshot}
+        status={status}
+        isConnected={isConnected}
+        queuedTicks={queuedTicks}
+      />
       <div className="match-view__content">
         {renderedSnapshot ? (
           <MatchPitch snapshot={renderedSnapshot} />
         ) : (
           <section className="match-empty">
-            <strong>{isLoading ? 'Loading match...' : 'No live snapshot'}</strong>
+            <strong>{countdown > 0 ? 'Preparing kickoff...' : isLoading ? 'Loading match...' : 'No live snapshot'}</strong>
             <span>{error ? error.message : 'Waiting for realtime data from server.'}</span>
           </section>
         )}
-        <EventFeed events={events} />
+        <CountdownOverlay count={countdown} />
+        <EventFeed events={visibleEvents} />
       </div>
     </main>
   );

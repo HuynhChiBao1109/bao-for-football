@@ -17,8 +17,4 @@ enum EMatchEvent {
   SKILL_USED = 41,
 }
 
-enum EMatchPlayerAction {
-  
-}
-
-export { EMatchEvent, EMatchPlayerAction };
+export { EMatchEvent };

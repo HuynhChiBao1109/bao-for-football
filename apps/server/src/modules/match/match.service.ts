@@ -23,6 +23,7 @@ export class MatchService implements IMatchService {
   private readonly activeTimers = new Map<string, NodeJS.Timeout>();
   private readonly timelineCache = new Map<string, MatchSnapshot[]>();
   private readonly matchMinuteMs = Number(process.env.MATCH_MINUTE_MS ?? 20_000);
+  private readonly matchKickoffDelayMs = Number(process.env.MATCH_KICKOFF_DELAY_MS ?? 3_000);
 
   constructor(
     private readonly repository: MatchRepository,
@@ -309,7 +310,11 @@ export class MatchService implements IMatchService {
     }
 
     const roomId = `${ESocketChannel.MATCH}${matchId}`;
-    let cursor = 0;
+    let cursor = this.resolvePlaybackCursor(match, timeline);
+    if (cursor >= timeline.length) {
+      this.stopPlayback(matchId);
+      return;
+    }
     this.activeTimers.set(matchId, setTimeout(() => undefined, 0));
 
     const playFrame = async () => {
@@ -333,14 +338,26 @@ export class MatchService implements IMatchService {
       this.socketService.emitToRoom({
         roomId,
         event: ESocketEvent.MATCH_SNAPSHOT,
-        data: { matchId, snapshot },
+        data: {
+          matchId,
+          frameId: snapshot.frameId,
+          tick: snapshot.tick,
+          minute: snapshot.minute,
+          snapshot,
+        },
       });
 
       if (snapshot.highlight?.event || snapshot.highlight?.skill) {
         this.socketService.emitToRoom({
           roomId,
           event: ESocketEvent.MATCH_EVENT,
-          data: { matchId, minute: snapshot.minute, highlight: snapshot.highlight },
+          data: {
+            matchId,
+            frameId: snapshot.frameId,
+            tick: snapshot.tick,
+            minute: snapshot.minute,
+            highlight: snapshot.highlight,
+          },
         });
       }
 
@@ -369,7 +386,27 @@ export class MatchService implements IMatchService {
       this.activeTimers.set(matchId, timer);
     };
 
-    void playFrame();
+    const initialDelayMs = cursor === 0 ? this.matchKickoffDelayMs : 0;
+    const initialTimer = setTimeout(() => {
+      void playFrame();
+    }, initialDelayMs);
+    this.activeTimers.set(matchId, initialTimer);
+  }
+
+  private resolvePlaybackCursor(match: MatchEntity, timeline: MatchSnapshot[]) {
+    const latestSnapshot = match.latestSnapshot as Partial<MatchSnapshot> | null;
+    const latestFrameId = Number(latestSnapshot?.frameId ?? -1);
+
+    if (!Number.isFinite(latestFrameId) || latestFrameId < 0) {
+      return 0;
+    }
+
+    const latestIndex = timeline.findIndex((snapshot) => snapshot.frameId === latestFrameId);
+    if (latestIndex < 0) {
+      return 0;
+    }
+
+    return latestIndex + 1;
   }
 
   private async completeCampaignMatchIfWon(

@@ -245,9 +245,8 @@ const SLOT_POSITION_MAP: Record<string, string[]> = {
 export function simulateMatch(
   homeTeam: SimulationTeamInput,
   awayTeam: SimulationTeamInput,
-  seedValue: number,
+  _seedValue: number,
 ): MatchSimulationResult {
-  const random = createSeededRandom(seedValue);
   const homeLineup = selectLineup(homeTeam, "home");
   const awayLineup = selectLineup(awayTeam, "away");
   const statsMap = new Map<number, SimulationPlayerStatsDraft>();
@@ -258,13 +257,14 @@ export function simulateMatch(
 
   const timeline: MatchSnapshot[] = [];
   const events: SimulationEventDraft[] = [];
-  let homeScore = 0;
-  let awayScore = 0;
+  const homeScore = 0;
+  const awayScore = 0;
   let frameId = 0;
   let positionState = createInitialPositionState(homeLineup, awayLineup);
 
   const pushFrames = (input: {
     count: number;
+    tick?: number;
     minute: number;
     matchStep: MatchStep;
     phase: MatchSnapshot["phase"];
@@ -277,6 +277,7 @@ export function simulateMatch(
     pressId?: number | null;
   }) => {
     for (let tick = 0; tick < input.count; tick += 1) {
+      const renderTick = (input.tick ?? frameId) + tick;
       const ball = input.ballPath[Math.min(tick, input.ballPath.length - 1)] ?? {
         x: input.ballOwner.anchors.x,
         y: input.ballOwner.anchors.y,
@@ -284,8 +285,8 @@ export function simulateMatch(
       const snapshot = buildSnapshot({
         frameId,
         minute: input.minute,
-        second: input.minute * 60 + tick * 12,
-        tick,
+        second: input.minute * 60 + renderTick * 12,
+        tick: renderTick,
         matchStep: input.matchStep,
         phase: input.phase,
         homeScore,
@@ -309,99 +310,63 @@ export function simulateMatch(
   };
 
   const homeKickoff = homeLineup.find((p) => p.role === "ST") ?? homeLineup[0];
-  const awayKickoff = awayLineup.find((p) => p.role === "ST") ?? awayLineup[0];
+  const homeKickoffPartner =
+    homeLineup.find((p) => p.userPlayerId !== homeKickoff.userPlayerId && p.role !== "GK") ??
+    homeLineup[1] ??
+    homeKickoff;
+
+  applyKickoffShape(homeLineup, awayLineup);
+  homeKickoff.anchors = { x: 50, y: 51 };
+  homeKickoff.x = 50;
+  homeKickoff.y = 51;
+  homeKickoffPartner.anchors = { x: 54, y: 54 };
+  homeKickoffPartner.x = 54;
+  homeKickoffPartner.y = 54;
+  positionState = createInitialPositionState(homeLineup, awayLineup);
 
   pushEvent(events, EMatchEvent.FIRST_HALF_START, 0, homeTeam.id, homeKickoff.userPlayerId, null, {
-    label: "Bat dau hiep 1",
+    label: "Tick 0: start hiep 1",
   });
   pushFrames({
-    count: FRAMES_PER_ACTION,
+    count: 1,
+    tick: 0,
     minute: 0,
     matchStep: "first_half_start",
     phase: "first_half",
     possession: "home",
     ballOwner: homeKickoff,
-    ballPath: buildKickoffPath(homeKickoff),
-    highlight: createHighlight(EMatchEvent.FIRST_HALF_START, "Bat dau hiep 1", "home", homeKickoff.userPlayerId, null, null),
+    ballPath: fixedBallPath(homeKickoff.anchors.x, homeKickoff.anchors.y),
+    highlight: createHighlight(
+      EMatchEvent.FIRST_HALF_START,
+      "Tick 0: start hiep 1",
+      "home",
+      homeKickoff.userPlayerId,
+      homeKickoffPartner.userPlayerId,
+      null,
+    ),
   });
 
-  for (let index = 0; index < ACTIONS_PER_HALF; index += 1) {
-    const result = playSimpleAction({
-      minute: 1 + index * 3,
-      homeTeam,
-      awayTeam,
-      homeLineup,
-      awayLineup,
-      homeScore,
-      awayScore,
-      statsMap,
-      events,
-      random,
-    });
-    homeScore = result.homeScore;
-    awayScore = result.awayScore;
-    pushActionFrames(pushFrames, result, "first_half", 1 + index * 3);
-  }
-
-  pushEvent(events, EMatchEvent.FIRST_HALF_END, 45, null, null, null, { label: "Het hiep 1" });
+  addPass(statsMap, homeKickoff.userPlayerId, true);
+  pushEvent(events, EMatchEvent.PASS, 0, homeTeam.id, homeKickoff.userPlayerId, homeKickoffPartner.userPlayerId, {
+    label: "Tick 2: pass giao bong",
+  });
   pushFrames({
-    count: FRAMES_PER_ACTION,
-    minute: 45,
-    matchStep: "half_time",
-    phase: "half_time",
+    count: 1,
+    tick: 2,
+    minute: 0,
+    matchStep: "play",
+    phase: "first_half",
     possession: "home",
-    ballOwner: homeKickoff,
-    ballPath: fixedBallPath(50, 50),
-    highlight: createHighlight(EMatchEvent.FIRST_HALF_END, "Het hiep 1", null, null, null, null),
-  });
-
-  pushEvent(events, EMatchEvent.SECOND_HALF_START, 46, awayTeam.id, awayKickoff.userPlayerId, null, {
-    label: "Bat dau hiep 2",
-  });
-  pushFrames({
-    count: FRAMES_PER_ACTION,
-    minute: 46,
-    matchStep: "second_half_start",
-    phase: "second_half",
-    possession: "away",
-    ballOwner: awayKickoff,
-    ballPath: buildKickoffPath(awayKickoff),
-    highlight: createHighlight(EMatchEvent.SECOND_HALF_START, "Bat dau hiep 2", "away", awayKickoff.userPlayerId, null, null),
-  });
-
-  for (let index = 0; index < ACTIONS_PER_HALF; index += 1) {
-    const minute = 47 + index * 3;
-    const result = playSimpleAction({
-      minute,
-      homeTeam,
-      awayTeam,
-      homeLineup,
-      awayLineup,
-      homeScore,
-      awayScore,
-      statsMap,
-      events,
-      random,
-    });
-    homeScore = result.homeScore;
-    awayScore = result.awayScore;
-    pushActionFrames(pushFrames, result, "second_half", minute);
-  }
-
-  pushEvent(events, EMatchEvent.MATCH_END, 90, null, null, null, {
-    label: "Het tran",
-    homeScore,
-    awayScore,
-  });
-  pushFrames({
-    count: FRAMES_PER_ACTION,
-    minute: 90,
-    matchStep: "full_time",
-    phase: "full_time",
-    possession: "home",
-    ballOwner: homeKickoff,
-    ballPath: fixedBallPath(50, 50),
-    highlight: createHighlight(EMatchEvent.MATCH_END, "Het tran", null, null, null, null),
+    ballOwner: homeKickoffPartner,
+    ballPath: fixedBallPath(homeKickoffPartner.anchors.x, homeKickoffPartner.anchors.y),
+    highlight: createHighlight(
+      EMatchEvent.PASS,
+      "Tick 2: pass giao bong",
+      "home",
+      homeKickoff.userPlayerId,
+      homeKickoffPartner.userPlayerId,
+      null,
+    ),
   });
 
   finalizeRatings(statsMap);
@@ -783,11 +748,14 @@ function projectPlayers(input: {
     let target = player.anchors;
     let intent: PlayerMoveIntent = "anchor";
 
-    if (input.matchStep === "half_time" || input.matchStep === "full_time") {
+    if (input.matchStep === "first_half_start" || input.matchStep === "second_half_start") {
+      target = hasBall ? { x: input.ball.x, y: input.ball.y } : player.anchors;
+      intent = hasBall ? "kickoff" : "anchor";
+    } else if (input.matchStep === "half_time" || input.matchStep === "full_time") {
       target = { x: 47 + (index % 4) * 2, y: 50 + Math.floor(index / 4) * 1.5 };
     } else if (hasBall) {
       target = { x: input.ball.x, y: input.ball.y };
-      intent = input.matchStep.includes("start") ? "kickoff" : "run";
+      intent = "run";
     } else if (isPress) {
       target = getPressTarget(player, input.ball);
       intent = "press";
@@ -1027,6 +995,28 @@ function extractPositionState(snapshot: MatchSnapshot): PositionState {
   const players = new Map<number, { x: number; y: number }>();
   [...snapshot.homePlayers, ...snapshot.awayPlayers].forEach((player) => players.set(player.userPlayerId, { x: player.x, y: player.y }));
   return { players, ball: { x: snapshot.ball.x, y: snapshot.ball.y } };
+}
+
+function applyKickoffShape(homeLineup: InternalLineupPlayer[], awayLineup: InternalLineupPlayer[]) {
+  homeLineup.forEach((player) => {
+    const next = {
+      x: player.anchors.x,
+      y: clamp(52 + player.anchors.y * 0.43, 52, 94),
+    };
+    player.anchors = next;
+    player.x = next.x;
+    player.y = next.y;
+  });
+
+  awayLineup.forEach((player) => {
+    const next = {
+      x: player.anchors.x,
+      y: clamp(5 + player.anchors.y * 0.43, 6, 48),
+    };
+    player.anchors = next;
+    player.x = next.x;
+    player.y = next.y;
+  });
 }
 
 function selectLineup(team: SimulationTeamInput, side: Side): InternalLineupPlayer[] {

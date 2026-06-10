@@ -69,14 +69,22 @@ function interpolateSnapshot(
   };
 }
 
-export function useMatchMotion(snapshot: MatchSnapshot | null) {
+export function useMatchMotion(
+  snapshot: MatchSnapshot | null,
+  options: { onTickComplete?: (snapshot: MatchSnapshot) => void } = {},
+) {
   const [rendered, setRendered] = useState<RenderedMatchSnapshot | null>(snapshot);
   const lastRenderedRef = useRef<MatchSnapshot | null>(snapshot);
   const previousRef = useRef<MatchSnapshot | null>(snapshot);
   const nextRef = useRef<MatchSnapshot | null>(snapshot);
+  const onTickCompleteRef = useRef(options.onTickComplete);
   const startRef = useRef(0);
   const durationRef = useRef(550);
   const frameRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    onTickCompleteRef.current = options.onTickComplete;
+  }, [options.onTickComplete]);
 
   useEffect(() => {
     if (!snapshot) {
@@ -120,6 +128,7 @@ export function useMatchMotion(snapshot: MatchSnapshot | null) {
         frameRef.current = requestAnimationFrame(animate);
       } else {
         frameRef.current = null;
+        onTickCompleteRef.current?.(next);
       }
     };
 
