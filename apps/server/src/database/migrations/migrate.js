@@ -83,6 +83,16 @@ function normalizePositions(value) {
     .filter((item) => item.position && Number.isFinite(item.rating));
 }
 
+function normalizeSkills(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => toInt(item, null))
+    .filter((item) => item === 1 || item === 2);
+}
+
 function normalizeJsonValue(value) {
   if (value == null) {
     return null;
@@ -142,6 +152,7 @@ function normalizePlayer(item, leagueCountryName) {
     speed: toInt(item?.speed, 75),
     stamina: toInt(item?.stamina, 75),
     positions: normalizePositions(item?.positions),
+    skills: normalizeSkills(item?.skills),
   };
 }
 
@@ -552,6 +563,52 @@ async function migratePlayers(connection, clubsWithRefs, clubByKey, countryIdByN
   };
 }
 
+async function migratePlayerSkills(connection, clubsWithRefs) {
+  const [playerRows] = await connection.execute(
+    "SELECT id, name, season FROM players",
+  );
+  const playerByKey = new Map();
+  for (const row of playerRows) {
+    playerByKey.set(`${normalizeKey(row.name)}|${String(row.season)}`, row);
+  }
+
+  const [existingRows] = await connection.execute(
+    "SELECT player_id, skill FROM player_skills",
+  );
+  const existingByKey = new Set(
+    existingRows.map((row) => `${String(row.player_id)}|${String(row.skill)}`),
+  );
+
+  const skillRows = [];
+  for (const club of clubsWithRefs) {
+    for (const player of club.players) {
+      if (!Array.isArray(player.skills) || player.skills.length === 0) {
+        continue;
+      }
+
+      const dbPlayer = playerByKey.get(`${normalizeKey(player.name)}|${String(player.season)}`);
+      if (!dbPlayer) {
+        continue;
+      }
+
+      for (const skill of player.skills) {
+        const key = `${String(dbPlayer.id)}|${String(skill)}`;
+        if (existingByKey.has(key)) {
+          continue;
+        }
+        existingByKey.add(key);
+        skillRows.push([dbPlayer.id, skill]);
+      }
+    }
+  }
+
+  await insertBatch(connection, "player_skills", "player_id, skill", skillRows);
+
+  return {
+    inserted: skillRows.length,
+  };
+}
+
 // Ensure admin user exists (username: admin, password: 123). Returns admin user id.
 async function migrateAdminUser(connection) {
   const [rows] = await connection.execute(
@@ -707,6 +764,7 @@ async function runMigration() {
       clubResult.clubByKey,
       countryIdByName,
     );
+    const playerSkillResult = await migratePlayerSkills(connection, clubResult.data);
 
     const adminId = await migrateAdminUser(connection);
     const teamResult = await migrateTeams(
@@ -735,6 +793,9 @@ async function runMigration() {
     );
     console.log(
       `Player migration completed. Inserted: ${playerResult.inserted}, updated: ${playerResult.updated}.`,
+    );
+    console.log(
+      `Player skill migration completed. Inserted: ${playerSkillResult.inserted}.`,
     );
     console.log(
       `Team (BOT) migration completed. Inserted: ${teamResult.inserted}.`,

@@ -7,57 +7,3411 @@
       {
         "name": "Arsenal",
         "league": "Premier League",
-        "img_url": "https://cdn.sofifa.net/teams/1/60.png"
+        "img_url": "https://cdn.sofifa.net/teams/1/60.png",
+        "players": [
+          {
+            "name": "David Raya",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 1,
+            "height": 192,
+            "bodyType": "NORMAL",
+            "pass": 75,
+            "longPass": 78,
+            "vision": 68,
+            "shoot": 20,
+            "tackle": 22,
+            "balance": 76,
+            "dribbling": 55,
+            "acceleration": 55,
+            "speed": 55,
+            "stamina": 72,
+            "positions": [
+              {
+                "position": "GK",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Ben White",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 1,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              },
+              {
+                "position": "CB",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "William Saliba",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 1,
+            "height": 190,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Gabriel Magalhaes",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 1,
+            "height": 188,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Riccardo Calafiori",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 1,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              },
+              {
+                "position": "CB",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "Declan Rice",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 1,
+            "height": 182,
+            "bodyType": "NORMAL",
+            "pass": 84,
+            "longPass": 86,
+            "vision": 82,
+            "shoot": 72,
+            "tackle": 84,
+            "balance": 82,
+            "dribbling": 78,
+            "acceleration": 76,
+            "speed": 76,
+            "stamina": 88,
+            "positions": [
+              {
+                "position": "DM",
+                "rating": 1
+              },
+              {
+                "position": "CB",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "Martin Odegaard",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 1,
+            "height": 180,
+            "bodyType": "LEAN",
+            "pass": 88,
+            "longPass": 84,
+            "vision": 88,
+            "shoot": 84,
+            "tackle": 60,
+            "balance": 86,
+            "dribbling": 88,
+            "acceleration": 85,
+            "speed": 84,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "AM",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              1,
+              2
+            ]
+          },
+          {
+            "name": "Kai Havertz",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 1,
+            "height": 186,
+            "bodyType": "STOCKY",
+            "pass": 78,
+            "longPass": 72,
+            "vision": 78,
+            "shoot": 88,
+            "tackle": 42,
+            "balance": 82,
+            "dribbling": 84,
+            "acceleration": 87,
+            "speed": 88,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "ST",
+                "rating": 1
+              },
+              {
+                "position": "AM",
+                "rating": 0.92
+              }
+            ],
+            "skills": [
+              1
+            ]
+          },
+          {
+            "name": "Bukayo Saka",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 1,
+            "height": 178,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              },
+              {
+                "position": "ST",
+                "rating": 0.92
+              }
+            ],
+            "skills": [
+              1,
+              2
+            ]
+          },
+          {
+            "name": "Gabriel Martinelli",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 1,
+            "height": 176,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              },
+              {
+                "position": "ST",
+                "rating": 0.92
+              }
+            ],
+            "skills": [
+              2
+            ]
+          },
+          {
+            "name": "Leandro Trossard",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 1,
+            "height": 177,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              },
+              {
+                "position": "ST",
+                "rating": 0.92
+              }
+            ],
+            "skills": [
+              2
+            ]
+          }
+        ]
       },
       {
         "name": "Aston Villa",
         "league": "Premier League",
-        "img_url": "https://cdn.sofifa.net/teams/2/60.png"
+        "img_url": "https://cdn.sofifa.net/teams/2/60.png",
+        "players": [
+          {
+            "name": "Emiliano Martinez",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 2,
+            "height": 192,
+            "bodyType": "NORMAL",
+            "pass": 75,
+            "longPass": 78,
+            "vision": 68,
+            "shoot": 20,
+            "tackle": 22,
+            "balance": 76,
+            "dribbling": 55,
+            "acceleration": 55,
+            "speed": 55,
+            "stamina": 72,
+            "positions": [
+              {
+                "position": "GK",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Matty Cash",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 2,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              },
+              {
+                "position": "CB",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "Ezri Konsa",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 2,
+            "height": 190,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Pau Torres",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 2,
+            "height": 188,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Lucas Digne",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 2,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Boubacar Kamara",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 2,
+            "height": 182,
+            "bodyType": "NORMAL",
+            "pass": 84,
+            "longPass": 86,
+            "vision": 82,
+            "shoot": 72,
+            "tackle": 84,
+            "balance": 82,
+            "dribbling": 78,
+            "acceleration": 76,
+            "speed": 76,
+            "stamina": 88,
+            "positions": [
+              {
+                "position": "DM",
+                "rating": 1
+              },
+              {
+                "position": "CB",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "Youri Tielemans",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 2,
+            "height": 180,
+            "bodyType": "NORMAL",
+            "pass": 86,
+            "longPass": 84,
+            "vision": 84,
+            "shoot": 78,
+            "tackle": 76,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 80,
+            "speed": 80,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "John McGinn",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 2,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 86,
+            "longPass": 84,
+            "vision": 84,
+            "shoot": 78,
+            "tackle": 76,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 80,
+            "speed": 80,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Morgan Rogers",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 2,
+            "height": 182,
+            "bodyType": "LEAN",
+            "pass": 88,
+            "longPass": 84,
+            "vision": 88,
+            "shoot": 84,
+            "tackle": 60,
+            "balance": 86,
+            "dribbling": 88,
+            "acceleration": 85,
+            "speed": 84,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "AM",
+                "rating": 1
+              },
+              {
+                "position": "W",
+                "rating": 0.92
+              }
+            ],
+            "skills": [
+              2
+            ]
+          },
+          {
+            "name": "Ollie Watkins",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 2,
+            "height": 185,
+            "bodyType": "STOCKY",
+            "pass": 78,
+            "longPass": 72,
+            "vision": 78,
+            "shoot": 88,
+            "tackle": 42,
+            "balance": 82,
+            "dribbling": 84,
+            "acceleration": 87,
+            "speed": 88,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "ST",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              1
+            ]
+          },
+          {
+            "name": "Leon Bailey",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 2,
+            "height": 177,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              },
+              {
+                "position": "ST",
+                "rating": 0.92
+              }
+            ],
+            "skills": [
+              1,
+              2
+            ]
+          }
+        ]
       },
       {
         "name": "AFC Bournemouth",
         "league": "Premier League",
-        "img_url": "https://cdn.sofifa.net/teams/1943/60.png"
+        "img_url": "https://cdn.sofifa.net/teams/1943/60.png",
+        "players": [
+          {
+            "name": "Kepa Arrizabalaga",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 3,
+            "height": 192,
+            "bodyType": "NORMAL",
+            "pass": 75,
+            "longPass": 78,
+            "vision": 68,
+            "shoot": 20,
+            "tackle": 22,
+            "balance": 76,
+            "dribbling": 55,
+            "acceleration": 55,
+            "speed": 55,
+            "stamina": 72,
+            "positions": [
+              {
+                "position": "GK",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Adam Smith",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 3,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              },
+              {
+                "position": "RB",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "Illia Zabarnyi",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 3,
+            "height": 190,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Dean Huijsen",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 3,
+            "height": 188,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Milos Kerkez",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 3,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Lewis Cook",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 3,
+            "height": 182,
+            "bodyType": "NORMAL",
+            "pass": 86,
+            "longPass": 84,
+            "vision": 84,
+            "shoot": 78,
+            "tackle": 76,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 80,
+            "speed": 80,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              },
+              {
+                "position": "DM",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "Ryan Christie",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 3,
+            "height": 180,
+            "bodyType": "NORMAL",
+            "pass": 86,
+            "longPass": 84,
+            "vision": 84,
+            "shoot": 78,
+            "tackle": 76,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 80,
+            "speed": 80,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              },
+              {
+                "position": "AM",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "Justin Kluivert",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 3,
+            "height": 177,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              },
+              {
+                "position": "AM",
+                "rating": 0.92
+              }
+            ],
+            "skills": [
+              2
+            ]
+          },
+          {
+            "name": "Antoine Semenyo",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 3,
+            "height": 178,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              },
+              {
+                "position": "ST",
+                "rating": 0.92
+              }
+            ],
+            "skills": [
+              2
+            ]
+          },
+          {
+            "name": "Dango Ouattara",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 3,
+            "height": 176,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              },
+              {
+                "position": "ST",
+                "rating": 0.92
+              }
+            ],
+            "skills": [
+              2
+            ]
+          },
+          {
+            "name": "Evanilson",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 3,
+            "height": 186,
+            "bodyType": "STOCKY",
+            "pass": 78,
+            "longPass": 72,
+            "vision": 78,
+            "shoot": 88,
+            "tackle": 42,
+            "balance": 82,
+            "dribbling": 84,
+            "acceleration": 87,
+            "speed": 88,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "ST",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              1
+            ]
+          }
+        ]
       },
       {
         "name": "Brentford",
         "league": "Premier League",
-        "img_url": "https://cdn.sofifa.net/teams/1925/60.png"
+        "img_url": "https://cdn.sofifa.net/teams/1925/60.png",
+        "players": [
+          {
+            "name": "Mark Flekken",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 4,
+            "height": 192,
+            "bodyType": "NORMAL",
+            "pass": 75,
+            "longPass": 78,
+            "vision": 68,
+            "shoot": 20,
+            "tackle": 22,
+            "balance": 76,
+            "dribbling": 55,
+            "acceleration": 55,
+            "speed": 55,
+            "stamina": 72,
+            "positions": [
+              {
+                "position": "GK",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Kristoffer Ajer",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 4,
+            "height": 189,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              },
+              {
+                "position": "FB",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "Ethan Pinnock",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 4,
+            "height": 190,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Nathan Collins",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 4,
+            "height": 188,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Rico Henry",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 4,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Christian Norgaard",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 4,
+            "height": 182,
+            "bodyType": "NORMAL",
+            "pass": 84,
+            "longPass": 86,
+            "vision": 82,
+            "shoot": 72,
+            "tackle": 84,
+            "balance": 82,
+            "dribbling": 78,
+            "acceleration": 76,
+            "speed": 76,
+            "stamina": 88,
+            "positions": [
+              {
+                "position": "DM",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Mathias Jensen",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 4,
+            "height": 180,
+            "bodyType": "NORMAL",
+            "pass": 86,
+            "longPass": 84,
+            "vision": 84,
+            "shoot": 78,
+            "tackle": 76,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 80,
+            "speed": 80,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Mikkel Damsgaard",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 4,
+            "height": 181,
+            "bodyType": "LEAN",
+            "pass": 88,
+            "longPass": 84,
+            "vision": 88,
+            "shoot": 84,
+            "tackle": 60,
+            "balance": 86,
+            "dribbling": 88,
+            "acceleration": 85,
+            "speed": 84,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "AM",
+                "rating": 1
+              },
+              {
+                "position": "W",
+                "rating": 0.92
+              }
+            ],
+            "skills": [
+              2
+            ]
+          },
+          {
+            "name": "Bryan Mbeumo",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 4,
+            "height": 178,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              },
+              {
+                "position": "ST",
+                "rating": 0.92
+              }
+            ],
+            "skills": [
+              1,
+              2
+            ]
+          },
+          {
+            "name": "Yoane Wissa",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 4,
+            "height": 185,
+            "bodyType": "STOCKY",
+            "pass": 78,
+            "longPass": 72,
+            "vision": 78,
+            "shoot": 88,
+            "tackle": 42,
+            "balance": 82,
+            "dribbling": 84,
+            "acceleration": 87,
+            "speed": 88,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "ST",
+                "rating": 1
+              },
+              {
+                "position": "W",
+                "rating": 0.92
+              }
+            ],
+            "skills": [
+              1
+            ]
+          },
+          {
+            "name": "Kevin Schade",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 4,
+            "height": 177,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              2
+            ]
+          }
+        ]
       },
       {
         "name": "Brighton & Hove Albion",
         "league": "Premier League",
-        "img_url": "https://cdn.sofifa.net/teams/1808/60.png"
+        "img_url": "https://cdn.sofifa.net/teams/1808/60.png",
+        "players": [
+          {
+            "name": "Bart Verbruggen",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 5,
+            "height": 192,
+            "bodyType": "NORMAL",
+            "pass": 75,
+            "longPass": 78,
+            "vision": 68,
+            "shoot": 20,
+            "tackle": 22,
+            "balance": 76,
+            "dribbling": 55,
+            "acceleration": 55,
+            "speed": 55,
+            "stamina": 72,
+            "positions": [
+              {
+                "position": "GK",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Joel Veltman",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 5,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              },
+              {
+                "position": "CB",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "Jan Paul van Hecke",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 5,
+            "height": 190,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Lewis Dunk",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 5,
+            "height": 188,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Pervis Estupinan",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 5,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Carlos Baleba",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 5,
+            "height": 182,
+            "bodyType": "NORMAL",
+            "pass": 86,
+            "longPass": 84,
+            "vision": 84,
+            "shoot": 78,
+            "tackle": 76,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 80,
+            "speed": 80,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              },
+              {
+                "position": "DM",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "Pascal Gross",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 5,
+            "height": 180,
+            "bodyType": "NORMAL",
+            "pass": 86,
+            "longPass": 84,
+            "vision": 84,
+            "shoot": 78,
+            "tackle": 76,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 80,
+            "speed": 80,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              },
+              {
+                "position": "AM",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "Kaoru Mitoma",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 5,
+            "height": 177,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              2
+            ]
+          },
+          {
+            "name": "Yankuba Minteh",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 5,
+            "height": 178,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              2
+            ]
+          },
+          {
+            "name": "Joao Pedro",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 5,
+            "height": 185,
+            "bodyType": "STOCKY",
+            "pass": 78,
+            "longPass": 72,
+            "vision": 78,
+            "shoot": 88,
+            "tackle": 42,
+            "balance": 82,
+            "dribbling": 84,
+            "acceleration": 87,
+            "speed": 88,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "ST",
+                "rating": 1
+              },
+              {
+                "position": "AM",
+                "rating": 0.92
+              }
+            ],
+            "skills": [
+              1,
+              2
+            ]
+          },
+          {
+            "name": "Danny Welbeck",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 5,
+            "height": 186,
+            "bodyType": "STOCKY",
+            "pass": 78,
+            "longPass": 72,
+            "vision": 78,
+            "shoot": 88,
+            "tackle": 42,
+            "balance": 82,
+            "dribbling": 84,
+            "acceleration": 87,
+            "speed": 88,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "ST",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              1
+            ]
+          }
+        ]
       },
       {
         "name": "Burnley",
         "league": "Premier League",
-        "img_url": "https://cdn.sofifa.net/teams/1796/60.png"
+        "img_url": "https://cdn.sofifa.net/teams/1796/60.png",
+        "players": [
+          {
+            "name": "James Trafford",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 6,
+            "height": 192,
+            "bodyType": "NORMAL",
+            "pass": 75,
+            "longPass": 78,
+            "vision": 68,
+            "shoot": 20,
+            "tackle": 22,
+            "balance": 76,
+            "dribbling": 55,
+            "acceleration": 55,
+            "speed": 55,
+            "stamina": 72,
+            "positions": [
+              {
+                "position": "GK",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Connor Roberts",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 6,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              },
+              {
+                "position": "RB",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "Maxime Esteve",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 6,
+            "height": 190,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Jordan Beyer",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 6,
+            "height": 188,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Lucas Pires",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 6,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Josh Cullen",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 6,
+            "height": 182,
+            "bodyType": "NORMAL",
+            "pass": 86,
+            "longPass": 84,
+            "vision": 84,
+            "shoot": 78,
+            "tackle": 76,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 80,
+            "speed": 80,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              },
+              {
+                "position": "DM",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "Sander Berge",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 6,
+            "height": 180,
+            "bodyType": "NORMAL",
+            "pass": 86,
+            "longPass": 84,
+            "vision": 84,
+            "shoot": 78,
+            "tackle": 76,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 80,
+            "speed": 80,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              },
+              {
+                "position": "DM",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "Josh Brownhill",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 6,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 86,
+            "longPass": 84,
+            "vision": 84,
+            "shoot": 78,
+            "tackle": 76,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 80,
+            "speed": 80,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Luca Koleosho",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 6,
+            "height": 178,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              2
+            ]
+          },
+          {
+            "name": "Lyle Foster",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 6,
+            "height": 185,
+            "bodyType": "STOCKY",
+            "pass": 78,
+            "longPass": 72,
+            "vision": 78,
+            "shoot": 88,
+            "tackle": 42,
+            "balance": 82,
+            "dribbling": 84,
+            "acceleration": 87,
+            "speed": 88,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "ST",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              1
+            ]
+          },
+          {
+            "name": "Zeki Amdouni",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 6,
+            "height": 186,
+            "bodyType": "STOCKY",
+            "pass": 78,
+            "longPass": 72,
+            "vision": 78,
+            "shoot": 88,
+            "tackle": 42,
+            "balance": 82,
+            "dribbling": 84,
+            "acceleration": 87,
+            "speed": 88,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "ST",
+                "rating": 1
+              },
+              {
+                "position": "AM",
+                "rating": 0.92
+              }
+            ],
+            "skills": [
+              1
+            ]
+          }
+        ]
       },
       {
         "name": "Chelsea",
         "league": "Premier League",
-        "img_url": "https://cdn.sofifa.net/teams/5/60.png"
+        "img_url": "https://cdn.sofifa.net/teams/5/60.png",
+        "players": [
+          {
+            "name": "Robert Sanchez",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 7,
+            "height": 192,
+            "bodyType": "NORMAL",
+            "pass": 75,
+            "longPass": 78,
+            "vision": 68,
+            "shoot": 20,
+            "tackle": 22,
+            "balance": 76,
+            "dribbling": 55,
+            "acceleration": 55,
+            "speed": 55,
+            "stamina": 72,
+            "positions": [
+              {
+                "position": "GK",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Reece James",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 7,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              },
+              {
+                "position": "CB",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "Wesley Fofana",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 7,
+            "height": 190,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Levi Colwill",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 7,
+            "height": 188,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Marc Cucurella",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 7,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Moises Caicedo",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 7,
+            "height": 182,
+            "bodyType": "NORMAL",
+            "pass": 84,
+            "longPass": 86,
+            "vision": 82,
+            "shoot": 72,
+            "tackle": 84,
+            "balance": 82,
+            "dribbling": 78,
+            "acceleration": 76,
+            "speed": 76,
+            "stamina": 88,
+            "positions": [
+              {
+                "position": "DM",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Enzo Fernandez",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 7,
+            "height": 180,
+            "bodyType": "NORMAL",
+            "pass": 86,
+            "longPass": 84,
+            "vision": 84,
+            "shoot": 78,
+            "tackle": 76,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 80,
+            "speed": 80,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Cole Palmer",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 7,
+            "height": 181,
+            "bodyType": "LEAN",
+            "pass": 88,
+            "longPass": 84,
+            "vision": 88,
+            "shoot": 84,
+            "tackle": 60,
+            "balance": 86,
+            "dribbling": 88,
+            "acceleration": 85,
+            "speed": 84,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "AM",
+                "rating": 1
+              },
+              {
+                "position": "W",
+                "rating": 0.92
+              }
+            ],
+            "skills": [
+              1,
+              2
+            ]
+          },
+          {
+            "name": "Pedro Neto",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 7,
+            "height": 178,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              2
+            ]
+          },
+          {
+            "name": "Nicolas Jackson",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 7,
+            "height": 185,
+            "bodyType": "STOCKY",
+            "pass": 78,
+            "longPass": 72,
+            "vision": 78,
+            "shoot": 88,
+            "tackle": 42,
+            "balance": 82,
+            "dribbling": 84,
+            "acceleration": 87,
+            "speed": 88,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "ST",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              1
+            ]
+          },
+          {
+            "name": "Noni Madueke",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 7,
+            "height": 177,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              2
+            ]
+          }
+        ]
       },
       {
         "name": "Crystal Palace",
         "league": "Premier League",
-        "img_url": "https://cdn.sofifa.net/teams/1799/60.png"
+        "img_url": "https://cdn.sofifa.net/teams/1799/60.png",
+        "players": [
+          {
+            "name": "Dean Henderson",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 8,
+            "height": 192,
+            "bodyType": "NORMAL",
+            "pass": 75,
+            "longPass": 78,
+            "vision": 68,
+            "shoot": 20,
+            "tackle": 22,
+            "balance": 76,
+            "dribbling": 55,
+            "acceleration": 55,
+            "speed": 55,
+            "stamina": 72,
+            "positions": [
+              {
+                "position": "GK",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Daniel Munoz",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 8,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Marc Guehi",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 8,
+            "height": 190,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Maxence Lacroix",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 8,
+            "height": 188,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Tyrick Mitchell",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 8,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Jefferson Lerma",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 8,
+            "height": 182,
+            "bodyType": "NORMAL",
+            "pass": 84,
+            "longPass": 86,
+            "vision": 82,
+            "shoot": 72,
+            "tackle": 84,
+            "balance": 82,
+            "dribbling": 78,
+            "acceleration": 76,
+            "speed": 76,
+            "stamina": 88,
+            "positions": [
+              {
+                "position": "DM",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Adam Wharton",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 8,
+            "height": 180,
+            "bodyType": "NORMAL",
+            "pass": 86,
+            "longPass": 84,
+            "vision": 84,
+            "shoot": 78,
+            "tackle": 76,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 80,
+            "speed": 80,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Eberechi Eze",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 8,
+            "height": 181,
+            "bodyType": "LEAN",
+            "pass": 88,
+            "longPass": 84,
+            "vision": 88,
+            "shoot": 84,
+            "tackle": 60,
+            "balance": 86,
+            "dribbling": 88,
+            "acceleration": 85,
+            "speed": 84,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "AM",
+                "rating": 1
+              },
+              {
+                "position": "W",
+                "rating": 0.92
+              }
+            ],
+            "skills": [
+              1,
+              2
+            ]
+          },
+          {
+            "name": "Ismaila Sarr",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 8,
+            "height": 178,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              2
+            ]
+          },
+          {
+            "name": "Jean-Philippe Mateta",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 8,
+            "height": 185,
+            "bodyType": "STOCKY",
+            "pass": 78,
+            "longPass": 72,
+            "vision": 78,
+            "shoot": 88,
+            "tackle": 42,
+            "balance": 82,
+            "dribbling": 84,
+            "acceleration": 87,
+            "speed": 88,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "ST",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              1
+            ]
+          },
+          {
+            "name": "Daichi Kamada",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 8,
+            "height": 181,
+            "bodyType": "LEAN",
+            "pass": 88,
+            "longPass": 84,
+            "vision": 88,
+            "shoot": 84,
+            "tackle": 60,
+            "balance": 86,
+            "dribbling": 88,
+            "acceleration": 85,
+            "speed": 84,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "AM",
+                "rating": 1
+              },
+              {
+                "position": "CM",
+                "rating": 0.92
+              }
+            ],
+            "skills": [
+              2
+            ]
+          }
+        ]
       },
       {
         "name": "Everton",
         "league": "Premier League",
-        "img_url": "https://cdn.sofifa.net/teams/7/60.png"
+        "img_url": "https://cdn.sofifa.net/teams/7/60.png",
+        "players": [
+          {
+            "name": "Jordan Pickford",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 9,
+            "height": 192,
+            "bodyType": "NORMAL",
+            "pass": 75,
+            "longPass": 78,
+            "vision": 68,
+            "shoot": 20,
+            "tackle": 22,
+            "balance": 76,
+            "dribbling": 55,
+            "acceleration": 55,
+            "speed": 55,
+            "stamina": 72,
+            "positions": [
+              {
+                "position": "GK",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Jake OBrien",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 9,
+            "height": 189,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              },
+              {
+                "position": "FB",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "James Tarkowski",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 9,
+            "height": 190,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Jarrad Branthwaite",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 9,
+            "height": 188,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Vitalii Mykolenko",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 9,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Idrissa Gueye",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 9,
+            "height": 182,
+            "bodyType": "NORMAL",
+            "pass": 84,
+            "longPass": 86,
+            "vision": 82,
+            "shoot": 72,
+            "tackle": 84,
+            "balance": 82,
+            "dribbling": 78,
+            "acceleration": 76,
+            "speed": 76,
+            "stamina": 88,
+            "positions": [
+              {
+                "position": "DM",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "James Garner",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 9,
+            "height": 180,
+            "bodyType": "NORMAL",
+            "pass": 86,
+            "longPass": 84,
+            "vision": 84,
+            "shoot": 78,
+            "tackle": 76,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 80,
+            "speed": 80,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              },
+              {
+                "position": "FB",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "Abdoulaye Doucoure",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 9,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 86,
+            "longPass": 84,
+            "vision": 84,
+            "shoot": 78,
+            "tackle": 76,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 80,
+            "speed": 80,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Dwight McNeil",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 9,
+            "height": 178,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              1,
+              2
+            ]
+          },
+          {
+            "name": "Iliman Ndiaye",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 9,
+            "height": 176,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              },
+              {
+                "position": "AM",
+                "rating": 0.92
+              }
+            ],
+            "skills": [
+              1,
+              2
+            ]
+          },
+          {
+            "name": "Beto",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 9,
+            "height": 186,
+            "bodyType": "STOCKY",
+            "pass": 78,
+            "longPass": 72,
+            "vision": 78,
+            "shoot": 88,
+            "tackle": 42,
+            "balance": 82,
+            "dribbling": 84,
+            "acceleration": 87,
+            "speed": 88,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "ST",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              1
+            ]
+          }
+        ]
       },
       {
         "name": "Fulham",
         "league": "Premier League",
-        "img_url": "https://cdn.sofifa.net/teams/144/60.png"
+        "img_url": "https://cdn.sofifa.net/teams/144/60.png",
+        "players": [
+          {
+            "name": "Bernd Leno",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 10,
+            "height": 192,
+            "bodyType": "NORMAL",
+            "pass": 75,
+            "longPass": 78,
+            "vision": 68,
+            "shoot": 20,
+            "tackle": 22,
+            "balance": 76,
+            "dribbling": 55,
+            "acceleration": 55,
+            "speed": 55,
+            "stamina": 72,
+            "positions": [
+              {
+                "position": "GK",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Kenny Tete",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 10,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Calvin Bassey",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 10,
+            "height": 190,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Issa Diop",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 10,
+            "height": 188,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Antonee Robinson",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 10,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Sasa Lukic",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 10,
+            "height": 182,
+            "bodyType": "NORMAL",
+            "pass": 86,
+            "longPass": 84,
+            "vision": 84,
+            "shoot": 78,
+            "tackle": 76,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 80,
+            "speed": 80,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              },
+              {
+                "position": "DM",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "Andreas Pereira",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 10,
+            "height": 180,
+            "bodyType": "LEAN",
+            "pass": 88,
+            "longPass": 84,
+            "vision": 88,
+            "shoot": 84,
+            "tackle": 60,
+            "balance": 86,
+            "dribbling": 88,
+            "acceleration": 85,
+            "speed": 84,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "AM",
+                "rating": 1
+              },
+              {
+                "position": "CM",
+                "rating": 0.92
+              }
+            ],
+            "skills": [
+              2
+            ]
+          },
+          {
+            "name": "Alex Iwobi",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 10,
+            "height": 177,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              },
+              {
+                "position": "CM",
+                "rating": 0.92
+              }
+            ],
+            "skills": [
+              2
+            ]
+          },
+          {
+            "name": "Harry Wilson",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 10,
+            "height": 178,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              1,
+              2
+            ]
+          },
+          {
+            "name": "Adama Traore",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 10,
+            "height": 176,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              2
+            ]
+          },
+          {
+            "name": "Raul Jimenez",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 10,
+            "height": 186,
+            "bodyType": "STOCKY",
+            "pass": 78,
+            "longPass": 72,
+            "vision": 78,
+            "shoot": 88,
+            "tackle": 42,
+            "balance": 82,
+            "dribbling": 84,
+            "acceleration": 87,
+            "speed": 88,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "ST",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              1
+            ]
+          }
+        ]
       },
       {
         "name": "Leeds United",
         "league": "Premier League",
-        "img_url": "https://cdn.sofifa.net/teams/8/60.png"
+        "img_url": "https://cdn.sofifa.net/teams/8/60.png",
+        "players": [
+          {
+            "name": "Illan Meslier",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 192,
+            "bodyType": "NORMAL",
+            "pass": 75,
+            "longPass": 78,
+            "vision": 68,
+            "shoot": 20,
+            "tackle": 22,
+            "balance": 76,
+            "dribbling": 55,
+            "acceleration": 55,
+            "speed": 55,
+            "stamina": 72,
+            "positions": [
+              {
+                "position": "GK",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Jayden Bogle",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Joe Rodon",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 190,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Ethan Ampadu",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 180,
+            "bodyType": "NORMAL",
+            "pass": 84,
+            "longPass": 86,
+            "vision": 82,
+            "shoot": 72,
+            "tackle": 84,
+            "balance": 82,
+            "dribbling": 78,
+            "acceleration": 76,
+            "speed": 76,
+            "stamina": 88,
+            "positions": [
+              {
+                "position": "DM",
+                "rating": 1
+              },
+              {
+                "position": "CB",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "Junior Firpo",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Ao Tanaka",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 182,
+            "bodyType": "NORMAL",
+            "pass": 86,
+            "longPass": 84,
+            "vision": 84,
+            "shoot": 78,
+            "tackle": 76,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 80,
+            "speed": 80,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Ilia Gruev",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 180,
+            "bodyType": "NORMAL",
+            "pass": 86,
+            "longPass": 84,
+            "vision": 84,
+            "shoot": 78,
+            "tackle": 76,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 80,
+            "speed": 80,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              },
+              {
+                "position": "DM",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "Brenden Aaronson",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 181,
+            "bodyType": "LEAN",
+            "pass": 88,
+            "longPass": 84,
+            "vision": 88,
+            "shoot": 84,
+            "tackle": 60,
+            "balance": 86,
+            "dribbling": 88,
+            "acceleration": 85,
+            "speed": 84,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "AM",
+                "rating": 1
+              },
+              {
+                "position": "W",
+                "rating": 0.92
+              }
+            ],
+            "skills": [
+              2
+            ]
+          },
+          {
+            "name": "Dan James",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 178,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              2
+            ]
+          },
+          {
+            "name": "Wilfried Gnonto",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 176,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              2
+            ]
+          },
+          {
+            "name": "Joel Piroe",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 186,
+            "bodyType": "STOCKY",
+            "pass": 78,
+            "longPass": 72,
+            "vision": 78,
+            "shoot": 88,
+            "tackle": 42,
+            "balance": 82,
+            "dribbling": 84,
+            "acceleration": 87,
+            "speed": 88,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "ST",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              1
+            ]
+          }
+        ]
       },
       {
         "name": "Liverpool",
@@ -91,6 +3445,10 @@
                 "position": "ST",
                 "rating": 0.9
               }
+            ],
+            "skills": [
+              1,
+              2
             ]
           },
           {
@@ -120,7 +3478,8 @@
                 "position": "CDM",
                 "rating": 0.7
               }
-            ]
+            ],
+            "skills": []
           },
           {
             "name": "Alisson Becker",
@@ -145,7 +3504,8 @@
                 "position": "GK",
                 "rating": 1
               }
-            ]
+            ],
+            "skills": []
           },
           {
             "name": "Trent Alexander-Arnold",
@@ -170,6 +3530,9 @@
                 "position": "RB",
                 "rating": 1
               }
+            ],
+            "skills": [
+              2
             ]
           },
           {
@@ -199,6 +3562,9 @@
                 "position": "CM",
                 "rating": 0.9
               }
+            ],
+            "skills": [
+              2
             ]
           },
           {
@@ -228,6 +3594,9 @@
                 "position": "CM",
                 "rating": 0.9
               }
+            ],
+            "skills": [
+              2
             ]
           },
           {
@@ -257,6 +3626,10 @@
                 "position": "CM",
                 "rating": 0.9
               }
+            ],
+            "skills": [
+              1,
+              2
             ]
           },
           {
@@ -286,6 +3659,9 @@
                 "position": "CAM",
                 "rating": 0.9
               }
+            ],
+            "skills": [
+              2
             ]
           },
           {
@@ -315,6 +3691,10 @@
                 "position": "ST",
                 "rating": 0.9
               }
+            ],
+            "skills": [
+              1,
+              2
             ]
           },
           {
@@ -344,6 +3724,9 @@
                 "position": "ST",
                 "rating": 0.9
               }
+            ],
+            "skills": [
+              1
             ]
           },
           {
@@ -373,6 +3756,10 @@
                 "position": "LW",
                 "rating": 0.9
               }
+            ],
+            "skills": [
+              1,
+              2
             ]
           },
           {
@@ -402,6 +3789,9 @@
                 "position": "RW",
                 "rating": 0.9
               }
+            ],
+            "skills": [
+              1
             ]
           },
           {
@@ -431,6 +3821,10 @@
                 "position": "ST",
                 "rating": 0.9
               }
+            ],
+            "skills": [
+              1,
+              2
             ]
           },
           {
@@ -456,7 +3850,8 @@
                 "position": "LB",
                 "rating": 1
               }
-            ]
+            ],
+            "skills": []
           },
           {
             "name": "Conor Bradley",
@@ -481,7 +3876,8 @@
                 "position": "RB",
                 "rating": 1
               }
-            ]
+            ],
+            "skills": []
           },
           {
             "name": "Ibrahima Konaté",
@@ -510,7 +3906,8 @@
                 "position": "RB",
                 "rating": 0.7
               }
-            ]
+            ],
+            "skills": []
           },
           {
             "name": "Joe Gomez",
@@ -543,7 +3940,8 @@
                 "position": "LB",
                 "rating": 0.85
               }
-            ]
+            ],
+            "skills": []
           },
           {
             "name": "Jarell Quansah",
@@ -572,7 +3970,8 @@
                 "position": "RB",
                 "rating": 0.65
               }
-            ]
+            ],
+            "skills": []
           },
           {
             "name": "Wataru Endo",
@@ -605,7 +4004,8 @@
                 "position": "CB",
                 "rating": 0.75
               }
-            ]
+            ],
+            "skills": []
           },
           {
             "name": "Harvey Elliott",
@@ -638,6 +4038,9 @@
                 "position": "CM",
                 "rating": 0.85
               }
+            ],
+            "skills": [
+              2
             ]
           }
         ]
@@ -664,7 +4067,10 @@
             "dribbling": 84,
             "acceleration": 88,
             "speed": 91,
-            "stamina": 87
+            "stamina": 87,
+            "skills": [
+              1
+            ]
           },
           {
             "name": "Phil Foden",
@@ -683,7 +4089,10 @@
             "dribbling": 92,
             "acceleration": 91,
             "speed": 87,
-            "stamina": 84
+            "stamina": 84,
+            "skills": [
+              2
+            ]
           },
           {
             "name": "Rodri",
@@ -702,7 +4111,10 @@
             "dribbling": 84,
             "acceleration": 70,
             "speed": 72,
-            "stamina": 92
+            "stamina": 92,
+            "skills": [
+              2
+            ]
           },
           {
             "name": "Kevin De Bruyne",
@@ -721,7 +4133,11 @@
             "dribbling": 88,
             "acceleration": 76,
             "speed": 76,
-            "stamina": 86
+            "stamina": 86,
+            "skills": [
+              1,
+              2
+            ]
           },
           {
             "name": "Bernardo Silva",
@@ -740,7 +4156,10 @@
             "dribbling": 92,
             "acceleration": 86,
             "speed": 82,
-            "stamina": 91
+            "stamina": 91,
+            "skills": [
+              2
+            ]
           },
           {
             "name": "Jack Grealish",
@@ -759,7 +4178,10 @@
             "dribbling": 91,
             "acceleration": 84,
             "speed": 82,
-            "stamina": 84
+            "stamina": 84,
+            "skills": [
+              2
+            ]
           },
           {
             "name": "Jérémy Doku",
@@ -778,7 +4200,10 @@
             "dribbling": 94,
             "acceleration": 96,
             "speed": 95,
-            "stamina": 80
+            "stamina": 80,
+            "skills": [
+              2
+            ]
           },
           {
             "name": "Savinho",
@@ -797,7 +4222,10 @@
             "dribbling": 90,
             "acceleration": 92,
             "speed": 91,
-            "stamina": 79
+            "stamina": 79,
+            "skills": [
+              2
+            ]
           },
           {
             "name": "Omar Marmoush",
@@ -816,7 +4244,10 @@
             "dribbling": 86,
             "acceleration": 90,
             "speed": 89,
-            "stamina": 85
+            "stamina": 85,
+            "skills": [
+              2
+            ]
           },
           {
             "name": "Mateo Kovačić",
@@ -835,7 +4266,10 @@
             "dribbling": 89,
             "acceleration": 81,
             "speed": 78,
-            "stamina": 85
+            "stamina": 85,
+            "skills": [
+              2
+            ]
           },
           {
             "name": "İlkay Gündoğan",
@@ -854,7 +4288,10 @@
             "dribbling": 86,
             "acceleration": 71,
             "speed": 70,
-            "stamina": 82
+            "stamina": 82,
+            "skills": [
+              2
+            ]
           },
           {
             "name": "Rúben Dias",
@@ -873,7 +4310,8 @@
             "dribbling": 74,
             "acceleration": 67,
             "speed": 70,
-            "stamina": 84
+            "stamina": 84,
+            "skills": []
           },
           {
             "name": "John Stones",
@@ -892,7 +4330,8 @@
             "dribbling": 78,
             "acceleration": 69,
             "speed": 71,
-            "stamina": 82
+            "stamina": 82,
+            "skills": []
           },
           {
             "name": "Josko Gvardiol",
@@ -911,7 +4350,8 @@
             "dribbling": 80,
             "acceleration": 80,
             "speed": 84,
-            "stamina": 86
+            "stamina": 86,
+            "skills": []
           },
           {
             "name": "Nathan Aké",
@@ -930,7 +4370,8 @@
             "dribbling": 76,
             "acceleration": 77,
             "speed": 79,
-            "stamina": 84
+            "stamina": 84,
+            "skills": []
           },
           {
             "name": "Manuel Akanji",
@@ -949,7 +4390,8 @@
             "dribbling": 74,
             "acceleration": 78,
             "speed": 82,
-            "stamina": 85
+            "stamina": 85,
+            "skills": []
           },
           {
             "name": "Rico Lewis",
@@ -968,7 +4410,10 @@
             "dribbling": 84,
             "acceleration": 85,
             "speed": 83,
-            "stamina": 84
+            "stamina": 84,
+            "skills": [
+              2
+            ]
           },
           {
             "name": "Ederson",
@@ -987,7 +4432,10 @@
             "dribbling": 55,
             "acceleration": 58,
             "speed": 60,
-            "stamina": 72
+            "stamina": 72,
+            "skills": [
+              2
+            ]
           },
           {
             "name": "Stefan Ortega",
@@ -1006,7 +4454,8 @@
             "dribbling": 48,
             "acceleration": 55,
             "speed": 54,
-            "stamina": 68
+            "stamina": 68,
+            "skills": []
           },
           {
             "name": "Claudio Echeverri",
@@ -1025,7 +4474,10 @@
             "dribbling": 89,
             "acceleration": 88,
             "speed": 86,
-            "stamina": 76
+            "stamina": 76,
+            "skills": [
+              2
+            ]
           }
         ]
       },
@@ -1421,32 +4873,1840 @@
       {
         "name": "Newcastle United",
         "league": "Premier League",
-        "img_url": "https://cdn.sofifa.net/teams/13/60.png"
+        "img_url": "https://cdn.sofifa.net/teams/13/60.png",
+        "players": [
+          {
+            "name": "Nick Pope",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 13,
+            "height": 192,
+            "bodyType": "NORMAL",
+            "pass": 75,
+            "longPass": 78,
+            "vision": 68,
+            "shoot": 20,
+            "tackle": 22,
+            "balance": 76,
+            "dribbling": 55,
+            "acceleration": 55,
+            "speed": 55,
+            "stamina": 72,
+            "positions": [
+              {
+                "position": "GK",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Kieran Trippier",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 13,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Fabian Schar",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 13,
+            "height": 190,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Sven Botman",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 13,
+            "height": 188,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Dan Burn",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 13,
+            "height": 189,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Bruno Guimaraes",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 13,
+            "height": 182,
+            "bodyType": "NORMAL",
+            "pass": 86,
+            "longPass": 84,
+            "vision": 84,
+            "shoot": 78,
+            "tackle": 76,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 80,
+            "speed": 80,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Sandro Tonali",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 13,
+            "height": 180,
+            "bodyType": "NORMAL",
+            "pass": 86,
+            "longPass": 84,
+            "vision": 84,
+            "shoot": 78,
+            "tackle": 76,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 80,
+            "speed": 80,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              },
+              {
+                "position": "DM",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "Joelinton",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 13,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 86,
+            "longPass": 84,
+            "vision": 84,
+            "shoot": 78,
+            "tackle": 76,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 80,
+            "speed": 80,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              },
+              {
+                "position": "W",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "Anthony Gordon",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 13,
+            "height": 178,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              1,
+              2
+            ]
+          },
+          {
+            "name": "Alexander Isak",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 13,
+            "height": 185,
+            "bodyType": "STOCKY",
+            "pass": 78,
+            "longPass": 72,
+            "vision": 78,
+            "shoot": 88,
+            "tackle": 42,
+            "balance": 82,
+            "dribbling": 84,
+            "acceleration": 87,
+            "speed": 88,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "ST",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              1
+            ]
+          },
+          {
+            "name": "Jacob Murphy",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 13,
+            "height": 177,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              2
+            ]
+          }
+        ]
       },
       {
         "name": "Nottingham Forest",
         "league": "Premier League",
-        "img_url": "https://cdn.sofifa.net/teams/14/60.png"
+        "img_url": "https://cdn.sofifa.net/teams/14/60.png",
+        "players": [
+          {
+            "name": "Matz Sels",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 14,
+            "height": 192,
+            "bodyType": "NORMAL",
+            "pass": 75,
+            "longPass": 78,
+            "vision": 68,
+            "shoot": 20,
+            "tackle": 22,
+            "balance": 76,
+            "dribbling": 55,
+            "acceleration": 55,
+            "speed": 55,
+            "stamina": 72,
+            "positions": [
+              {
+                "position": "GK",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Ola Aina",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 14,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Nikola Milenkovic",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 14,
+            "height": 190,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Murillo",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 14,
+            "height": 188,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Neco Williams",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 14,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Ryan Yates",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 14,
+            "height": 182,
+            "bodyType": "NORMAL",
+            "pass": 86,
+            "longPass": 84,
+            "vision": 84,
+            "shoot": 78,
+            "tackle": 76,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 80,
+            "speed": 80,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              },
+              {
+                "position": "DM",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "Elliot Anderson",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 14,
+            "height": 180,
+            "bodyType": "NORMAL",
+            "pass": 86,
+            "longPass": 84,
+            "vision": 84,
+            "shoot": 78,
+            "tackle": 76,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 80,
+            "speed": 80,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              },
+              {
+                "position": "AM",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "Morgan Gibbs-White",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 14,
+            "height": 181,
+            "bodyType": "LEAN",
+            "pass": 88,
+            "longPass": 84,
+            "vision": 88,
+            "shoot": 84,
+            "tackle": 60,
+            "balance": 86,
+            "dribbling": 88,
+            "acceleration": 85,
+            "speed": 84,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "AM",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              1,
+              2
+            ]
+          },
+          {
+            "name": "Callum Hudson-Odoi",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 14,
+            "height": 178,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              2
+            ]
+          },
+          {
+            "name": "Chris Wood",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 14,
+            "height": 185,
+            "bodyType": "STOCKY",
+            "pass": 78,
+            "longPass": 72,
+            "vision": 78,
+            "shoot": 88,
+            "tackle": 42,
+            "balance": 82,
+            "dribbling": 84,
+            "acceleration": 87,
+            "speed": 88,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "ST",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              1
+            ]
+          },
+          {
+            "name": "Anthony Elanga",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 14,
+            "height": 177,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              2
+            ]
+          }
+        ]
       },
       {
         "name": "Sunderland",
         "league": "Premier League",
-        "img_url": "https://cdn.sofifa.net/teams/106/60.png"
+        "img_url": "https://cdn.sofifa.net/teams/106/60.png",
+        "players": [
+          {
+            "name": "Anthony Patterson",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 17,
+            "height": 192,
+            "bodyType": "NORMAL",
+            "pass": 75,
+            "longPass": 78,
+            "vision": 68,
+            "shoot": 20,
+            "tackle": 22,
+            "balance": 76,
+            "dribbling": 55,
+            "acceleration": 55,
+            "speed": 55,
+            "stamina": 72,
+            "positions": [
+              {
+                "position": "GK",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Trai Hume",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 17,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Daniel Ballard",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 17,
+            "height": 190,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Luke O'Nien",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 17,
+            "height": 188,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              },
+              {
+                "position": "DM",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "Dennis Cirkin",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 17,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Dan Neil",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 17,
+            "height": 182,
+            "bodyType": "NORMAL",
+            "pass": 86,
+            "longPass": 84,
+            "vision": 84,
+            "shoot": 78,
+            "tackle": 76,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 80,
+            "speed": 80,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Jobe Bellingham",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 17,
+            "height": 180,
+            "bodyType": "NORMAL",
+            "pass": 86,
+            "longPass": 84,
+            "vision": 84,
+            "shoot": 78,
+            "tackle": 76,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 80,
+            "speed": 80,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              },
+              {
+                "position": "AM",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "Chris Rigg",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 17,
+            "height": 181,
+            "bodyType": "LEAN",
+            "pass": 88,
+            "longPass": 84,
+            "vision": 88,
+            "shoot": 84,
+            "tackle": 60,
+            "balance": 86,
+            "dribbling": 88,
+            "acceleration": 85,
+            "speed": 84,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "AM",
+                "rating": 1
+              },
+              {
+                "position": "CM",
+                "rating": 0.92
+              }
+            ],
+            "skills": [
+              1,
+              2
+            ]
+          },
+          {
+            "name": "Patrick Roberts",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 17,
+            "height": 178,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              2
+            ]
+          },
+          {
+            "name": "Enzo Le Fee",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 17,
+            "height": 180,
+            "bodyType": "LEAN",
+            "pass": 88,
+            "longPass": 84,
+            "vision": 88,
+            "shoot": 84,
+            "tackle": 60,
+            "balance": 86,
+            "dribbling": 88,
+            "acceleration": 85,
+            "speed": 84,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "AM",
+                "rating": 1
+              },
+              {
+                "position": "W",
+                "rating": 0.92
+              }
+            ],
+            "skills": [
+              2
+            ]
+          },
+          {
+            "name": "Wilson Isidor",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 17,
+            "height": 186,
+            "bodyType": "STOCKY",
+            "pass": 78,
+            "longPass": 72,
+            "vision": 78,
+            "shoot": 88,
+            "tackle": 42,
+            "balance": 82,
+            "dribbling": 84,
+            "acceleration": 87,
+            "speed": 88,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "ST",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              1
+            ]
+          }
+        ]
       },
       {
         "name": "Tottenham Hotspur",
         "league": "Premier League",
-        "img_url": "https://cdn.sofifa.net/teams/18/60.png"
+        "img_url": "https://cdn.sofifa.net/teams/18/60.png",
+        "players": [
+          {
+            "name": "Guglielmo Vicario",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 18,
+            "height": 192,
+            "bodyType": "NORMAL",
+            "pass": 75,
+            "longPass": 78,
+            "vision": 68,
+            "shoot": 20,
+            "tackle": 22,
+            "balance": 76,
+            "dribbling": 55,
+            "acceleration": 55,
+            "speed": 55,
+            "stamina": 72,
+            "positions": [
+              {
+                "position": "GK",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Pedro Porro",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 18,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Cristian Romero",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 18,
+            "height": 190,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Micky van de Ven",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 18,
+            "height": 188,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Destiny Udogie",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 18,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Rodrigo Bentancur",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 18,
+            "height": 182,
+            "bodyType": "NORMAL",
+            "pass": 86,
+            "longPass": 84,
+            "vision": 84,
+            "shoot": 78,
+            "tackle": 76,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 80,
+            "speed": 80,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "James Maddison",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 18,
+            "height": 180,
+            "bodyType": "LEAN",
+            "pass": 88,
+            "longPass": 84,
+            "vision": 88,
+            "shoot": 84,
+            "tackle": 60,
+            "balance": 86,
+            "dribbling": 88,
+            "acceleration": 85,
+            "speed": 84,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "AM",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              1,
+              2
+            ]
+          },
+          {
+            "name": "Dejan Kulusevski",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 18,
+            "height": 177,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              },
+              {
+                "position": "AM",
+                "rating": 0.92
+              }
+            ],
+            "skills": [
+              2
+            ]
+          },
+          {
+            "name": "Son Heung-min",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 18,
+            "height": 178,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              },
+              {
+                "position": "ST",
+                "rating": 0.92
+              }
+            ],
+            "skills": [
+              2
+            ]
+          },
+          {
+            "name": "Brennan Johnson",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 18,
+            "height": 176,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              2
+            ]
+          },
+          {
+            "name": "Richarlison",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 18,
+            "height": 186,
+            "bodyType": "STOCKY",
+            "pass": 78,
+            "longPass": 72,
+            "vision": 78,
+            "shoot": 88,
+            "tackle": 42,
+            "balance": 82,
+            "dribbling": 84,
+            "acceleration": 87,
+            "speed": 88,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "ST",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              1
+            ]
+          }
+        ]
       },
       {
         "name": "West Ham United",
         "league": "Premier League",
-        "img_url": "https://cdn.sofifa.net/teams/19/60.png"
+        "img_url": "https://cdn.sofifa.net/teams/19/60.png",
+        "players": [
+          {
+            "name": "Alphonse Areola",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 19,
+            "height": 192,
+            "bodyType": "NORMAL",
+            "pass": 75,
+            "longPass": 78,
+            "vision": 68,
+            "shoot": 20,
+            "tackle": 22,
+            "balance": 76,
+            "dribbling": 55,
+            "acceleration": 55,
+            "speed": 55,
+            "stamina": 72,
+            "positions": [
+              {
+                "position": "GK",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Aaron Wan-Bissaka",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 19,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Konstantinos Mavropanos",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 19,
+            "height": 190,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Max Kilman",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 19,
+            "height": 188,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Emerson",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 19,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Edson Alvarez",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 19,
+            "height": 182,
+            "bodyType": "NORMAL",
+            "pass": 84,
+            "longPass": 86,
+            "vision": 82,
+            "shoot": 72,
+            "tackle": 84,
+            "balance": 82,
+            "dribbling": 78,
+            "acceleration": 76,
+            "speed": 76,
+            "stamina": 88,
+            "positions": [
+              {
+                "position": "DM",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Tomas Soucek",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 19,
+            "height": 180,
+            "bodyType": "NORMAL",
+            "pass": 86,
+            "longPass": 84,
+            "vision": 84,
+            "shoot": 78,
+            "tackle": 76,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 80,
+            "speed": 80,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "James Ward-Prowse",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 19,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 86,
+            "longPass": 84,
+            "vision": 84,
+            "shoot": 78,
+            "tackle": 76,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 80,
+            "speed": 80,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              },
+              {
+                "position": "AM",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "Jarrod Bowen",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 19,
+            "height": 178,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              1,
+              2
+            ]
+          },
+          {
+            "name": "Lucas Paqueta",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 19,
+            "height": 180,
+            "bodyType": "LEAN",
+            "pass": 88,
+            "longPass": 84,
+            "vision": 88,
+            "shoot": 84,
+            "tackle": 60,
+            "balance": 86,
+            "dribbling": 88,
+            "acceleration": 85,
+            "speed": 84,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "AM",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              1,
+              2
+            ]
+          },
+          {
+            "name": "Mohammed Kudus",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 19,
+            "height": 177,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              },
+              {
+                "position": "AM",
+                "rating": 0.92
+              }
+            ],
+            "skills": [
+              1,
+              2
+            ]
+          }
+        ]
       },
       {
         "name": "Wolverhampton Wanderers",
         "league": "Premier League",
-        "img_url": "https://cdn.sofifa.net/teams/110/60.png"
+        "img_url": "https://cdn.sofifa.net/teams/110/60.png",
+        "players": [
+          {
+            "name": "Jose Sa",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 20,
+            "height": 192,
+            "bodyType": "NORMAL",
+            "pass": 75,
+            "longPass": 78,
+            "vision": 68,
+            "shoot": 20,
+            "tackle": 22,
+            "balance": 76,
+            "dribbling": 55,
+            "acceleration": 55,
+            "speed": 55,
+            "stamina": 72,
+            "positions": [
+              {
+                "position": "GK",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Nelson Semedo",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 20,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Craig Dawson",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 20,
+            "height": 190,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Santiago Bueno",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 20,
+            "height": 188,
+            "bodyType": "NORMAL",
+            "pass": 78,
+            "longPass": 81,
+            "vision": 70,
+            "shoot": 55,
+            "tackle": 86,
+            "balance": 78,
+            "dribbling": 70,
+            "acceleration": 72,
+            "speed": 75,
+            "stamina": 82,
+            "positions": [
+              {
+                "position": "CB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Rayan Ait-Nouri",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 20,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 78,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 80,
+            "balance": 82,
+            "dribbling": 76,
+            "acceleration": 83,
+            "speed": 84,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "FB",
+                "rating": 1
+              }
+            ]
+          },
+          {
+            "name": "Andre",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 20,
+            "height": 182,
+            "bodyType": "NORMAL",
+            "pass": 86,
+            "longPass": 84,
+            "vision": 84,
+            "shoot": 78,
+            "tackle": 76,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 80,
+            "speed": 80,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              },
+              {
+                "position": "DM",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "Joao Gomes",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 20,
+            "height": 180,
+            "bodyType": "NORMAL",
+            "pass": 86,
+            "longPass": 84,
+            "vision": 84,
+            "shoot": 78,
+            "tackle": 76,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 80,
+            "speed": 80,
+            "stamina": 86,
+            "positions": [
+              {
+                "position": "CM",
+                "rating": 1
+              },
+              {
+                "position": "DM",
+                "rating": 0.92
+              }
+            ]
+          },
+          {
+            "name": "Jean-Ricner Bellegarde",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 20,
+            "height": 181,
+            "bodyType": "LEAN",
+            "pass": 88,
+            "longPass": 84,
+            "vision": 88,
+            "shoot": 84,
+            "tackle": 60,
+            "balance": 86,
+            "dribbling": 88,
+            "acceleration": 85,
+            "speed": 84,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "AM",
+                "rating": 1
+              },
+              {
+                "position": "W",
+                "rating": 0.92
+              }
+            ],
+            "skills": [
+              2
+            ]
+          },
+          {
+            "name": "Matheus Cunha",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 20,
+            "height": 187,
+            "bodyType": "STOCKY",
+            "pass": 78,
+            "longPass": 72,
+            "vision": 78,
+            "shoot": 88,
+            "tackle": 42,
+            "balance": 82,
+            "dribbling": 84,
+            "acceleration": 87,
+            "speed": 88,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "ST",
+                "rating": 1
+              },
+              {
+                "position": "AM",
+                "rating": 0.92
+              }
+            ],
+            "skills": [
+              1,
+              2
+            ]
+          },
+          {
+            "name": "Hwang Hee-chan",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 20,
+            "height": 176,
+            "bodyType": "LEAN",
+            "pass": 84,
+            "longPass": 80,
+            "vision": 84,
+            "shoot": 82,
+            "tackle": 48,
+            "balance": 88,
+            "dribbling": 90,
+            "acceleration": 90,
+            "speed": 90,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "W",
+                "rating": 1
+              },
+              {
+                "position": "ST",
+                "rating": 0.92
+              }
+            ],
+            "skills": [
+              1,
+              2
+            ]
+          },
+          {
+            "name": "Jorgen Strand Larsen",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 20,
+            "height": 186,
+            "bodyType": "STOCKY",
+            "pass": 78,
+            "longPass": 72,
+            "vision": 78,
+            "shoot": 88,
+            "tackle": 42,
+            "balance": 82,
+            "dribbling": 84,
+            "acceleration": 87,
+            "speed": 88,
+            "stamina": 84,
+            "positions": [
+              {
+                "position": "ST",
+                "rating": 1
+              }
+            ],
+            "skills": [
+              1
+            ]
+          }
+        ]
       }
     ]
   },
