@@ -100,7 +100,11 @@ textarea {
 .app-shell {
   position: relative;
   min-height: 100vh;
-  padding: 24px 16px 40px;
+  padding:
+    max(18px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right))
+    calc(108px + env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
   color: var(--text-main);
 }
 
@@ -173,6 +177,61 @@ textarea {
   z-index: 1;
   margin: 0 auto;
   width: min(100%, 1360px);
+}
+
+.app-bottom-nav {
+  position: fixed;
+  left: 50%;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  z-index: 70;
+  display: grid;
+  grid-auto-flow: column;
+  gap: 8px;
+  width: min(calc(100vw - 24px), 480px);
+  min-height: 66px;
+  padding: 9px;
+  border: 1px solid rgba(126, 238, 255, 0.22);
+  border-radius: 999px;
+  background: rgba(2, 8, 19, 0.74);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(18px);
+  transform: translateX(-50%);
+}
+
+.app-bottom-nav__button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 48px;
+  min-height: 48px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(224, 246, 255, 0.82);
+  cursor: pointer;
+  transition:
+    transform 0.16s ease,
+    background 0.16s ease,
+    color 0.16s ease,
+    box-shadow 0.16s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app-bottom-nav__button span {
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.app-bottom-nav__button[data-active='true'] {
+  background:
+    linear-gradient(180deg, rgba(126, 238, 255, 0.28), rgba(255, 211, 103, 0.18)),
+    rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  box-shadow: 0 0 28px rgba(126, 238, 255, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.app-bottom-nav__button:active {
+  transform: scale(0.94);
 }
 
 .auth-popup-shell {
@@ -956,7 +1015,11 @@ textarea {
 
 @media (max-width: 768px) {
   .app-shell {
-    padding: 16px 12px 28px;
+    padding:
+      max(8px, env(safe-area-inset-top))
+      max(8px, env(safe-area-inset-right))
+      calc(94px + env(safe-area-inset-bottom))
+      max(8px, env(safe-area-inset-left));
   }
 
   .auth-popup-shell {

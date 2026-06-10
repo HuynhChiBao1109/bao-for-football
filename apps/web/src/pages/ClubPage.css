@@ -1,79 +1,331 @@
-.club-page {
+.club-dashboard {
   position: relative;
-  padding: 22px 6px 14px;
+  min-height: calc(100svh - 32px);
+  overflow: hidden;
+  border: 1px solid rgba(126, 238, 255, 0.14);
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(2, 7, 19, 0.08), rgba(2, 7, 19, 0.78)),
+    url('/app/background.png') center / cover no-repeat;
+  box-shadow: 0 36px 90px rgba(0, 0, 0, 0.45);
+  isolation: isolate;
 }
 
-.club-page__content {
-  position: relative;
-  z-index: 1;
-  max-width: 1400px;
-  margin: 0 auto;
+.club-dashboard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background:
+    linear-gradient(90deg, rgba(84, 234, 255, 0.08), transparent 22%, transparent 78%, rgba(255, 196, 87, 0.1)),
+    radial-gradient(circle at 50% 92%, rgba(76, 211, 194, 0.26), transparent 34%);
 }
 
-.club-page__header {
+.club-dashboard::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 52px 52px;
+  mask-image: linear-gradient(180deg, transparent, black 24%, black 74%, transparent);
+  opacity: 0.54;
+}
+
+.club-dashboard__field {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: min(920px, 120vw);
+  height: 38%;
+  border: 1px solid rgba(153, 255, 219, 0.24);
+  border-bottom: 0;
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, rgba(10, 103, 65, 0.12), rgba(9, 69, 47, 0.38));
+  box-shadow: inset 0 18px 70px rgba(51, 255, 194, 0.12);
+}
+
+.club-dashboard__player {
+  position: absolute;
+  left: 50%;
+  bottom: 19%;
+  width: min(340px, 64vw);
+  aspect-ratio: 1;
+  opacity: 0.22;
+  transform: translateX(-50%);
+  background: url('/app/logo.png') center / contain no-repeat;
+  filter: drop-shadow(0 22px 48px rgba(0, 0, 0, 0.6));
+  animation: dashboardFloat 5.8s ease-in-out infinite;
+}
+
+.club-dashboard__scan {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 0 46%, rgba(126, 238, 255, 0.08) 48%, transparent 51% 100%);
+  animation: dashboardScan 5.4s linear infinite;
+  pointer-events: none;
+}
+
+.club-dashboard__top {
+  position: absolute;
+  top: max(18px, env(safe-area-inset-top));
+  left: max(18px, env(safe-area-inset-left));
+  right: max(18px, env(safe-area-inset-right));
+  z-index: 4;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
+}
+
+.club-dashboard__identity {
+  position: absolute;
+  top: max(92px, calc(env(safe-area-inset-top) + 76px));
+  left: 50%;
+  z-index: 3;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.club-dashboard__identity p,
+.club-dashboard__identity strong {
+  margin: 0;
+  text-shadow: 0 2px 22px rgba(0, 0, 0, 0.72);
+}
+
+.club-dashboard__identity p {
+  color: rgba(222, 250, 255, 0.76);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.club-dashboard__identity strong {
+  max-width: min(78vw, 520px);
+  overflow: hidden;
+  color: #fff;
+  font-family: 'Bebas Neue', 'Barlow', sans-serif;
+  font-size: 40px;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.club-icon-button,
+.club-orbit-button,
+.club-start-button,
+.club-start-menu button,
+.club-toast {
+  border: 0;
+  color: #f7fbff;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.club-icon-button {
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  border: 1px solid rgba(126, 238, 255, 0.34);
+  border-radius: 50%;
+  background: linear-gradient(180deg, rgba(11, 28, 48, 0.76), rgba(4, 12, 26, 0.84));
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.28), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(14px);
+  transition: transform 0.18s ease, border-color 0.18s ease, filter 0.18s ease;
+}
+
+.club-icon-button:active,
+.club-orbit-button:active,
+.club-start-button:active,
+.club-start-menu button:active {
+  transform: scale(0.96);
+}
+
+.club-icon-button:hover,
+.club-orbit-button:hover,
+.club-start-button:hover {
+  border-color: rgba(255, 211, 103, 0.7);
+  filter: brightness(1.08);
+}
+
+.club-icon-button img {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.club-icon-button--small {
+  width: 52px;
+  height: 52px;
+}
+
+.club-icon-button--small span {
+  color: #78f8ff;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.club-dashboard__side {
+  position: absolute;
+  top: 45%;
+  z-index: 4;
+  display: grid;
+  gap: 18px;
+  transform: translateY(-50%);
+}
+
+.club-dashboard__side--left {
+  left: max(18px, env(safe-area-inset-left));
+}
+
+.club-dashboard__side--right {
+  right: max(18px, env(safe-area-inset-right));
+}
+
+.club-orbit-button {
+  display: grid;
+  place-items: center;
+  width: 74px;
+  height: 74px;
+  border: 1px solid rgba(126, 238, 255, 0.3);
+  border-radius: 50%;
+  background:
+    linear-gradient(180deg, rgba(11, 37, 57, 0.76), rgba(4, 15, 27, 0.88)),
+    radial-gradient(circle at 30% 20%, rgba(126, 238, 255, 0.24), transparent 42%);
+  box-shadow: 0 22px 44px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(14px);
+  animation: dashboardIconIn 0.44s ease both, dashboardBreath 3.6s ease-in-out infinite;
+}
+
+.club-orbit-button span {
+  color: #dffbff;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.club-orbit-button--gold {
+  border-color: rgba(255, 211, 103, 0.42);
+  background:
+    linear-gradient(180deg, rgba(62, 43, 10, 0.68), rgba(20, 13, 4, 0.82)),
+    radial-gradient(circle at 30% 20%, rgba(255, 211, 103, 0.3), transparent 42%);
+}
+
+.club-orbit-button--gold span {
+  color: #ffe9a8;
+}
+
+.club-dashboard__bottom {
+  position: absolute;
+  left: 50%;
+  bottom: max(24px, calc(env(safe-area-inset-bottom) + 20px));
+  z-index: 6;
+  display: grid;
+  justify-items: center;
   gap: 12px;
-  margin-bottom: 32px;
-  animation: clubFadeIn 0.55s ease forwards;
+  transform: translateX(-50%);
 }
 
-.club-page__header .game-title {
-  margin-top: 10px;
-  font-size: clamp(1.95rem, 4.3vw, 3.1rem);
-  text-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+.club-start-button {
+  min-width: 176px;
+  min-height: 58px;
+  border: 1px solid rgba(255, 229, 141, 0.7);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, #ffe68c 0%, #ff9f2b 100%),
+    radial-gradient(circle at 50% 0, rgba(255, 255, 255, 0.72), transparent 44%);
+  color: #1b1303;
+  font-family: 'Bebas Neue', 'Barlow', sans-serif;
+  font-size: 30px;
+  line-height: 1;
+  box-shadow: 0 18px 46px rgba(255, 153, 43, 0.35), 0 0 0 8px rgba(255, 184, 65, 0.08);
+  animation: startPulse 2.2s ease-in-out infinite;
 }
 
-.club-page__content > .banner {
-  margin-bottom: 24px;
-  animation: clubFadeIn 0.5s ease forwards;
+.club-start-menu {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(112px, 1fr));
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(126, 238, 255, 0.24);
+  border-radius: 999px;
+  background: rgba(3, 10, 21, 0.76);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.36);
+  backdrop-filter: blur(16px);
+  animation: dashboardMenuIn 0.2s ease both;
 }
 
-.club-page__content > .club-header {
-  margin-bottom: 30px;
-  animation: clubFadeIn 0.58s ease forwards 0.1s;
-  animation-fill-mode: backwards;
+.club-start-menu button {
+  min-height: 46px;
+  border-radius: 999px;
+  background: rgba(126, 238, 255, 0.1);
+  font-size: 13px;
+  font-weight: 900;
 }
 
-@keyframes clubFadeIn {
+.club-start-menu button:last-child {
+  background: rgba(255, 211, 103, 0.16);
+}
+
+.club-toast {
+  position: absolute;
+  left: 50%;
+  top: 22%;
+  z-index: 9;
+  max-width: min(76vw, 360px);
+  padding: 12px 16px;
+  border: 1px solid rgba(126, 238, 255, 0.24);
+  border-radius: 999px;
+  background: rgba(3, 10, 21, 0.72);
+  color: #dffbff;
+  font-size: 13px;
+  font-weight: 800;
+  transform: translateX(-50%);
+  backdrop-filter: blur(14px);
+  animation: dashboardMenuIn 0.2s ease both;
+}
+
+.club-dashboard--loading,
+.club-dashboard--empty {
+  display: grid;
+  place-items: center;
+}
+
+.club-dashboard__loader {
+  width: 56px;
+  height: 56px;
+  border: 3px solid rgba(126, 238, 255, 0.18);
+  border-top-color: #78f8ff;
+  border-radius: 50%;
+  animation: dashboardSpin 0.84s linear infinite;
+}
+
+@keyframes dashboardFloat {
+  50% {
+    transform: translateX(-50%) translateY(-10px) scale(1.03);
+  }
+}
+
+@keyframes dashboardScan {
   from {
-    opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(-100%);
   }
 
   to {
-    opacity: 1;
-    transform: translateY(0);
+    transform: translateY(100%);
   }
 }
 
-.club-page__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 22px;
-  margin-bottom: 32px;
-}
-
-.club-page__grid > .module-card:nth-child(1) {
-  animation: cardSlideIn 0.62s ease forwards 0.12s;
-  animation-fill-mode: backwards;
-}
-
-.club-page__grid > .module-card:nth-child(2) {
-  animation: cardSlideIn 0.62s ease forwards 0.2s;
-  animation-fill-mode: backwards;
-}
-
-.club-page__grid > .module-card:nth-child(3) {
-  animation: cardSlideIn 0.62s ease forwards 0.28s;
-  animation-fill-mode: backwards;
-}
-
-@keyframes cardSlideIn {
+@keyframes dashboardIconIn {
   from {
     opacity: 0;
-    transform: translateY(34px) scale(0.965);
+    transform: translateY(18px) scale(0.88);
   }
 
   to {
@@ -82,40 +334,87 @@
   }
 }
 
-@media (max-width: 1200px) {
-  .club-page__grid {
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 24px;
+@keyframes dashboardBreath {
+  50% {
+    box-shadow: 0 22px 44px rgba(0, 0, 0, 0.3), 0 0 32px rgba(126, 238, 255, 0.16);
   }
 }
 
-@media (max-width: 768px) {
-  .club-page {
-    padding: 10px 0 12px;
+@keyframes dashboardMenuIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
   }
 
-  .club-page__grid {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-
-  .club-page__header {
-    flex-direction: column;
-    align-items: stretch;
-    margin-bottom: 24px;
-  }
-
-  .club-page__content > .club-header {
-    margin-bottom: 30px;
-  }
-
-  .club-page__header .game-title {
-    font-size: 24px;
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
-.club-page__content *:focus-visible {
-  outline: 2px solid rgba(242, 184, 79, 0.6);
-  outline-offset: 2px;
-  border-radius: 4px;
+@keyframes startPulse {
+  50% {
+    box-shadow: 0 20px 54px rgba(255, 153, 43, 0.44), 0 0 0 12px rgba(255, 184, 65, 0.04);
+  }
+}
+
+@keyframes dashboardSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 760px) {
+  .club-dashboard {
+    min-height: calc(100svh - 16px);
+    border-radius: 22px;
+  }
+
+  .club-dashboard__identity {
+    top: max(84px, calc(env(safe-area-inset-top) + 68px));
+  }
+
+  .club-dashboard__identity strong {
+    font-size: 30px;
+  }
+
+  .club-icon-button {
+    width: 56px;
+    height: 56px;
+  }
+
+  .club-icon-button img {
+    width: 40px;
+    height: 40px;
+  }
+
+  .club-dashboard__side {
+    top: 48%;
+    gap: 14px;
+  }
+
+  .club-orbit-button {
+    width: 62px;
+    height: 62px;
+  }
+
+  .club-start-button {
+    min-width: 162px;
+    min-height: 56px;
+  }
+}
+
+@media (max-width: 420px) {
+  .club-dashboard__side--left {
+    left: max(10px, env(safe-area-inset-left));
+  }
+
+  .club-dashboard__side--right {
+    right: max(10px, env(safe-area-inset-right));
+  }
+
+  .club-orbit-button {
+    width: 58px;
+    height: 58px;
+  }
 }
