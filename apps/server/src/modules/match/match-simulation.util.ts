@@ -55,6 +55,10 @@ export type PlayerMotion = {
   toX: number;
   toY: number;
   intent: PlayerMoveIntent;
+  directionX: number;
+  directionY: number;
+  targetX: number;
+  targetY: number;
 };
 
 export type SimulationRosterPlayer = {
@@ -1496,13 +1500,51 @@ function distance(left: TrajectoryPoint, right: TrajectoryPoint) {
 function moveToward(from: TrajectoryPoint, to: TrajectoryPoint, maxDistance: number): TrajectoryPoint {
   const totalDistance = distance(from, to);
   if (totalDistance <= maxDistance || totalDistance <= 0) {
-    return { x: clamp(to.x, 4, 96), y: clamp(to.y, 4, 96) };
+    return { x: clamp(to.x, 0, 100), y: clamp(to.y, 0, 100) };
   }
 
   const ratio = maxDistance / totalDistance;
   return {
-    x: clamp(lerp(from.x, to.x, ratio), 4, 96),
-    y: clamp(lerp(from.y, to.y, ratio), 4, 96),
+    x: clamp(lerp(from.x, to.x, ratio), 0, 100),
+    y: clamp(lerp(from.y, to.y, ratio), 0, 100),
+  };
+}
+
+function movePlayerForTick(input: {
+  current: TrajectoryPoint;
+  target: TrajectoryPoint;
+  maxDistance: number;
+  intent: PlayerMoveIntent;
+}): { x: number; y: number; move: PlayerMotion } {
+  const target = {
+    x: clamp(input.target.x, 0, 100),
+    y: clamp(input.target.y, 0, 100),
+  };
+  const current = {
+    x: clamp(input.current.x, 0, 100),
+    y: clamp(input.current.y, 0, 100),
+  };
+  const next = moveToward(current, target, Math.max(0, input.maxDistance));
+  const dx = target.x - current.x;
+  const dy = target.y - current.y;
+  const length = Math.hypot(dx, dy);
+  const directionX = length > 0 ? Number((dx / length).toFixed(4)) : 0;
+  const directionY = length > 0 ? Number((dy / length).toFixed(4)) : 0;
+
+  return {
+    x: next.x,
+    y: next.y,
+    move: {
+      fromX: current.x,
+      fromY: current.y,
+      toX: next.x,
+      toY: next.y,
+      intent: input.intent,
+      directionX,
+      directionY,
+      targetX: target.x,
+      targetY: target.y,
+    },
   };
 }
 
@@ -1709,10 +1751,12 @@ function projectPlayers(input: {
       intent = movement.intent;
     }
 
-    const maxStep = getRoleMoveFactor(player, intent);
-    const nextPosition = moveToward(prev, target, maxStep);
-    const toX = clamp(nextPosition.x, 5, 95);
-    const toY = clamp(nextPosition.y, 5, 95);
+    const movement = movePlayerForTick({
+      current: prev,
+      target,
+      maxDistance: getRoleMoveFactor(player, intent),
+      intent,
+    });
     return {
       userPlayerId: player.userPlayerId,
       playerId: player.playerId,
@@ -1723,12 +1767,12 @@ function projectPlayers(input: {
       name: player.name,
       shortName: player.shortName,
       avatarUrl: player.avatarUrl,
-      x: toX,
-      y: toY,
+      x: movement.x,
+      y: movement.y,
       stamina: player.stamina,
       activeSkill: null,
       hasBall: false,
-      move: { fromX: prev.x, fromY: prev.y, toX, toY, intent },
+      move: movement.move,
     };
   });
 }
@@ -1926,7 +1970,7 @@ function getRoleMoveFactor(player: InternalLineupPlayer, intent: PlayerMoveInten
               ? 1.08
               : 1;
   const intentSpeed = PLAYER_SPEED_UNITS_PER_TICK[intent] ?? PLAYER_SPEED_UNITS_PER_TICK.anchor;
-  return clamp(intentSpeed * roleMultiplier * athletic, 0.12, 0.9);
+  return clamp(intentSpeed * roleMultiplier * athletic, 0.4, 7);
 }
 
 function normalizeRole(role: string): "GK" | "CB" | "FB" | "CM" | "W" | "ST" {

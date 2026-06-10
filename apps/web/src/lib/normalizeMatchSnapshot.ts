@@ -41,6 +41,10 @@ function toPitchPlayer(
           toX: clampPercent(move.toX, x),
           toY: clampPercent(move.toY, y),
           intent: (move.intent as PlayerMoveIntent) ?? 'anchor',
+          directionX: Number(move.directionX ?? 0),
+          directionY: Number(move.directionY ?? 0),
+          targetX: clampPercent(move.targetX, x),
+          targetY: clampPercent(move.targetY, y),
         }
       : undefined,
   };

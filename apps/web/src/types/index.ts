@@ -187,6 +187,10 @@ export type PlayerMotion = {
   toX: number;
   toY: number;
   intent: PlayerMoveIntent;
+  directionX?: number;
+  directionY?: number;
+  targetX?: number;
+  targetY?: number;
 };
 
 export type MatchPitchPlayer = {
