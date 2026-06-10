@@ -109,7 +109,7 @@ export function useMatchMotion(
 
     previousRef.current = lastRenderedRef.current ?? nextRef.current;
     nextRef.current = snapshot;
-    durationRef.current = Math.max(220, Math.min(900, snapshot.durationMs ?? 550));
+    durationRef.current = Math.max(80, Math.min(1200, snapshot.durationMs ?? 1000));
     startRef.current = performance.now();
 
     const animate = (now: number) => {

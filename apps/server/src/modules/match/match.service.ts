@@ -16,6 +16,7 @@ import { UserPlayerEntity, UserPlayerSkillEntity } from "../player/entities/play
 import { ESocketChannel, ESocketEvent } from "../socket/enums";
 import { SocketService } from "../socket/socket.service";
 import { ETeamFormation } from "../team/enums/team-formation.enum";
+import { EMatchEvent } from "./enums";
 
 type MatchStartPayload = {
   matchId: string;
@@ -167,6 +168,8 @@ export class MatchService implements IMatchService {
 
     const timeline = [...previousTicks, nextTick.snapshot];
 
+    const isFinished = nextTick.snapshot.highlight?.event === EMatchEvent.MATCH_END;
+
     await this.repository.update(match.id, {
       currentMinute: nextTick.snapshot.minute,
       clockSeconds: nextTick.snapshot.second,
@@ -174,7 +177,8 @@ export class MatchService implements IMatchService {
       timeline,
       homeScore: nextTick.snapshot.homeScore,
       awayScore: nextTick.snapshot.awayScore,
-      status: EMatchStatus.IN_PROGRESS,
+      status: isFinished ? EMatchStatus.FINISHED : EMatchStatus.IN_PROGRESS,
+      endedAt: isFinished ? new Date() : null,
     });
 
     await this.repository.saveEvents([
@@ -190,6 +194,18 @@ export class MatchService implements IMatchService {
     ]);
 
     this.emitSnapshot(match, nextTick.snapshot);
+
+    if (isFinished) {
+      this.socketService.emitToRoom({
+        roomId: `${ESocketChannel.MATCH}${String(match.id)}`,
+        event: ESocketEvent.MATCH_COMPLETED,
+        data: {
+          matchId: String(match.id),
+          homeScore: nextTick.snapshot.homeScore,
+          awayScore: nextTick.snapshot.awayScore,
+        },
+      });
+    }
 
     return {
       matchId: String(match.id),

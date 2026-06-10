@@ -8,11 +8,17 @@ import type { MatchPitchPlayer, MatchSnapshot } from './types';
 
 const MATCH_EVENT = {
   FIRST_HALF_START: 2,
+  FIRST_HALF_END: 3,
+  SECOND_HALF_START: 4,
+  MATCH_END: 6,
   PASS: 35,
   SHOOT: 36,
   GOALKEEPER_SAVE: 38,
   TACKLE: 42,
   SLIDE_TACKLE: 43,
+  FIRST_HALF_STOPPAGE: 44,
+  HALF_TIME_TUNNEL: 45,
+  SECOND_HALF_STOPPAGE: 46,
 } as const;
 
 function clampPercent(value: number) {
@@ -51,6 +57,18 @@ function getEventView(eventCode: number | null | undefined) {
   switch (eventCode) {
     case MATCH_EVENT.FIRST_HALF_START:
       return { title: 'Start half', className: 'match-event--start' };
+    case MATCH_EVENT.FIRST_HALF_STOPPAGE:
+      return { title: 'Stoppage time', className: 'match-event--start' };
+    case MATCH_EVENT.FIRST_HALF_END:
+      return { title: 'Half time', className: 'match-event--start' };
+    case MATCH_EVENT.HALF_TIME_TUNNEL:
+      return { title: 'Tunnel', className: 'match-event--start' };
+    case MATCH_EVENT.SECOND_HALF_START:
+      return { title: 'Second half', className: 'match-event--start' };
+    case MATCH_EVENT.SECOND_HALF_STOPPAGE:
+      return { title: 'Stoppage time', className: 'match-event--start' };
+    case MATCH_EVENT.MATCH_END:
+      return { title: 'Full time', className: 'match-event--goal' };
     case MATCH_EVENT.PASS:
       return { title: 'Pass', className: 'match-event--pass' };
     case MATCH_EVENT.SHOOT:

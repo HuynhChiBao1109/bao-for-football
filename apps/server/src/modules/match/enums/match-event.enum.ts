@@ -17,6 +17,9 @@ enum EMatchEvent {
   SKILL_USED = 41,
   TACKLE = 42,
   SLIDE_TACKLE = 43,
+  FIRST_HALF_STOPPAGE = 44,
+  HALF_TIME_TUNNEL = 45,
+  SECOND_HALF_STOPPAGE = 46,
 }
 
 export { EMatchEvent };
