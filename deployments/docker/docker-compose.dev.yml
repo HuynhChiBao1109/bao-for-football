@@ -13,6 +13,13 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
 
+  redis:
+    image: redis:7-alpine
+    container_name: fifam-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+
   service-core:
     image: golang:1.24
     container_name: fifam-service-core

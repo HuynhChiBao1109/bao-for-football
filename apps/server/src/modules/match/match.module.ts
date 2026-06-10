@@ -13,11 +13,13 @@ import { TeamFormationEntity } from "../team/entities/team-formatition.entity";
 import { UserPlayerEntity, UserPlayerSkillEntity } from "../player/entities/player-user.entity";
 import { PlayerEntity } from "../player/entities/player-admin.entity";
 import { SocketModule } from "../socket/socket.module";
+import { RedisModule } from "../redis/redis.module";
 
 @Module({
   imports: [
     AuthModule,
     SocketModule,
+    RedisModule,
     TypeOrmModule.forFeature([
       TeamEntity,
       TeamFormationEntity,

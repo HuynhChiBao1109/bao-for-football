@@ -17,6 +17,7 @@ import { ESocketChannel, ESocketEvent } from "../socket/enums";
 import { SocketService } from "../socket/socket.service";
 import { ETeamFormation } from "../team/enums/team-formation.enum";
 import { EMatchEvent } from "./enums";
+import { RedisService } from "../redis/redis.service";
 
 type MatchStartPayload = {
   matchId: string;
@@ -24,11 +25,27 @@ type MatchStartPayload = {
   awayLineup: unknown[];
 };
 
+type MatchRuntimeState = {
+  matchId: number;
+  homeTeamId: number | null;
+  awayTeamId: number | null;
+  status: EMatchStatus;
+  currentMinute: number;
+  clockSeconds: number;
+  homeScore: number;
+  awayScore: number;
+  homeLineup: unknown[];
+  awayLineup: unknown[];
+  timeline: MatchSnapshot[];
+  latestSnapshot: MatchSnapshot | null;
+};
+
 @Injectable()
 export class MatchService implements IMatchService {
   constructor(
     private readonly repository: MatchRepository,
     private readonly socketService: SocketService,
+    private readonly redisService: RedisService,
   ) {}
 
   async startCampaignMatch(user: AuthUser, campaignMatchId: number): Promise<MatchStartPayload> {
@@ -65,6 +82,7 @@ export class MatchService implements IMatchService {
       const alreadyCleared = Number(campaignMatch.level) < campaignLevel;
 
       if (existingMatch.status === EMatchStatus.IN_PROGRESS) {
+        await this.cacheMatchRuntimeState(existingMatch);
         return {
           matchId: String(existingMatch.id),
           homeLineup: existingMatch.homeLineup ?? [],
@@ -81,6 +99,7 @@ export class MatchService implements IMatchService {
       }
 
       await this.repository.deleteById(existingMatch.id);
+      await this.redisService.del(this.getMatchRuntimeKey(existingMatch.id));
     }
 
     const [homePlayers, awayPlayers] = await Promise.all([
@@ -128,6 +147,8 @@ export class MatchService implements IMatchService {
       timeline: [],
     });
 
+    await this.cacheMatchRuntimeState(match);
+
     return {
       matchId: String(match.id),
       homeLineup: lineups.homeLineup,
@@ -145,21 +166,24 @@ export class MatchService implements IMatchService {
   }
 
   async getNextTick(matchId: number) {
-    const match = await this.repository.findMatchById(matchId);
-    if (!match) {
-      throw new NotFoundException("Match not found");
+    const runtimeState = await this.redisService.getJson<MatchRuntimeState>(
+      this.getMatchRuntimeKey(matchId),
+    );
+
+    if (!runtimeState) {
+      throw new NotFoundException("Match runtime cache not found. Start the match before requesting ticks.");
     }
 
-    if (match.status !== EMatchStatus.IN_PROGRESS) {
+    if (runtimeState.status !== EMatchStatus.IN_PROGRESS) {
       throw new BadRequestException("Match is not in progress");
     }
 
-    const previousTicks = ((match.timeline ?? []) as MatchSnapshot[]).filter(Boolean);
+    const previousTicks = (runtimeState.timeline ?? []).filter(Boolean);
     const nextTick = generateNextMatchTick({
       previousTicks,
-      homeLineup: (match.homeLineup ?? []) as any,
-      awayLineup: (match.awayLineup ?? []) as any,
-      homeTeamId: match.homeTeamId ?? null,
+      homeLineup: (runtimeState.homeLineup ?? []) as any,
+      awayLineup: (runtimeState.awayLineup ?? []) as any,
+      homeTeamId: runtimeState.homeTeamId ?? null,
     });
 
     if (!nextTick) {
@@ -167,23 +191,35 @@ export class MatchService implements IMatchService {
     }
 
     const timeline = [...previousTicks, nextTick.snapshot];
-
     const isFinished = nextTick.snapshot.highlight?.event === EMatchEvent.MATCH_END;
-
-    await this.repository.update(match.id, {
+    const nextRuntimeState: MatchRuntimeState = {
+      ...runtimeState,
+      status: isFinished ? EMatchStatus.FINISHED : EMatchStatus.IN_PROGRESS,
       currentMinute: nextTick.snapshot.minute,
       clockSeconds: nextTick.snapshot.second,
-      latestSnapshot: nextTick.snapshot,
-      timeline,
       homeScore: nextTick.snapshot.homeScore,
       awayScore: nextTick.snapshot.awayScore,
-      status: isFinished ? EMatchStatus.FINISHED : EMatchStatus.IN_PROGRESS,
-      endedAt: isFinished ? new Date() : null,
-    });
+      latestSnapshot: nextTick.snapshot,
+      timeline,
+    };
+
+    await this.redisService.setJson(this.getMatchRuntimeKey(matchId), nextRuntimeState);
+
+    if (isFinished) {
+      await this.repository.update(matchId, {
+        currentMinute: nextTick.snapshot.minute,
+        clockSeconds: nextTick.snapshot.second,
+        latestSnapshot: nextTick.snapshot,
+        homeScore: nextTick.snapshot.homeScore,
+        awayScore: nextTick.snapshot.awayScore,
+        status: EMatchStatus.FINISHED,
+        endedAt: new Date(),
+      });
+    }
 
     await this.repository.saveEvents([
       {
-        matchId: match.id,
+        matchId,
         event: nextTick.event.event,
         minute: nextTick.event.minute,
         teamId: nextTick.event.teamId,
@@ -193,14 +229,14 @@ export class MatchService implements IMatchService {
       },
     ]);
 
-    this.emitSnapshot(match, nextTick.snapshot);
+    this.emitSnapshot(matchId, nextTick.snapshot);
 
     if (isFinished) {
       this.socketService.emitToRoom({
-        roomId: `${ESocketChannel.MATCH}${String(match.id)}`,
+        roomId: `${ESocketChannel.MATCH}${String(matchId)}`,
         event: ESocketEvent.MATCH_COMPLETED,
         data: {
-          matchId: String(match.id),
+          matchId: String(matchId),
           homeScore: nextTick.snapshot.homeScore,
           awayScore: nextTick.snapshot.awayScore,
         },
@@ -219,8 +255,31 @@ export class MatchService implements IMatchService {
     return match;
   }
 
-  private emitSnapshot(match: MatchEntity, snapshot: MatchSnapshot) {
-    const matchId = String(match.id);
+  private getMatchRuntimeKey(matchId: number) {
+    return `match:${matchId}:runtime`;
+  }
+
+  private async cacheMatchRuntimeState(match: MatchEntity) {
+    const runtimeState: MatchRuntimeState = {
+      matchId: match.id,
+      homeTeamId: match.homeTeamId ?? null,
+      awayTeamId: match.awayTeamId ?? null,
+      status: match.status,
+      currentMinute: Number(match.currentMinute ?? 0),
+      clockSeconds: Number(match.clockSeconds ?? 0),
+      homeScore: Number(match.homeScore ?? 0),
+      awayScore: Number(match.awayScore ?? 0),
+      homeLineup: match.homeLineup ?? [],
+      awayLineup: match.awayLineup ?? [],
+      timeline: ((match.timeline ?? []) as MatchSnapshot[]).filter(Boolean),
+      latestSnapshot: (match.latestSnapshot as MatchSnapshot | null) ?? null,
+    };
+
+    await this.redisService.setJson(this.getMatchRuntimeKey(match.id), runtimeState);
+  }
+
+  private emitSnapshot(matchIdValue: number | string, snapshot: MatchSnapshot) {
+    const matchId = String(matchIdValue);
     const roomId = `${ESocketChannel.MATCH}${matchId}`;
 
     this.socketService.emitToRoom({
