@@ -15,6 +15,8 @@ enum EMatchEvent {
   DRIBBLE = 39,
   INTERCEPTION = 40,
   SKILL_USED = 41,
+  TACKLE = 42,
+  SLIDE_TACKLE = 43,
 }
 
 export { EMatchEvent };

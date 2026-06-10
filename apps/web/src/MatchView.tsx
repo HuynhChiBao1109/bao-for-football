@@ -10,6 +10,9 @@ const MATCH_EVENT = {
   FIRST_HALF_START: 2,
   PASS: 35,
   SHOOT: 36,
+  GOALKEEPER_SAVE: 38,
+  TACKLE: 42,
+  SLIDE_TACKLE: 43,
 } as const;
 
 function clampPercent(value: number) {
@@ -52,6 +55,12 @@ function getEventView(eventCode: number | null | undefined) {
       return { title: 'Pass', className: 'match-event--pass' };
     case MATCH_EVENT.SHOOT:
       return { title: 'Shot', className: 'match-event--shot' };
+    case MATCH_EVENT.GOALKEEPER_SAVE:
+      return { title: 'Save', className: 'match-event--defense' };
+    case MATCH_EVENT.TACKLE:
+      return { title: 'Tackle', className: 'match-event--defense' };
+    case MATCH_EVENT.SLIDE_TACKLE:
+      return { title: 'Slide tackle', className: 'match-event--defense' };
     case 7:
       return { title: 'Goal', className: 'match-event--goal' };
     default:
