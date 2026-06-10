@@ -16,6 +16,7 @@ import { UserPlayerEntity, UserPlayerSkillEntity } from "../player/entities/play
 import { ESocketChannel, ESocketEvent } from "../socket/enums";
 import { SocketService } from "../socket/socket.service";
 import { ETeamFormation } from "../team/enums/team-formation.enum";
+import { CampainMatchEntity } from "../campain/entities/campain-match.entity";
 
 @Injectable()
 export class MatchService implements IMatchService {
@@ -49,8 +50,36 @@ export class MatchService implements IMatchService {
       throw new BadRequestException("You do not own this campaign match");
     }
 
+    const campaignLevel = Number(campaignMatch.campain?.level ?? 1);
+    if (Number(campaignMatch.level) > campaignLevel) {
+      throw new BadRequestException("Campaign match level is not unlocked yet");
+    }
+
     const existingMatch = await this.repository.findMatchByCampaignMatchId(campaignMatchId);
     if (existingMatch) {
+      const existingHomeScore = Number(existingMatch.homeScore ?? 0);
+      const existingAwayScore = Number(existingMatch.awayScore ?? 0);
+      const existingHomeWon = existingMatch.status === EMatchStatus.FINISHED && existingHomeScore > existingAwayScore;
+      const alreadyCleared = Number(campaignMatch.level) < campaignLevel;
+
+      if (existingMatch.status === EMatchStatus.IN_PROGRESS && existingMatch.timeline?.length) {
+        this.timelineCache.set(String(existingMatch.id), existingMatch.timeline as MatchSnapshot[]);
+        this.ensurePlayback(existingMatch);
+        return {
+          matchId: String(existingMatch.id),
+          status: existingMatch.status,
+          latestSnapshot: existingMatch.latestSnapshot,
+        };
+      }
+
+      if (existingHomeWon || alreadyCleared) {
+        return {
+          matchId: String(existingMatch.id),
+          status: existingMatch.status,
+          latestSnapshot: existingMatch.latestSnapshot,
+        };
+      }
+
       this.stopPlayback(String(existingMatch.id));
       this.timelineCache.delete(String(existingMatch.id));
       await this.repository.deleteById(existingMatch.id);
@@ -99,7 +128,7 @@ export class MatchService implements IMatchService {
       homeLineup: simulation.homeLineup,
       awayLineup: simulation.awayLineup,
       latestSnapshot: simulation.timeline[0] ?? null,
-      timeline: null,
+      timeline: simulation.timeline,
     });
 
     this.timelineCache.set(String(match.id), simulation.timeline);
@@ -142,7 +171,7 @@ export class MatchService implements IMatchService {
       ),
     ]);
 
-    this.startPlayback(match, simulation.timeline);
+    this.startPlayback(match, simulation.timeline, campaignMatch);
 
     return {
       matchId: String(match.id),
@@ -266,10 +295,14 @@ export class MatchService implements IMatchService {
       return;
     }
 
-    this.startPlayback(match, timeline);
+    this.startPlayback(match, timeline, match.campainMatch);
   }
 
-  private startPlayback(match: MatchEntity, timeline: MatchSnapshot[]) {
+  private startPlayback(
+    match: MatchEntity,
+    timeline: MatchSnapshot[],
+    campaignMatch?: CampainMatchEntity | null,
+  ) {
     const matchId = String(match.id);
     if (!timeline.length || this.activeTimers.has(matchId)) {
       return;
@@ -312,6 +345,8 @@ export class MatchService implements IMatchService {
       }
 
       if (isFinal) {
+        await this.completeCampaignMatchIfWon(match, snapshot, campaignMatch);
+
         this.socketService.emitToRoom({
           roomId,
           event: ESocketEvent.MATCH_COMPLETED,
@@ -335,6 +370,26 @@ export class MatchService implements IMatchService {
     };
 
     void playFrame();
+  }
+
+  private async completeCampaignMatchIfWon(
+    match: MatchEntity,
+    snapshot: MatchSnapshot,
+    campaignMatch?: CampainMatchEntity | null,
+  ) {
+    const campaign = campaignMatch?.campain;
+    const homeWon = Number(snapshot.homeScore ?? 0) > Number(snapshot.awayScore ?? 0);
+
+    if (!campaignMatch || !campaign || !homeWon || !match.homeTeamId) {
+      return;
+    }
+
+    await this.repository.completeCampaignMatch({
+      campaignId: campaign.id,
+      teamId: match.homeTeamId,
+      nextLevel: Number(campaignMatch.level ?? 0) + 1,
+      reward: Number(campaignMatch.matchReward ?? 0),
+    });
   }
 
   private stopPlayback(matchId: string) {

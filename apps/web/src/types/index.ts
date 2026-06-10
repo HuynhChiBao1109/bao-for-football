@@ -194,9 +194,12 @@ export type MatchPitchPlayer = {
   name: string;
   avatarUrl?: string | null;
   position: string;
+  jerseyNumber?: number | string;
+  teamSide?: 'home' | 'away';
   x: number;
   y: number;
   hasBall: boolean;
+  card?: 'yellow' | 'red' | null;
   activeSkill?: number | null;
   move?: PlayerMotion;
 };

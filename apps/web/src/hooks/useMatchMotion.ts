@@ -6,75 +6,120 @@ export type RenderedMatchSnapshot = MatchSnapshot & {
   awayPlayers: MatchPitchPlayer[];
 };
 
-function easeInOutCubic(t: number) {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+function easeOutCubic(t: number) {
+  return 1 - Math.pow(1 - t, 3);
 }
 
 function lerp(from: number, to: number, alpha: number) {
   return from + (to - from) * alpha;
 }
 
-function interpolatePlayer(player: MatchPitchPlayer, alpha: number): MatchPitchPlayer {
-  const move = player.move;
-  if (!move) {
-    return player;
-  }
-
-  return {
-    ...player,
-    x: lerp(move.fromX, move.toX, alpha),
-    y: lerp(move.fromY, move.toY, alpha),
-  };
+function playerKey(player: MatchPitchPlayer) {
+  return `${player.teamSide ?? 'team'}:${player.id}`;
 }
 
-function interpolateSnapshot(target: MatchSnapshot, alpha: number): RenderedMatchSnapshot {
-  const ballFromX = target.ball.fromX ?? target.ball.x;
-  const ballFromY = target.ball.fromY ?? target.ball.y;
+function indexPlayers(players: MatchPitchPlayer[]) {
+  return new Map(players.map((player) => [playerKey(player), player]));
+}
+
+function interpolatePlayers(
+  previousPlayers: MatchPitchPlayer[],
+  nextPlayers: MatchPitchPlayer[],
+  alpha: number,
+) {
+  const previousById = indexPlayers(previousPlayers);
+
+  return nextPlayers.map((nextPlayer) => {
+    const previousPlayer = previousById.get(playerKey(nextPlayer));
+    if (!previousPlayer) {
+      const move = nextPlayer.move;
+      return {
+        ...nextPlayer,
+        x: lerp(move?.fromX ?? nextPlayer.x, nextPlayer.x, alpha),
+        y: lerp(move?.fromY ?? nextPlayer.y, nextPlayer.y, alpha),
+      };
+    }
+
+    return {
+      ...nextPlayer,
+      x: lerp(previousPlayer.x, nextPlayer.x, alpha),
+      y: lerp(previousPlayer.y, nextPlayer.y, alpha),
+    };
+  });
+}
+
+function interpolateSnapshot(
+  previous: MatchSnapshot | null,
+  next: MatchSnapshot,
+  alpha: number,
+): RenderedMatchSnapshot {
+  const previousBall = previous?.ball;
+  const ballFromX = previousBall?.x ?? next.ball.fromX ?? next.ball.x;
+  const ballFromY = previousBall?.y ?? next.ball.fromY ?? next.ball.y;
 
   return {
-    ...target,
+    ...next,
     ball: {
-      ...target.ball,
-      x: lerp(ballFromX, target.ball.x, alpha),
-      y: lerp(ballFromY, target.ball.y, alpha),
+      ...next.ball,
+      x: lerp(ballFromX, next.ball.x, alpha),
+      y: lerp(ballFromY, next.ball.y, alpha),
     },
-    homePlayers: target.homePlayers.map((player) => interpolatePlayer(player, alpha)),
-    awayPlayers: target.awayPlayers.map((player) => interpolatePlayer(player, alpha)),
+    homePlayers: interpolatePlayers(previous?.homePlayers ?? [], next.homePlayers, alpha),
+    awayPlayers: interpolatePlayers(previous?.awayPlayers ?? [], next.awayPlayers, alpha),
   };
 }
 
 export function useMatchMotion(snapshot: MatchSnapshot | null) {
   const [rendered, setRendered] = useState<RenderedMatchSnapshot | null>(snapshot);
-  const targetRef = useRef<MatchSnapshot | null>(snapshot);
+  const lastRenderedRef = useRef<MatchSnapshot | null>(snapshot);
+  const previousRef = useRef<MatchSnapshot | null>(snapshot);
+  const nextRef = useRef<MatchSnapshot | null>(snapshot);
   const startRef = useRef(0);
   const durationRef = useRef(550);
   const frameRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!snapshot) {
-      setRendered(null);
-      targetRef.current = null;
-      return;
+      if (frameRef.current) {
+        cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+      }
+      previousRef.current = null;
+      nextRef.current = null;
+      lastRenderedRef.current = null;
+      frameRef.current = requestAnimationFrame(() => {
+        setRendered(null);
+        frameRef.current = null;
+      });
+      return () => {
+        if (frameRef.current) {
+          cancelAnimationFrame(frameRef.current);
+          frameRef.current = null;
+        }
+      };
     }
 
-    targetRef.current = snapshot;
-    durationRef.current = Math.max(420, snapshot.durationMs ?? 550);
+    previousRef.current = lastRenderedRef.current ?? nextRef.current;
+    nextRef.current = snapshot;
+    durationRef.current = Math.max(220, Math.min(900, snapshot.durationMs ?? 550));
     startRef.current = performance.now();
-    setRendered(interpolateSnapshot(snapshot, 0));
 
     const animate = (now: number) => {
-      const target = targetRef.current;
-      if (!target) {
+      const next = nextRef.current;
+      if (!next) {
         return;
       }
 
       const elapsed = now - startRef.current;
       const progress = Math.min(1, elapsed / durationRef.current);
-      const eased = easeInOutCubic(progress);
-      setRendered(interpolateSnapshot(target, eased));
+      const frame = interpolateSnapshot(previousRef.current, next, easeOutCubic(progress));
+      lastRenderedRef.current = frame;
+      setRendered(frame);
 
       if (progress < 1) {
         frameRef.current = requestAnimationFrame(animate);
+      } else {
+        frameRef.current = null;
       }
     };
 
@@ -86,9 +131,10 @@ export function useMatchMotion(snapshot: MatchSnapshot | null) {
     return () => {
       if (frameRef.current) {
         cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
       }
     };
-  }, [snapshot?.frameId]);
+  }, [snapshot]);
 
   return rendered ?? snapshot;
 }

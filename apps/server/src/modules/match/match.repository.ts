@@ -47,6 +47,9 @@ export class MatchRepository {
       relations: {
         matchEvents: true,
         matchPlayerStats: true,
+        campainMatch: {
+          campain: true,
+        },
       },
       order: {
         matchEvents: {
@@ -57,7 +60,14 @@ export class MatchRepository {
   }
 
   async findMatchByCampaignMatchId(campaignMatchId: number): Promise<MatchEntity | null> {
-    return this.matchRepository.findOne({ where: { campainId: campaignMatchId } });
+    return this.matchRepository.findOne({
+      where: { campainId: campaignMatchId },
+      relations: {
+        campainMatch: {
+          campain: true,
+        },
+      },
+    });
   }
 
   async findCampaignMatchById(campaignMatchId: number): Promise<CampainMatchEntity | null> {
@@ -79,6 +89,27 @@ export class MatchRepository {
 
   async update(matchId: number, payload: Partial<MatchEntity>): Promise<void> {
     await this.matchRepository.update({ id: matchId }, payload);
+  }
+
+  async completeCampaignMatch(data: {
+    campaignId: number;
+    teamId: number;
+    nextLevel: number;
+    reward: number;
+  }): Promise<void> {
+    await this.campainMatchRepository.manager.transaction(async (manager) => {
+      if (data.reward > 0) {
+        await manager.query(
+          "UPDATE teams SET budget = budget + ? WHERE id = ? AND EXISTS (SELECT 1 FROM campains WHERE id = ? AND level < ?)",
+          [data.reward, data.teamId, data.campaignId, data.nextLevel],
+        );
+      }
+
+      await manager.query("UPDATE campains SET level = GREATEST(level, ?) WHERE id = ?", [
+        data.nextLevel,
+        data.campaignId,
+      ]);
+    });
   }
 
   async deleteById(matchId: number): Promise<void> {
