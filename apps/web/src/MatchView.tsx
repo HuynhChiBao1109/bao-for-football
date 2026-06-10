@@ -345,7 +345,7 @@ export function MatchView() {
       if (!getNextTick.isPending && queuedTicks < 4) {
         getNextTick.mutate();
       }
-    }, 1100);
+    }, 700);
 
     return () => window.clearInterval(intervalId);
   }, [getNextTick, isAutoTicking, isMatchEnded, matchId, queuedTicks]);

@@ -12,7 +12,7 @@ import {
 
 export const MATCH_REAL_DURATION_MS = 180_000;
 export const MATCH_CLOCK_SECONDS = 180;
-export const MATCH_TICK_MS = 1000;
+export const MATCH_TICK_MS = 650;
 export const TICKS_PER_SECOND = 1000 / MATCH_TICK_MS;
 export const TICKS_PER_MINUTE = 60 * TICKS_PER_SECOND;
 export const MATCH_DURATION_TICKS = MATCH_CLOCK_SECONDS * TICKS_PER_SECOND;
@@ -1287,8 +1287,8 @@ function resolveDebugPossessionTempoAction(input: {
     input.latestEvent === EMatchEvent.SECOND_HALF_START;
   const mustSettle =
     !restartPass &&
-    (input.latestEvent === EMatchEvent.PASS || teamTicks < 3 || ownerTicks < 3);
-  const passCadenceReady = input.nextTick % 4 === 0 || ownerTicks >= 5;
+    (input.latestEvent === EMatchEvent.PASS || teamTicks < 2 || ownerTicks < 2);
+  const passCadenceReady = input.nextTick % 3 === 0 || ownerTicks >= 4;
 
   if (restartPass || (!mustSettle && passCadenceReady)) {
     return {
