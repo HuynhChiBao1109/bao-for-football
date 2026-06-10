@@ -16,6 +16,10 @@ function toHorizontalPitchPosition(point: { x: number; y: number }) {
   } as CSSProperties;
 }
 
+function formatCoord(value: number | undefined) {
+  return Number.isFinite(value) ? Number(value).toFixed(1) : '0.0';
+}
+
 function formatStatus(status: string | undefined, snapshot: MatchSnapshot | null) {
   const value = snapshot?.matchStep ?? snapshot?.phase ?? status ?? 'ready';
   return value.replaceAll('_', ' ');
@@ -86,6 +90,33 @@ function PitchLines() {
   );
 }
 
+function PitchDebugGrid() {
+  const marks = [0, 25, 50, 75, 100];
+
+  return (
+    <div className="pitch-debug-grid" aria-hidden="true">
+      {marks.map((value) => (
+        <span
+          className="pitch-debug-grid__x"
+          key={`x-${value}`}
+          style={{ top: `${value}%` }}
+        >
+          x {value}
+        </span>
+      ))}
+      {marks.map((value) => (
+        <span
+          className="pitch-debug-grid__y"
+          key={`y-${value}`}
+          style={{ left: `${value}%` }}
+        >
+          y {value}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 const PlayerCircle = memo(function PlayerCircle({
   player,
   activeHighlight,
@@ -111,6 +142,9 @@ const PlayerCircle = memo(function PlayerCircle({
       </div>
       {player.card ? <span className={`player-card player-card--${player.card}`} /> : null}
       {player.activeSkill ? <span className="player-skill-badge">S</span> : null}
+      <span className="player-coord">
+        x:{formatCoord(player.x)} y:{formatCoord(player.y)}
+      </span>
       <span className="player-name">{player.name}</span>
     </div>
   );
@@ -124,7 +158,11 @@ function Ball({ snapshot }: { snapshot: MatchSnapshot }) {
       className={isShotEvent(snapshot) ? 'match-ball match-ball--shot' : 'match-ball'}
       style={style}
       aria-label="Ball"
-    />
+    >
+      <span className="ball-coord">
+        x:{formatCoord(snapshot.ball.x)} y:{formatCoord(snapshot.ball.y)}
+      </span>
+    </div>
   );
 }
 
@@ -196,6 +234,7 @@ function MatchPitch({ snapshot }: { snapshot: MatchSnapshot }) {
     <section className="match-pitch-shell" aria-label="Top down football pitch">
       <div className="match-pitch">
         <PitchLines />
+        <PitchDebugGrid />
         {allPlayers.map((player) => (
           <PlayerCircle
             key={`${player.teamSide}-${player.id}`}

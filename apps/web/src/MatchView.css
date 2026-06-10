@@ -173,6 +173,48 @@
   z-index: 2;
 }
 
+.pitch-debug-grid {
+  position: absolute;
+  inset: 4%;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.pitch-debug-grid::before {
+  position: absolute;
+  inset: 0;
+  content: '';
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.14) 1px, transparent 1px) 0 0 / 25% 100%,
+    linear-gradient(0deg, rgba(255, 255, 255, 0.14) 1px, transparent 1px) 0 0 / 100% 25%;
+  opacity: 0.42;
+}
+
+.pitch-debug-grid__x,
+.pitch-debug-grid__y {
+  position: absolute;
+  z-index: 1;
+  padding: 2px 5px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  background: rgba(4, 9, 7, 0.58);
+  color: rgba(238, 247, 242, 0.78);
+  font-size: clamp(0.52rem, 1vw, 0.68rem);
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.pitch-debug-grid__x {
+  left: 4px;
+  transform: translateY(-50%);
+}
+
+.pitch-debug-grid__y {
+  top: 4px;
+  transform: translateX(-50%);
+}
+
 .pitch-line,
 .pitch-circle,
 .pitch-box {
@@ -360,6 +402,36 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+}
+
+.player-coord,
+.ball-coord {
+  position: absolute;
+  z-index: 7;
+  padding: 2px 5px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 4px;
+  background: rgba(2, 7, 5, 0.72);
+  color: #dfffea;
+  font-size: clamp(0.5rem, 1vw, 0.62rem);
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.24);
+}
+
+.player-coord {
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.ball-coord {
+  left: 50%;
+  top: -18px;
+  transform: translateX(-50%);
+  color: #fff5a3;
 }
 
 .player-card,
@@ -692,6 +764,16 @@
 
   .player-name {
     display: none;
+  }
+
+  .player-coord {
+    top: -12px;
+    font-size: 0.48rem;
+  }
+
+  .pitch-debug-grid__x,
+  .pitch-debug-grid__y {
+    font-size: 0.48rem;
   }
 
   .match-events__head {
