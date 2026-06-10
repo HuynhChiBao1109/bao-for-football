@@ -294,10 +294,8 @@ export type MatchStartResponse = {
 };
 
 export type MatchNextTickResponse = {
-  matchId: string;
-  frameId: number;
-  tick: number;
   snapshot: MatchSnapshot;
+  event: MatchEventRecord;
 };
 
 // ─── Gacha ────────────────────────────────────────────────────────────────────

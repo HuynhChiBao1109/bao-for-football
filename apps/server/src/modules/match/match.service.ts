@@ -207,12 +207,7 @@ export class MatchService implements IMatchService {
       });
     }
 
-    return {
-      matchId: String(match.id),
-      frameId: nextTick.snapshot.frameId,
-      tick: nextTick.snapshot.tick,
-      snapshot: nextTick.snapshot,
-    };
+    return nextTick;
   }
 
   async finalize(matchId: number, payload: Partial<MatchEntity>): Promise<MatchEntity> {

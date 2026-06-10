@@ -1,4 +1,4 @@
-import { memo, useMemo, type CSSProperties } from 'react';
+import { memo, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useParams } from 'react-router-dom';
 import './MatchView.css';
 import { useMatchMotion } from './hooks/useMatchMotion';
@@ -14,6 +14,8 @@ const MATCH_EVENT = {
   PASS: 35,
   SHOOT: 36,
   GOALKEEPER_SAVE: 38,
+  DRIBBLE: 39,
+  INTERCEPTION: 40,
   TACKLE: 42,
   SLIDE_TACKLE: 43,
   FIRST_HALF_STOPPAGE: 44,
@@ -75,6 +77,10 @@ function getEventView(eventCode: number | null | undefined) {
       return { title: 'Shot', className: 'match-event--shot' };
     case MATCH_EVENT.GOALKEEPER_SAVE:
       return { title: 'Save', className: 'match-event--defense' };
+    case MATCH_EVENT.DRIBBLE:
+      return { title: 'Carry', className: 'match-event--standard' };
+    case MATCH_EVENT.INTERCEPTION:
+      return { title: 'Interception', className: 'match-event--defense' };
     case MATCH_EVENT.TACKLE:
       return { title: 'Tackle', className: 'match-event--defense' };
     case MATCH_EVENT.SLIDE_TACKLE:
@@ -313,6 +319,7 @@ function MatchPitch({ snapshot }: { snapshot: MatchSnapshot }) {
 
 export function MatchView() {
   const { matchId } = useParams();
+  const [isAutoTicking, setIsAutoTicking] = useState(false);
   const {
     snapshot,
     events,
@@ -327,6 +334,27 @@ export function MatchView() {
   const renderedSnapshot = useMatchMotion(snapshot, {
     onTickComplete: ackActiveTick,
   });
+  const isMatchEnded = renderedSnapshot?.highlight?.event === MATCH_EVENT.MATCH_END;
+
+  useEffect(() => {
+    if (!isAutoTicking || !matchId || isMatchEnded) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      if (!getNextTick.isPending && queuedTicks < 4) {
+        getNextTick.mutate();
+      }
+    }, 1100);
+
+    return () => window.clearInterval(intervalId);
+  }, [getNextTick, isAutoTicking, isMatchEnded, matchId, queuedTicks]);
+
+  useEffect(() => {
+    if (isMatchEnded) {
+      setIsAutoTicking(false);
+    }
+  }, [isMatchEnded]);
 
   return (
     <main className="match-view">
@@ -347,6 +375,22 @@ export function MatchView() {
             }}
           >
             {getNextTick.isPending ? 'Generating tick...' : 'Get next tick'}
+          </button>
+          <button
+            type="button"
+            className="match-debug-controls__button"
+            disabled={!matchId || isAutoTicking || isMatchEnded}
+            onClick={() => setIsAutoTicking(true)}
+          >
+            Auto tick
+          </button>
+          <button
+            type="button"
+            className="match-debug-controls__button match-debug-controls__button--stop"
+            disabled={!isAutoTicking}
+            onClick={() => setIsAutoTicking(false)}
+          >
+            Stop
           </button>
           {getNextTick.error ? (
             <span className="match-debug-controls__error">{getNextTick.error.message}</span>

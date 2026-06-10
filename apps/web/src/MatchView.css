@@ -152,6 +152,10 @@
   opacity: 0.68;
 }
 
+.match-debug-controls__button--stop {
+  background: linear-gradient(135deg, rgba(255, 112, 112, 0.98), rgba(255, 203, 107, 0.92));
+}
+
 .match-debug-controls__error {
   max-width: 260px;
   padding: 7px 9px;
@@ -815,6 +819,8 @@
   .match-debug-controls {
     left: 10px;
     top: 10px;
+    flex-wrap: wrap;
+    max-width: calc(100% - 20px);
   }
 
   .match-pitch {
