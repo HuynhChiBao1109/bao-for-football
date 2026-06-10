@@ -22,4 +22,9 @@ export class MatchController {
   async getById(@Param("matchId") matchId: number) {
     return this.matchService.getById(matchId);
   }
+
+  @Post(":matchId/next-tick")
+  async getNextTick(@Param("matchId") matchId: number) {
+    return this.matchService.getNextTick(matchId);
+  }
 }

@@ -1,7 +1,8 @@
-import { memo, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { memo, useMemo, type CSSProperties } from 'react';
 import { useParams } from 'react-router-dom';
 import './MatchView.css';
 import { useMatchMotion } from './hooks/useMatchMotion';
+import { useGetNextMatchTick } from './hooks/useMatch';
 import { useMatchSocket, type LiveMatchEvent } from './hooks/useMatchSocket';
 import type { MatchPitchPlayer, MatchSnapshot } from './types';
 
@@ -179,19 +180,6 @@ function GoalOverlay({ show, label }: { show: boolean; label: string }) {
   );
 }
 
-function CountdownOverlay({ count }: { count: number }) {
-  if (count <= 0) {
-    return null;
-  }
-
-  return (
-    <div className="match-countdown" role="status" aria-live="polite">
-      <span>Kickoff in</span>
-      <strong>{count}</strong>
-    </div>
-  );
-}
-
 function EventFeed({ events }: { events: LiveMatchEvent[] }) {
   return (
     <aside className="match-events" aria-label="Match events">
@@ -255,7 +243,6 @@ function MatchPitch({ snapshot }: { snapshot: MatchSnapshot }) {
 
 export function MatchView() {
   const { matchId } = useParams();
-  const [countdown, setCountdown] = useState(3);
   const {
     snapshot,
     events,
@@ -266,26 +253,10 @@ export function MatchView() {
     queuedTicks,
     ackActiveTick,
   } = useMatchSocket(matchId);
-  const isCountdownDone = countdown <= 0;
-  const renderedSnapshot = useMatchMotion(isCountdownDone ? snapshot : null, {
+  const getNextTick = useGetNextMatchTick(matchId);
+  const renderedSnapshot = useMatchMotion(snapshot, {
     onTickComplete: ackActiveTick,
   });
-  const visibleEvents = isCountdownDone ? events : [];
-
-  useEffect(() => {
-    setCountdown(3);
-    const timer = window.setInterval(() => {
-      setCountdown((current) => {
-        if (current <= 1) {
-          window.clearInterval(timer);
-          return 0;
-        }
-        return current - 1;
-      });
-    }, 1000);
-
-    return () => window.clearInterval(timer);
-  }, [matchId]);
 
   return (
     <main className="match-view">
@@ -296,16 +267,30 @@ export function MatchView() {
         queuedTicks={queuedTicks}
       />
       <div className="match-view__content">
+        <div className="match-debug-controls">
+          <button
+            type="button"
+            className="match-debug-controls__button"
+            disabled={!matchId || getNextTick.isPending}
+            onClick={() => {
+              getNextTick.mutate();
+            }}
+          >
+            {getNextTick.isPending ? 'Generating tick...' : 'Get next tick'}
+          </button>
+          {getNextTick.error ? (
+            <span className="match-debug-controls__error">{getNextTick.error.message}</span>
+          ) : null}
+        </div>
         {renderedSnapshot ? (
           <MatchPitch snapshot={renderedSnapshot} />
         ) : (
           <section className="match-empty">
-            <strong>{countdown > 0 ? 'Preparing kickoff...' : isLoading ? 'Loading match...' : 'No live snapshot'}</strong>
-            <span>{error ? error.message : 'Waiting for realtime data from server.'}</span>
+            <strong>{isLoading ? 'Loading match...' : 'No live snapshot'}</strong>
+            <span>{error ? error.message : 'Press Get next tick to render the next server tick.'}</span>
           </section>
         )}
-        <CountdownOverlay count={countdown} />
-        <EventFeed events={visibleEvents} />
+        <EventFeed events={events} />
       </div>
     </main>
   );

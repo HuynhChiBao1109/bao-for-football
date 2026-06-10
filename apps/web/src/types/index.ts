@@ -283,8 +283,17 @@ export type MatchState = {
 
 export type MatchStartResponse = {
   matchId: string;
-  status: string;
+  status?: string;
   latestSnapshot?: MatchSnapshot | null;
+  homeLineup?: Array<Record<string, unknown>> | null;
+  awayLineup?: Array<Record<string, unknown>> | null;
+};
+
+export type MatchNextTickResponse = {
+  matchId: string;
+  frameId: number;
+  tick: number;
+  snapshot: MatchSnapshot;
 };
 
 // ─── Gacha ────────────────────────────────────────────────────────────────────

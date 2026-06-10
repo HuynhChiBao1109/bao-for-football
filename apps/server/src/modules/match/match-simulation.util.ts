@@ -172,6 +172,16 @@ export type MatchSimulationResult = {
   awayScore: number;
 };
 
+export type MatchNextTickResult = {
+  snapshot: MatchSnapshot;
+  event: SimulationEventDraft;
+};
+
+export type MatchKickoffLineups = {
+  homeLineup: MatchRenderPlayer[];
+  awayLineup: MatchRenderPlayer[];
+};
+
 type FormationSlot = { role: string; label: string; x: number; y: number };
 type InternalLineupPlayer = MatchRenderPlayer & {
   anchors: { x: number; y: number };
@@ -242,6 +252,22 @@ const SLOT_POSITION_MAP: Record<string, string[]> = {
   RST: ["ST", "SS", "AM"],
 };
 
+export function prepareMatchKickoffLineups(
+  homeTeam: SimulationTeamInput,
+  awayTeam: SimulationTeamInput,
+): MatchKickoffLineups {
+  const homeLineup = selectLineup(homeTeam, "home");
+  const awayLineup = selectLineup(awayTeam, "away");
+
+  applyKickoffShape(homeLineup, awayLineup);
+  applyHomeKickoffPair(homeLineup);
+
+  return {
+    homeLineup: stripInternalLineup(homeLineup),
+    awayLineup: stripInternalLineup(awayLineup),
+  };
+}
+
 export function simulateMatch(
   homeTeam: SimulationTeamInput,
   awayTeam: SimulationTeamInput,
@@ -309,19 +335,8 @@ export function simulateMatch(
     }
   };
 
-  const homeKickoff = homeLineup.find((p) => p.role === "ST") ?? homeLineup[0];
-  const homeKickoffPartner =
-    homeLineup.find((p) => p.userPlayerId !== homeKickoff.userPlayerId && p.role !== "GK") ??
-    homeLineup[1] ??
-    homeKickoff;
-
   applyKickoffShape(homeLineup, awayLineup);
-  homeKickoff.anchors = { x: 50, y: 51 };
-  homeKickoff.x = 50;
-  homeKickoff.y = 51;
-  homeKickoffPartner.anchors = { x: 54, y: 54 };
-  homeKickoffPartner.x = 54;
-  homeKickoffPartner.y = 54;
+  const { homeKickoff, homeKickoffPartner } = applyHomeKickoffPair(homeLineup);
   positionState = createInitialPositionState(homeLineup, awayLineup);
 
   pushEvent(events, EMatchEvent.FIRST_HALF_START, 0, homeTeam.id, homeKickoff.userPlayerId, null, {
@@ -370,22 +385,141 @@ export function simulateMatch(
   });
 
   finalizeRatings(statsMap);
-  const strip = (lineup: InternalLineupPlayer[]): MatchRenderPlayer[] =>
-    lineup.map(({ anchors: _a, raw: _r, ...player }) => ({
-      ...player,
-      hasBall: false,
-      activeSkill: null,
-    }));
-
   return {
     timeline,
     events,
     playerStats: Array.from(statsMap.values()),
-    homeLineup: strip(homeLineup),
-    awayLineup: strip(awayLineup),
+    homeLineup: stripInternalLineup(homeLineup),
+    awayLineup: stripInternalLineup(awayLineup),
     homeScore,
     awayScore,
   };
+}
+
+export function generateNextMatchTick(input: {
+  previousTicks: MatchSnapshot[];
+  homeLineup: MatchRenderPlayer[];
+  awayLineup: MatchRenderPlayer[];
+  homeTeamId: number | null;
+}): MatchNextTickResult | null {
+  const previousTicks = [...input.previousTicks].sort((left, right) => left.frameId - right.frameId);
+  const frameId = previousTicks.length;
+  const latestTick = previousTicks.at(-1);
+  const homeLineup = input.homeLineup.map(toInternalLineupPlayer);
+  const awayLineup = input.awayLineup.map(toInternalLineupPlayer);
+
+  if (!homeLineup.length || !awayLineup.length) {
+    return null;
+  }
+
+  const homeKickoff =
+    homeLineup.find((player) => player.role === "ST") ??
+    homeLineup.find((player) => player.role !== "GK") ??
+    homeLineup[0];
+  const homeKickoffPartner =
+    homeLineup.find((player) => player.userPlayerId !== homeKickoff.userPlayerId && player.role !== "GK") ??
+    homeLineup[1] ??
+    homeKickoff;
+  const previousPositionState = latestTick
+    ? extractPositionState(latestTick)
+    : createInitialPositionState(homeLineup, awayLineup);
+
+  if (!latestTick) {
+    const snapshot = buildSnapshot({
+      frameId,
+      minute: 0,
+      second: 0,
+      tick: 0,
+      matchStep: "first_half_start",
+      phase: "first_half",
+      homeScore: 0,
+      awayScore: 0,
+      possession: "home",
+      homeLineup,
+      awayLineup,
+      ballOwner: homeKickoff,
+      ball: { x: homeKickoff.anchors.x, y: homeKickoff.anchors.y },
+      ballPath: fixedBallPath(homeKickoff.anchors.x, homeKickoff.anchors.y),
+      highlight: createHighlight(
+        EMatchEvent.FIRST_HALF_START,
+        "Tick 0: start hiep 1",
+        "home",
+        homeKickoff.userPlayerId,
+        homeKickoffPartner.userPlayerId,
+        null,
+      ),
+      activeSkill: null,
+      focusId: homeKickoff.userPlayerId,
+      pressId: null,
+      positionState: previousPositionState,
+    });
+
+    return {
+      snapshot,
+      event: {
+        event: EMatchEvent.FIRST_HALF_START,
+        minute: 0,
+        teamId: input.homeTeamId,
+        actorPlayerId: homeKickoff.userPlayerId,
+        secondaryPlayerId: homeKickoffPartner.userPlayerId,
+        payload: { label: snapshot.highlight.label },
+      },
+    };
+  }
+
+  if (latestTick.tick < 2) {
+    const actorId = Number(latestTick.highlight?.actorPlayerId ?? homeKickoff.userPlayerId);
+    const receiverId = Number(latestTick.highlight?.secondaryPlayerId ?? homeKickoffPartner.userPlayerId);
+    const actor = homeLineup.find((player) => player.userPlayerId === actorId) ?? homeKickoff;
+    const receiver =
+      homeLineup.find((player) => player.userPlayerId === receiverId) ??
+      homeKickoffPartner;
+    const snapshot = buildSnapshot({
+      frameId,
+      minute: 0,
+      second: 24,
+      tick: 2,
+      matchStep: "play",
+      phase: "first_half",
+      homeScore: Number(latestTick.homeScore ?? 0),
+      awayScore: Number(latestTick.awayScore ?? 0),
+      possession: "home",
+      homeLineup,
+      awayLineup,
+      ballOwner: receiver,
+      ball: { x: receiver.anchors.x, y: receiver.anchors.y },
+      ballPath: pathBetween(
+        { x: latestTick.ball.x, y: latestTick.ball.y },
+        { x: receiver.anchors.x, y: receiver.anchors.y },
+      ),
+      highlight: createHighlight(
+        EMatchEvent.PASS,
+        "Tick 2: pass giao bong",
+        "home",
+        actor.userPlayerId,
+        receiver.userPlayerId,
+        null,
+      ),
+      activeSkill: null,
+      focusId: receiver.userPlayerId,
+      pressId: null,
+      positionState: previousPositionState,
+    });
+
+    return {
+      snapshot,
+      event: {
+        event: EMatchEvent.PASS,
+        minute: 0,
+        teamId: input.homeTeamId,
+        actorPlayerId: actor.userPlayerId,
+        secondaryPlayerId: receiver.userPlayerId,
+        payload: { label: snapshot.highlight.label },
+      },
+    };
+  }
+
+  return null;
 }
 
 function pushActionFrames(
@@ -583,6 +717,38 @@ function finishAction(
     if (row) row.minutesPlayed += 3;
   });
   return { action, ballPath: buildBallPath(action, input.random), homeScore, awayScore };
+}
+
+function toInternalLineupPlayer(player: MatchRenderPlayer): InternalLineupPlayer {
+  return {
+    ...player,
+    anchors: { x: Number(player.x ?? 50), y: Number(player.y ?? 50) },
+    raw: {
+      userPlayerId: player.userPlayerId,
+      playerId: player.playerId,
+      teamId: player.teamId,
+      name: player.name,
+      avatarUrl: player.avatarUrl,
+      positions: [{ position: player.displayRole || player.role, effect: 1 }],
+      skills: [],
+      stats: {
+        pass: 70,
+        longPass: 70,
+        vision: 70,
+        shoot: 70,
+        tackle: 70,
+        balance: 70,
+        dribbling: 70,
+        acceleration: 70,
+        speed: 70,
+        stamina: Number(player.stamina ?? 70),
+        gkKeeping: 70,
+        gkReflex: 70,
+        gkDiving: 70,
+        gkReach: 70,
+      },
+    },
+  };
 }
 
 function createSkillContext(
@@ -1017,6 +1183,31 @@ function applyKickoffShape(homeLineup: InternalLineupPlayer[], awayLineup: Inter
     player.x = next.x;
     player.y = next.y;
   });
+}
+
+function applyHomeKickoffPair(homeLineup: InternalLineupPlayer[]) {
+  const homeKickoff = homeLineup.find((p) => p.role === "ST") ?? homeLineup[0];
+  const homeKickoffPartner =
+    homeLineup.find((p) => p.userPlayerId !== homeKickoff.userPlayerId && p.role !== "GK") ??
+    homeLineup[1] ??
+    homeKickoff;
+
+  homeKickoff.anchors = { x: 50, y: 51 };
+  homeKickoff.x = 50;
+  homeKickoff.y = 51;
+  homeKickoffPartner.anchors = { x: 54, y: 54 };
+  homeKickoffPartner.x = 54;
+  homeKickoffPartner.y = 54;
+
+  return { homeKickoff, homeKickoffPartner };
+}
+
+function stripInternalLineup(lineup: InternalLineupPlayer[]): MatchRenderPlayer[] {
+  return lineup.map(({ anchors: _a, raw: _r, ...player }) => ({
+    ...player,
+    hasBall: false,
+    activeSkill: null,
+  }));
 }
 
 function selectLineup(team: SimulationTeamInput, side: Side): InternalLineupPlayer[] {

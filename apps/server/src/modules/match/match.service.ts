@@ -5,9 +5,9 @@ import { MatchEntity } from "./entities/match.entity";
 import { AuthUser } from "../auth/types";
 import { EMatchStatus } from "./enums";
 import {
-  FRAME_DURATION_MS,
+  generateNextMatchTick,
   MatchSnapshot,
-  simulateMatch,
+  prepareMatchKickoffLineups,
   SimulationRosterPlayer,
   SimulationTeamInput,
 } from "./match-simulation.util";
@@ -16,21 +16,21 @@ import { UserPlayerEntity, UserPlayerSkillEntity } from "../player/entities/play
 import { ESocketChannel, ESocketEvent } from "../socket/enums";
 import { SocketService } from "../socket/socket.service";
 import { ETeamFormation } from "../team/enums/team-formation.enum";
-import { CampainMatchEntity } from "../campain/entities/campain-match.entity";
+
+type MatchStartPayload = {
+  matchId: string;
+  homeLineup: unknown[];
+  awayLineup: unknown[];
+};
 
 @Injectable()
 export class MatchService implements IMatchService {
-  private readonly activeTimers = new Map<string, NodeJS.Timeout>();
-  private readonly timelineCache = new Map<string, MatchSnapshot[]>();
-  private readonly matchMinuteMs = Number(process.env.MATCH_MINUTE_MS ?? 20_000);
-  private readonly matchKickoffDelayMs = Number(process.env.MATCH_KICKOFF_DELAY_MS ?? 3_000);
-
   constructor(
     private readonly repository: MatchRepository,
     private readonly socketService: SocketService,
   ) {}
 
-  async startCampaignMatch(user: AuthUser, campaignMatchId: number): Promise<any> {
+  async startCampaignMatch(user: AuthUser, campaignMatchId: number): Promise<MatchStartPayload> {
     if (!campaignMatchId) {
       throw new BadRequestException("campainMatchId is required");
     }
@@ -63,26 +63,22 @@ export class MatchService implements IMatchService {
       const existingHomeWon = existingMatch.status === EMatchStatus.FINISHED && existingHomeScore > existingAwayScore;
       const alreadyCleared = Number(campaignMatch.level) < campaignLevel;
 
-      if (existingMatch.status === EMatchStatus.IN_PROGRESS && existingMatch.timeline?.length) {
-        this.timelineCache.set(String(existingMatch.id), existingMatch.timeline as MatchSnapshot[]);
-        this.ensurePlayback(existingMatch);
+      if (existingMatch.status === EMatchStatus.IN_PROGRESS) {
         return {
           matchId: String(existingMatch.id),
-          status: existingMatch.status,
-          latestSnapshot: existingMatch.latestSnapshot,
+          homeLineup: existingMatch.homeLineup ?? [],
+          awayLineup: existingMatch.awayLineup ?? [],
         };
       }
 
       if (existingHomeWon || alreadyCleared) {
         return {
           matchId: String(existingMatch.id),
-          status: existingMatch.status,
-          latestSnapshot: existingMatch.latestSnapshot,
+          homeLineup: existingMatch.homeLineup ?? [],
+          awayLineup: existingMatch.awayLineup ?? [],
         };
       }
 
-      this.stopPlayback(String(existingMatch.id));
-      this.timelineCache.delete(String(existingMatch.id));
       await this.repository.deleteById(existingMatch.id);
     }
 
@@ -95,7 +91,7 @@ export class MatchService implements IMatchService {
       throw new BadRequestException("One of the teams does not have enough players to start");
     }
 
-    const simulation = simulateMatch(
+    const lineups = prepareMatchKickoffLineups(
       {
         id: homeTeam.id,
         name: homeTeam.teamName,
@@ -114,7 +110,6 @@ export class MatchService implements IMatchService {
         pressure: Number(awayTeam.pressure ?? 50),
         players: awayPlayers,
       },
-      campaignMatch.id,
     );
 
     const match = await this.repository.create({
@@ -126,58 +121,16 @@ export class MatchService implements IMatchService {
       clockSeconds: 0,
       homeScore: 0,
       awayScore: 0,
-      homeLineup: simulation.homeLineup,
-      awayLineup: simulation.awayLineup,
-      latestSnapshot: simulation.timeline[0] ?? null,
-      timeline: simulation.timeline,
+      homeLineup: lineups.homeLineup,
+      awayLineup: lineups.awayLineup,
+      latestSnapshot: null,
+      timeline: [],
     });
-
-    this.timelineCache.set(String(match.id), simulation.timeline);
-
-    await Promise.all([
-      this.repository.saveEvents(
-        simulation.events.map((event) => ({
-          matchId: match.id,
-          event: event.event,
-          minute: event.minute,
-          teamId: event.teamId,
-          actorPlayerId: event.actorPlayerId,
-          secondaryPlayerId: event.secondaryPlayerId,
-          payload: event.payload,
-        })),
-      ),
-      this.repository.savePlayerStats(
-        simulation.playerStats.map((stat) => ({
-          matchId: match.id,
-          playerId: stat.playerId,
-          goals: stat.goals,
-          assists: stat.assists,
-          yellowCards: stat.yellowCards,
-          redCards: stat.redCards,
-          passes: stat.passes,
-          passAccuracy: stat.passAccuracy,
-          tackles: stat.tackles,
-          tackleAccuracy: stat.tackleAccuracy,
-          interceptions: stat.interceptions,
-          minutesPlayed: stat.minutesPlayed,
-          shots: stat.shots,
-          shotAccuracy: stat.shotAccuracy,
-          dribbles: stat.dribbles,
-          dribbleAccuracy: stat.dribbleAccuracy,
-          foulsCommitted: stat.foulsCommitted,
-          foulsSuffered: stat.foulsSuffered,
-          offsides: stat.offsides,
-          rating: stat.rating,
-        })),
-      ),
-    ]);
-
-    this.startPlayback(match, simulation.timeline, campaignMatch);
 
     return {
       matchId: String(match.id),
-      status: match.status,
-      latestSnapshot: match.latestSnapshot,
+      homeLineup: lineups.homeLineup,
+      awayLineup: lineups.awayLineup,
     };
   }
 
@@ -187,11 +140,63 @@ export class MatchService implements IMatchService {
       throw new NotFoundException("Match not found");
     }
 
-    if (match.status === EMatchStatus.IN_PROGRESS) {
-      this.ensurePlayback(match);
+    return match;
+  }
+
+  async getNextTick(matchId: number) {
+    const match = await this.repository.findMatchById(matchId);
+    if (!match) {
+      throw new NotFoundException("Match not found");
     }
 
-    return match;
+    if (match.status !== EMatchStatus.IN_PROGRESS) {
+      throw new BadRequestException("Match is not in progress");
+    }
+
+    const previousTicks = ((match.timeline ?? []) as MatchSnapshot[]).filter(Boolean);
+    const nextTick = generateNextMatchTick({
+      previousTicks,
+      homeLineup: (match.homeLineup ?? []) as any,
+      awayLineup: (match.awayLineup ?? []) as any,
+      homeTeamId: match.homeTeamId ?? null,
+    });
+
+    if (!nextTick) {
+      throw new BadRequestException("No more debug ticks to generate");
+    }
+
+    const timeline = [...previousTicks, nextTick.snapshot];
+
+    await this.repository.update(match.id, {
+      currentMinute: nextTick.snapshot.minute,
+      clockSeconds: nextTick.snapshot.second,
+      latestSnapshot: nextTick.snapshot,
+      timeline,
+      homeScore: nextTick.snapshot.homeScore,
+      awayScore: nextTick.snapshot.awayScore,
+      status: EMatchStatus.IN_PROGRESS,
+    });
+
+    await this.repository.saveEvents([
+      {
+        matchId: match.id,
+        event: nextTick.event.event,
+        minute: nextTick.event.minute,
+        teamId: nextTick.event.teamId,
+        actorPlayerId: nextTick.event.actorPlayerId,
+        secondaryPlayerId: nextTick.event.secondaryPlayerId,
+        payload: nextTick.event.payload,
+      },
+    ]);
+
+    this.emitSnapshot(match, nextTick.snapshot);
+
+    return {
+      matchId: String(match.id),
+      frameId: nextTick.snapshot.frameId,
+      tick: nextTick.snapshot.tick,
+      snapshot: nextTick.snapshot,
+    };
   }
 
   async finalize(matchId: number, payload: Partial<MatchEntity>): Promise<MatchEntity> {
@@ -201,6 +206,37 @@ export class MatchService implements IMatchService {
       throw new NotFoundException("Match not found");
     }
     return match;
+  }
+
+  private emitSnapshot(match: MatchEntity, snapshot: MatchSnapshot) {
+    const matchId = String(match.id);
+    const roomId = `${ESocketChannel.MATCH}${matchId}`;
+
+    this.socketService.emitToRoom({
+      roomId,
+      event: ESocketEvent.MATCH_SNAPSHOT,
+      data: {
+        matchId,
+        frameId: snapshot.frameId,
+        tick: snapshot.tick,
+        minute: snapshot.minute,
+        snapshot,
+      },
+    });
+
+    if (snapshot.highlight?.event || snapshot.highlight?.skill) {
+      this.socketService.emitToRoom({
+        roomId,
+        event: ESocketEvent.MATCH_EVENT,
+        data: {
+          matchId,
+          frameId: snapshot.frameId,
+          tick: snapshot.tick,
+          minute: snapshot.minute,
+          highlight: snapshot.highlight,
+        },
+      });
+    }
   }
 
   private async buildTeamRoster(
@@ -285,155 +321,4 @@ export class MatchService implements IMatchService {
       );
   }
 
-  private ensurePlayback(match: MatchEntity) {
-    const matchId = String(match.id);
-    if (this.activeTimers.has(matchId)) {
-      return;
-    }
-
-    const timeline = this.timelineCache.get(matchId) ?? (match.timeline as MatchSnapshot[] | null);
-    if (!timeline?.length) {
-      return;
-    }
-
-    this.startPlayback(match, timeline, match.campainMatch);
-  }
-
-  private startPlayback(
-    match: MatchEntity,
-    timeline: MatchSnapshot[],
-    campaignMatch?: CampainMatchEntity | null,
-  ) {
-    const matchId = String(match.id);
-    if (!timeline.length || this.activeTimers.has(matchId)) {
-      return;
-    }
-
-    const roomId = `${ESocketChannel.MATCH}${matchId}`;
-    let cursor = this.resolvePlaybackCursor(match, timeline);
-    if (cursor >= timeline.length) {
-      this.stopPlayback(matchId);
-      return;
-    }
-    this.activeTimers.set(matchId, setTimeout(() => undefined, 0));
-
-    const playFrame = async () => {
-      const snapshot = timeline[cursor];
-      if (!snapshot) {
-        this.stopPlayback(matchId);
-        return;
-      }
-
-      const isFinal = cursor >= timeline.length - 1;
-      await this.repository.update(match.id, {
-        currentMinute: snapshot.minute,
-        clockSeconds: snapshot.second,
-        latestSnapshot: snapshot,
-        homeScore: snapshot.homeScore,
-        awayScore: snapshot.awayScore,
-        status: isFinal ? EMatchStatus.FINISHED : EMatchStatus.IN_PROGRESS,
-        endedAt: isFinal ? new Date() : null,
-      });
-
-      this.socketService.emitToRoom({
-        roomId,
-        event: ESocketEvent.MATCH_SNAPSHOT,
-        data: {
-          matchId,
-          frameId: snapshot.frameId,
-          tick: snapshot.tick,
-          minute: snapshot.minute,
-          snapshot,
-        },
-      });
-
-      if (snapshot.highlight?.event || snapshot.highlight?.skill) {
-        this.socketService.emitToRoom({
-          roomId,
-          event: ESocketEvent.MATCH_EVENT,
-          data: {
-            matchId,
-            frameId: snapshot.frameId,
-            tick: snapshot.tick,
-            minute: snapshot.minute,
-            highlight: snapshot.highlight,
-          },
-        });
-      }
-
-      if (isFinal) {
-        await this.completeCampaignMatchIfWon(match, snapshot, campaignMatch);
-
-        this.socketService.emitToRoom({
-          roomId,
-          event: ESocketEvent.MATCH_COMPLETED,
-          data: {
-            matchId,
-            homeScore: snapshot.homeScore,
-            awayScore: snapshot.awayScore,
-          },
-        });
-        this.stopPlayback(matchId);
-        return;
-      }
-
-      cursor += 1;
-      const nextSnapshot = timeline[cursor];
-      const delayMs = Math.max(480, snapshot.durationMs ?? FRAME_DURATION_MS);
-      const timer = setTimeout(() => {
-        void playFrame();
-      }, delayMs);
-      this.activeTimers.set(matchId, timer);
-    };
-
-    const initialDelayMs = cursor === 0 ? this.matchKickoffDelayMs : 0;
-    const initialTimer = setTimeout(() => {
-      void playFrame();
-    }, initialDelayMs);
-    this.activeTimers.set(matchId, initialTimer);
-  }
-
-  private resolvePlaybackCursor(match: MatchEntity, timeline: MatchSnapshot[]) {
-    const latestSnapshot = match.latestSnapshot as Partial<MatchSnapshot> | null;
-    const latestFrameId = Number(latestSnapshot?.frameId ?? -1);
-
-    if (!Number.isFinite(latestFrameId) || latestFrameId < 0) {
-      return 0;
-    }
-
-    const latestIndex = timeline.findIndex((snapshot) => snapshot.frameId === latestFrameId);
-    if (latestIndex < 0) {
-      return 0;
-    }
-
-    return latestIndex + 1;
-  }
-
-  private async completeCampaignMatchIfWon(
-    match: MatchEntity,
-    snapshot: MatchSnapshot,
-    campaignMatch?: CampainMatchEntity | null,
-  ) {
-    const campaign = campaignMatch?.campain;
-    const homeWon = Number(snapshot.homeScore ?? 0) > Number(snapshot.awayScore ?? 0);
-
-    if (!campaignMatch || !campaign || !homeWon || !match.homeTeamId) {
-      return;
-    }
-
-    await this.repository.completeCampaignMatch({
-      campaignId: campaign.id,
-      teamId: match.homeTeamId,
-      nextLevel: Number(campaignMatch.level ?? 0) + 1,
-      reward: Number(campaignMatch.matchReward ?? 0),
-    });
-  }
-
-  private stopPlayback(matchId: string) {
-    const timer = this.activeTimers.get(matchId);
-    if (timer) {
-      clearTimeout(timer);
-      this.activeTimers.delete(matchId);
-    }
-  }
 }

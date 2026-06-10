@@ -119,6 +119,49 @@
   align-items: stretch;
 }
 
+.match-debug-controls {
+  position: absolute;
+  left: 14px;
+  top: 14px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.match-debug-controls__button {
+  pointer-events: auto;
+  min-height: 36px;
+  padding: 0 13px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 7px;
+  background: linear-gradient(135deg, rgba(255, 245, 163, 0.98), rgba(76, 201, 240, 0.92));
+  color: #06100d;
+  font-size: 0.78rem;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.28);
+  cursor: pointer;
+}
+
+.match-debug-controls__button:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+
+.match-debug-controls__error {
+  max-width: 260px;
+  padding: 7px 9px;
+  border: 1px solid rgba(255, 95, 116, 0.34);
+  border-radius: 7px;
+  background: rgba(58, 10, 16, 0.78);
+  color: #ffd4da;
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
 .match-pitch-shell {
   display: grid;
   place-items: center;
@@ -700,6 +743,11 @@
 
   .match-view__content {
     grid-template-columns: 1fr;
+  }
+
+  .match-debug-controls {
+    left: 10px;
+    top: 10px;
   }
 
   .match-pitch {

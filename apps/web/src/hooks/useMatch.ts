@@ -1,7 +1,7 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/apiClient';
 import { useAuth } from './useAuth';
-import type { MatchStartResponse, MatchState } from '../types';
+import type { MatchNextTickResponse, MatchStartResponse, MatchState } from '../types';
 
 export function useStartCampaignMatch() {
   const { token } = useAuth();
@@ -25,6 +25,27 @@ export function useMatch(matchId: string | undefined) {
     enabled: Boolean(token && matchId),
     queryFn: async () => {
       return apiClient(`/api/v1/matches/${matchId}`, { token }) as Promise<MatchState>;
+    },
+  });
+}
+
+export function useGetNextMatchTick(matchId: string | undefined) {
+  const { token } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation<MatchNextTickResponse, Error>({
+    mutationFn: async () => {
+      if (!matchId) {
+        throw new Error('Missing match id');
+      }
+
+      return apiClient(`/api/v1/matches/${matchId}/next-tick`, {
+        method: 'POST',
+        token,
+      }) as Promise<MatchNextTickResponse>;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['match', token, matchId] });
     },
   });
 }
