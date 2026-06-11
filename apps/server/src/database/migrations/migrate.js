@@ -27,7 +27,26 @@ function loadEnv() {
 }
 
 function normalizeKey(value) {
-  return String(value || "").trim().toLowerCase();
+  return String(value || "")
+    .trim()
+    .toLowerCase();
+}
+
+function createSlug(value, fallback) {
+  const slug = String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return slug || fallback;
+}
+
+function getPlayerSkillSlug(skill) {
+  if (Number(skill) === 1) return "shoot-thunder";
+  if (Number(skill) === 2) return "dribble-magic";
+  return `skill-${String(skill)}`;
 }
 
 function normalizeCountry(item) {
@@ -88,9 +107,7 @@ function normalizeSkills(value) {
     return [];
   }
 
-  return value
-    .map((item) => toInt(item, null))
-    .filter((item) => item === 1 || item === 2);
+  return value.map((item) => toInt(item, null)).filter((item) => item === 1 || item === 2);
 }
 
 function normalizeJsonValue(value) {
@@ -127,17 +144,21 @@ function normalizePlayer(item, leagueCountryName) {
   const bodyType = String(item?.bodyType || "").trim();
 
   if (!season || !PLAYER_SEASONS.has(season)) {
-    throw new Error(`Unsupported player season '${season}' for ${name}. Add it to EPlayerSeason first.`);
+    throw new Error(
+      `Unsupported player season '${season}' for ${name}. Add it to EPlayerSeason first.`,
+    );
   }
 
   if (!bodyType || !PLAYER_BODIES.has(bodyType)) {
-    throw new Error(`Unsupported player bodyType '${bodyType}' for ${name}. Add it to EPlayerBody first.`);
+    throw new Error(
+      `Unsupported player bodyType '${bodyType}' for ${name}. Add it to EPlayerBody first.`,
+    );
   }
 
   return {
     name,
     season,
-    avatar_url: item?.avatarUrl ? String(item.avatarUrl).trim() : null,
+    slug: createSlug(name, "player"),
     countryName: String(item?.country || leagueCountryName || "").trim() || null,
     height: toInt(item?.height, 180),
     body_type: bodyType,
@@ -247,9 +268,7 @@ async function migrateCountries(connection) {
   const rawData = fs.readFileSync(path.resolve(__dirname, "country.json"), "utf8");
   const countries = JSON.parse(rawData).map(normalizeCountry).filter(Boolean);
 
-  const [existingRows] = await connection.execute(
-    "SELECT id, name, img_url FROM countries",
-  );
+  const [existingRows] = await connection.execute("SELECT id, name, img_url FROM countries");
   const existingByName = new Map();
   for (const row of existingRows) {
     existingByName.set(normalizeKey(row.name), row);
@@ -334,15 +353,14 @@ async function migrateLeagues(connection, leagues, countryIdByName) {
   await insertBatch(connection, "leagues", "name, img_url, country_id", toInsert);
 
   for (const [imgUrl, countryId, id] of toUpdate) {
-    await connection.execute(
-      "UPDATE leagues SET img_url = ?, country_id = ? WHERE id = ?",
-      [imgUrl, countryId, id],
-    );
+    await connection.execute("UPDATE leagues SET img_url = ?, country_id = ? WHERE id = ?", [
+      imgUrl,
+      countryId,
+      id,
+    ]);
   }
 
-  const [allLeagueRows] = await connection.execute(
-    "SELECT id, name, country_id FROM leagues",
-  );
+  const [allLeagueRows] = await connection.execute("SELECT id, name, country_id FROM leagues");
   const leagueByName = new Map();
   for (const row of allLeagueRows) {
     leagueByName.set(normalizeKey(row.name), row);
@@ -376,9 +394,7 @@ async function migrateClubs(connection, leaguesWithCountryId, leagueByName) {
     }
   }
 
-  const [existingRows] = await connection.execute(
-    "SELECT id, name, img_url, league_id FROM clubs",
-  );
+  const [existingRows] = await connection.execute("SELECT id, name, img_url, league_id FROM clubs");
   const existingByKey = new Map();
   for (const row of existingRows) {
     const key = `${normalizeKey(row.name)}|${String(row.league_id)}`;
@@ -408,9 +424,7 @@ async function migrateClubs(connection, leaguesWithCountryId, leagueByName) {
     await connection.execute("UPDATE clubs SET img_url = ? WHERE id = ?", [imgUrl, id]);
   }
 
-  const [allClubRows] = await connection.execute(
-    "SELECT id, name, league_id FROM clubs",
-  );
+  const [allClubRows] = await connection.execute("SELECT id, name, league_id FROM clubs");
   const clubByKey = new Map();
   for (const row of allClubRows) {
     const key = `${normalizeKey(row.name)}|${String(row.league_id)}`;
@@ -427,7 +441,7 @@ async function migrateClubs(connection, leaguesWithCountryId, leagueByName) {
 
 async function migratePlayers(connection, clubsWithRefs, clubByKey, countryIdByName) {
   const [existingRows] = await connection.execute(
-    "SELECT id, name, season, avatar_url, country_id, club_id, height, body_type, `pass`, long_pass, vision, shoot, tackle, balance, dribbling, acceleration, speed, stamina, positions FROM players",
+    "SELECT id, name, slug, season, country_id, club_id, height, body_type, `pass`, long_pass, vision, shoot, tackle, balance, dribbling, acceleration, speed, stamina, positions FROM players",
   );
 
   const existingByKey = new Map();
@@ -449,13 +463,13 @@ async function migratePlayers(connection, clubsWithRefs, clubByKey, countryIdByN
 
     for (const player of club.players) {
       const countryId = player.countryName
-        ? countryIdByName.get(normalizeKey(player.countryName)) ?? null
+        ? (countryIdByName.get(normalizeKey(player.countryName)) ?? null)
         : club.countryId;
 
       const record = {
         name: player.name,
+        slug: player.slug,
         season: player.season,
-        avatar_url: player.avatar_url,
         country_id: countryId,
         club_id: dbClub.id,
         height: player.height,
@@ -473,15 +487,14 @@ async function migratePlayers(connection, clubsWithRefs, clubByKey, countryIdByN
         positions: normalizePositions(player.positions),
       };
 
-
       const key = `${normalizeKey(record.name)}|${String(record.season)}`;
       const existing = existingByKey.get(key);
 
       if (!existing) {
         toInsert.push([
           record.name,
+          record.slug,
           record.season,
-          record.avatar_url,
           record.country_id,
           record.club_id,
           record.height,
@@ -502,7 +515,7 @@ async function migratePlayers(connection, clubsWithRefs, clubByKey, countryIdByN
       }
 
       const changed =
-        (existing.avatar_url || null) !== (record.avatar_url || null) ||
+        String(existing.slug || "") !== String(record.slug || "") ||
         String(existing.country_id) !== String(record.country_id) ||
         String(existing.club_id) !== String(record.club_id) ||
         Number(existing.height) !== Number(record.height) ||
@@ -521,7 +534,7 @@ async function migratePlayers(connection, clubsWithRefs, clubByKey, countryIdByN
 
       if (changed) {
         toUpdate.push([
-          record.avatar_url,
+          record.slug,
           record.country_id,
           record.club_id,
           record.height,
@@ -546,13 +559,13 @@ async function migratePlayers(connection, clubsWithRefs, clubByKey, countryIdByN
   await insertBatch(
     connection,
     "players",
-    "name, season, avatar_url, country_id, club_id, height, body_type, `pass`, long_pass, vision, shoot, tackle, balance, dribbling, acceleration, speed, stamina, positions",
+    "name, slug, season, country_id, club_id, height, body_type, `pass`, long_pass, vision, shoot, tackle, balance, dribbling, acceleration, speed, stamina, positions",
     toInsert,
   );
 
   for (const values of toUpdate) {
     await connection.execute(
-      "UPDATE players SET avatar_url = ?, country_id = ?, club_id = ?, height = ?, body_type = ?, `pass` = ?, long_pass = ?, vision = ?, shoot = ?, tackle = ?, balance = ?, dribbling = ?, acceleration = ?, speed = ?, stamina = ?, positions = ? WHERE id = ?",
+      "UPDATE players SET slug = ?, country_id = ?, club_id = ?, height = ?, body_type = ?, `pass` = ?, long_pass = ?, vision = ?, shoot = ?, tackle = ?, balance = ?, dribbling = ?, acceleration = ?, speed = ?, stamina = ?, positions = ? WHERE id = ?",
       values,
     );
   }
@@ -564,17 +577,13 @@ async function migratePlayers(connection, clubsWithRefs, clubByKey, countryIdByN
 }
 
 async function migratePlayerSkills(connection, clubsWithRefs) {
-  const [playerRows] = await connection.execute(
-    "SELECT id, name, season FROM players",
-  );
+  const [playerRows] = await connection.execute("SELECT id, name, season FROM players");
   const playerByKey = new Map();
   for (const row of playerRows) {
     playerByKey.set(`${normalizeKey(row.name)}|${String(row.season)}`, row);
   }
 
-  const [existingRows] = await connection.execute(
-    "SELECT player_id, skill FROM player_skills",
-  );
+  const [existingRows] = await connection.execute("SELECT player_id, skill FROM player_skills");
   const existingByKey = new Set(
     existingRows.map((row) => `${String(row.player_id)}|${String(row.skill)}`),
   );
@@ -597,12 +606,12 @@ async function migratePlayerSkills(connection, clubsWithRefs) {
           continue;
         }
         existingByKey.add(key);
-        skillRows.push([dbPlayer.id, skill]);
+        skillRows.push([dbPlayer.id, skill, getPlayerSkillSlug(skill)]);
       }
     }
   }
 
-  await insertBatch(connection, "player_skills", "player_id, skill", skillRows);
+  await insertBatch(connection, "player_skills", "player_id, skill, slug", skillRows);
 
   return {
     inserted: skillRows.length,
@@ -611,10 +620,7 @@ async function migratePlayerSkills(connection, clubsWithRefs) {
 
 // Ensure admin user exists (username: admin, password: 123). Returns admin user id.
 async function migrateAdminUser(connection) {
-  const [rows] = await connection.execute(
-    "SELECT id FROM users WHERE userName = ?",
-    ["admin"],
-  );
+  const [rows] = await connection.execute("SELECT id FROM users WHERE userName = ?", ["admin"]);
 
   if (rows.length > 0) {
     console.log("Admin user already exists, reusing existing admin.");
@@ -794,12 +800,8 @@ async function runMigration() {
     console.log(
       `Player migration completed. Inserted: ${playerResult.inserted}, updated: ${playerResult.updated}.`,
     );
-    console.log(
-      `Player skill migration completed. Inserted: ${playerSkillResult.inserted}.`,
-    );
-    console.log(
-      `Team (BOT) migration completed. Inserted: ${teamResult.inserted}.`,
-    );
+    console.log(`Player skill migration completed. Inserted: ${playerSkillResult.inserted}.`);
+    console.log(`Team (BOT) migration completed. Inserted: ${teamResult.inserted}.`);
     console.log(
       `User-player migration for admin completed. Inserted: ${userPlayerResult.inserted}.`,
     );

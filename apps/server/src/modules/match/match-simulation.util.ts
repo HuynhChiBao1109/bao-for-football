@@ -1,4 +1,4 @@
-import { EPlayerSkill } from "src/modules/player/enum/player-skill.enum";
+import { EPlayerSkill, getPlayerSkillSlug } from "src/modules/player/enum/player-skill.enum";
 import { ETeamFormation } from "src/modules/team/enums/team-formation.enum";
 import { EMatchEvent } from "./enums";
 import {
@@ -67,9 +67,10 @@ export type SimulationRosterPlayer = {
   playerId: number;
   teamId: number;
   name: string;
-  avatarUrl: string | null;
+  slug: string | null;
   positions: Array<{ position: string; effect: number }>;
   skills: EPlayerSkill[];
+  skillSlugs: string[];
   stats: {
     pass: number;
     longPass: number;
@@ -107,7 +108,8 @@ export type MatchRenderPlayer = {
   displayRole: string;
   name: string;
   shortName: string;
-  avatarUrl: string | null;
+  slug: string | null;
+  skillSlugs: string[];
   x: number;
   y: number;
   stamina: number;
@@ -147,6 +149,7 @@ export type MatchSnapshot = {
     actorPlayerId: number | null;
     secondaryPlayerId: number | null;
     skill: EPlayerSkill | null;
+    skillSlug: string | null;
   };
 };
 
@@ -508,15 +511,18 @@ export function generateNextMatchTick(input: {
     }
 
     const allPlayers = [...homeLineup, ...awayLineup];
-    const currentOwnerId = Number(latestTick.ball.ownerPlayerId ?? latestTick.highlight?.actorPlayerId);
+    const currentOwnerId = Number(
+      latestTick.ball.ownerPlayerId ?? latestTick.highlight?.actorPlayerId,
+    );
     const currentOwner =
       allPlayers.find((player) => player.userPlayerId === currentOwnerId) ??
       (lifecycleAction.event === EMatchEvent.SECOND_HALF_START
-        ? awayLineup.find((player) => player.role !== "GK") ?? awayLineup[0]
+        ? (awayLineup.find((player) => player.role !== "GK") ?? awayLineup[0])
         : homeKickoff);
-    const ball = lifecycleAction.event === EMatchEvent.SECOND_HALF_START
-      ? { x: currentOwner.anchors.x, y: currentOwner.anchors.y }
-      : { x: latestTick.ball.x, y: latestTick.ball.y };
+    const ball =
+      lifecycleAction.event === EMatchEvent.SECOND_HALF_START
+        ? { x: currentOwner.anchors.x, y: currentOwner.anchors.y }
+        : { x: latestTick.ball.x, y: latestTick.ball.y };
     const snapshot = buildSnapshot({
       frameId,
       minute,
@@ -615,7 +621,9 @@ export function generateNextMatchTick(input: {
     };
   }
 
-  const latestOwnerId = Number(latestTick.ball.ownerPlayerId ?? latestTick.highlight?.secondaryPlayerId);
+  const latestOwnerId = Number(
+    latestTick.ball.ownerPlayerId ?? latestTick.highlight?.secondaryPlayerId,
+  );
   const latestOwner = [...homeLineup, ...awayLineup].find(
     (player) => player.userPlayerId === latestOwnerId,
   );
@@ -637,17 +645,22 @@ export function generateNextMatchTick(input: {
     nextTick: nextTickValue,
     possession,
   });
-  const shotAction = resolveDebugShotAction({
-    shooter: actor,
-    defending,
-    possession,
-    ball: latestTick.ball,
-    nextTick: nextTickValue,
-  }, tempoDecision.kind === "pass");
+  const shotAction = resolveDebugShotAction(
+    {
+      shooter: actor,
+      defending,
+      possession,
+      ball: latestTick.ball,
+      nextTick: nextTickValue,
+    },
+    tempoDecision.kind === "pass",
+  );
 
   if (shotAction) {
-    const homeScore = Number(latestTick.homeScore ?? 0) + (shotAction.isGoal && possession === "home" ? 1 : 0);
-    const awayScore = Number(latestTick.awayScore ?? 0) + (shotAction.isGoal && possession === "away" ? 1 : 0);
+    const homeScore =
+      Number(latestTick.homeScore ?? 0) + (shotAction.isGoal && possession === "home" ? 1 : 0);
+    const awayScore =
+      Number(latestTick.awayScore ?? 0) + (shotAction.isGoal && possession === "away" ? 1 : 0);
     const keeper = shotAction.keeper;
     const nextOwner = shotAction.isGoal ? actor : keeper;
     const snapshot = buildSnapshot({
@@ -659,7 +672,7 @@ export function generateNextMatchTick(input: {
       phase,
       homeScore,
       awayScore,
-      possession: shotAction.isGoal ? possession : (possession === "home" ? "away" : "home"),
+      possession: shotAction.isGoal ? possession : possession === "home" ? "away" : "home",
       homeLineup,
       awayLineup,
       ballOwner: nextOwner,
@@ -714,7 +727,10 @@ export function generateNextMatchTick(input: {
       awayLineup,
       ballOwner: actor,
       ball: tempoDecision.ballTarget,
-      ballPath: pathBetween({ x: latestTick.ball.x, y: latestTick.ball.y }, tempoDecision.ballTarget),
+      ballPath: pathBetween(
+        { x: latestTick.ball.x, y: latestTick.ball.y },
+        tempoDecision.ballTarget,
+      ),
       highlight: createHighlight(
         EMatchEvent.DRIBBLE,
         `Tick ${nextTickValue}: ${actor.shortName} ${tempoDecision.label}`,
@@ -1242,9 +1258,10 @@ function toInternalLineupPlayer(player: MatchRenderPlayer): InternalLineupPlayer
       playerId: player.playerId,
       teamId: player.teamId,
       name: player.name,
-      avatarUrl: player.avatarUrl,
+      slug: player.slug,
       positions: [{ position: player.displayRole || player.role, effect: 1 }],
       skills: [],
+      skillSlugs: player.skillSlugs,
       stats: {
         pass: 70,
         longPass: 70,
@@ -1286,8 +1303,7 @@ function resolveDebugPossessionTempoAction(input: {
     input.latestEvent === EMatchEvent.FIRST_HALF_START ||
     input.latestEvent === EMatchEvent.SECOND_HALF_START;
   const mustSettle =
-    !restartPass &&
-    (input.latestEvent === EMatchEvent.PASS || teamTicks < 2 || ownerTicks < 2);
+    !restartPass && (input.latestEvent === EMatchEvent.PASS || teamTicks < 2 || ownerTicks < 2);
   const passCadenceReady = input.nextTick % 3 === 0 || ownerTicks >= 4;
 
   if (restartPass || (!mustSettle && passCadenceReady)) {
@@ -1458,7 +1474,15 @@ function resolveDebugPassingAction(input: {
       });
       const role = normalizeRole(player.role);
       const roleWeight =
-        role === "ST" ? 0.1 : role === "W" ? 0.08 : role === "CM" ? 0.06 : role === "FB" ? 0.03 : 0.01;
+        role === "ST"
+          ? 0.1
+          : role === "W"
+            ? 0.08
+            : role === "CM"
+              ? 0.06
+              : role === "FB"
+                ? 0.03
+                : 0.01;
       const laneRotation = ((input.tick / 2 + index) % candidates.length) * 0.72;
       const distanceScore = clamp(1 - Math.abs(distanceToBall - 26) / 48, 0, 1);
 
@@ -1516,14 +1540,17 @@ function evaluatePassLane(input: {
   const defenders = input.defending.filter((player) => player.role !== "GK");
   const ranked = defenders
     .map((defender) => {
-      const position = input.previousPositionState.players.get(defender.userPlayerId) ?? defender.anchors;
+      const position =
+        input.previousPositionState.players.get(defender.userPlayerId) ?? defender.anchors;
       return {
         defender,
         distance: distanceToSegment(position, input.from, input.to),
         ballDistance: distance(position, input.from),
       };
     })
-    .sort((left, right) => left.distance - right.distance || left.ballDistance - right.ballDistance);
+    .sort(
+      (left, right) => left.distance - right.distance || left.ballDistance - right.ballDistance,
+    );
   const closest = ranked[0];
 
   if (!closest) {
@@ -1547,7 +1574,10 @@ function evaluateTeammateAvailability(input: {
     .map((defender) => {
       const defenderPosition =
         input.previousPositionState.players.get(defender.userPlayerId) ?? defender.anchors;
-      return Math.min(distance(defenderPosition, receiverPosition), distance(defenderPosition, input.target));
+      return Math.min(
+        distance(defenderPosition, receiverPosition),
+        distance(defenderPosition, input.target),
+      );
     })
     .sort((left, right) => left - right)[0];
   const markerDistance = nearestMarker ?? 28;
@@ -1607,7 +1637,11 @@ function resolveDebugPassInterception(input: {
     return null;
   }
 
-  const interceptionPoint = closestPointOnSegment(input.defender.anchors, input.ball, input.ballTarget);
+  const interceptionPoint = closestPointOnSegment(
+    input.defender.anchors,
+    input.ball,
+    input.ballTarget,
+  );
   const contestedPoint = {
     x: clamp(lerp(interceptionPoint.x, input.defender.anchors.x, 0.45), 5, 95),
     y: clamp(lerp(interceptionPoint.y, input.defender.anchors.y, 0.45), 5, 95),
@@ -1705,13 +1739,16 @@ function resolveDebugDefensiveAction(input: {
   return null;
 }
 
-function resolveDebugShotAction(input: {
-  shooter: InternalLineupPlayer;
-  defending: InternalLineupPlayer[];
-  possession: Side;
-  ball: TrajectoryPoint;
-  nextTick: number;
-}, canReleaseBall = true): {
+function resolveDebugShotAction(
+  input: {
+    shooter: InternalLineupPlayer;
+    defending: InternalLineupPlayer[];
+    possession: Side;
+    ball: TrajectoryPoint;
+    nextTick: number;
+  },
+  canReleaseBall = true,
+): {
   event: EMatchEvent;
   label: string;
   target: TrajectoryPoint;
@@ -1769,7 +1806,10 @@ function resolveDebugShotAction(input: {
 }
 
 function getNextMatchClockSecond(latestTick: MatchSnapshot) {
-  return Math.min(MATCH_CLOCK_SECONDS, Math.floor((latestTick.tick + DEBUG_TICK_STEP) / TICKS_PER_SECOND));
+  return Math.min(
+    MATCH_CLOCK_SECONDS,
+    Math.floor((latestTick.tick + DEBUG_TICK_STEP) / TICKS_PER_SECOND),
+  );
 }
 
 function resolveMatchLifecycleAction(
@@ -1823,10 +1863,7 @@ function resolveMatchLifecycleAction(
     };
   }
 
-  if (
-    latestTick.phase === "first_half" &&
-    nextSecond >= halfTimeSecond
-  ) {
+  if (latestTick.phase === "first_half" && nextSecond >= halfTimeSecond) {
     return {
       event: EMatchEvent.FIRST_HALF_STOPPAGE,
       label: "Bu gio hiep 1",
@@ -1835,10 +1872,7 @@ function resolveMatchLifecycleAction(
     };
   }
 
-  if (
-    latestTick.phase === "second_half" &&
-    nextSecond >= MATCH_CLOCK_SECONDS
-  ) {
+  if (latestTick.phase === "second_half" && nextSecond >= MATCH_CLOCK_SECONDS) {
     return {
       event: EMatchEvent.SECOND_HALF_STOPPAGE,
       label: "Bu gio hiep 2",
@@ -1898,7 +1932,11 @@ function closestPointOnSegment(
   };
 }
 
-function moveToward(from: TrajectoryPoint, to: TrajectoryPoint, maxDistance: number): TrajectoryPoint {
+function moveToward(
+  from: TrajectoryPoint,
+  to: TrajectoryPoint,
+  maxDistance: number,
+): TrajectoryPoint {
   const totalDistance = distance(from, to);
   if (totalDistance <= maxDistance || totalDistance <= 0) {
     return { x: clamp(to.x, 0, 100), y: clamp(to.y, 0, 100) };
@@ -2168,7 +2206,8 @@ function projectPlayers(input: {
       displayRole: player.displayRole,
       name: player.name,
       shortName: player.shortName,
-      avatarUrl: player.avatarUrl,
+      slug: player.slug,
+      skillSlugs: player.skillSlugs,
       x: movement.x,
       y: movement.y,
       stamina: player.stamina,
@@ -2358,7 +2397,11 @@ function getPressTarget(player: InternalLineupPlayer, ball: TrajectoryPoint): Tr
 
 function getRoleMoveFactor(player: InternalLineupPlayer, intent: PlayerMoveIntent): number {
   const role = normalizeRole(player.role);
-  const athletic = clamp((player.raw.stats.speed + player.raw.stats.acceleration) / 220, 0.45, 1.05);
+  const athletic = clamp(
+    (player.raw.stats.speed + player.raw.stats.acceleration) / 220,
+    0.45,
+    1.05,
+  );
   const roleMultiplier =
     role === "GK"
       ? 0.52
@@ -2510,7 +2553,8 @@ function selectLineup(team: SimulationTeamInput, side: Side): InternalLineupPlay
       displayRole: slot.label,
       name: picked.name,
       shortName: shortenName(picked.name),
-      avatarUrl: picked.avatarUrl,
+      slug: picked.slug,
+      skillSlugs: picked.skillSlugs,
       x: anchors.x,
       y: anchors.y,
       stamina: picked.stats.stamina,
@@ -2672,7 +2716,15 @@ function createHighlight(
   secondaryPlayerId: number | null,
   skill: EPlayerSkill | null,
 ): MatchSnapshot["highlight"] {
-  return { event, label, teamSide, actorPlayerId, secondaryPlayerId, skill };
+  return {
+    event,
+    label,
+    teamSide,
+    actorPlayerId,
+    secondaryPlayerId,
+    skill,
+    skillSlug: getPlayerSkillSlug(skill),
+  };
 }
 
 function pushSkillEvent(

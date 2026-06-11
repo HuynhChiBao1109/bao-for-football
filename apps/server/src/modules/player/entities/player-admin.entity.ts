@@ -26,6 +26,9 @@ export class PlayerEntity extends AbstractEntity {
   @Column({ type: "varchar", length: 191 })
   name: string;
 
+  @Column({ name: "slug", type: "varchar", length: 191, nullable: true })
+  slug: string | null;
+
   @Column({
     name: "season",
     type: "enum",
@@ -33,9 +36,6 @@ export class PlayerEntity extends AbstractEntity {
   })
   @IsEnum(EPlayerSeason)
   season: EPlayerSeason;
-
-  @Column({ name: "avatar_url", type: "varchar", length: 512, nullable: true })
-  avatarUrl: string | null;
 
   @Column({
     name: "country_id",
@@ -133,6 +133,9 @@ export class PlayerSkillEntity extends AbstractEntity {
   })
   @IsEnum(EPlayerSkill)
   skill: EPlayerSkill;
+
+  @Column({ name: "slug", type: "varchar", length: 191, nullable: true })
+  slug: string | null;
 
   @ManyToOne(() => PlayerEntity, (player) => player.skills, {
     onDelete: "CASCADE",

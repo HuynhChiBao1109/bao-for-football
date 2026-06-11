@@ -18,6 +18,7 @@ import { SocketService } from "../socket/socket.service";
 import { ETeamFormation } from "../team/enums/team-formation.enum";
 import { EMatchEvent } from "./enums";
 import { RedisService } from "../redis/redis.service";
+import { getPlayerSkillSlug } from "../player/enum/player-skill.enum";
 
 type MatchStartPayload = {
   matchId: string;
@@ -78,7 +79,8 @@ export class MatchService implements IMatchService {
     if (existingMatch) {
       const existingHomeScore = Number(existingMatch.homeScore ?? 0);
       const existingAwayScore = Number(existingMatch.awayScore ?? 0);
-      const existingHomeWon = existingMatch.status === EMatchStatus.FINISHED && existingHomeScore > existingAwayScore;
+      const existingHomeWon =
+        existingMatch.status === EMatchStatus.FINISHED && existingHomeScore > existingAwayScore;
       const alreadyCleared = Number(campaignMatch.level) < campaignLevel;
 
       if (existingMatch.status === EMatchStatus.IN_PROGRESS) {
@@ -171,7 +173,9 @@ export class MatchService implements IMatchService {
     );
 
     if (!runtimeState) {
-      throw new NotFoundException("Match runtime cache not found. Start the match before requesting ticks.");
+      throw new NotFoundException(
+        "Match runtime cache not found. Start the match before requesting ticks.",
+      );
     }
 
     if (runtimeState.status !== EMatchStatus.IN_PROGRESS) {
@@ -359,12 +363,16 @@ export class MatchService implements IMatchService {
           playerId: item.playerId,
           teamId,
           name: player.name,
-          avatarUrl: player.avatarUrl,
+          slug: player.slug,
           positions: (item.positions ?? []).map((position) => ({
             position: String(position.position),
             effect: Number(position.rating ?? 1),
           })),
           skills: skills.map((skill) => skill.skill),
+          skillSlugs: skills.map((skill) => {
+            const playerSkill = player.skills?.find((item) => item.skill === skill.skill);
+            return playerSkill?.slug ?? getPlayerSkillSlug(skill.skill) ?? `skill-${skill.skill}`;
+          }),
           stats: {
             pass: player.pass + item.bonusPass,
             longPass: player.longPass + item.bonusPass,
@@ -390,5 +398,4 @@ export class MatchService implements IMatchService {
           (formationOrder[String(right.userPlayerId)] ?? Number.MAX_SAFE_INTEGER),
       );
   }
-
 }

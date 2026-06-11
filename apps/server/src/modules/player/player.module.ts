@@ -8,6 +8,7 @@ import { LeagueEntity } from "../reference/entities/league.entity";
 import { CountryEntity } from "../reference/entities/country.entity";
 import { ClubEntity } from "../reference/entities/club.entity";
 import { UserPlayerEntity, UserPlayerSkillEntity } from "./entities/player-user.entity";
+import { PlayerSlugService } from "./player-slug.service";
 
 @Module({
   imports: [
@@ -22,7 +23,7 @@ import { UserPlayerEntity, UserPlayerSkillEntity } from "./entities/player-user.
     ]),
   ],
   controllers: [PlayerController],
-  providers: [PlayerRepository, PlayerService],
+  providers: [PlayerRepository, PlayerService, PlayerSlugService],
   exports: [PlayerService],
 })
 export class PlayerModule {}
