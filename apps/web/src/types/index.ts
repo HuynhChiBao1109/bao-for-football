@@ -18,7 +18,9 @@ export type Session = {
 export type Club = {
   id: number;
   name: string;
+  slug?: string;
   logo?: string;
+  imgUrl?: string;
   leagueId?: number;
   leagueName?: string;
   budget?: number;
@@ -36,6 +38,7 @@ export type Country = {
   id: number;
   name: string;
   code?: string;
+  slug?: string;
   flag?: string;
 };
 
@@ -49,6 +52,7 @@ export type UserPlayerCard = {
   name: string;
   imageUrl?: string;
   clubImage?: string;
+  clubSlug?: string;
   baseClub?: string;
   season?: string;
   level: number;

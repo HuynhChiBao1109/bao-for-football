@@ -6,11 +6,12 @@ import { LeagueEntity } from "./entities/league.entity";
 import { ReferenceController } from "./reference.controller";
 import { ReferenceRepository } from "./reference.repository";
 import { ReferenceService } from "./reference.service";
+import { ReferenceSlugService } from "./reference-slug.service";
 
 @Module({
   imports: [TypeOrmModule.forFeature([ClubEntity, LeagueEntity, CountryEntity])],
   controllers: [ReferenceController],
-  providers: [ReferenceRepository, ReferenceService],
+  providers: [ReferenceRepository, ReferenceService, ReferenceSlugService],
   exports: [ReferenceService],
 })
 export class ReferenceModule {}

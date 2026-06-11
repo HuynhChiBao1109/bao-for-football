@@ -842,6 +842,9 @@ textarea {
 
 .team-club-card {
   width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   text-align: left;
   border: 1px solid rgba(73, 211, 255, 0.28);
   border-radius: 16px;
@@ -873,9 +876,14 @@ textarea {
   letter-spacing: 0.02em;
 }
 
+.team-club-card__content {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
 .team-club-card__league {
   display: block;
-  margin-top: 4px;
   font-size: 12px;
   color: var(--text-muted);
 }

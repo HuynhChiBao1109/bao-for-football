@@ -10,6 +10,9 @@ export class CountryEntity {
   @Column({ type: "varchar", length: 191 })
   name: string;
 
+  @Column({ type: "varchar", length: 191, nullable: true })
+  slug: string | null;
+
   @Column({ type: "varchar", length: 512, nullable: true })
   img_url: string | null;
 

@@ -34,7 +34,7 @@ export class TeamService implements ITeamService {
     const createTeamData: Partial<TeamEntity> = {
       userId: user.id,
       teamName: club.name,
-      imgUrl: club.imgUrl,
+      imgUrl: club.slug ? `/clubs/${club.slug}.svg` : club.imgUrl,
       type: ETeamType.USER,
     };
 

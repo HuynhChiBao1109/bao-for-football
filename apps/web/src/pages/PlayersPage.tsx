@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { usePlayerCards, useAllocateStats } from '../hooks/usePlayerCards';
 import { STAT_FIELDS, STAT_KEYS, DEFAULT_STATS, type StatKey } from '../lib/constants';
 import { API_BASE_URL } from '../lib/apiClient';
+import { resolveClubImage, resolveCountryImage } from '../lib/referenceImage';
 import { Banner } from '../components/feedback';
 import type { UserPlayerCard } from '../types';
 
@@ -177,18 +178,18 @@ export function PlayersPage() {
                           <div>
                             <p>{card.name}</p>
                             <div className="mt-1 flex items-center gap-2 text-xs text-slate-400">
-                              {card.clubImage ? (
-                                <img
-                                  src={resolveMediaUrl(card.clubImage)}
-                                  alt={card.baseClub || 'Club'}
-                                  className="h-4 w-4 rounded-full object-cover"
-                                  onError={(event) => {
-                                    event.currentTarget.style.display = 'none';
-                                  }}
-                                />
-                              ) : (
-                                <span className="inline-block h-4 w-4 rounded-full bg-white/10" />
-                              )}
+                              <img
+                                src={resolveClubImage({
+                                  slug: card.clubSlug,
+                                  imgUrl: card.clubImage,
+                                  name: card.baseClub,
+                                })}
+                                alt={card.baseClub || 'Club'}
+                                className="h-4 w-4 rounded-full object-cover"
+                                onError={(event) => {
+                                  event.currentTarget.style.display = 'none';
+                                }}
+                              />
                               <span>{card.baseClub || 'N/A'}</span>
                             </div>
                           </div>
@@ -196,18 +197,14 @@ export function PlayersPage() {
                       </td>
                       <td className="px-4 py-3 text-slate-300">
                         <div className="flex items-center gap-2">
-                          {card.country?.flag ? (
-                            <img
-                              src={resolveMediaUrl(card.country.flag)}
-                              alt={card.country?.name || 'Country'}
-                              className="h-4 w-6 rounded-sm object-cover"
-                              onError={(event) => {
-                                event.currentTarget.style.display = 'none';
-                              }}
-                            />
-                          ) : (
-                            <span className="inline-block h-4 w-6 rounded-sm bg-white/10" />
-                          )}
+                          <img
+                            src={resolveCountryImage(card.country)}
+                            alt={card.country?.name || 'Country'}
+                            className="h-4 w-6 rounded-sm object-cover"
+                            onError={(event) => {
+                              event.currentTarget.style.display = 'none';
+                            }}
+                          />
                           <span>{card.country?.name ?? '—'}</span>
                         </div>
                       </td>
@@ -247,33 +244,29 @@ export function PlayersPage() {
                   </p>
                   <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-300">
                     <div className="flex items-center gap-2">
-                      {selectedCard.clubImage ? (
-                        <img
-                          src={resolveMediaUrl(selectedCard.clubImage)}
-                          alt={selectedCard.baseClub || 'Club'}
-                          className="h-5 w-5 rounded-full object-cover"
-                          onError={(event) => {
-                            event.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      ) : (
-                        <span className="inline-block h-5 w-5 rounded-full bg-white/10" />
-                      )}
+                      <img
+                        src={resolveClubImage({
+                          slug: selectedCard.clubSlug,
+                          imgUrl: selectedCard.clubImage,
+                          name: selectedCard.baseClub,
+                        })}
+                        alt={selectedCard.baseClub || 'Club'}
+                        className="h-5 w-5 rounded-full object-cover"
+                        onError={(event) => {
+                          event.currentTarget.style.display = 'none';
+                        }}
+                      />
                       <span>{selectedCard.baseClub || 'N/A'}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      {selectedCard.country?.flag ? (
-                        <img
-                          src={resolveMediaUrl(selectedCard.country.flag)}
-                          alt={selectedCard.country?.name || 'Country'}
-                          className="h-4 w-6 rounded-sm object-cover"
-                          onError={(event) => {
-                            event.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      ) : (
-                        <span className="inline-block h-4 w-6 rounded-sm bg-white/10" />
-                      )}
+                      <img
+                        src={resolveCountryImage(selectedCard.country)}
+                        alt={selectedCard.country?.name || 'Country'}
+                        className="h-4 w-6 rounded-sm object-cover"
+                        onError={(event) => {
+                          event.currentTarget.style.display = 'none';
+                        }}
+                      />
                       <span>{selectedCard.country?.name || '—'}</span>
                     </div>
                   </div>

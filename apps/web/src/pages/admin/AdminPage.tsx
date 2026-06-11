@@ -17,6 +17,7 @@ import { useClubs } from '../../hooks/useClubs';
 import { useAuth } from '../../hooks/useAuth';
 import { API_BASE_URL } from '../../lib/apiClient';
 import { STAT_FIELDS } from '../../lib/constants';
+import { resolveCountryImage } from '../../lib/referenceImage';
 import { CreatePlayerCard, GachaBannerCard } from '../../components/admin';
 import { Banner } from '../../components/feedback';
 import { queryClient } from '../../lib/queryClient';
@@ -344,7 +345,19 @@ function PlayerTable({
                 )}
                 {p.name}
               </td>
-              <td className="px-3 py-3 text-slate-300">{p.country?.name ?? '—'}</td>
+              <td className="px-3 py-3 text-slate-300">
+                <div className="flex items-center gap-2">
+                  <img
+                    src={resolveCountryImage(p.country)}
+                    alt={p.country?.name ?? 'Country'}
+                    className="h-4 w-6 rounded-sm object-cover"
+                    onError={(event) => {
+                      event.currentTarget.style.display = 'none';
+                    }}
+                  />
+                  <span>{p.country?.name ?? '—'}</span>
+                </div>
+              </td>
               <td className="px-3 py-3 text-slate-300">{p.baseClub}</td>
               <td className="px-3 py-3 text-slate-300">{p.season}</td>
               <td className="px-3 py-3 font-semibold text-emerald-200">

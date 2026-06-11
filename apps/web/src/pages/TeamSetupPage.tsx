@@ -5,6 +5,7 @@ import {
   useReferenceLeagues,
   useCreateTeamByClubMutation,
 } from '../hooks/useReference';
+import { resolveClubImage, resolveCountryImage } from '../lib/referenceImage';
 
 export function TeamSetupPage() {
   const [selectedCountryId, setSelectedCountryId] = useState<number | null>(null);
@@ -108,15 +109,35 @@ export function TeamSetupPage() {
 
             <div className="game-stat-card mt-2">
               <p className="game-stat-card__label">Preview</p>
-              <p className="mt-2 text-sm text-slate-200">
-                Quoc gia: <strong>{selectedCountry?.name ?? 'Chua chon'}</strong>
-              </p>
-              <p className="mt-1 text-sm text-slate-200">
-                Giai dau: <strong>{selectedLeague?.name ?? 'Chua chon'}</strong>
-              </p>
-              <p className="mt-1 text-sm text-slate-200">
-                CLB: <strong>{selectedClub?.name ?? 'Chua chon'}</strong>
-              </p>
+              <div className="mt-3 flex items-center gap-3">
+                <img
+                  src={resolveCountryImage(selectedCountry)}
+                  alt={selectedCountry?.name ?? 'Country'}
+                  className="h-10 w-10 rounded-xl border border-white/10 bg-white/5 object-cover"
+                  onError={(event) => {
+                    event.currentTarget.style.display = 'none';
+                  }}
+                />
+                <img
+                  src={resolveClubImage(selectedClub)}
+                  alt={selectedClub?.name ?? 'Club'}
+                  className="h-10 w-10 rounded-xl border border-white/10 bg-white/5 object-cover"
+                  onError={(event) => {
+                    event.currentTarget.style.display = 'none';
+                  }}
+                />
+                <div>
+                  <p className="text-sm text-slate-200">
+                    Quoc gia: <strong>{selectedCountry?.name ?? 'Chua chon'}</strong>
+                  </p>
+                  <p className="mt-1 text-sm text-slate-200">
+                    Giai dau: <strong>{selectedLeague?.name ?? 'Chua chon'}</strong>
+                  </p>
+                  <p className="mt-1 text-sm text-slate-200">
+                    CLB: <strong>{selectedClub?.name ?? 'Chua chon'}</strong>
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </article>
@@ -137,10 +158,20 @@ export function TeamSetupPage() {
                     data-active={club.id === selectedClubId}
                     onClick={() => setSelectedClubId(club.id)}
                   >
-                    <span className="team-club-card__name">{club.name}</span>
-                    <span className="team-club-card__league">
-                      {selectedLeague?.name ?? 'League'}
-                    </span>
+                    <img
+                      src={resolveClubImage(club)}
+                      alt={club.name}
+                      className="h-10 w-10 rounded-xl border border-white/10 bg-white/5 object-cover"
+                      onError={(event) => {
+                        event.currentTarget.style.display = 'none';
+                      }}
+                    />
+                    <div className="team-club-card__content">
+                      <span className="team-club-card__name">{club.name}</span>
+                      <span className="team-club-card__league">
+                        {selectedLeague?.name ?? 'League'}
+                      </span>
+                    </div>
                   </button>
                 ))}
 

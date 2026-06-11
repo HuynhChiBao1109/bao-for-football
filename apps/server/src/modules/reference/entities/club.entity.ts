@@ -9,6 +9,9 @@ export class ClubEntity {
   @Column({ type: "varchar", length: 191 })
   name: string;
 
+  @Column({ type: "varchar", length: 191, nullable: true })
+  slug: string | null;
+
   @Column({ name: "img_url", type: "varchar", length: 512 })
   imgUrl: string;
 

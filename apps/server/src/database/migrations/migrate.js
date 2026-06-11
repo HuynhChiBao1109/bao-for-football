@@ -59,6 +59,7 @@ function normalizeCountry(item) {
 
   return {
     name,
+    slug: createSlug(name, "country"),
     img_url: imgUrl || null,
   };
 }
@@ -202,6 +203,7 @@ function normalizeLeague(item) {
 
           return {
             name: clubName,
+            slug: createSlug(clubName, "club"),
             img_url: clubImgUrl || null,
             players,
           };
@@ -268,7 +270,7 @@ async function migrateCountries(connection) {
   const rawData = fs.readFileSync(path.resolve(__dirname, "country.json"), "utf8");
   const countries = JSON.parse(rawData).map(normalizeCountry).filter(Boolean);
 
-  const [existingRows] = await connection.execute("SELECT id, name, img_url FROM countries");
+  const [existingRows] = await connection.execute("SELECT id, name, slug, img_url FROM countries");
   const existingByName = new Map();
   for (const row of existingRows) {
     existingByName.set(normalizeKey(row.name), row);
@@ -280,19 +282,23 @@ async function migrateCountries(connection) {
   for (const country of countries) {
     const existing = existingByName.get(normalizeKey(country.name));
     if (!existing) {
-      toInsert.push([country.name, country.img_url]);
+      toInsert.push([country.name, country.slug, country.img_url]);
       continue;
     }
 
-    if ((existing.img_url || null) !== country.img_url) {
-      toUpdate.push([country.img_url, existing.id]);
+    if ((existing.slug || null) !== country.slug || (existing.img_url || null) !== country.img_url) {
+      toUpdate.push([country.slug, country.img_url, existing.id]);
     }
   }
 
-  await insertBatch(connection, "countries", "name, img_url", toInsert);
+  await insertBatch(connection, "countries", "name, slug, img_url", toInsert);
 
-  for (const [imgUrl, id] of toUpdate) {
-    await connection.execute("UPDATE countries SET img_url = ? WHERE id = ?", [imgUrl, id]);
+  for (const [slug, imgUrl, id] of toUpdate) {
+    await connection.execute("UPDATE countries SET slug = ?, img_url = ? WHERE id = ?", [
+      slug,
+      imgUrl,
+      id,
+    ]);
   }
 
   return {
@@ -409,19 +415,26 @@ async function migrateClubs(connection, leaguesWithCountryId, leagueByName) {
     const existing = existingByKey.get(key);
 
     if (!existing) {
-      toInsert.push([club.name, club.img_url, club.leagueId]);
+      toInsert.push([club.name, club.slug, club.img_url, club.leagueId]);
       continue;
     }
 
-    if ((existing.img_url || null) !== (club.img_url || null)) {
-      toUpdate.push([club.img_url, existing.id]);
+    if (
+      (existing.slug || null) !== (club.slug || null) ||
+      (existing.img_url || null) !== (club.img_url || null)
+    ) {
+      toUpdate.push([club.slug, club.img_url, existing.id]);
     }
   }
 
-  await insertBatch(connection, "clubs", "name, img_url, league_id", toInsert);
+  await insertBatch(connection, "clubs", "name, slug, img_url, league_id", toInsert);
 
-  for (const [imgUrl, id] of toUpdate) {
-    await connection.execute("UPDATE clubs SET img_url = ? WHERE id = ?", [imgUrl, id]);
+  for (const [slug, imgUrl, id] of toUpdate) {
+    await connection.execute("UPDATE clubs SET slug = ?, img_url = ? WHERE id = ?", [
+      slug,
+      imgUrl,
+      id,
+    ]);
   }
 
   const [allClubRows] = await connection.execute("SELECT id, name, league_id FROM clubs");
