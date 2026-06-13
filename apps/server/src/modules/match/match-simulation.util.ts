@@ -9,15 +9,32 @@ import {
   TrajectoryPoint,
   tryActivateSkill,
 } from "./match-skills.util";
+import {
+  applySeparation,
+  getTacticalTarget,
+  MOVEMENT,
+  Player as MovementPlayer,
+  PlayerAIState,
+  predictBallIntercept,
+  SIM_TICK_MS,
+  SIM_TICK_SECONDS,
+  SIM_TICKS_PER_SECOND,
+  updatePlayerMovement,
+} from "./match-movement.util";
 
 export const MATCH_REAL_DURATION_MS = 180_000;
 export const MATCH_CLOCK_SECONDS = 180;
-export const MATCH_TICK_MS = 650;
-export const TICKS_PER_SECOND = 1000 / MATCH_TICK_MS;
+export const MATCH_TICK_MS = SIM_TICK_MS;
+export const TICKS_PER_SECOND = SIM_TICKS_PER_SECOND;
 export const TICKS_PER_MINUTE = 60 * TICKS_PER_SECOND;
 export const MATCH_DURATION_TICKS = MATCH_CLOCK_SECONDS * TICKS_PER_SECOND;
 export const DEBUG_TICK_STEP = 1;
 export const FRAME_DURATION_MS = MATCH_TICK_MS;
+const MIN_OWNER_POSSESSION_TICKS = Math.round(1.2 * TICKS_PER_SECOND);
+const MIN_TEAM_POSSESSION_TICKS = Math.round(0.8 * TICKS_PER_SECOND);
+const PASS_CADENCE_TICKS = Math.round(2.1 * TICKS_PER_SECOND);
+const TACKLE_CADENCE_TICKS = Math.round(1.4 * TICKS_PER_SECOND);
+const SHOT_CADENCE_TICKS = Math.round(2.4 * TICKS_PER_SECOND);
 const PLAYER_SPEED_UNITS_PER_TICK: Record<PlayerMoveIntent, number> = {
   anchor: 1.2,
   kickoff: 2.2,
@@ -29,8 +46,8 @@ const PLAYER_SPEED_UNITS_PER_TICK: Record<PlayerMoveIntent, number> = {
   overlap: 5.6,
   press: 6,
 };
-const PASS_SPEED_UNITS_PER_TICK = 35;
-const SHOT_SPEED_UNITS_PER_TICK = 62;
+const PASS_SPEED_UNITS_PER_TICK = MOVEMENT.passSpeed * SIM_TICK_SECONDS;
+const SHOT_SPEED_UNITS_PER_TICK = MOVEMENT.shotSpeed * SIM_TICK_SECONDS;
 export const FRAMES_PER_ACTION = 5;
 export const ACTIONS_PER_HALF = 14;
 
@@ -112,6 +129,11 @@ export type MatchRenderPlayer = {
   skillSlugs: string[];
   x: number;
   y: number;
+  vx?: number;
+  vy?: number;
+  targetX?: number;
+  targetY?: number;
+  aiState?: PlayerAIState;
   stamina: number;
   activeSkill: EPlayerSkill | null;
   hasBall: boolean;
@@ -210,7 +232,18 @@ type InternalLineupPlayer = MatchRenderPlayer & {
   raw: SimulationRosterPlayer;
 };
 type PositionState = {
-  players: Map<number, { x: number; y: number }>;
+  players: Map<
+    number,
+    {
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      targetX: number;
+      targetY: number;
+      aiState: PlayerAIState;
+    }
+  >;
   ball: { x: number; y: number };
 };
 type ResolvedAction = {
@@ -1303,8 +1336,12 @@ function resolveDebugPossessionTempoAction(input: {
     input.latestEvent === EMatchEvent.FIRST_HALF_START ||
     input.latestEvent === EMatchEvent.SECOND_HALF_START;
   const mustSettle =
-    !restartPass && (input.latestEvent === EMatchEvent.PASS || teamTicks < 2 || ownerTicks < 2);
-  const passCadenceReady = input.nextTick % 3 === 0 || ownerTicks >= 4;
+    !restartPass &&
+    (input.latestEvent === EMatchEvent.PASS ||
+      teamTicks < MIN_TEAM_POSSESSION_TICKS ||
+      ownerTicks < MIN_OWNER_POSSESSION_TICKS);
+  const passCadenceReady =
+    input.nextTick % PASS_CADENCE_TICKS === 0 || ownerTicks >= PASS_CADENCE_TICKS;
 
   if (restartPass || (!mustSettle && passCadenceReady)) {
     return {
@@ -1712,7 +1749,7 @@ function resolveDebugDefensiveAction(input: {
     return null;
   }
 
-  if (input.nextTick % 10 === 0) {
+  if (input.nextTick % TACKLE_CADENCE_TICKS === 0) {
     const target = {
       x: clamp(lerp(input.ball.x, input.defender.anchors.x, 0.78), 6, 94),
       y: clamp(lerp(input.ball.y, input.defender.anchors.y, 0.78), 6, 94),
@@ -1724,7 +1761,7 @@ function resolveDebugDefensiveAction(input: {
     };
   }
 
-  if (input.nextTick % 6 === 0) {
+  if (input.nextTick % Math.max(6, Math.round(TACKLE_CADENCE_TICKS * 0.7)) === 0) {
     const target = {
       x: clamp(lerp(input.ballTarget.x, input.defender.anchors.x, 0.55), 6, 94),
       y: clamp(lerp(input.ballTarget.y, input.defender.anchors.y, 0.55), 6, 94),
@@ -1765,7 +1802,7 @@ function resolveDebugShotAction(
   const distanceToGoal = Math.abs(input.ball.y - goalY);
   const role = normalizeRole(input.shooter.role);
   const shotWindow = distanceToGoal <= 34 || role === "ST" || role === "W";
-  const shouldShoot = shotWindow && input.nextTick % 8 === 0;
+  const shouldShoot = shotWindow && input.nextTick % SHOT_CADENCE_TICKS === 0;
 
   if (!shouldShoot) {
     return null;
@@ -1778,7 +1815,8 @@ function resolveDebugShotAction(
   };
   const isGoal =
     distance(input.ball, goalTarget) <= SHOT_SPEED_UNITS_PER_TICK &&
-    (input.nextTick % 16 === 0 || (role === "ST" && input.nextTick % 24 === 8));
+    (input.nextTick % (SHOT_CADENCE_TICKS * 2) === 0 ||
+      (role === "ST" && input.nextTick % (SHOT_CADENCE_TICKS * 3) === SHOT_CADENCE_TICKS));
 
   if (isGoal) {
     return {
@@ -1797,8 +1835,14 @@ function resolveDebugShotAction(
   const target = moveToward(input.ball, saveTarget, SHOT_SPEED_UNITS_PER_TICK);
 
   return {
-    event: input.nextTick % 16 === 8 ? EMatchEvent.GOALKEEPER_SAVE : EMatchEvent.SHOOT,
-    label: input.nextTick % 16 === 8 ? "sut, thu mon cuu thua" : "sut bong",
+    event:
+      input.nextTick % (SHOT_CADENCE_TICKS * 2) === SHOT_CADENCE_TICKS
+        ? EMatchEvent.GOALKEEPER_SAVE
+        : EMatchEvent.SHOOT,
+    label:
+      input.nextTick % (SHOT_CADENCE_TICKS * 2) === SHOT_CADENCE_TICKS
+        ? "sut, thu mon cuu thua"
+        : "sut bong",
     target,
     isGoal: false,
     keeper,
@@ -1987,6 +2031,50 @@ function movePlayerForTick(input: {
   };
 }
 
+function createPlayerMotion(input: {
+  current: TrajectoryPoint;
+  next: TrajectoryPoint;
+  target: TrajectoryPoint;
+  intent: PlayerMoveIntent;
+}): PlayerMotion {
+  const dx = input.target.x - input.current.x;
+  const dy = input.target.y - input.current.y;
+  const length = Math.hypot(dx, dy);
+
+  return {
+    fromX: clamp(input.current.x, 0, 100),
+    fromY: clamp(input.current.y, 0, 100),
+    toX: clamp(input.next.x, 0, 100),
+    toY: clamp(input.next.y, 0, 100),
+    intent: input.intent,
+    directionX: length > 0 ? Number((dx / length).toFixed(4)) : 0,
+    directionY: length > 0 ? Number((dy / length).toFixed(4)) : 0,
+    targetX: clamp(input.target.x, 0, 100),
+    targetY: clamp(input.target.y, 0, 100),
+  };
+}
+
+function getIntentForState(state: PlayerAIState): PlayerMoveIntent {
+  switch (state) {
+    case "PRESS_BALL":
+      return "press";
+    case "SUPPORT_ATTACK":
+      return "support";
+    case "MARK_OPPONENT":
+      return "mark";
+    case "RECEIVE_PASS":
+    case "MOVE_TO_SPACE":
+    case "DRIBBLE":
+      return "run";
+    case "RECOVER_DEFENSE":
+      return "cover";
+    case "IDLE":
+    case "HOLD_POSITION":
+    default:
+      return "anchor";
+  }
+}
+
 function createSkillContext(
   actor: InternalLineupPlayer,
   defender: InternalLineupPlayer,
@@ -2100,9 +2188,12 @@ function buildSnapshot(input: {
   const ownerId = input.ballOwner.userPlayerId;
   const homePlayers = projectPlayers({
     lineup: input.homeLineup,
+    teammateLineup: input.homeLineup,
+    opponentLineup: input.awayLineup,
     possession: input.possession,
     ball,
     ballOwnerId: ownerId,
+    intendedReceiverId: input.highlight.secondaryPlayerId ?? null,
     focusId: input.focusId,
     pressId: input.pressId,
     matchStep: input.matchStep,
@@ -2110,9 +2201,12 @@ function buildSnapshot(input: {
   });
   const awayPlayers = projectPlayers({
     lineup: input.awayLineup,
+    teammateLineup: input.awayLineup,
+    opponentLineup: input.homeLineup,
     possession: input.possession,
     ball,
     ballOwnerId: ownerId,
+    intendedReceiverId: input.highlight.secondaryPlayerId ?? null,
     focusId: input.focusId,
     pressId: input.pressId,
     matchStep: input.matchStep,
@@ -2154,49 +2248,131 @@ function buildSnapshot(input: {
 
 function projectPlayers(input: {
   lineup: InternalLineupPlayer[];
+  teammateLineup: InternalLineupPlayer[];
+  opponentLineup: InternalLineupPlayer[];
   possession: Side;
   ball: TrajectoryPoint;
   ballOwnerId: number;
+  intendedReceiverId: number | null;
   focusId: number;
   pressId: number | null;
   matchStep: MatchStep;
   positionState: PositionState;
 }): MatchRenderPlayer[] {
+  const createMovementPlayer = (player: InternalLineupPlayer): MovementPlayer => {
+    const prev = input.positionState.players.get(player.userPlayerId);
+    const hasBall = player.userPlayerId === input.ballOwnerId;
+    return {
+      id: player.userPlayerId,
+      teamId: player.teamId,
+      side: player.side,
+      role: player.role,
+      position: {
+        x: prev?.x ?? player.x ?? player.anchors.x,
+        y: prev?.y ?? player.y ?? player.anchors.y,
+      },
+      velocity: { x: prev?.vx ?? 0, y: prev?.vy ?? 0 },
+      targetPosition: {
+        x: prev?.targetX ?? player.anchors.x,
+        y: prev?.targetY ?? player.anchors.y,
+      },
+      homePosition: player.anchors,
+      state: prev?.aiState ?? "HOLD_POSITION",
+      stamina: player.stamina,
+      hasBall,
+      receivingPass: input.intendedReceiverId === player.userPlayerId,
+      stats: {
+        speed: player.raw.stats.speed,
+        acceleration: player.raw.stats.acceleration,
+        stamina: player.raw.stats.stamina,
+        dribbling: player.raw.stats.dribbling,
+      },
+    };
+  };
+
+  const teammateMovement = input.teammateLineup.map(createMovementPlayer);
+  const opponentMovement = input.opponentLineup.map(createMovementPlayer);
+  const gameState = {
+    tick: 0,
+    deltaTime: SIM_TICK_SECONDS,
+    possession: input.possession,
+    homePlayers: input.lineup[0]?.side === "home" ? teammateMovement : opponentMovement,
+    awayPlayers: input.lineup[0]?.side === "away" ? teammateMovement : opponentMovement,
+    ball: {
+      position: input.ball,
+      velocity: { x: 0, y: 0 },
+      ownerPlayerId: input.ballOwnerId,
+      intendedReceiverId: input.intendedReceiverId,
+      targetPosition: input.ball,
+      isLoose: input.intendedReceiverId != null && input.intendedReceiverId !== input.ballOwnerId,
+    },
+  };
+
   return input.lineup.map((player, index) => {
-    const prev = input.positionState.players.get(player.userPlayerId) ?? player.anchors;
+    const movementPlayer = teammateMovement.find((item) => item.id === player.userPlayerId)!;
+    const prev = input.positionState.players.get(player.userPlayerId) ?? {
+      x: player.anchors.x,
+      y: player.anchors.y,
+      vx: 0,
+      vy: 0,
+      targetX: player.anchors.x,
+      targetY: player.anchors.y,
+      aiState: "HOLD_POSITION" as PlayerAIState,
+    };
     const hasBall = player.userPlayerId === input.ballOwnerId;
     const isPress = input.pressId != null && player.userPlayerId === input.pressId;
     const onAttack = player.side === input.possession;
     let target = player.anchors;
     let intent: PlayerMoveIntent = "anchor";
+    let aiState: PlayerAIState = "HOLD_POSITION";
 
     if (input.matchStep === "first_half_start" || input.matchStep === "second_half_start") {
       target = hasBall ? { x: input.ball.x, y: input.ball.y } : player.anchors;
       intent = hasBall ? "kickoff" : "anchor";
+      aiState = hasBall ? "DRIBBLE" : "HOLD_POSITION";
     } else if (input.matchStep === "half_time" || input.matchStep === "full_time") {
       target = { x: 47 + (index % 4) * 2, y: 50 + Math.floor(index / 4) * 1.5 };
+      aiState = "IDLE";
     } else if (hasBall) {
-      target = { x: input.ball.x, y: input.ball.y };
+      const tactical = getTacticalTarget(movementPlayer, gameState);
+      target = tactical.targetPosition;
       intent = "run";
+      aiState = tactical.state;
+    } else if (input.intendedReceiverId === player.userPlayerId) {
+      target = predictBallIntercept(movementPlayer, gameState.ball);
+      intent = "run";
+      aiState = "RECEIVE_PASS";
     } else if (isPress) {
-      target = getPressTarget(player, input.ball);
+      const tactical = getTacticalTarget(movementPlayer, gameState);
+      target = tactical.targetPosition;
       intent = "press";
+      aiState = "PRESS_BALL";
     } else if (onAttack) {
-      const movement = getAttackingTarget(player, input.ball);
-      target = movement.target;
-      intent = movement.intent;
+      const tactical = getTacticalTarget(movementPlayer, gameState);
+      target = tactical.targetPosition;
+      intent = getIntentForState(tactical.state);
+      aiState = tactical.state;
     } else {
-      const movement = getDefensiveTarget(player, input.ball);
-      target = movement.target;
-      intent = movement.intent;
+      const tactical = getTacticalTarget(movementPlayer, gameState);
+      target = tactical.targetPosition;
+      intent = getIntentForState(tactical.state);
+      aiState = tactical.state;
     }
 
-    const movement = movePlayerForTick({
-      current: prev,
-      target,
-      maxDistance: getRoleMoveFactor(player, intent),
+    movementPlayer.position = { x: prev.x, y: prev.y };
+    movementPlayer.velocity = { x: prev.vx, y: prev.vy };
+    movementPlayer.targetPosition = target;
+    movementPlayer.state = aiState;
+    applySeparation(movementPlayer, teammateMovement);
+    updatePlayerMovement(movementPlayer, SIM_TICK_SECONDS);
+
+    const movement = createPlayerMotion({
+      current: { x: prev.x, y: prev.y },
+      next: movementPlayer.position,
+      target: movementPlayer.targetPosition,
       intent,
     });
+
     return {
       userPlayerId: player.userPlayerId,
       playerId: player.playerId,
@@ -2208,12 +2384,17 @@ function projectPlayers(input: {
       shortName: player.shortName,
       slug: player.slug,
       skillSlugs: player.skillSlugs,
-      x: movement.x,
-      y: movement.y,
+      x: clamp(movementPlayer.position.x, 0, 100),
+      y: clamp(movementPlayer.position.y, 0, 100),
+      vx: Number(movementPlayer.velocity.x.toFixed(4)),
+      vy: Number(movementPlayer.velocity.y.toFixed(4)),
+      targetX: clamp(movementPlayer.targetPosition.x, 0, 100),
+      targetY: clamp(movementPlayer.targetPosition.y, 0, 100),
+      aiState,
       stamina: player.stamina,
       activeSkill: null,
       hasBall: false,
-      move: movement.move,
+      move: movement,
     };
   });
 }
@@ -2449,17 +2630,55 @@ function createInitialPositionState(
   home: InternalLineupPlayer[],
   away: InternalLineupPlayer[],
 ): PositionState {
-  const players = new Map<number, { x: number; y: number }>();
+  const players = new Map<
+    number,
+    {
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      targetX: number;
+      targetY: number;
+      aiState: PlayerAIState;
+    }
+  >();
   [...home, ...away].forEach((player) =>
-    players.set(player.userPlayerId, { x: player.anchors.x, y: player.anchors.y }),
+    players.set(player.userPlayerId, {
+      x: player.anchors.x,
+      y: player.anchors.y,
+      vx: 0,
+      vy: 0,
+      targetX: player.anchors.x,
+      targetY: player.anchors.y,
+      aiState: "HOLD_POSITION",
+    }),
   );
   return { players, ball: { x: 50, y: 50 } };
 }
 
 function extractPositionState(snapshot: MatchSnapshot): PositionState {
-  const players = new Map<number, { x: number; y: number }>();
+  const players = new Map<
+    number,
+    {
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      targetX: number;
+      targetY: number;
+      aiState: PlayerAIState;
+    }
+  >();
   [...snapshot.homePlayers, ...snapshot.awayPlayers].forEach((player) =>
-    players.set(player.userPlayerId, { x: player.x, y: player.y }),
+    players.set(player.userPlayerId, {
+      x: player.x,
+      y: player.y,
+      vx: player.vx ?? 0,
+      vy: player.vy ?? 0,
+      targetX: player.targetX ?? player.x,
+      targetY: player.targetY ?? player.y,
+      aiState: player.aiState ?? "HOLD_POSITION",
+    }),
   );
   return { players, ball: { x: snapshot.ball.x, y: snapshot.ball.y } };
 }

@@ -4486,388 +4486,386 @@
         "league": "Premier League",
         "img_url": "https://cdn.sofifa.net/teams/11/60.png",
         "players": [
-          [
-            {
-              "name": "Bruno Fernandes",
-              "season": "CURRENT",
-              "avatarUrl": null,
-              "countryId": null,
-              "clubId": 11,
-              "height": 179,
-              "bodyType": "NORMAL",
-              "pass": 91,
-              "longPass": 90,
-              "vision": 92,
-              "shoot": 86,
-              "tackle": 68,
-              "balance": 82,
-              "dribbling": 86,
-              "acceleration": 79,
-              "speed": 77,
-              "stamina": 90
-            },
-            {
-              "name": "Casemiro",
-              "season": "CURRENT",
-              "avatarUrl": null,
-              "countryId": null,
-              "clubId": 11,
-              "height": 185,
-              "bodyType": "NORMAL",
-              "pass": 83,
-              "longPass": 87,
-              "vision": 82,
-              "shoot": 75,
-              "tackle": 90,
-              "balance": 74,
-              "dribbling": 74,
-              "acceleration": 63,
-              "speed": 65,
-              "stamina": 84
-            },
-            {
-              "name": "Kobbie Mainoo",
-              "season": "CURRENT",
-              "avatarUrl": null,
-              "countryId": null,
-              "clubId": 11,
-              "height": 180,
-              "bodyType": "NORMAL",
-              "pass": 84,
-              "longPass": 82,
-              "vision": 84,
-              "shoot": 76,
-              "tackle": 78,
-              "balance": 87,
-              "dribbling": 85,
-              "acceleration": 81,
-              "speed": 80,
-              "stamina": 83
-            },
-            {
-              "name": "Mason Mount",
-              "season": "CURRENT",
-              "avatarUrl": null,
-              "countryId": null,
-              "clubId": 11,
-              "height": 181,
-              "bodyType": "NORMAL",
-              "pass": 84,
-              "longPass": 82,
-              "vision": 84,
-              "shoot": 80,
-              "tackle": 71,
-              "balance": 83,
-              "dribbling": 83,
-              "acceleration": 82,
-              "speed": 81,
-              "stamina": 86
-            },
-            {
-              "name": "Amad Diallo",
-              "season": "CURRENT",
-              "avatarUrl": null,
-              "countryId": null,
-              "clubId": 11,
-              "height": 173,
-              "bodyType": "LEAN",
-              "pass": 80,
-              "longPass": 75,
-              "vision": 82,
-              "shoot": 78,
-              "tackle": 55,
-              "balance": 90,
-              "dribbling": 88,
-              "acceleration": 90,
-              "speed": 88,
-              "stamina": 80
-            },
-            {
-              "name": "Alejandro Garnacho",
-              "season": "CURRENT",
-              "avatarUrl": null,
-              "countryId": null,
-              "clubId": 11,
-              "height": 180,
-              "bodyType": "LEAN",
-              "pass": 78,
-              "longPass": 74,
-              "vision": 79,
-              "shoot": 82,
-              "tackle": 42,
-              "balance": 84,
-              "dribbling": 87,
-              "acceleration": 92,
-              "speed": 91,
-              "stamina": 82
-            },
-            {
-              "name": "Rasmus Højlund",
-              "season": "CURRENT",
-              "avatarUrl": null,
-              "countryId": null,
-              "clubId": 11,
-              "height": 191,
-              "bodyType": "STOCKY",
-              "pass": 72,
-              "longPass": 68,
-              "vision": 74,
-              "shoot": 84,
-              "tackle": 38,
-              "balance": 77,
-              "dribbling": 81,
-              "acceleration": 86,
-              "speed": 88,
-              "stamina": 84
-            },
-            {
-              "name": "Joshua Zirkzee",
-              "season": "CURRENT",
-              "avatarUrl": null,
-              "countryId": null,
-              "clubId": 11,
-              "height": 193,
-              "bodyType": "NORMAL",
-              "pass": 80,
-              "longPass": 76,
-              "vision": 82,
-              "shoot": 82,
-              "tackle": 40,
-              "balance": 76,
-              "dribbling": 85,
-              "acceleration": 78,
-              "speed": 79,
-              "stamina": 79
-            },
-            {
-              "name": "Lisandro Martínez",
-              "season": "CURRENT",
-              "avatarUrl": null,
-              "countryId": null,
-              "clubId": 11,
-              "height": 175,
-              "bodyType": "NORMAL",
-              "pass": 84,
-              "longPass": 87,
-              "vision": 79,
-              "shoot": 60,
-              "tackle": 88,
-              "balance": 83,
-              "dribbling": 77,
-              "acceleration": 75,
-              "speed": 74,
-              "stamina": 82
-            },
-            {
-              "name": "Matthijs de Ligt",
-              "season": "CURRENT",
-              "avatarUrl": null,
-              "countryId": null,
-              "clubId": 11,
-              "height": 189,
-              "bodyType": "STOCKY",
-              "pass": 80,
-              "longPass": 82,
-              "vision": 74,
-              "shoot": 58,
-              "tackle": 87,
-              "balance": 72,
-              "dribbling": 72,
-              "acceleration": 69,
-              "speed": 72,
-              "stamina": 81
-            },
-            {
-              "name": "Harry Maguire",
-              "season": "CURRENT",
-              "avatarUrl": null,
-              "countryId": null,
-              "clubId": 11,
-              "height": 194,
-              "bodyType": "STOCKY",
-              "pass": 78,
-              "longPass": 80,
-              "vision": 72,
-              "shoot": 60,
-              "tackle": 84,
-              "balance": 60,
-              "dribbling": 65,
-              "acceleration": 52,
-              "speed": 58,
-              "stamina": 76
-            },
-            {
-              "name": "Leny Yoro",
-              "season": "CURRENT",
-              "avatarUrl": null,
-              "countryId": null,
-              "clubId": 11,
-              "height": 190,
-              "bodyType": "NORMAL",
-              "pass": 76,
-              "longPass": 75,
-              "vision": 70,
-              "shoot": 50,
-              "tackle": 83,
-              "balance": 75,
-              "dribbling": 72,
-              "acceleration": 78,
-              "speed": 81,
-              "stamina": 78
-            },
-            {
-              "name": "Noussair Mazraoui",
-              "season": "CURRENT",
-              "avatarUrl": null,
-              "countryId": null,
-              "clubId": 11,
-              "height": 183,
-              "bodyType": "LEAN",
-              "pass": 81,
-              "longPass": 80,
-              "vision": 79,
-              "shoot": 68,
-              "tackle": 82,
-              "balance": 84,
-              "dribbling": 82,
-              "acceleration": 83,
-              "speed": 82,
-              "stamina": 84
-            },
-            {
-              "name": "Luke Shaw",
-              "season": "CURRENT",
-              "avatarUrl": null,
-              "countryId": null,
-              "clubId": 11,
-              "height": 185,
-              "bodyType": "NORMAL",
-              "pass": 82,
-              "longPass": 81,
-              "vision": 79,
-              "shoot": 65,
-              "tackle": 82,
-              "balance": 78,
-              "dribbling": 78,
-              "acceleration": 78,
-              "speed": 79,
-              "stamina": 83
-            },
-            {
-              "name": "Diogo Dalot",
-              "season": "CURRENT",
-              "avatarUrl": null,
-              "countryId": null,
-              "clubId": 11,
-              "height": 183,
-              "bodyType": "NORMAL",
-              "pass": 80,
-              "longPass": 79,
-              "vision": 78,
-              "shoot": 72,
-              "tackle": 81,
-              "balance": 80,
-              "dribbling": 79,
-              "acceleration": 81,
-              "speed": 83,
-              "stamina": 89
-            },
-            {
-              "name": "André Onana",
-              "season": "CURRENT",
-              "avatarUrl": null,
-              "countryId": null,
-              "clubId": 11,
-              "height": 190,
-              "bodyType": "NORMAL",
-              "pass": 82,
-              "longPass": 84,
-              "vision": 70,
-              "shoot": 20,
-              "tackle": 25,
-              "balance": 72,
-              "dribbling": 55,
-              "acceleration": 60,
-              "speed": 58,
-              "stamina": 70
-            },
-            {
-              "name": "Altay Bayındır",
-              "season": "CURRENT",
-              "avatarUrl": null,
-              "countryId": null,
-              "clubId": 11,
-              "height": 198,
-              "bodyType": "NORMAL",
-              "pass": 70,
-              "longPass": 73,
-              "vision": 60,
-              "shoot": 18,
-              "tackle": 20,
-              "balance": 65,
-              "dribbling": 45,
-              "acceleration": 55,
-              "speed": 54,
-              "stamina": 68
-            },
-            {
-              "name": "Patrick Dorgu",
-              "season": "CURRENT",
-              "avatarUrl": null,
-              "countryId": null,
-              "clubId": 11,
-              "height": 185,
-              "bodyType": "LEAN",
-              "pass": 76,
-              "longPass": 74,
-              "vision": 73,
-              "shoot": 70,
-              "tackle": 78,
-              "balance": 82,
-              "dribbling": 78,
-              "acceleration": 86,
-              "speed": 87,
-              "stamina": 84
-            },
-            {
-              "name": "Manuel Ugarte",
-              "season": "CURRENT",
-              "avatarUrl": null,
-              "countryId": null,
-              "clubId": 11,
-              "height": 182,
-              "bodyType": "NORMAL",
-              "pass": 80,
-              "longPass": 79,
-              "vision": 76,
-              "shoot": 65,
-              "tackle": 89,
-              "balance": 82,
-              "dribbling": 77,
-              "acceleration": 77,
-              "speed": 76,
-              "stamina": 88
-            },
-            {
-              "name": "Jonny Evans",
-              "season": "CURRENT",
-              "avatarUrl": null,
-              "countryId": null,
-              "clubId": 11,
-              "height": 188,
-              "bodyType": "NORMAL",
-              "pass": 76,
-              "longPass": 78,
-              "vision": 70,
-              "shoot": 50,
-              "tackle": 80,
-              "balance": 68,
-              "dribbling": 62,
-              "acceleration": 48,
-              "speed": 50,
-              "stamina": 72
-            }
-          ]
+          {
+            "name": "Bruno Fernandes",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 179,
+            "bodyType": "NORMAL",
+            "pass": 91,
+            "longPass": 90,
+            "vision": 92,
+            "shoot": 86,
+            "tackle": 68,
+            "balance": 82,
+            "dribbling": 86,
+            "acceleration": 79,
+            "speed": 77,
+            "stamina": 90
+          },
+          {
+            "name": "Casemiro",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 185,
+            "bodyType": "NORMAL",
+            "pass": 83,
+            "longPass": 87,
+            "vision": 82,
+            "shoot": 75,
+            "tackle": 90,
+            "balance": 74,
+            "dribbling": 74,
+            "acceleration": 63,
+            "speed": 65,
+            "stamina": 84
+          },
+          {
+            "name": "Kobbie Mainoo",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 180,
+            "bodyType": "NORMAL",
+            "pass": 84,
+            "longPass": 82,
+            "vision": 84,
+            "shoot": 76,
+            "tackle": 78,
+            "balance": 87,
+            "dribbling": 85,
+            "acceleration": 81,
+            "speed": 80,
+            "stamina": 83
+          },
+          {
+            "name": "Mason Mount",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 181,
+            "bodyType": "NORMAL",
+            "pass": 84,
+            "longPass": 82,
+            "vision": 84,
+            "shoot": 80,
+            "tackle": 71,
+            "balance": 83,
+            "dribbling": 83,
+            "acceleration": 82,
+            "speed": 81,
+            "stamina": 86
+          },
+          {
+            "name": "Amad Diallo",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 173,
+            "bodyType": "LEAN",
+            "pass": 80,
+            "longPass": 75,
+            "vision": 82,
+            "shoot": 78,
+            "tackle": 55,
+            "balance": 90,
+            "dribbling": 88,
+            "acceleration": 90,
+            "speed": 88,
+            "stamina": 80
+          },
+          {
+            "name": "Alejandro Garnacho",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 180,
+            "bodyType": "LEAN",
+            "pass": 78,
+            "longPass": 74,
+            "vision": 79,
+            "shoot": 82,
+            "tackle": 42,
+            "balance": 84,
+            "dribbling": 87,
+            "acceleration": 92,
+            "speed": 91,
+            "stamina": 82
+          },
+          {
+            "name": "Rasmus Højlund",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 191,
+            "bodyType": "STOCKY",
+            "pass": 72,
+            "longPass": 68,
+            "vision": 74,
+            "shoot": 84,
+            "tackle": 38,
+            "balance": 77,
+            "dribbling": 81,
+            "acceleration": 86,
+            "speed": 88,
+            "stamina": 84
+          },
+          {
+            "name": "Joshua Zirkzee",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 193,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 76,
+            "vision": 82,
+            "shoot": 82,
+            "tackle": 40,
+            "balance": 76,
+            "dribbling": 85,
+            "acceleration": 78,
+            "speed": 79,
+            "stamina": 79
+          },
+          {
+            "name": "Lisandro Martínez",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 175,
+            "bodyType": "NORMAL",
+            "pass": 84,
+            "longPass": 87,
+            "vision": 79,
+            "shoot": 60,
+            "tackle": 88,
+            "balance": 83,
+            "dribbling": 77,
+            "acceleration": 75,
+            "speed": 74,
+            "stamina": 82
+          },
+          {
+            "name": "Matthijs de Ligt",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 189,
+            "bodyType": "STOCKY",
+            "pass": 80,
+            "longPass": 82,
+            "vision": 74,
+            "shoot": 58,
+            "tackle": 87,
+            "balance": 72,
+            "dribbling": 72,
+            "acceleration": 69,
+            "speed": 72,
+            "stamina": 81
+          },
+          {
+            "name": "Harry Maguire",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 194,
+            "bodyType": "STOCKY",
+            "pass": 78,
+            "longPass": 80,
+            "vision": 72,
+            "shoot": 60,
+            "tackle": 84,
+            "balance": 60,
+            "dribbling": 65,
+            "acceleration": 52,
+            "speed": 58,
+            "stamina": 76
+          },
+          {
+            "name": "Leny Yoro",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 190,
+            "bodyType": "NORMAL",
+            "pass": 76,
+            "longPass": 75,
+            "vision": 70,
+            "shoot": 50,
+            "tackle": 83,
+            "balance": 75,
+            "dribbling": 72,
+            "acceleration": 78,
+            "speed": 81,
+            "stamina": 78
+          },
+          {
+            "name": "Noussair Mazraoui",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 183,
+            "bodyType": "LEAN",
+            "pass": 81,
+            "longPass": 80,
+            "vision": 79,
+            "shoot": 68,
+            "tackle": 82,
+            "balance": 84,
+            "dribbling": 82,
+            "acceleration": 83,
+            "speed": 82,
+            "stamina": 84
+          },
+          {
+            "name": "Luke Shaw",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 185,
+            "bodyType": "NORMAL",
+            "pass": 82,
+            "longPass": 81,
+            "vision": 79,
+            "shoot": 65,
+            "tackle": 82,
+            "balance": 78,
+            "dribbling": 78,
+            "acceleration": 78,
+            "speed": 79,
+            "stamina": 83
+          },
+          {
+            "name": "Diogo Dalot",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 183,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 79,
+            "vision": 78,
+            "shoot": 72,
+            "tackle": 81,
+            "balance": 80,
+            "dribbling": 79,
+            "acceleration": 81,
+            "speed": 83,
+            "stamina": 89
+          },
+          {
+            "name": "André Onana",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 190,
+            "bodyType": "NORMAL",
+            "pass": 82,
+            "longPass": 84,
+            "vision": 70,
+            "shoot": 20,
+            "tackle": 25,
+            "balance": 72,
+            "dribbling": 55,
+            "acceleration": 60,
+            "speed": 58,
+            "stamina": 70
+          },
+          {
+            "name": "Altay Bayındır",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 198,
+            "bodyType": "NORMAL",
+            "pass": 70,
+            "longPass": 73,
+            "vision": 60,
+            "shoot": 18,
+            "tackle": 20,
+            "balance": 65,
+            "dribbling": 45,
+            "acceleration": 55,
+            "speed": 54,
+            "stamina": 68
+          },
+          {
+            "name": "Patrick Dorgu",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 185,
+            "bodyType": "LEAN",
+            "pass": 76,
+            "longPass": 74,
+            "vision": 73,
+            "shoot": 70,
+            "tackle": 78,
+            "balance": 82,
+            "dribbling": 78,
+            "acceleration": 86,
+            "speed": 87,
+            "stamina": 84
+          },
+          {
+            "name": "Manuel Ugarte",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 182,
+            "bodyType": "NORMAL",
+            "pass": 80,
+            "longPass": 79,
+            "vision": 76,
+            "shoot": 65,
+            "tackle": 89,
+            "balance": 82,
+            "dribbling": 77,
+            "acceleration": 77,
+            "speed": 76,
+            "stamina": 88
+          },
+          {
+            "name": "Jonny Evans",
+            "season": "CURRENT",
+            "avatarUrl": null,
+            "countryId": null,
+            "clubId": 11,
+            "height": 188,
+            "bodyType": "NORMAL",
+            "pass": 76,
+            "longPass": 78,
+            "vision": 70,
+            "shoot": 50,
+            "tackle": 80,
+            "balance": 68,
+            "dribbling": 62,
+            "acceleration": 48,
+            "speed": 50,
+            "stamina": 72
+          }
         ]
       },
       {
@@ -6750,7 +6748,7 @@
             ]
           },
           {
-            "name": "Nam Romano",
+            "name": "Nam Romano (Paris Saint-Germain #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -6783,7 +6781,7 @@
             ]
           },
           {
-            "name": "Khoa Collins",
+            "name": "Khoa test 1",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -6981,7 +6979,7 @@
             ]
           },
           {
-            "name": "Tuan Romano",
+            "name": "Tuan Romano (Paris Saint-Germain #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -7018,7 +7016,7 @@
             ]
           },
           {
-            "name": "Ben Taylor",
+            "name": "Ben Taylor (Paris Saint-Germain #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -7215,7 +7213,7 @@
             ]
           },
           {
-            "name": "Phuc Romano",
+            "name": "Phuc Romanosss",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -7248,7 +7246,7 @@
             ]
           },
           {
-            "name": "Julian Carter",
+            "name": "Julian Carter (Olympique de Marseille #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -7284,7 +7282,7 @@
             ]
           },
           {
-            "name": "Jack Lewis",
+            "name": "Jack Lewis (Olympique de Marseille #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -7559,7 +7557,7 @@
             ]
           },
           {
-            "name": "Khanh Wilson",
+            "name": "Khanh Wilson (AS Monaco #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -7628,7 +7626,7 @@
             ]
           },
           {
-            "name": "Kai Lewis",
+            "name": "Kai Lewis (AS Monaco #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -7760,7 +7758,7 @@
             ]
           },
           {
-            "name": "Luca Taylor",
+            "name": "Luca Taylor (AS Monaco #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -7833,7 +7831,7 @@
         "img_url": "https://cdn.sofifa.net/teams/66/60.png",
         "players": [
           {
-            "name": "Nico Lewis",
+            "name": "Nico Lewis (Olympique Lyonnais #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -7895,7 +7893,7 @@
             ]
           },
           {
-            "name": "Hugo Taylor",
+            "name": "Hugo Taylor (Olympique Lyonnais #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -7957,7 +7955,7 @@
             ]
           },
           {
-            "name": "Quang Romano",
+            "name": "Quang Romano (Olympique Lyonnais #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -8059,7 +8057,7 @@
             ]
           },
           {
-            "name": "Khoa Collins",
+            "name": "Khoa esewf 2",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -8264,7 +8262,7 @@
             ]
           },
           {
-            "name": "Theo Lombardi",
+            "name": "Theo Lombardi (LOSC Lille #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -8293,7 +8291,7 @@
             ]
           },
           {
-            "name": "Ben Martin",
+            "name": "Ben Martin (LOSC Lille #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -8326,7 +8324,7 @@
             ]
           },
           {
-            "name": "Tom Taylor",
+            "name": "Tom Taylor (LOSC Lille #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -8362,7 +8360,7 @@
             ]
           },
           {
-            "name": "Phuc Romano",
+            "name": "Phuc Romanoasdasd",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -8395,7 +8393,7 @@
             ]
           },
           {
-            "name": "Aaron Rossi",
+            "name": "Aaron Rossi (LOSC Lille #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -8461,7 +8459,7 @@
             ]
           },
           {
-            "name": "Andrea Bianchi",
+            "name": "Andrea Bianchi (LOSC Lille #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -8494,7 +8492,7 @@
             ]
           },
           {
-            "name": "Andrea Thomas",
+            "name": "Andrea Thomas (LOSC Lille #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -8571,7 +8569,7 @@
         "img_url": "https://cdn.sofifa.net/teams/72/60.png",
         "players": [
           {
-            "name": "Khanh Rossi",
+            "name": "Khanh Rossi (OGC Nice #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -8600,7 +8598,7 @@
             ]
           },
           {
-            "name": "Theo Bui",
+            "name": "Theo Bui (OGC Nice #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -8728,7 +8726,7 @@
             ]
           },
           {
-            "name": "Felix Adams",
+            "name": "Felix Adams (OGC Nice #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -8867,7 +8865,7 @@
             ]
           },
           {
-            "name": "Ben Baker",
+            "name": "Ben Baker (OGC Nice #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -8904,7 +8902,7 @@
             ]
           },
           {
-            "name": "Khanh Green",
+            "name": "Khanh Green (OGC Nice #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -8944,7 +8942,7 @@
         "img_url": "https://cdn.sofifa.net/teams/64/60.png",
         "players": [
           {
-            "name": "Theo Romano",
+            "name": "Theo Romano (RC Lens #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -8973,7 +8971,7 @@
             ]
           },
           {
-            "name": "Andrea Clark",
+            "name": "Andrea Clark (RC Lens #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -9344,7 +9342,7 @@
             ]
           },
           {
-            "name": "Jack Smith",
+            "name": "Jack Smith (Stade Rennais #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -9377,7 +9375,7 @@
             ]
           },
           {
-            "name": "Phong Moretti",
+            "name": "Phong Moretti (Stade Rennais #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -9439,7 +9437,7 @@
             ]
           },
           {
-            "name": "Mason Le",
+            "name": "Mason Le (Stade Rennais #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -9472,7 +9470,7 @@
             ]
           },
           {
-            "name": "Khoa Lewis",
+            "name": "Khoa Lewis (Stade Rennais #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -9508,7 +9506,7 @@
             ]
           },
           {
-            "name": "Ryan Allen",
+            "name": "Ryan Allen (Stade Rennais #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -9574,7 +9572,7 @@
             ]
           },
           {
-            "name": "Phong Evans",
+            "name": "Phong Evans (Stade Rennais #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -9607,7 +9605,7 @@
             ]
           },
           {
-            "name": "Andrea Wright",
+            "name": "Andrea Wright (Stade Rennais #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -9680,7 +9678,7 @@
         "img_url": "https://cdn.sofifa.net/teams/70/60.png",
         "players": [
           {
-            "name": "Tuan Adams",
+            "name": "Tuan Adams (Montpellier HSC #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -9742,7 +9740,7 @@
             ]
           },
           {
-            "name": "Bao Scott",
+            "name": "Bao Scott (Montpellier HSC #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -9771,7 +9769,7 @@
             ]
           },
           {
-            "name": "James Chau",
+            "name": "James Chau (Montpellier HSC #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -9837,7 +9835,7 @@
             ]
           },
           {
-            "name": "Matteo Bianchi",
+            "name": "Matteo Bianchi (Montpellier HSC #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -9903,7 +9901,7 @@
             ]
           },
           {
-            "name": "David Romano",
+            "name": "David Romano (Montpellier HSC #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -10006,7 +10004,7 @@
             ]
           },
           {
-            "name": "Kai Pham",
+            "name": "Kai Pham (Montpellier HSC #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -10046,7 +10044,7 @@
         "img_url": "https://cdn.sofifa.net/teams/71/60.png",
         "players": [
           {
-            "name": "Max Wright",
+            "name": "Max Wright (FC Nantes #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -10236,7 +10234,7 @@
             ]
           },
           {
-            "name": "Jack Walker",
+            "name": "Jack Walker (FC Nantes #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -10302,7 +10300,7 @@
             ]
           },
           {
-            "name": "Ethan Nguyen",
+            "name": "Ethan Nguyen (FC Nantes #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -10372,7 +10370,7 @@
             ]
           },
           {
-            "name": "Max Taylor",
+            "name": "Max Taylor (FC Nantes #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -10503,7 +10501,7 @@
             ]
           },
           {
-            "name": "Hugo Taylor",
+            "name": "Hugo Taylor (Stade Brestois 29 #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -10635,7 +10633,7 @@
             ]
           },
           {
-            "name": "Duc Hill",
+            "name": "Duc Hill (Stade Brestois 29 #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -10704,7 +10702,7 @@
             ]
           },
           {
-            "name": "Phong Moretti",
+            "name": "Phong Moretti (Stade Brestois 29 #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -10901,7 +10899,7 @@
             ]
           },
           {
-            "name": "Son Carter",
+            "name": "Son Carter (Toulouse FC #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -10934,7 +10932,7 @@
             ]
           },
           {
-            "name": "Tuan Adams",
+            "name": "Tuan Adams (Toulouse FC #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -10967,7 +10965,7 @@
             ]
           },
           {
-            "name": "Jack Walker",
+            "name": "Jack Walker (Toulouse FC #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -11099,7 +11097,7 @@
             ]
           },
           {
-            "name": "Khoa Baker",
+            "name": "Khoa Baker (Toulouse FC #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -11139,7 +11137,7 @@
         "img_url": "https://cdn.sofifa.net/teams/76/60.png",
         "players": [
           {
-            "name": "Luca Thomas",
+            "name": "Luca Thomas (RC Strasbourg #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -11201,7 +11199,7 @@
             ]
           },
           {
-            "name": "Long Ferrari",
+            "name": "Long Ferrari (RC Strasbourg #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -11263,7 +11261,7 @@
             ]
           },
           {
-            "name": "Andrea Bianchi",
+            "name": "Andrea Bianchi (RC Strasbourg #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -11296,7 +11294,7 @@
             ]
           },
           {
-            "name": "Tuan Phan",
+            "name": "Tuan Phan (RC Strasbourg #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -11329,7 +11327,7 @@
             ]
           },
           {
-            "name": "Julian Moore",
+            "name": "Julian Moore (RC Strasbourg #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -11362,7 +11360,7 @@
             ]
           },
           {
-            "name": "Khanh Clark",
+            "name": "Khanh Clark (RC Strasbourg #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -11428,7 +11426,7 @@
             ]
           },
           {
-            "name": "Khoa Thomas",
+            "name": "Khoa Thomas (RC Strasbourg #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -11501,7 +11499,7 @@
         "img_url": "https://cdn.sofifa.net/teams/1819/60.png",
         "players": [
           {
-            "name": "Minh King",
+            "name": "Minh King (Le Havre AC #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -11530,7 +11528,7 @@
             ]
           },
           {
-            "name": "Luca Romano",
+            "name": "Luca Romano (Le Havre AC #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -11790,7 +11788,7 @@
             ]
           },
           {
-            "name": "Sam Dang",
+            "name": "Sam Dang (Le Havre AC #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -11823,7 +11821,7 @@
             ]
           },
           {
-            "name": "Daniel Hughes",
+            "name": "Daniel Hughes (Le Havre AC #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -11866,7 +11864,7 @@
         "img_url": "https://cdn.sofifa.net/teams/68/60.png",
         "players": [
           {
-            "name": "Liam Pham",
+            "name": "Liam Pham (FC Metz #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -12059,7 +12057,7 @@
             ]
           },
           {
-            "name": "Theo Bui",
+            "name": "Theo Bui (FC Metz #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -12165,7 +12163,7 @@
             ]
           },
           {
-            "name": "Lucas Moore",
+            "name": "Lucas Moore (FC Metz #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -12202,7 +12200,7 @@
             ]
           },
           {
-            "name": "Long Adams",
+            "name": "Long Adams (FC Metz #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -12246,7 +12244,7 @@
         "img_url": "https://cdn.sofifa.net/teams/379/60.png",
         "players": [
           {
-            "name": "Ethan King",
+            "name": "Ethan King (Stade de Reims #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -12308,7 +12306,7 @@
             ]
           },
           {
-            "name": "David Johnson",
+            "name": "David Johnson (Stade de Reims #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -12370,7 +12368,7 @@
             ]
           },
           {
-            "name": "Tom Wright",
+            "name": "Tom Wright (Stade de Reims #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -12736,7 +12734,7 @@
             ]
           },
           {
-            "name": "Jonas Evans",
+            "name": "Jonas Evans (Angers SCO #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -12901,7 +12899,7 @@
             ]
           },
           {
-            "name": "Sam White",
+            "name": "Sam White (Angers SCO #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -13003,7 +13001,7 @@
             ]
           },
           {
-            "name": "Ben Wright",
+            "name": "Ben Wright (AJ Auxerre #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -13098,7 +13096,7 @@
             ]
           },
           {
-            "name": "Harry Johnson",
+            "name": "Harry Johnson (AJ Auxerre #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -13300,7 +13298,7 @@
             ]
           },
           {
-            "name": "Jonas White",
+            "name": "Jonas White (AJ Auxerre #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -13340,7 +13338,7 @@
         "img_url": "https://cdn.sofifa.net/teams/217/60.png",
         "players": [
           {
-            "name": "Khanh Romano",
+            "name": "Khanh Romano (FC Lorient #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -13402,7 +13400,7 @@
             ]
           },
           {
-            "name": "Harry Clark",
+            "name": "Harry Clark (FC Lorient #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -13431,7 +13429,7 @@
             ]
           },
           {
-            "name": "Alex Turner",
+            "name": "Alex Turner (FC Lorient #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -13464,7 +13462,7 @@
             ]
           },
           {
-            "name": "Leo King",
+            "name": "Leo King (FC Lorient #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -13500,7 +13498,7 @@
             ]
           },
           {
-            "name": "Liam Lewis",
+            "name": "Liam Lewis (FC Lorient #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -13566,7 +13564,7 @@
             ]
           },
           {
-            "name": "Elias Hill",
+            "name": "Elias Hill (FC Lorient #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -13665,7 +13663,7 @@
             ]
           },
           {
-            "name": "Theo Moore",
+            "name": "Theo Moore (FC Lorient #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -13734,7 +13732,7 @@
             ]
           },
           {
-            "name": "Oliver Evans",
+            "name": "Oliver Evans (Clermont Foot 63 #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -13770,7 +13768,7 @@
             ]
           },
           {
-            "name": "Nam Lewis",
+            "name": "Nam Lewis (Clermont Foot 63 #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -13799,7 +13797,7 @@
             ]
           },
           {
-            "name": "Huy King",
+            "name": "Huy King (Clermont Foot 63 #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -13865,7 +13863,7 @@
             ]
           },
           {
-            "name": "Sam Hoang",
+            "name": "Sam Hoang (Clermont Foot 63 #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -13934,7 +13932,7 @@
             ]
           },
           {
-            "name": "Huy Wright",
+            "name": "Huy Wright (Clermont Foot 63 #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -14080,7 +14078,7 @@
         "img_url": "https://cdn.sofifa.net/teams/243/60.png",
         "players": [
           {
-            "name": "Ryan Ferrari",
+            "name": "Ryan Ferrari (Real Madrid #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -14171,7 +14169,7 @@
             ]
           },
           {
-            "name": "David Romano",
+            "name": "David Romano (Real Madrid #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -14369,7 +14367,7 @@
             ]
           },
           {
-            "name": "Oliver Le",
+            "name": "Oliver Le (Real Madrid #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -14442,7 +14440,7 @@
         "img_url": "https://cdn.sofifa.net/teams/241/60.png",
         "players": [
           {
-            "name": "Sam Brown",
+            "name": "Sam Brown (FC Barcelona #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -14471,7 +14469,7 @@
             ]
           },
           {
-            "name": "Theo Ricci",
+            "name": "Theo Ricci (FC Barcelona #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -14504,7 +14502,7 @@
             ]
           },
           {
-            "name": "Son Johnson",
+            "name": "Son Johnson (FC Barcelona #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -14572,7 +14570,7 @@
             ]
           },
           {
-            "name": "Andrea Hughes",
+            "name": "Andrea Hughes (FC Barcelona #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -14638,7 +14636,7 @@
             ]
           },
           {
-            "name": "Minh Baker",
+            "name": "Minh Baker (FC Barcelona #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -14671,7 +14669,7 @@
             ]
           },
           {
-            "name": "Khanh Green",
+            "name": "Khanh Green (FC Barcelona #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -14839,7 +14837,7 @@
             ]
           },
           {
-            "name": "Liam Pham",
+            "name": "Liam Pham (Atlético Madrid #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -14934,7 +14932,7 @@
             ]
           },
           {
-            "name": "Andrea Thomas",
+            "name": "Andrea Thomas (Atlético Madrid #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -15000,7 +14998,7 @@
             ]
           },
           {
-            "name": "Khanh Romano",
+            "name": "Khanh Romano (Atlético Madrid #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -15136,7 +15134,7 @@
             ]
           },
           {
-            "name": "Hugo Vu",
+            "name": "Hugo Vu (Atlético Madrid #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -15176,7 +15174,7 @@
         "img_url": "https://cdn.sofifa.net/teams/448/60.png",
         "players": [
           {
-            "name": "Khoa Ly",
+            "name": "Khoa Ly (Athletic Club #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -15205,7 +15203,7 @@
             ]
           },
           {
-            "name": "Noah Esposito",
+            "name": "Noah Esposito (Athletic Club #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -15238,7 +15236,7 @@
             ]
           },
           {
-            "name": "David Johnson",
+            "name": "David Johnson (Athletic Club #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -15267,7 +15265,7 @@
             ]
           },
           {
-            "name": "Nam Turner",
+            "name": "Nam Turner (Athletic Club #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -15333,7 +15331,7 @@
             ]
           },
           {
-            "name": "Daniel Parker",
+            "name": "Daniel Parker (Athletic Club #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -15510,7 +15508,7 @@
             ]
           },
           {
-            "name": "Ryan Martin",
+            "name": "Ryan Martin (Athletic Club #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -15550,7 +15548,7 @@
         "img_url": "https://cdn.sofifa.net/teams/457/60.png",
         "players": [
           {
-            "name": "Khoa Moretti",
+            "name": "Khoa Moretti (Real Sociedad #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -15612,7 +15610,7 @@
             ]
           },
           {
-            "name": "Felix Tran",
+            "name": "Felix Tran (Real Sociedad #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -15641,7 +15639,7 @@
             ]
           },
           {
-            "name": "Kai Johnson",
+            "name": "Kai Johnson (Real Sociedad #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -15707,7 +15705,7 @@
             ]
           },
           {
-            "name": "Tuan Esposito",
+            "name": "Tuan Esposito (Real Sociedad #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -15744,7 +15742,7 @@
             ]
           },
           {
-            "name": "Duy Martin",
+            "name": "Duy Martin (Real Sociedad #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -15847,7 +15845,7 @@
             ]
           },
           {
-            "name": "Ben Wright",
+            "name": "Ben Wright (Real Sociedad #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -15920,7 +15918,7 @@
         "img_url": "https://cdn.sofifa.net/teams/449/60.png",
         "players": [
           {
-            "name": "Noah Evans",
+            "name": "Noah Evans (Real Betis #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -15949,7 +15947,7 @@
             ]
           },
           {
-            "name": "Khanh Clark",
+            "name": "Khanh Clark (Real Betis #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -15982,7 +15980,7 @@
             ]
           },
           {
-            "name": "Daniel Wilson",
+            "name": "Daniel Wilson (Real Betis #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -16147,7 +16145,7 @@
             ]
           },
           {
-            "name": "Duc Hill",
+            "name": "Duc Hill (Real Betis #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -16184,7 +16182,7 @@
             ]
           },
           {
-            "name": "Tom Young",
+            "name": "Tom Young (Real Betis #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -16221,7 +16219,7 @@
             ]
           },
           {
-            "name": "Julian Young",
+            "name": "Julian Young (Real Betis #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -16421,7 +16419,7 @@
             ]
           },
           {
-            "name": "Mason Taylor",
+            "name": "Mason Taylor (Sevilla FC #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -16520,7 +16518,7 @@
             ]
           },
           {
-            "name": "Felix White",
+            "name": "Felix White (Sevilla FC #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -16556,7 +16554,7 @@
             ]
           },
           {
-            "name": "Jonas Hughes",
+            "name": "Jonas Hughes (Sevilla FC #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -16593,7 +16591,7 @@
             ]
           },
           {
-            "name": "Sam Hughes",
+            "name": "Sam Hughes (Sevilla FC #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -16626,7 +16624,7 @@
             ]
           },
           {
-            "name": "Andrea Tran",
+            "name": "Andrea Tran (Sevilla FC #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -16670,7 +16668,7 @@
         "img_url": "https://cdn.sofifa.net/teams/483/60.png",
         "players": [
           {
-            "name": "Alex Turner",
+            "name": "Alex Turner (Villarreal CF #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -16794,7 +16792,7 @@
             ]
           },
           {
-            "name": "Sam Hughes",
+            "name": "Sam Hughes (Villarreal CF #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -16899,7 +16897,7 @@
             ]
           },
           {
-            "name": "Marco Hill",
+            "name": "Marco Hill (Villarreal CF #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -17075,7 +17073,7 @@
             ]
           },
           {
-            "name": "Son Esposito",
+            "name": "Son Esposito (Valencia CF #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -17209,7 +17207,7 @@
             ]
           },
           {
-            "name": "Kai Ferrari",
+            "name": "Kai Ferrari (Valencia CF #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -17245,7 +17243,7 @@
             ]
           },
           {
-            "name": "Theo Parker",
+            "name": "Theo Parker (Valencia CF #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -17458,7 +17456,7 @@
             ]
           },
           {
-            "name": "Khanh Wilson",
+            "name": "Khanh Wilson (Getafe CF #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -17553,7 +17551,7 @@
             ]
           },
           {
-            "name": "Son Johnson",
+            "name": "Son Johnson (Getafe CF #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -17691,7 +17689,7 @@
             ]
           },
           {
-            "name": "Khoa Ly",
+            "name": "Khoa Ly (Getafe CF #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -17724,7 +17722,7 @@
             ]
           },
           {
-            "name": "Ryan Bui",
+            "name": "Ryan Bui (Getafe CF #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -17761,7 +17759,7 @@
             ]
           },
           {
-            "name": "Long Ferrari",
+            "name": "Long Ferrari (Getafe CF #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -17834,7 +17832,7 @@
             ]
           },
           {
-            "name": "Khanh Rossi",
+            "name": "Khanh Rossi (Rayo Vallecano #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -17896,7 +17894,7 @@
             ]
           },
           {
-            "name": "Chris Nguyen",
+            "name": "Chris Nguyen (Rayo Vallecano #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -17929,7 +17927,7 @@
             ]
           },
           {
-            "name": "Oliver Parker",
+            "name": "Oliver Parker (Rayo Vallecano #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -18035,7 +18033,7 @@
             ]
           },
           {
-            "name": "Hugo Tran",
+            "name": "Hugo Tran (Rayo Vallecano #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -18101,7 +18099,7 @@
             ]
           },
           {
-            "name": "Nico Lewis",
+            "name": "Nico Lewis (Rayo Vallecano #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -18298,7 +18296,7 @@
             ]
           },
           {
-            "name": "Luke Wilson",
+            "name": "Luke Wilson (CA Osasuna #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -18397,7 +18395,7 @@
             ]
           },
           {
-            "name": "Theo Romano",
+            "name": "Theo Romano (CA Osasuna #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -18499,7 +18497,7 @@
             ]
           },
           {
-            "name": "Phuc Le",
+            "name": "Phuc Le (CA Osasuna #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -18539,7 +18537,7 @@
         "img_url": "https://cdn.sofifa.net/teams/453/60.png",
         "players": [
           {
-            "name": "James Lombardi",
+            "name": "James Lombardi (RCD Mallorca #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -18601,7 +18599,7 @@
             ]
           },
           {
-            "name": "Minh Collins",
+            "name": "Minh Collins (RCD Mallorca #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -18630,7 +18628,7 @@
             ]
           },
           {
-            "name": "Luca Romano",
+            "name": "Luca Romano (RCD Mallorca #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -18696,7 +18694,7 @@
             ]
           },
           {
-            "name": "Khoa Thomas",
+            "name": "Khoa Thomas (RCD Mallorca #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -18729,7 +18727,7 @@
             ]
           },
           {
-            "name": "Mason Le",
+            "name": "Mason Le (RCD Mallorca #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -18762,7 +18760,7 @@
             ]
           },
           {
-            "name": "Tuan Romano",
+            "name": "Tuan Romano (RCD Mallorca #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -18828,7 +18826,7 @@
             ]
           },
           {
-            "name": "Harry Le",
+            "name": "Harry Le (RCD Mallorca #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -18930,7 +18928,7 @@
             ]
           },
           {
-            "name": "Aaron Rossi",
+            "name": "Aaron Rossi (RC Celta de Vigo #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -19058,7 +19056,7 @@
             ]
           },
           {
-            "name": "Marco Dang",
+            "name": "Marco Dang (RC Celta de Vigo #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -19091,7 +19089,7 @@
             ]
           },
           {
-            "name": "Phuc Ly",
+            "name": "Phuc Ly (RC Celta de Vigo #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -19124,7 +19122,7 @@
             ]
           },
           {
-            "name": "Aaron Parker",
+            "name": "Aaron Parker (RC Celta de Vigo #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -19592,7 +19590,7 @@
             ]
           },
           {
-            "name": "Huy Ward",
+            "name": "Huy Ward (Girona FC #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -19635,7 +19633,7 @@
         "img_url": "https://cdn.sofifa.net/teams/463/60.png",
         "players": [
           {
-            "name": "Felix Adams",
+            "name": "Felix Adams (Deportivo Alavés #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -19697,7 +19695,7 @@
             ]
           },
           {
-            "name": "Chris Smith",
+            "name": "Chris Smith (Deportivo Alavés #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -19726,7 +19724,7 @@
             ]
           },
           {
-            "name": "Kai Rossi",
+            "name": "Kai Rossi (Deportivo Alavés #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -19759,7 +19757,7 @@
             ]
           },
           {
-            "name": "Julian Wright",
+            "name": "Julian Wright (Deportivo Alavés #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -19825,7 +19823,7 @@
             ]
           },
           {
-            "name": "Oliver Evans",
+            "name": "Oliver Evans (Deportivo Alavés #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -19891,7 +19889,7 @@
             ]
           },
           {
-            "name": "Milan Allen",
+            "name": "Milan Allen (Deportivo Alavés #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -20063,7 +20061,7 @@
             ]
           },
           {
-            "name": "Matteo Collins",
+            "name": "Matteo Collins (RCD Espanyol #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -20161,7 +20159,7 @@
             ]
           },
           {
-            "name": "Leo Hughes",
+            "name": "Leo Hughes (RCD Espanyol #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -20197,7 +20195,7 @@
             ]
           },
           {
-            "name": "Jack White",
+            "name": "Jack White (RCD Espanyol #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -20302,7 +20300,7 @@
             ]
           },
           {
-            "name": "Felix Bui",
+            "name": "Felix Bui (RCD Espanyol #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -20335,7 +20333,7 @@
             ]
           },
           {
-            "name": "Quang Harris",
+            "name": "Quang Harris (RCD Espanyol #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -20437,7 +20435,7 @@
             ]
           },
           {
-            "name": "Quang Parker",
+            "name": "Quang Parker (Levante UD #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -20469,7 +20467,7 @@
             ]
           },
           {
-            "name": "Ethan Wright",
+            "name": "Ethan Wright (Levante UD #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -20571,7 +20569,7 @@
             ]
           },
           {
-            "name": "Mason Smith",
+            "name": "Mason Smith (Levante UD #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -20775,7 +20773,7 @@
             ]
           },
           {
-            "name": "Ryan Romano",
+            "name": "Ryan Romano (Elche CF #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -20945,7 +20943,7 @@
             ]
           },
           {
-            "name": "Theo Ricci",
+            "name": "Theo Ricci (Elche CF #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -20978,7 +20976,7 @@
             ]
           },
           {
-            "name": "Kai Young",
+            "name": "Kai Young (Elche CF #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -21014,7 +21012,7 @@
             ]
           },
           {
-            "name": "Son Adams",
+            "name": "Son Adams (Elche CF #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -21247,7 +21245,7 @@
             ]
           },
           {
-            "name": "Son Parker",
+            "name": "Son Parker (Real Oviedo #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -21382,7 +21380,7 @@
             ]
           },
           {
-            "name": "Oliver Parker",
+            "name": "Oliver Parker (Real Oviedo #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -21563,7 +21561,7 @@
             ]
           },
           {
-            "name": "Julian Carter",
+            "name": "Julian Carter (AC Milan #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -21661,7 +21659,7 @@
             ]
           },
           {
-            "name": "Liam Nguyen",
+            "name": "Liam Nguyen (AC Milan #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -21694,7 +21692,7 @@
             ]
           },
           {
-            "name": "Daniel Young",
+            "name": "Daniel Young (AC Milan #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -21903,7 +21901,7 @@
             ]
           },
           {
-            "name": "Liam Hill",
+            "name": "Liam Hill (Inter #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -21965,7 +21963,7 @@
             ]
           },
           {
-            "name": "Chris Smith",
+            "name": "Chris Smith (Inter #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -22104,7 +22102,7 @@
             ]
           },
           {
-            "name": "Quang Vu",
+            "name": "Quang Vu (Inter #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -22141,7 +22139,7 @@
             ]
           },
           {
-            "name": "Max Taylor",
+            "name": "Max Taylor (Inter #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -22207,7 +22205,7 @@
             ]
           },
           {
-            "name": "Milan Wilson",
+            "name": "Milan Wilson (Inter #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -22309,7 +22307,7 @@
             ]
           },
           {
-            "name": "Noah Thomas",
+            "name": "Noah Thomas (Juventus #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -22338,7 +22336,7 @@
             ]
           },
           {
-            "name": "Milan Brown",
+            "name": "Milan Brown (Juventus #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -22371,7 +22369,7 @@
             ]
           },
           {
-            "name": "Ben Johnson",
+            "name": "Ben Johnson (Juventus #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -22404,7 +22402,7 @@
             ]
           },
           {
-            "name": "Mason Taylor",
+            "name": "Mason Taylor (Juventus #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -22470,7 +22468,7 @@
             ]
           },
           {
-            "name": "Huy Do",
+            "name": "Huy Do (Juventus #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -22540,7 +22538,7 @@
             ]
           },
           {
-            "name": "Julian Nguyen",
+            "name": "Julian Nguyen (Juventus #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -22679,7 +22677,7 @@
             ]
           },
           {
-            "name": "Jack Lewis",
+            "name": "Jack Lewis (Napoli #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -22708,7 +22706,7 @@
             ]
           },
           {
-            "name": "Lucas Dang",
+            "name": "Lucas Dang (Napoli #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -22883,7 +22881,7 @@
             ]
           },
           {
-            "name": "Leo King",
+            "name": "Leo King (Napoli #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -22953,7 +22951,7 @@
             ]
           },
           {
-            "name": "Duc Ward",
+            "name": "Duc Ward (Napoli #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -23026,7 +23024,7 @@
             ]
           },
           {
-            "name": "Sam White",
+            "name": "Sam White (AS Roma #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -23059,7 +23057,7 @@
             ]
           },
           {
-            "name": "Quang Evans",
+            "name": "Quang Evans (AS Roma #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -23121,7 +23119,7 @@
             ]
           },
           {
-            "name": "An Adams",
+            "name": "An Adams (AS Roma #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -23392,7 +23390,7 @@
             ]
           },
           {
-            "name": "Milan Lombardi",
+            "name": "Milan Lombardi (Lazio #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -23457,7 +23455,7 @@
             ]
           },
           {
-            "name": "Noah Hughes",
+            "name": "Noah Hughes (Lazio #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -23523,7 +23521,7 @@
             ]
           },
           {
-            "name": "Matteo Wright",
+            "name": "Matteo Wright (Lazio #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -23626,7 +23624,7 @@
             ]
           },
           {
-            "name": "Son Thomas",
+            "name": "Son Thomas (Lazio #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -23692,7 +23690,7 @@
             ]
           },
           {
-            "name": "Noah Thomas",
+            "name": "Noah Thomas (Lazio #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -23798,7 +23796,7 @@
             ]
           },
           {
-            "name": "Leo Hughes",
+            "name": "Leo Hughes (Atalanta #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -23827,7 +23825,7 @@
             ]
           },
           {
-            "name": "Long Ricci",
+            "name": "Long Ricci (Atalanta #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -23893,7 +23891,7 @@
             ]
           },
           {
-            "name": "Kai Rossi",
+            "name": "Kai Rossi (Atalanta #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -24263,7 +24261,7 @@
             ]
           },
           {
-            "name": "Felix Bui",
+            "name": "Felix Bui (Fiorentina #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -24332,7 +24330,7 @@
             ]
           },
           {
-            "name": "Nam Lewis",
+            "name": "Nam Lewis (Fiorentina #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -24369,7 +24367,7 @@
             ]
           },
           {
-            "name": "Kai Ward",
+            "name": "Kai Ward (Fiorentina #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -24402,7 +24400,7 @@
             ]
           },
           {
-            "name": "Hugo Do",
+            "name": "Hugo Do (Fiorentina #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -24435,7 +24433,7 @@
             ]
           },
           {
-            "name": "Chris Harris",
+            "name": "Chris Harris (Fiorentina #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -24541,7 +24539,7 @@
             ]
           },
           {
-            "name": "Duy Martin",
+            "name": "Duy Martin (Bologna #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -24645,7 +24643,7 @@
             ]
           },
           {
-            "name": "Tuan Do",
+            "name": "Tuan Do (Bologna #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -24747,7 +24745,7 @@
             ]
           },
           {
-            "name": "Quang Romano",
+            "name": "Quang Romano (Bologna #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -24813,7 +24811,7 @@
             ]
           },
           {
-            "name": "Adam Hill",
+            "name": "Adam Hill (Bologna #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -24853,7 +24851,7 @@
         "img_url": "https://cdn.sofifa.net/teams/54/60.png",
         "players": [
           {
-            "name": "Ethan Scott",
+            "name": "Ethan Scott (Torino #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -24882,7 +24880,7 @@
             ]
           },
           {
-            "name": "Ben Taylor",
+            "name": "Ben Taylor (Torino #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -24915,7 +24913,7 @@
             ]
           },
           {
-            "name": "Minh Allen",
+            "name": "Minh Allen (Torino #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -25043,7 +25041,7 @@
             ]
           },
           {
-            "name": "Noah Hughes",
+            "name": "Noah Hughes (Torino #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -25112,7 +25110,7 @@
             ]
           },
           {
-            "name": "Noah Wilson",
+            "name": "Noah Wilson (Torino #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -25145,7 +25143,7 @@
             ]
           },
           {
-            "name": "Minh Baker",
+            "name": "Minh Baker (Torino #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -25247,7 +25245,7 @@
             ]
           },
           {
-            "name": "James Pham",
+            "name": "James Pham (Udinese #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -25280,7 +25278,7 @@
             ]
           },
           {
-            "name": "Jack White",
+            "name": "Jack White (Udinese #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -25342,7 +25340,7 @@
             ]
           },
           {
-            "name": "Long Ricci",
+            "name": "Long Ricci (Udinese #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -25375,7 +25373,7 @@
             ]
           },
           {
-            "name": "Kai Ferrari",
+            "name": "Kai Ferrari (Udinese #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -25408,7 +25406,7 @@
             ]
           },
           {
-            "name": "Mason Harris",
+            "name": "Mason Harris (Udinese #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -25444,7 +25442,7 @@
             ]
           },
           {
-            "name": "Phuc Wright",
+            "name": "Phuc Wright (Udinese #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -25510,7 +25508,7 @@
             ]
           },
           {
-            "name": "Phuc Ward",
+            "name": "Phuc Ward (Udinese #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -25743,7 +25741,7 @@
             ]
           },
           {
-            "name": "Felix Adams",
+            "name": "Felix Adams (Genoa #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -25779,7 +25777,7 @@
             ]
           },
           {
-            "name": "Son King",
+            "name": "Son King (Genoa #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -25954,7 +25952,7 @@
         "img_url": "https://cdn.sofifa.net/teams/1746/60.png",
         "players": [
           {
-            "name": "Khoa Baker",
+            "name": "Khoa Baker (Como #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -25983,7 +25981,7 @@
             ]
           },
           {
-            "name": "Minh Allen",
+            "name": "Minh Allen (Como #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -26078,7 +26076,7 @@
             ]
           },
           {
-            "name": "Son Parker",
+            "name": "Son Parker (Como #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -26276,7 +26274,7 @@
             ]
           },
           {
-            "name": "Luke Wilson",
+            "name": "Luke Wilson (Como #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -26320,7 +26318,7 @@
         "img_url": "https://cdn.sofifa.net/teams/50/60.png",
         "players": [
           {
-            "name": "Duy Ward",
+            "name": "Duy Ward (Parma #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -26349,7 +26347,7 @@
             ]
           },
           {
-            "name": "Oliver Taylor",
+            "name": "Oliver Taylor (Parma #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -26382,7 +26380,7 @@
             ]
           },
           {
-            "name": "Luca Adams",
+            "name": "Luca Adams (Parma #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -26513,7 +26511,7 @@
             ]
           },
           {
-            "name": "Marco Hill",
+            "name": "Marco Hill (Parma #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -26653,7 +26651,7 @@
             ]
           },
           {
-            "name": "Andrea Moretti",
+            "name": "Andrea Moretti (Parma #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -26784,7 +26782,7 @@
             ]
           },
           {
-            "name": "Phuc Esposito",
+            "name": "Phuc Esposito (Hellas Verona #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -26850,7 +26848,7 @@
             ]
           },
           {
-            "name": "Mason Young",
+            "name": "Mason Young (Hellas Verona #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -26883,7 +26881,7 @@
             ]
           },
           {
-            "name": "Hugo Tran",
+            "name": "Hugo Tran (Hellas Verona #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -26916,7 +26914,7 @@
             ]
           },
           {
-            "name": "Hugo Walker",
+            "name": "Hugo Walker (Hellas Verona #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -26952,7 +26950,7 @@
             ]
           },
           {
-            "name": "Julian Smith",
+            "name": "Julian Smith (Hellas Verona #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -26989,7 +26987,7 @@
             ]
           },
           {
-            "name": "Ben Johnson",
+            "name": "Ben Johnson (Hellas Verona #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -27022,7 +27020,7 @@
             ]
           },
           {
-            "name": "Quang Vu",
+            "name": "Quang Vu (Hellas Verona #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -27124,7 +27122,7 @@
             ]
           },
           {
-            "name": "An Collins",
+            "name": "An Collins (Cagliari #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -27153,7 +27151,7 @@
             ]
           },
           {
-            "name": "Daniel Nguyen",
+            "name": "Daniel Nguyen (Cagliari #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -27186,7 +27184,7 @@
             ]
           },
           {
-            "name": "Sam Scott",
+            "name": "Sam Scott (Cagliari #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -27285,7 +27283,7 @@
             ]
           },
           {
-            "name": "Chris Harris",
+            "name": "Chris Harris (Cagliari #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -27431,7 +27429,7 @@
         "img_url": "https://cdn.sofifa.net/teams/347/60.png",
         "players": [
           {
-            "name": "Ben Baker",
+            "name": "Ben Baker (Lecce #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -27460,7 +27458,7 @@
             ]
           },
           {
-            "name": "Jack Smith",
+            "name": "Jack Smith (Lecce #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -27493,7 +27491,7 @@
             ]
           },
           {
-            "name": "Hugo Vu",
+            "name": "Hugo Vu (Lecce #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -27555,7 +27553,7 @@
             ]
           },
           {
-            "name": "Jack Romano",
+            "name": "Jack Romano (Lecce #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -27588,7 +27586,7 @@
             ]
           },
           {
-            "name": "Noah Baker",
+            "name": "Noah Baker (Lecce #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -27621,7 +27619,7 @@
             ]
           },
           {
-            "name": "Julian Moore",
+            "name": "Julian Moore (Lecce #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -27654,7 +27652,7 @@
             ]
           },
           {
-            "name": "Phong Evans",
+            "name": "Phong Evans (Lecce #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -27720,7 +27718,7 @@
             ]
           },
           {
-            "name": "Sam Parker",
+            "name": "Sam Parker (Lecce #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -27796,7 +27794,7 @@
         "img_url": "https://cdn.sofifa.net/teams/111974/60.png",
         "players": [
           {
-            "name": "Ethan King",
+            "name": "Ethan King (Sassuolo #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -28025,7 +28023,7 @@
             ]
           },
           {
-            "name": "Luca Thomas",
+            "name": "Luca Thomas (Sassuolo #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -28091,7 +28089,7 @@
             ]
           },
           {
-            "name": "Lucas Wilson",
+            "name": "Lucas Wilson (Sassuolo #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -28229,7 +28227,7 @@
             ]
           },
           {
-            "name": "Ethan Nguyen",
+            "name": "Ethan Nguyen (Pisa #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -28258,7 +28256,7 @@
             ]
           },
           {
-            "name": "Noah Thomas",
+            "name": "Noah Thomas (Pisa #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -28291,7 +28289,7 @@
             ]
           },
           {
-            "name": "Oliver Evans",
+            "name": "Oliver Evans (Pisa #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -28360,7 +28358,7 @@
             ]
           },
           {
-            "name": "Mason Moore",
+            "name": "Mason Moore (Pisa #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -28429,7 +28427,7 @@
             ]
           },
           {
-            "name": "Huy Ward",
+            "name": "Huy Ward (Pisa #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -28466,7 +28464,7 @@
             ]
           },
           {
-            "name": "Tuan Do",
+            "name": "Tuan Do (Pisa #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -28543,7 +28541,7 @@
         "img_url": "https://cdn.sofifa.net/teams/111434/60.png",
         "players": [
           {
-            "name": "Huy Do",
+            "name": "Huy Do (Cremonese #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -28572,7 +28570,7 @@
             ]
           },
           {
-            "name": "Sam Dang",
+            "name": "Sam Dang (Cremonese #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -28766,7 +28764,7 @@
             ]
           },
           {
-            "name": "Theo Moore",
+            "name": "Theo Moore (Cremonese #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -29006,7 +29004,7 @@
             ]
           },
           {
-            "name": "Adam Walker",
+            "name": "Adam Walker (Bayern Munich #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -29075,7 +29073,7 @@
             ]
           },
           {
-            "name": "Phong King",
+            "name": "Phong King (Bayern Munich #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -29111,7 +29109,7 @@
             ]
           },
           {
-            "name": "Phuc Ly",
+            "name": "Phuc Ly (Bayern Munich #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -29177,7 +29175,7 @@
             ]
           },
           {
-            "name": "David Phan",
+            "name": "David Phan (Bayern Munich #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -29312,7 +29310,7 @@
             ]
           },
           {
-            "name": "Daniel Nguyen",
+            "name": "Daniel Nguyen (Borussia Dortmund #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -29576,7 +29574,7 @@
             ]
           },
           {
-            "name": "Luca Ngo",
+            "name": "Luca Ngo (Borussia Dortmund #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -29653,7 +29651,7 @@
         "img_url": "https://cdn.sofifa.net/teams/112172/60.png",
         "players": [
           {
-            "name": "Luca Taylor",
+            "name": "Luca Taylor (RB Leipzig #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -29715,7 +29713,7 @@
             ]
           },
           {
-            "name": "Nam Romano",
+            "name": "Nam Romano (RB Leipzig #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -29744,7 +29742,7 @@
             ]
           },
           {
-            "name": "Liam Bui",
+            "name": "Liam Bui (RB Leipzig #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -29846,7 +29844,7 @@
             ]
           },
           {
-            "name": "Ryan Allen",
+            "name": "Ryan Allen (RB Leipzig #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -29912,7 +29910,7 @@
             ]
           },
           {
-            "name": "David Bianchi",
+            "name": "David Bianchi (RB Leipzig #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -30245,7 +30243,7 @@
             ]
           },
           {
-            "name": "Mason Smith",
+            "name": "Mason Smith (Bayer 04 Leverkusen #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -30450,7 +30448,7 @@
             ]
           },
           {
-            "name": "Noah Evans",
+            "name": "Noah Evans (Eintracht Frankfurt #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -30479,7 +30477,7 @@
             ]
           },
           {
-            "name": "Quang Evans",
+            "name": "Quang Evans (Eintracht Frankfurt #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -30515,7 +30513,7 @@
             ]
           },
           {
-            "name": "Andrea Clark",
+            "name": "Andrea Clark (Eintracht Frankfurt #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -30581,7 +30579,7 @@
             ]
           },
           {
-            "name": "Julian Scott",
+            "name": "Julian Scott (Eintracht Frankfurt #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -30757,7 +30755,7 @@
         "img_url": "https://cdn.sofifa.net/teams/25/60.png",
         "players": [
           {
-            "name": "Max Wright",
+            "name": "Max Wright (SC Freiburg #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -30819,7 +30817,7 @@
             ]
           },
           {
-            "name": "Phuc Baker",
+            "name": "Phuc Baker (SC Freiburg #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -30848,7 +30846,7 @@
             ]
           },
           {
-            "name": "Matteo Collins",
+            "name": "Matteo Collins (SC Freiburg #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -31082,7 +31080,7 @@
             ]
           },
           {
-            "name": "Phuc Ward",
+            "name": "Phuc Ward (SC Freiburg #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -31122,7 +31120,7 @@
         "img_url": "https://cdn.sofifa.net/teams/36/60.png",
         "players": [
           {
-            "name": "Mason Moore",
+            "name": "Mason Moore (VfB Stuttgart #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -31187,7 +31185,7 @@
             ]
           },
           {
-            "name": "Chris Bianchi",
+            "name": "Chris Bianchi (VfB Stuttgart #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -31282,7 +31280,7 @@
             ]
           },
           {
-            "name": "Tuan Esposito",
+            "name": "Tuan Esposito (VfB Stuttgart #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -31455,7 +31453,7 @@
             ]
           },
           {
-            "name": "Kai Lewis",
+            "name": "Kai Lewis (VfB Stuttgart #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -31586,7 +31584,7 @@
             ]
           },
           {
-            "name": "Phuc Baker",
+            "name": "Phuc Baker (Borussia Mönchengladbach #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -31727,7 +31725,7 @@
             ]
           },
           {
-            "name": "Mason Harris",
+            "name": "Mason Harris (Borussia Mönchengladbach #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -31902,7 +31900,7 @@
             ]
           },
           {
-            "name": "Daniel Wilson",
+            "name": "Daniel Wilson (VfL Wolfsburg #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -31935,7 +31933,7 @@
             ]
           },
           {
-            "name": "Milan Wilson",
+            "name": "Milan Wilson (VfL Wolfsburg #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -32066,7 +32064,7 @@
             ]
           },
           {
-            "name": "Andrea Moretti",
+            "name": "Andrea Moretti (VfL Wolfsburg #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -32169,7 +32167,7 @@
             ]
           },
           {
-            "name": "Huy Lombardi",
+            "name": "Huy Lombardi (VfL Wolfsburg #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -32242,7 +32240,7 @@
         "img_url": "https://cdn.sofifa.net/teams/10029/60.png",
         "players": [
           {
-            "name": "Mason Smith",
+            "name": "Mason Smith (TSG Hoffenheim #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -32372,7 +32370,7 @@
             ]
           },
           {
-            "name": "Marco Dang",
+            "name": "Marco Dang (TSG Hoffenheim #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -32570,7 +32568,7 @@
             ]
           },
           {
-            "name": "Huy Do",
+            "name": "Huy Do (TSG Hoffenheim #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -32610,7 +32608,7 @@
         "img_url": "https://cdn.sofifa.net/teams/169/60.png",
         "players": [
           {
-            "name": "Bao Lombardi",
+            "name": "Bao Lombardi (1. FSV Mainz 05 #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -32639,7 +32637,7 @@
             ]
           },
           {
-            "name": "James Scott",
+            "name": "James Scott (1. FSV Mainz 05 #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -32701,7 +32699,7 @@
             ]
           },
           {
-            "name": "Daniel Wilson",
+            "name": "Daniel Wilson (1. FSV Mainz 05 #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -32734,7 +32732,7 @@
             ]
           },
           {
-            "name": "Huy King",
+            "name": "Huy King (1. FSV Mainz 05 #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -32770,7 +32768,7 @@
             ]
           },
           {
-            "name": "Quang Evans",
+            "name": "Quang Evans (1. FSV Mainz 05 #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -32836,7 +32834,7 @@
             ]
           },
           {
-            "name": "Aaron Parker",
+            "name": "Aaron Parker (1. FSV Mainz 05 #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -32873,7 +32871,7 @@
             ]
           },
           {
-            "name": "Ryan Ferrari",
+            "name": "Ryan Ferrari (1. FSV Mainz 05 #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -32906,7 +32904,7 @@
             ]
           },
           {
-            "name": "Noah Ricci",
+            "name": "Noah Ricci (1. FSV Mainz 05 #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -32939,7 +32937,7 @@
             ]
           },
           {
-            "name": "Theo Lombardi",
+            "name": "Theo Lombardi (1. FSV Mainz 05 #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -32979,7 +32977,7 @@
         "img_url": "https://cdn.sofifa.net/teams/100409/60.png",
         "players": [
           {
-            "name": "Luca Romano",
+            "name": "Luca Romano (FC Augsburg #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -33070,7 +33068,7 @@
             ]
           },
           {
-            "name": "Phuc Baker",
+            "name": "Phuc Baker (FC Augsburg #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -33106,7 +33104,7 @@
             ]
           },
           {
-            "name": "Long Adams",
+            "name": "Long Adams (FC Augsburg #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -33175,7 +33173,7 @@
             ]
           },
           {
-            "name": "Phuc Le",
+            "name": "Phuc Le (FC Augsburg #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -33244,7 +33242,7 @@
             ]
           },
           {
-            "name": "Mason Harris",
+            "name": "Mason Harris (FC Augsburg #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -33353,7 +33351,7 @@
         "img_url": "https://cdn.sofifa.net/teams/38/60.png",
         "players": [
           {
-            "name": "Daniel Parker",
+            "name": "Daniel Parker (Werder Bremen #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -33382,7 +33380,7 @@
             ]
           },
           {
-            "name": "Noah Wilson",
+            "name": "Noah Wilson (Werder Bremen #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -33444,7 +33442,7 @@
             ]
           },
           {
-            "name": "Harry Johnson",
+            "name": "Harry Johnson (Werder Bremen #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -33785,7 +33783,7 @@
             ]
           },
           {
-            "name": "Noah Ricci",
+            "name": "Noah Ricci (Union Berlin #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -33949,7 +33947,7 @@
             ]
           },
           {
-            "name": "Andrea Taylor",
+            "name": "Andrea Taylor (Union Berlin #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -34015,7 +34013,7 @@
             ]
           },
           {
-            "name": "Nico Do",
+            "name": "Nico Do (Union Berlin #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -34088,7 +34086,7 @@
         "img_url": "https://cdn.sofifa.net/teams/37/60.png",
         "players": [
           {
-            "name": "David Bianchi",
+            "name": "David Bianchi (FC St. Pauli #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -34248,7 +34246,7 @@
             ]
           },
           {
-            "name": "Harry Green",
+            "name": "Harry Green (FC St. Pauli #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -34281,7 +34279,7 @@
             ]
           },
           {
-            "name": "Felix Taylor",
+            "name": "Felix Taylor (FC St. Pauli #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -34347,7 +34345,7 @@
             ]
           },
           {
-            "name": "Son King",
+            "name": "Son King (FC St. Pauli #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -34380,7 +34378,7 @@
             ]
           },
           {
-            "name": "Liam Allen",
+            "name": "Liam Allen (FC St. Pauli #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -34413,7 +34411,7 @@
             ]
           },
           {
-            "name": "Adam Hill",
+            "name": "Adam Hill (FC St. Pauli #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -34453,7 +34451,7 @@
         "img_url": "https://cdn.sofifa.net/teams/31/60.png",
         "players": [
           {
-            "name": "Luke White",
+            "name": "Luke White (1. FC Köln #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -34515,7 +34513,7 @@
             ]
           },
           {
-            "name": "Ethan Clark",
+            "name": "Ethan Clark (1. FC Köln #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -34685,7 +34683,7 @@
             ]
           },
           {
-            "name": "Matteo Bianchi",
+            "name": "Matteo Bianchi (1. FC Köln #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -34755,7 +34753,7 @@
             ]
           },
           {
-            "name": "Jonas Hughes",
+            "name": "Jonas Hughes (1. FC Köln #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -34788,7 +34786,7 @@
             ]
           },
           {
-            "name": "Jonas White",
+            "name": "Jonas White (1. FC Köln #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -34828,7 +34826,7 @@
         "img_url": "https://cdn.sofifa.net/teams/28/60.png",
         "players": [
           {
-            "name": "Milan Wilson",
+            "name": "Milan Wilson (Hamburger SV #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -34890,7 +34888,7 @@
             ]
           },
           {
-            "name": "Daniel Ngo",
+            "name": "Daniel Ngo (Hamburger SV #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -34952,7 +34950,7 @@
             ]
           },
           {
-            "name": "An Adams",
+            "name": "An Adams (Hamburger SV #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -35120,7 +35118,7 @@
             ]
           },
           {
-            "name": "Theo King",
+            "name": "Theo King (Hamburger SV #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -35153,7 +35151,7 @@
             ]
           },
           {
-            "name": "Daniel Parker",
+            "name": "Daniel Parker (Hamburger SV #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -35422,7 +35420,7 @@
             ]
           },
           {
-            "name": "Luke White",
+            "name": "Luke White (1. FC Heidenheim #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -35455,7 +35453,7 @@
             ]
           },
           {
-            "name": "James Pham",
+            "name": "James Pham (1. FC Heidenheim #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -35488,7 +35486,7 @@
             ]
           },
           {
-            "name": "David Harris",
+            "name": "David Harris (1. FC Heidenheim #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -35521,7 +35519,7 @@
             ]
           },
           {
-            "name": "Elias Hill",
+            "name": "Elias Hill (1. FC Heidenheim #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -35561,7 +35559,7 @@
         "img_url": "https://cdn.sofifa.net/teams/576/60.png",
         "players": [
           {
-            "name": "Tom Taylor",
+            "name": "Tom Taylor (Holstein Kiel #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -35820,7 +35818,7 @@
             ]
           },
           {
-            "name": "Chris Bianchi",
+            "name": "Chris Bianchi (Holstein Kiel #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -35853,7 +35851,7 @@
             ]
           },
           {
-            "name": "James Lombardi",
+            "name": "James Lombardi (Holstein Kiel #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -35955,7 +35953,7 @@
             ]
           },
           {
-            "name": "Lucas Dang",
+            "name": "Lucas Dang (Arminia Bielefeld #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -35991,7 +35989,7 @@
             ]
           },
           {
-            "name": "Milan Brown",
+            "name": "Milan Brown (Arminia Bielefeld #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -36086,7 +36084,7 @@
             ]
           },
           {
-            "name": "Bao Scott",
+            "name": "Bao Scott (Arminia Bielefeld #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -36221,7 +36219,7 @@
             ]
           },
           {
-            "name": "Aaron Green",
+            "name": "Aaron Green (Arminia Bielefeld #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -36258,7 +36256,7 @@
             ]
           },
           {
-            "name": "Theo Parker",
+            "name": "Theo Parker (Arminia Bielefeld #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -36334,7 +36332,7 @@
             ]
           },
           {
-            "name": "Minh Wright",
+            "name": "Minh Wright (Ajax #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -36370,7 +36368,7 @@
             ]
           },
           {
-            "name": "Kai Johnson",
+            "name": "Kai Johnson (Ajax #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -36399,7 +36397,7 @@
             ]
           },
           {
-            "name": "Noah Baker",
+            "name": "Noah Baker (Ajax #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -36498,7 +36496,7 @@
             ]
           },
           {
-            "name": "Liam Hill",
+            "name": "Liam Hill (Ajax #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -36531,7 +36529,7 @@
             ]
           },
           {
-            "name": "Daniel Young",
+            "name": "Daniel Young (Ajax #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -36864,7 +36862,7 @@
             ]
           },
           {
-            "name": "Milan Allen",
+            "name": "Milan Allen (PSV Eindhoven #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -36897,7 +36895,7 @@
             ]
           },
           {
-            "name": "Liam Allen",
+            "name": "Liam Allen (PSV Eindhoven #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -36933,7 +36931,7 @@
             ]
           },
           {
-            "name": "Kai Pham",
+            "name": "Kai Pham (PSV Eindhoven #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -37003,7 +37001,7 @@
             ]
           },
           {
-            "name": "Duc Collins",
+            "name": "Duc Collins (PSV Eindhoven #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -37047,7 +37045,7 @@
         "img_url": "https://cdn.sofifa.net/teams/246/60.png",
         "players": [
           {
-            "name": "Minh Wright",
+            "name": "Minh Wright (Feyenoord #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -37138,7 +37136,7 @@
             ]
           },
           {
-            "name": "Phong Evans",
+            "name": "Phong Evans (Feyenoord #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -37342,7 +37340,7 @@
             ]
           },
           {
-            "name": "Jack Lewis",
+            "name": "Jack Lewis (Feyenoord #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -37444,7 +37442,7 @@
             ]
           },
           {
-            "name": "Julian Moore",
+            "name": "Julian Moore (AZ Alkmaar #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -37539,7 +37537,7 @@
             ]
           },
           {
-            "name": "David Bianchi",
+            "name": "David Bianchi (AZ Alkmaar #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -37971,7 +37969,7 @@
             ]
           },
           {
-            "name": "Son Thomas",
+            "name": "Son Thomas (FC Twente #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -38242,7 +38240,7 @@
             ]
           },
           {
-            "name": "Khoa Moretti",
+            "name": "Khoa Moretti (FC Utrecht #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -38308,7 +38306,7 @@
             ]
           },
           {
-            "name": "Aaron Rossi",
+            "name": "Aaron Rossi (FC Utrecht #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -38341,7 +38339,7 @@
             ]
           },
           {
-            "name": "Minh Tran",
+            "name": "Minh Tran (FC Utrecht #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -38374,7 +38372,7 @@
             ]
           },
           {
-            "name": "Jack Romano",
+            "name": "Jack Romano (FC Utrecht #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -38443,7 +38441,7 @@
             ]
           },
           {
-            "name": "Phuc Esposito",
+            "name": "Phuc Esposito (FC Utrecht #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -38476,7 +38474,7 @@
             ]
           },
           {
-            "name": "David Phan",
+            "name": "David Phan (FC Utrecht #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -38582,7 +38580,7 @@
             ]
           },
           {
-            "name": "Andrea Hughes",
+            "name": "Andrea Hughes (SC Heerenveen #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -38644,7 +38642,7 @@
             ]
           },
           {
-            "name": "Elias Tran",
+            "name": "Elias Tran (SC Heerenveen #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -38677,7 +38675,7 @@
             ]
           },
           {
-            "name": "Quang Romano",
+            "name": "Quang Romano (SC Heerenveen #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -38710,7 +38708,7 @@
             ]
           },
           {
-            "name": "Liam Lewis",
+            "name": "Liam Lewis (SC Heerenveen #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -38815,7 +38813,7 @@
             ]
           },
           {
-            "name": "Ethan Parker",
+            "name": "Ethan Parker (SC Heerenveen #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -38979,7 +38977,7 @@
             ]
           },
           {
-            "name": "Milan Lombardi",
+            "name": "Milan Lombardi (NEC Nijmegen #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -39012,7 +39010,7 @@
             ]
           },
           {
-            "name": "Quang Bui",
+            "name": "Quang Bui (NEC Nijmegen #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -39180,7 +39178,7 @@
             ]
           },
           {
-            "name": "Phuc Wright",
+            "name": "Phuc Wright (NEC Nijmegen #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -39213,7 +39211,7 @@
             ]
           },
           {
-            "name": "Quang Harris",
+            "name": "Quang Harris (NEC Nijmegen #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -39253,7 +39251,7 @@
         "img_url": "https://cdn.sofifa.net/teams/1911/60.png",
         "players": [
           {
-            "name": "Julian Thomas",
+            "name": "Julian Thomas (Go Ahead Eagles #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -39344,7 +39342,7 @@
             ]
           },
           {
-            "name": "Andrea Taylor",
+            "name": "Andrea Taylor (Go Ahead Eagles #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -39377,7 +39375,7 @@
             ]
           },
           {
-            "name": "Nico Do",
+            "name": "Nico Do (Go Ahead Eagles #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -39410,7 +39408,7 @@
             ]
           },
           {
-            "name": "Duc Nguyen",
+            "name": "Duc Nguyen (Go Ahead Eagles #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -39546,7 +39544,7 @@
             ]
           },
           {
-            "name": "James Scott",
+            "name": "James Scott (Go Ahead Eagles #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -39813,7 +39811,7 @@
             ]
           },
           {
-            "name": "Harry Green",
+            "name": "Harry Green (Sparta Rotterdam #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -39846,7 +39844,7 @@
             ]
           },
           {
-            "name": "Minh Allen",
+            "name": "Minh Allen (Sparta Rotterdam #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -39882,7 +39880,7 @@
             ]
           },
           {
-            "name": "Duc Collins",
+            "name": "Duc Collins (Sparta Rotterdam #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -40317,7 +40315,7 @@
             ]
           },
           {
-            "name": "Oliver Le",
+            "name": "Oliver Le (Fortuna Sittard #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -40386,7 +40384,7 @@
             ]
           },
           {
-            "name": "Elias Tran",
+            "name": "Elias Tran (PEC Zwolle #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -40419,7 +40417,7 @@
             ]
           },
           {
-            "name": "Duc Ward",
+            "name": "Duc Ward (PEC Zwolle #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -40448,7 +40446,7 @@
             ]
           },
           {
-            "name": "Phong King",
+            "name": "Phong King (PEC Zwolle #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -40550,7 +40548,7 @@
             ]
           },
           {
-            "name": "Son Adams",
+            "name": "Son Adams (PEC Zwolle #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -40685,7 +40683,7 @@
             ]
           },
           {
-            "name": "Julian Scott",
+            "name": "Julian Scott (PEC Zwolle #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -40787,7 +40785,7 @@
             ]
           },
           {
-            "name": "Felix Tran",
+            "name": "Felix Tran (Heracles Almelo #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -40816,7 +40814,7 @@
             ]
           },
           {
-            "name": "Julian Wright",
+            "name": "Julian Wright (Heracles Almelo #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -40849,7 +40847,7 @@
             ]
           },
           {
-            "name": "Theo Romano",
+            "name": "Theo Romano (Heracles Almelo #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -40882,7 +40880,7 @@
             ]
           },
           {
-            "name": "Elias Ricci",
+            "name": "Elias Ricci (Heracles Almelo #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -40948,7 +40946,7 @@
             ]
           },
           {
-            "name": "Milan Allen",
+            "name": "Milan Allen (Heracles Almelo #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -41014,7 +41012,7 @@
             ]
           },
           {
-            "name": "James Pham",
+            "name": "James Pham (Heracles Almelo #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -41087,7 +41085,7 @@
         "img_url": "https://cdn.sofifa.net/teams/1917/60.png",
         "players": [
           {
-            "name": "Nam Turner",
+            "name": "Nam Turner (FC Groningen #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -41116,7 +41114,7 @@
             ]
           },
           {
-            "name": "Hugo Walker",
+            "name": "Hugo Walker (FC Groningen #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -41244,7 +41242,7 @@
             ]
           },
           {
-            "name": "Marco Dang",
+            "name": "Marco Dang (FC Groningen #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -41412,7 +41410,7 @@
             ]
           },
           {
-            "name": "Kai Ward",
+            "name": "Kai Ward (FC Groningen #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -41456,7 +41454,7 @@
         "img_url": "https://cdn.sofifa.net/teams/1904/60.png",
         "players": [
           {
-            "name": "An Collins",
+            "name": "An Collins (NAC Breda #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -41485,7 +41483,7 @@
             ]
           },
           {
-            "name": "Minh Collins",
+            "name": "Minh Collins (NAC Breda #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -41613,7 +41611,7 @@
             ]
           },
           {
-            "name": "Luke White",
+            "name": "Luke White (NAC Breda #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -41751,7 +41749,7 @@
             ]
           },
           {
-            "name": "Tom Young",
+            "name": "Tom Young (NAC Breda #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -41889,7 +41887,7 @@
             ]
           },
           {
-            "name": "Sam Parker",
+            "name": "Sam Parker (Willem II #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -41951,7 +41949,7 @@
             ]
           },
           {
-            "name": "Huy King",
+            "name": "Huy King (Willem II #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -41984,7 +41982,7 @@
             ]
           },
           {
-            "name": "Felix Bui",
+            "name": "Felix Bui (Willem II #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -42089,7 +42087,7 @@
             ]
           },
           {
-            "name": "Noah Wilson",
+            "name": "Noah Wilson (Willem II #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -42122,7 +42120,7 @@
             ]
           },
           {
-            "name": "Khoa Collins",
+            "name": "Khoa 124124 3",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -42198,7 +42196,7 @@
         "img_url": "https://cdn.sofifa.net/teams/1971/60.png",
         "players": [
           {
-            "name": "Andrea Wright",
+            "name": "Andrea Wright (Excelsior #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -42227,7 +42225,7 @@
             ]
           },
           {
-            "name": "David Bui",
+            "name": "David Bui (Excelsior #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -42322,7 +42320,7 @@
             ]
           },
           {
-            "name": "Aaron Carter",
+            "name": "Aaron Carter (Excelsior #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -42358,7 +42356,7 @@
             ]
           },
           {
-            "name": "Ethan Clark",
+            "name": "Ethan Clark (Excelsior #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -42424,7 +42422,7 @@
             ]
           },
           {
-            "name": "Milan Wilson",
+            "name": "Milan Wilson (Excelsior #4)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -42526,7 +42524,7 @@
             ]
           },
           {
-            "name": "Daniel Nguyen",
+            "name": "Daniel Nguyen (Excelsior #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -42661,7 +42659,7 @@
             ]
           },
           {
-            "name": "Chris Nguyen",
+            "name": "Chris Nguyen (FC Volendam #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -42760,7 +42758,7 @@
             ]
           },
           {
-            "name": "Julian Thomas",
+            "name": "Julian Thomas (FC Volendam #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -42832,7 +42830,7 @@
             ]
           },
           {
-            "name": "Aaron Green",
+            "name": "Aaron Green (FC Volendam #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -42898,7 +42896,7 @@
             ]
           },
           {
-            "name": "Julian Nguyen",
+            "name": "Julian Nguyen (FC Volendam #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -43000,7 +42998,7 @@
             ]
           },
           {
-            "name": "Sam Hoang",
+            "name": "Sam Hoang (RKC Waalwijk #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -43095,7 +43093,7 @@
             ]
           },
           {
-            "name": "Harry Clark",
+            "name": "Harry Clark (RKC Waalwijk #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -43131,7 +43129,7 @@
             ]
           },
           {
-            "name": "Julian Scott",
+            "name": "Julian Scott (RKC Waalwijk #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -43164,7 +43162,7 @@
             ]
           },
           {
-            "name": "David Romano",
+            "name": "David Romano (RKC Waalwijk #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -43233,7 +43231,7 @@
             ]
           },
           {
-            "name": "Khanh Green",
+            "name": "Khanh Green (RKC Waalwijk #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -43335,7 +43333,7 @@
             ]
           },
           {
-            "name": "Hugo Do",
+            "name": "Hugo Do (Almere City FC #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -43430,7 +43428,7 @@
             ]
           },
           {
-            "name": "David Harris",
+            "name": "David Harris (Almere City FC #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -43529,7 +43527,7 @@
             ]
           },
           {
-            "name": "Julian Smith",
+            "name": "Julian Smith (Almere City FC #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -43562,7 +43560,7 @@
             ]
           },
           {
-            "name": "Theo King",
+            "name": "Theo King (Almere City FC #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -43598,7 +43596,7 @@
             ]
           },
           {
-            "name": "Son Carter",
+            "name": "Son Carter (Almere City FC #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -43631,7 +43629,7 @@
             ]
           },
           {
-            "name": "Elias Ricci",
+            "name": "Elias Ricci (Almere City FC #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -43805,7 +43803,7 @@
             ]
           },
           {
-            "name": "James Chau",
+            "name": "James Chau (Hà Nội FC #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -43871,7 +43869,7 @@
             ]
           },
           {
-            "name": "Bao Le",
+            "name": "Bao Le (Hà Nội FC #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -43977,7 +43975,7 @@
             ]
           },
           {
-            "name": "Liam Nguyen",
+            "name": "Liam Nguyen (Hà Nội FC #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -44050,7 +44048,7 @@
         "img_url": "https://fifam.s3.amazonaws.com/clubs/nam-dinh-fc.png",
         "players": [
           {
-            "name": "Liam Bui",
+            "name": "Liam Bui (Thép Xanh Nam Định #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -44174,7 +44172,7 @@
             ]
           },
           {
-            "name": "Ethan Wright",
+            "name": "Ethan Wright (Thép Xanh Nam Định #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -44240,7 +44238,7 @@
             ]
           },
           {
-            "name": "Adam Pham",
+            "name": "Adam Pham (Thép Xanh Nam Định #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -44343,7 +44341,7 @@
             ]
           },
           {
-            "name": "David Johnson",
+            "name": "David Johnson (Thép Xanh Nam Định #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -44376,7 +44374,7 @@
             ]
           },
           {
-            "name": "Minh Tran",
+            "name": "Minh Tran (Thép Xanh Nam Định #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -44419,7 +44417,7 @@
         "img_url": "https://fifam.s3.amazonaws.com/clubs/cong-an-ha-noi-fc.png",
         "players": [
           {
-            "name": "Noah Esposito",
+            "name": "Noah Esposito (Công An Hà Nội #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -44448,7 +44446,7 @@
             ]
           },
           {
-            "name": "Mason Young",
+            "name": "Mason Young (Công An Hà Nội #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -44576,7 +44574,7 @@
             ]
           },
           {
-            "name": "Bao Le",
+            "name": "Bao Le (Công An Hà Nội #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -44609,7 +44607,7 @@
             ]
           },
           {
-            "name": "Ryan Ferrari",
+            "name": "Ryan Ferrari (Công An Hà Nội #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -44642,7 +44640,7 @@
             ]
           },
           {
-            "name": "Kai Rossi",
+            "name": "Kai Rossi (Công An Hà Nội #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -44675,7 +44673,7 @@
             ]
           },
           {
-            "name": "Quang Bui",
+            "name": "Quang Bui (Công An Hà Nội #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -44711,7 +44709,7 @@
             ]
           },
           {
-            "name": "Huy Lombardi",
+            "name": "Huy Lombardi (Công An Hà Nội #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -44787,7 +44785,7 @@
         "img_url": "https://fifam.s3.amazonaws.com/clubs/the-cong-viettel.png",
         "players": [
           {
-            "name": "Sam Scott",
+            "name": "Sam Scott (Thể Công Viettel #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -44881,7 +44879,7 @@
             ]
           },
           {
-            "name": "Max Taylor",
+            "name": "Max Taylor (Thể Công Viettel #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -45013,7 +45011,7 @@
             ]
           },
           {
-            "name": "Mason Harris",
+            "name": "Mason Harris (Thể Công Viettel #4)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -45079,7 +45077,7 @@
             ]
           },
           {
-            "name": "Lucas Wilson",
+            "name": "Lucas Wilson (Thể Công Viettel #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -45112,7 +45110,7 @@
             ]
           },
           {
-            "name": "Aaron Carter",
+            "name": "Aaron Carter (Thể Công Viettel #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -45184,7 +45182,7 @@
             ]
           },
           {
-            "name": "Jonas Evans",
+            "name": "Jonas Evans (Đông Á Thanh Hóa #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -45246,7 +45244,7 @@
             ]
           },
           {
-            "name": "Khoa Thomas",
+            "name": "Khoa Thomas (Đông Á Thanh Hóa #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -45378,7 +45376,7 @@
             ]
           },
           {
-            "name": "Matteo Wright",
+            "name": "Matteo Wright (Đông Á Thanh Hóa #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -45517,7 +45515,7 @@
         "img_url": "https://fifam.s3.amazonaws.com/clubs/binh-duong-fc.png",
         "players": [
           {
-            "name": "David Bui",
+            "name": "David Bui (Becamex Bình Dương #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -45641,7 +45639,7 @@
             ]
           },
           {
-            "name": "Adam Walker",
+            "name": "Adam Walker (Becamex Bình Dương #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -45674,7 +45672,7 @@
             ]
           },
           {
-            "name": "Khoa Lewis",
+            "name": "Khoa Lewis (Becamex Bình Dương #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -45707,7 +45705,7 @@
             ]
           },
           {
-            "name": "Harry Le",
+            "name": "Harry Le (Becamex Bình Dương #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -45740,7 +45738,7 @@
             ]
           },
           {
-            "name": "Andrea Tran",
+            "name": "Andrea Tran (Becamex Bình Dương #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -45773,7 +45771,7 @@
             ]
           },
           {
-            "name": "Lucas Moore",
+            "name": "Lucas Moore (Becamex Bình Dương #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -45842,7 +45840,7 @@
             ]
           },
           {
-            "name": "Julian Young",
+            "name": "Julian Young (Becamex Bình Dương #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -45944,7 +45942,7 @@
             ]
           },
           {
-            "name": "Ryan Bui",
+            "name": "Ryan Bui (Hải Phòng FC #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -45973,7 +45971,7 @@
             ]
           },
           {
-            "name": "Tuan Phan",
+            "name": "Tuan Phan (Hải Phòng FC #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -46039,7 +46037,7 @@
             ]
           },
           {
-            "name": "Son Esposito",
+            "name": "Son Esposito (Hải Phòng FC #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -46072,7 +46070,7 @@
             ]
           },
           {
-            "name": "Milan Brown",
+            "name": "Milan Brown (Hải Phòng FC #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -46138,7 +46136,7 @@
             ]
           },
           {
-            "name": "Huy Wright",
+            "name": "Huy Wright (Hải Phòng FC #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -46171,7 +46169,7 @@
             ]
           },
           {
-            "name": "Luca Ngo",
+            "name": "Luca Ngo (Hải Phòng FC #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -46207,7 +46205,7 @@
             ]
           },
           {
-            "name": "Ryan Martin",
+            "name": "Ryan Martin (Hải Phòng FC #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -46247,7 +46245,7 @@
         "img_url": "https://fifam.s3.amazonaws.com/clubs/ha-tinh-fc.png",
         "players": [
           {
-            "name": "Quang Lewis",
+            "name": "Quang Lewis (Hồng Lĩnh Hà Tĩnh #1)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -46341,7 +46339,7 @@
             ]
           },
           {
-            "name": "Ryan Romano",
+            "name": "Ryan Romano (Hồng Lĩnh Hà Tĩnh #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -46407,7 +46405,7 @@
             ]
           },
           {
-            "name": "Long Ricci",
+            "name": "Long Ricci (Hồng Lĩnh Hà Tĩnh #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -46575,7 +46573,7 @@
             ]
           },
           {
-            "name": "Duc Ward",
+            "name": "Duc Ward (Hồng Lĩnh Hà Tĩnh #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -46742,7 +46740,7 @@
             ]
           },
           {
-            "name": "Felix Taylor",
+            "name": "Felix Taylor (Quảng Nam FC #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -46811,7 +46809,7 @@
             ]
           },
           {
-            "name": "Duc Nguyen",
+            "name": "Duc Nguyen (Quảng Nam FC #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -46910,7 +46908,7 @@
             ]
           },
           {
-            "name": "Felix White",
+            "name": "Felix White (Quảng Nam FC #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -46946,7 +46944,7 @@
             ]
           },
           {
-            "name": "Ben Wright",
+            "name": "Ben Wright (Quảng Nam FC #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -46986,7 +46984,7 @@
         "img_url": "https://fifam.s3.amazonaws.com/clubs/hagl.png",
         "players": [
           {
-            "name": "Minh King",
+            "name": "Minh King (Hoàng Anh Gia Lai #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -47015,7 +47013,7 @@
             ]
           },
           {
-            "name": "Harry Green",
+            "name": "Harry Green (Hoàng Anh Gia Lai #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -47110,7 +47108,7 @@
             ]
           },
           {
-            "name": "Daniel Ngo",
+            "name": "Daniel Ngo (Hoàng Anh Gia Lai #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -47209,7 +47207,7 @@
             ]
           },
           {
-            "name": "Luca Adams",
+            "name": "Luca Adams (Hoàng Anh Gia Lai #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -47380,7 +47378,7 @@
             ]
           },
           {
-            "name": "Sam Brown",
+            "name": "Sam Brown (Sông Lam Nghệ An #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -47475,7 +47473,7 @@
             ]
           },
           {
-            "name": "Khanh Green",
+            "name": "Khanh Green (Sông Lam Nghệ An #4)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -47508,7 +47506,7 @@
             ]
           },
           {
-            "name": "Duy Ward",
+            "name": "Duy Ward (Sông Lam Nghệ An #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -47679,7 +47677,7 @@
             ]
           },
           {
-            "name": "Oliver Taylor",
+            "name": "Oliver Taylor (Sông Lam Nghệ An #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -47781,7 +47779,7 @@
             ]
           },
           {
-            "name": "Daniel Hughes",
+            "name": "Daniel Hughes (TP Hồ Chí Minh FC #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -47876,7 +47874,7 @@
             ]
           },
           {
-            "name": "Jonas Hughes",
+            "name": "Jonas Hughes (TP Hồ Chí Minh FC #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -47909,7 +47907,7 @@
             ]
           },
           {
-            "name": "Quang Parker",
+            "name": "Quang Parker (TP Hồ Chí Minh FC #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -47975,7 +47973,7 @@
             ]
           },
           {
-            "name": "Ben Martin",
+            "name": "Ben Martin (TP Hồ Chí Minh FC #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -48011,7 +48009,7 @@
             ]
           },
           {
-            "name": "Son King",
+            "name": "Son King (TP Hồ Chí Minh FC #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -48047,7 +48045,7 @@
             ]
           },
           {
-            "name": "Bao Lombardi",
+            "name": "Bao Lombardi (TP Hồ Chí Minh FC #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -48283,7 +48281,7 @@
             ]
           },
           {
-            "name": "Ethan Parker",
+            "name": "Ethan Parker (SHB Đà Nẵng #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -48316,7 +48314,7 @@
             ]
           },
           {
-            "name": "Tom Wright",
+            "name": "Tom Wright (SHB Đà Nẵng #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -48487,7 +48485,7 @@
             ]
           },
           {
-            "name": "Ethan Scott",
+            "name": "Ethan Scott (Quy Nhơn Bình Định #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -48520,7 +48518,7 @@
             ]
           },
           {
-            "name": "Quang Lewis",
+            "name": "Quang Lewis (Quy Nhơn Bình Định #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -48552,7 +48550,7 @@
             ]
           },
           {
-            "name": "Hugo Tran",
+            "name": "Hugo Tran (Quy Nhơn Bình Định #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -48588,7 +48586,7 @@
             ]
           },
           {
-            "name": "Adam Pham",
+            "name": "Adam Pham (Quy Nhơn Bình Định #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -48723,7 +48721,7 @@
             ]
           },
           {
-            "name": "Kai Young",
+            "name": "Kai Young (Quy Nhơn Bình Định #2)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
@@ -48789,7 +48787,7 @@
             ]
           },
           {
-            "name": "Huy Ward",
+            "name": "Huy Ward (Quy Nhơn Bình Định #3)",
             "season": "CURRENT",
             "avatarUrl": null,
             "countryId": null,
