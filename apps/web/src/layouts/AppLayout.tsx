@@ -16,34 +16,37 @@ export function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const items = isAdmin ? [{ path: ROUTES.admin, label: 'Admin', icon: 'AD' }] : PLAYER_NAV;
+  const isClubScreen = !isAdmin && location.pathname === ROUTES.club;
 
   return (
-    <main className="app-shell wuxia-shell">
+    <main className={`app-shell wuxia-shell${isClubScreen ? ' app-shell--fullscreen' : ''}`}>
       <div className="wuxia-shell__mist" aria-hidden="true" />
       <div className="wuxia-shell__flare wuxia-shell__flare--left" aria-hidden="true" />
       <div className="wuxia-shell__flare wuxia-shell__flare--right" aria-hidden="true" />
       <EventPopups />
-      <div className="app-shell__inner">
+      <div className={`app-shell__inner${isClubScreen ? ' app-shell__inner--fullscreen' : ''}`}>
         <Outlet />
       </div>
-      <nav className="app-bottom-nav" aria-label="Main navigation">
-        {items.map((item) => {
-          const active = location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
-          return (
-            <button
-              key={item.path}
-              type="button"
-              className="app-bottom-nav__button"
-              data-active={active}
-              onClick={() => navigate(item.path)}
-              aria-label={item.label}
-              title={item.label}
-            >
-              <span>{item.icon}</span>
-            </button>
-          );
-        })}
-      </nav>
+      {isClubScreen ? null : (
+        <nav className="app-bottom-nav" aria-label="Main navigation">
+          {items.map((item) => {
+            const active = location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
+            return (
+              <button
+                key={item.path}
+                type="button"
+                className="app-bottom-nav__button"
+                data-active={active}
+                onClick={() => navigate(item.path)}
+                aria-label={item.label}
+                title={item.label}
+              >
+                <span>{item.icon}</span>
+              </button>
+            );
+          })}
+        </nav>
+      )}
     </main>
   );
 }

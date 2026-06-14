@@ -1,9 +1,9 @@
 .club-dashboard {
   position: relative;
-  min-height: calc(100svh - 32px);
+  min-height: 100svh;
   overflow: hidden;
-  border: 1px solid rgba(126, 238, 255, 0.14);
-  border-radius: 28px;
+  border: 0;
+  border-radius: 0;
   background:
     linear-gradient(180deg, rgba(2, 7, 19, 0.08), rgba(2, 7, 19, 0.78)),
     url('/app/background.png') center / cover no-repeat;
@@ -166,10 +166,84 @@
   height: 52px;
 }
 
-.club-icon-button--small span {
-  color: #78f8ff;
-  font-size: 13px;
+.club-dashboard__quick {
+  position: absolute;
+  left: 50%;
+  top: 57%;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(94px, 1fr));
+  gap: 12px;
+  width: min(680px, calc(100vw - 176px));
+  transform: translate(-50%, -50%);
+}
+
+.club-action-card {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 8px;
+  min-height: 104px;
+  border: 1px solid rgba(126, 238, 255, 0.26);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(8, 31, 48, 0.68), rgba(4, 12, 24, 0.84)),
+    radial-gradient(circle at 50% 0, rgba(126, 238, 255, 0.2), transparent 52%);
+  color: #e8fbff;
+  box-shadow: 0 22px 46px rgba(0, 0, 0, 0.32), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  backdrop-filter: blur(16px);
+  animation: dashboardIconIn 0.36s ease both;
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    filter 0.16s ease;
+}
+
+.club-action-card:hover {
+  border-color: rgba(255, 211, 103, 0.68);
+  filter: brightness(1.08);
+  transform: translateY(-3px);
+}
+
+.club-action-card:active {
+  transform: scale(0.97);
+}
+
+.club-action-card[data-tone='gold'] {
+  border-color: rgba(255, 211, 103, 0.38);
+  background:
+    linear-gradient(180deg, rgba(67, 45, 9, 0.66), rgba(19, 12, 4, 0.84)),
+    radial-gradient(circle at 50% 0, rgba(255, 211, 103, 0.24), transparent 52%);
+  color: #ffeab0;
+}
+
+.club-action-card[data-tone='red'] {
+  border-color: rgba(255, 70, 96, 0.42);
+  background:
+    linear-gradient(180deg, rgba(76, 14, 25, 0.66), rgba(20, 5, 10, 0.86)),
+    radial-gradient(circle at 50% 0, rgba(255, 53, 82, 0.25), transparent 52%);
+  color: #ffd9df;
+}
+
+.club-action-card__icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+}
+
+.club-action-card__label {
+  font-size: 12px;
   font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.club-icon-button--small .club-svg-icon {
+  width: 23px;
+  height: 23px;
+  color: #78f8ff;
 }
 
 .club-dashboard__side {
@@ -205,20 +279,41 @@
 }
 
 .club-orbit-button span {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
   color: #dffbff;
-  font-size: 16px;
-  font-weight: 900;
 }
 
-.club-orbit-button--gold {
+.club-orbit-button[data-tone='gold'] {
   border-color: rgba(255, 211, 103, 0.42);
   background:
     linear-gradient(180deg, rgba(62, 43, 10, 0.68), rgba(20, 13, 4, 0.82)),
     radial-gradient(circle at 30% 20%, rgba(255, 211, 103, 0.3), transparent 42%);
 }
 
-.club-orbit-button--gold span {
+.club-orbit-button[data-tone='gold'] span {
   color: #ffe9a8;
+}
+
+.club-orbit-button[data-tone='red'] {
+  border-color: rgba(255, 70, 96, 0.5);
+  background:
+    linear-gradient(180deg, rgba(76, 14, 25, 0.72), rgba(23, 5, 11, 0.88)),
+    radial-gradient(circle at 30% 20%, rgba(255, 53, 82, 0.34), transparent 42%);
+  box-shadow: 0 22px 44px rgba(0, 0, 0, 0.3), 0 0 28px rgba(255, 53, 82, 0.12);
+}
+
+.club-orbit-button[data-tone='red'] span {
+  color: #ffd5dc;
+}
+
+.club-svg-icon {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(0 0 10px currentColor);
 }
 
 .club-dashboard__bottom {
@@ -233,6 +328,10 @@
 }
 
 .club-start-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
   min-width: 176px;
   min-height: 58px;
   border: 1px solid rgba(255, 229, 141, 0.7);
@@ -246,6 +345,16 @@
   line-height: 1;
   box-shadow: 0 18px 46px rgba(255, 153, 43, 0.35), 0 0 0 8px rgba(255, 184, 65, 0.08);
   animation: startPulse 2.2s ease-in-out infinite;
+}
+
+.club-start-button .club-svg-icon {
+  width: 22px;
+  height: 22px;
+  filter: none;
+}
+
+.club-start-button span {
+  transform: translateY(1px);
 }
 
 .club-start-menu {
@@ -262,11 +371,20 @@
 }
 
 .club-start-menu button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
   min-height: 46px;
   border-radius: 999px;
   background: rgba(126, 238, 255, 0.1);
   font-size: 13px;
   font-weight: 900;
+}
+
+.club-start-menu .club-svg-icon {
+  width: 18px;
+  height: 18px;
 }
 
 .club-start-menu button:last-child {
@@ -393,6 +511,17 @@
     gap: 14px;
   }
 
+  .club-dashboard__quick {
+    top: 62%;
+    grid-template-columns: repeat(2, minmax(112px, 1fr));
+    width: min(330px, calc(100vw - 104px));
+    gap: 10px;
+  }
+
+  .club-action-card {
+    min-height: 84px;
+  }
+
   .club-orbit-button {
     width: 62px;
     height: 62px;
@@ -416,5 +545,19 @@
   .club-orbit-button {
     width: 58px;
     height: 58px;
+  }
+
+  .club-dashboard__quick {
+    top: 63%;
+    width: min(292px, calc(100vw - 88px));
+  }
+
+  .club-action-card {
+    min-height: 78px;
+  }
+
+  .club-action-card__icon {
+    width: 28px;
+    height: 28px;
   }
 }

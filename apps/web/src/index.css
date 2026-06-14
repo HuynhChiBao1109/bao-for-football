@@ -179,6 +179,20 @@ textarea {
   width: min(100%, 1360px);
 }
 
+.app-shell--fullscreen {
+  min-height: 100svh;
+  padding: 0;
+}
+
+.app-shell--fullscreen::before {
+  opacity: 0.12;
+}
+
+.app-shell__inner--fullscreen {
+  width: 100%;
+  min-height: 100svh;
+}
+
 .app-bottom-nav {
   position: fixed;
   left: 50%;
