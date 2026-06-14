@@ -218,22 +218,31 @@ export function getTacticalTarget(
     }
 
     if (role === "CB") {
+      const laneX = getCentralLaneX(player);
       return {
         state: "HOLD_POSITION",
-        targetPosition: clampToRoleZone(player, {
-          x: lerp(player.homePosition.x, ball.x, 0.14),
-          y: player.homePosition.y + direction * 7,
-        }),
+        targetPosition: applyTeamSpacing(
+          player,
+          teammates,
+          clampToRoleZone(player, {
+            x: lerp(laneX, ball.x, 0.1),
+            y: player.homePosition.y + direction * 7,
+          }),
+        ),
       };
     }
 
     if (role === "DM") {
       return {
         state: "SUPPORT_ATTACK",
-        targetPosition: clampToRoleZone(player, {
-          x: lerp(player.homePosition.x, ball.x, 0.24),
-          y: ball.y - direction * 10,
-        }),
+        targetPosition: applyTeamSpacing(
+          player,
+          teammates,
+          clampToRoleZone(player, {
+            x: lerp(getCentralLaneX(player), ball.x, 0.2),
+            y: ball.y - direction * 10,
+          }),
+        ),
       };
     }
 
@@ -274,10 +283,14 @@ export function getTacticalTarget(
 
     return {
       state: "SUPPORT_ATTACK",
-      targetPosition: clampToRoleZone(player, {
-        x: lerp(player.homePosition.x, ball.x, 0.34),
-        y: ball.y - direction * 8,
-      }),
+      targetPosition: applyTeamSpacing(
+        player,
+        teammates,
+        clampToRoleZone(player, {
+          x: lerp(getCentralLaneX(player), ball.x, 0.28),
+          y: ball.y - direction * 8,
+        }),
+      ),
     };
   }
 
@@ -285,21 +298,30 @@ export function getTacticalTarget(
     return { state: "PRESS_BALL", targetPosition: getPressTarget(player, ball) };
   }
 
-  const mark = findNearestOpponent(player, opponents);
+  const mark = findMarkAssignment(player, teammates, opponents, owner);
   if (mark && role !== "GK") {
+    const markHasBall = owner?.id === mark.id;
+    const pressureWeight = markHasBall ? 0.55 : role === "CB" || role === "DM" ? 0.28 : 0.18;
     const coverGoalSide = {
-      x: lerp(mark.position.x, 50, role === "CB" || role === "DM" ? 0.28 : 0.16),
+      x: lerp(mark.position.x, getCentralLaneX(player), pressureWeight),
       y: mark.position.y - direction * getMarkGoalSideGap(role),
     };
-    return { state: "MARK_OPPONENT", targetPosition: clampToRoleZone(player, coverGoalSide) };
+    return {
+      state: "MARK_OPPONENT",
+      targetPosition: applyTeamSpacing(player, teammates, clampToRoleZone(player, coverGoalSide)),
+    };
   }
 
   return {
     state: "RECOVER_DEFENSE",
-    targetPosition: clampToRoleZone(player, {
-      x: lerp(player.homePosition.x, ball.x, role === "GK" ? 0.08 : 0.24),
-      y: player.homePosition.y - direction * getRecoveryDrop(role),
-    }),
+    targetPosition: applyTeamSpacing(
+      player,
+      teammates,
+      clampToRoleZone(player, {
+        x: lerp(getCentralLaneX(player), ball.x, role === "GK" ? 0.08 : 0.2),
+        y: player.homePosition.y - direction * getRecoveryDrop(role),
+      }),
+    ),
   };
 }
 
@@ -429,10 +451,17 @@ function applySameTargetOffsets(players: Player[]) {
   groups.forEach((group) => {
     if (group.length < 2) return;
     group.forEach((player, index) => {
-      const angle = (Math.PI * 2 * index) / group.length;
+      const role = normalizeRole(player.role);
+      const laneSign =
+        role === "CB" || role === "CM" || role === "DM"
+          ? Math.sign(getCentralLaneX(player) - 50) || (index % 2 === 0 ? -1 : 1)
+          : index % 2 === 0
+            ? -1
+            : 1;
+      const depthSign = index % 2 === 0 ? -1 : 1;
       player.targetPosition = clampToRoleZone(player, {
-        x: player.targetPosition.x + Math.cos(angle) * MOVEMENT.sameTargetOffset,
-        y: player.targetPosition.y + Math.sin(angle) * MOVEMENT.sameTargetOffset,
+        x: player.targetPosition.x + laneSign * MOVEMENT.sameTargetOffset,
+        y: player.targetPosition.y + depthSign * MOVEMENT.sameTargetOffset * 0.55,
       });
     });
   });
@@ -479,12 +508,75 @@ function getPressTarget(player: Player, ball: Vec2) {
   });
 }
 
-function findNearestOpponent(player: Player, opponents: Player[]) {
+function findMarkAssignment(
+  player: Player,
+  teammates: Player[],
+  opponents: Player[],
+  owner: Player | null,
+) {
+  const role = normalizeRole(player.role);
+  if (role === "GK") return null;
+  if (owner && owner.side !== player.side && distance(player.position, owner.position) <= 10) {
+    return owner;
+  }
+
+  const teammateMarkers = teammates
+    .filter((item) => item.id !== player.id && normalizeRole(item.role) !== "GK")
+    .map((item) => ({
+      marker: item,
+      target: choosePreferredMark(item, opponents, owner),
+    }))
+    .filter((item) => item.target != null);
+
+  return choosePreferredMark(player, opponents, owner, (candidate) => {
+    const duplicateCount = teammateMarkers.filter((item) => item.target?.id === candidate.id).length;
+    return duplicateCount * 9;
+  });
+}
+
+function choosePreferredMark(
+  player: Player,
+  opponents: Player[],
+  owner: Player | null,
+  duplicatePenalty: (candidate: Player) => number = () => 0,
+) {
+  const role = normalizeRole(player.role);
+  const laneX = getCentralLaneX(player);
+  const ballOwnerBonus = owner && owner.side !== player.side ? owner.id : null;
+  const viable = opponents.filter((item) => normalizeRole(item.role) !== "GK");
+
   return (
-    opponents
-      .filter((item) => normalizeRole(item.role) !== "GK")
-      .map((item) => ({ player: item, distance: distance(player.homePosition, item.position) }))
-      .sort((left, right) => left.distance - right.distance)[0]?.player ?? null
+    viable
+      .map((candidate) => {
+        const candidateRole = normalizeRole(candidate.role);
+        const sameLane = Math.abs(candidate.position.x - laneX);
+        const roleMatch =
+          role === "CB"
+            ? candidateRole === "ST"
+              ? -10
+              : candidateRole === "W"
+                ? 3
+                : 0
+            : role === "FB" || role === "W"
+              ? candidateRole === "W" || candidateRole === "FB"
+                ? -7
+                : 2
+              : candidateRole === "CM" || candidateRole === "DM"
+                ? -5
+                : 0;
+        const ownerWeight = ballOwnerBonus === candidate.id ? -5 : 0;
+        return {
+          player: candidate,
+          score:
+            distance(player.position, candidate.position) * 0.45 +
+            sameLane * 0.32 +
+            distance(player.homePosition, candidate.position) * 0.18 +
+            roleMatch +
+            ownerWeight +
+            duplicatePenalty(candidate),
+        };
+      })
+      .sort((left, right) => left.score - right.score)[0]?.player ?? null
   );
 }
 
@@ -531,6 +623,35 @@ function getRoleXBounds(player: Player, role: PlayerRole) {
   }
   if (role === "ST") return { min: 30, max: 70 };
   return { min: 18, max: 82 };
+}
+
+function getCentralLaneX(player: Player) {
+  const role = player.role.toUpperCase();
+  if (role.startsWith("L")) return role.includes("CB") ? 37 : 34;
+  if (role.startsWith("R")) return role.includes("CB") ? 63 : 66;
+  if (role === "CDM" || role === "DM" || role === "CM" || role === "CAM") return 50;
+  return player.homePosition.x;
+}
+
+function applyTeamSpacing(player: Player, teammates: Player[], target: Vec2) {
+  const role = normalizeRole(player.role);
+  const minDistance = role === "CB" ? 8.5 : role === "CM" || role === "DM" ? 7.5 : 6;
+  const push = teammates.reduce<Vec2>(
+    (acc, teammate) => {
+      if (teammate.id === player.id) return acc;
+      const teammateRole = normalizeRole(teammate.role);
+      if (teammateRole === "GK") return acc;
+      const teammateTarget = teammate.targetPosition ?? teammate.position;
+      const delta = sub(target, teammateTarget);
+      const gap = length(delta);
+      if (gap <= 0 || gap >= minDistance) return acc;
+      const direction = scale(delta, 1 / gap);
+      return add(acc, scale(direction, (minDistance - gap) * 0.7));
+    },
+    { x: 0, y: 0 },
+  );
+
+  return clampToRoleZone(player, add(target, push));
 }
 
 function getWideLaneX(player: Player) {
