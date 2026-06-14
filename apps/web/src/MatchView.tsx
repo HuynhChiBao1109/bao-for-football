@@ -11,6 +11,7 @@ const MATCH_EVENT = {
   FIRST_HALF_END: 3,
   SECOND_HALF_START: 4,
   MATCH_END: 6,
+  FREE_KICK: 8,
   PASS: 35,
   SHOOT: 36,
   GOALKEEPER_SAVE: 38,
@@ -21,6 +22,8 @@ const MATCH_EVENT = {
   FIRST_HALF_STOPPAGE: 44,
   HALF_TIME_TUNNEL: 45,
   SECOND_HALF_STOPPAGE: 46,
+  OFFSIDE: 47,
+  GOAL_RESET: 48,
 } as const;
 
 function clampPercent(value: number) {
@@ -71,6 +74,8 @@ function getEventView(eventCode: number | null | undefined) {
       return { title: 'Stoppage time', className: 'match-event--start' };
     case MATCH_EVENT.MATCH_END:
       return { title: 'Full time', className: 'match-event--goal' };
+    case MATCH_EVENT.FREE_KICK:
+      return { title: 'Free kick', className: 'match-event--pass' };
     case MATCH_EVENT.PASS:
       return { title: 'Pass', className: 'match-event--pass' };
     case MATCH_EVENT.SHOOT:
@@ -85,10 +90,17 @@ function getEventView(eventCode: number | null | undefined) {
       return { title: 'Tackle', className: 'match-event--defense' };
     case MATCH_EVENT.SLIDE_TACKLE:
       return { title: 'Slide tackle', className: 'match-event--defense' };
+    case MATCH_EVENT.OFFSIDE:
+      return { title: 'Offside', className: 'match-event--defense' };
+    case MATCH_EVENT.GOAL_RESET:
+      return { title: 'Reset', className: 'match-event--start' };
     case 7:
       return { title: 'Goal', className: 'match-event--goal' };
     default:
-      return { title: eventCode ? `Event ${eventCode}` : 'Tick', className: 'match-event--standard' };
+      return {
+        title: eventCode ? `Event ${eventCode}` : 'Tick',
+        className: 'match-event--standard',
+      };
   }
 }
 
@@ -162,20 +174,12 @@ function PitchDebugGrid() {
   return (
     <div className="pitch-debug-grid" aria-hidden="true">
       {marks.map((value) => (
-        <span
-          className="pitch-debug-grid__x"
-          key={`x-${value}`}
-          style={{ top: `${value}%` }}
-        >
+        <span className="pitch-debug-grid__x" key={`x-${value}`} style={{ top: `${value}%` }}>
           x {value}
         </span>
       ))}
       {marks.map((value) => (
-        <span
-          className="pitch-debug-grid__y"
-          key={`y-${value}`}
-          style={{ left: `${value}%` }}
-        >
+        <span className="pitch-debug-grid__y" key={`y-${value}`} style={{ left: `${value}%` }}>
           y {value}
         </span>
       ))}
@@ -209,7 +213,9 @@ const PlayerCircle = memo(function PlayerCircle({
         {player.avatarUrl ? (
           <img src={player.avatarUrl} alt="" className="player-avatar" />
         ) : (
-          <span className="player-avatar player-avatar--fallback">{getPlayerInitials(player.name)}</span>
+          <span className="player-avatar player-avatar--fallback">
+            {getPlayerInitials(player.name)}
+          </span>
         )}
         <span className="player-number">{player.jerseyNumber ?? player.id}</span>
       </div>
@@ -265,10 +271,7 @@ function EventFeed({ events }: { events: LiveMatchEvent[] }) {
           events.map((event) => {
             const view = getEventView(event.event);
             return (
-              <article
-                className={`match-event ${view.className}`}
-                key={event.id}
-              >
+              <article className={`match-event ${view.className}`} key={event.id}>
                 <span className="match-event__minute">{event.minute}'</span>
                 <div>
                   <strong>{view.title}</strong>
@@ -316,16 +319,8 @@ function MatchPitch({ snapshot }: { snapshot: MatchSnapshot }) {
 export function MatchView() {
   const { matchId } = useParams();
   const [isAutoTicking, setIsAutoTicking] = useState(false);
-  const {
-    snapshot,
-    events,
-    status,
-    isConnected,
-    isLoading,
-    error,
-    queuedTicks,
-    ackActiveTick,
-  } = useMatchSocket(matchId);
+  const { snapshot, events, status, isConnected, isLoading, error, queuedTicks, ackActiveTick } =
+    useMatchSocket(matchId);
   const getNextTick = useGetNextMatchTick(matchId);
   const startAutoTick = useStartAutoMatchTick(matchId);
   const stopAutoTick = useStopAutoMatchTick(matchId);
@@ -400,10 +395,12 @@ export function MatchView() {
         ) : (
           <section className="match-empty">
             <strong>{isLoading ? 'Loading match...' : 'No live snapshot'}</strong>
-            <span>{error ? error.message : 'Press Get next tick to render the next server tick.'}</span>
+            <span>
+              {error ? error.message : 'Press Get next tick to render the next server tick.'}
+            </span>
           </section>
         )}
-        <EventFeed events={events} />
+        {/* <EventFeed events={events} /> */}
       </div>
     </main>
   );

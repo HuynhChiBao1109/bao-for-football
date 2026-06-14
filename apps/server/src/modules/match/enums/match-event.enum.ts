@@ -20,6 +20,8 @@ enum EMatchEvent {
   FIRST_HALF_STOPPAGE = 44,
   HALF_TIME_TUNNEL = 45,
   SECOND_HALF_STOPPAGE = 46,
+  OFFSIDE = 47,
+  GOAL_RESET = 48,
 }
 
 export { EMatchEvent };

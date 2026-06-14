@@ -3,19 +3,19 @@ export const SIM_TICK_SECONDS = SIM_TICK_MS / 1000;
 export const SIM_TICKS_PER_SECOND = 1000 / SIM_TICK_MS;
 
 export const MOVEMENT = {
-  walkingSpeed: 1.35,
-  jogSpeed: 3.1,
-  sprintSpeed: 5.4,
+  walkingSpeed: 4,
+  jogSpeed: 8,
+  sprintSpeed: 7.6,
   playerWithBallSpeedMultiplier: 0.86,
-  acceleration: 9.5,
-  braking: 7,
-  turnSmoothing: 0.88,
-  arrivalRadius: 5.5,
+  acceleration: 13.5,
+  braking: 9,
+  turnSmoothing: 0.9,
+  arrivalRadius: 6.8,
   stopRadius: 0.45,
   separationRadius: 5.4,
   separationStrength: 1.35,
   sameTargetOffset: 3.2,
-  passSpeed: 24,
+  passSpeed: 15,
   shotSpeed: 36,
   ballFriction: 8.5,
   ballControlRadius: 1.4,
@@ -161,14 +161,18 @@ export function applySeparation(player: Player, teammates: Player[]) {
       const away = sub(player.position, teammate.position);
       const dist = length(away);
       if (dist <= 0 || dist >= MOVEMENT.separationRadius) return acc;
-      const strength = ((MOVEMENT.separationRadius - dist) / MOVEMENT.separationRadius) *
+      const strength =
+        ((MOVEMENT.separationRadius - dist) / MOVEMENT.separationRadius) *
         MOVEMENT.separationStrength;
       return add(acc, scale(away, strength / dist));
     },
     { x: 0, y: 0 },
   );
 
-  player.targetPosition = clampToRoleZone(player, add(player.targetPosition, push));
+  const separatedTarget = add(player.targetPosition, push);
+  player.targetPosition = player.receivingPass
+    ? clampPoint(separatedTarget)
+    : clampToRoleZone(player, separatedTarget);
 }
 
 export function getTacticalTarget(
@@ -185,7 +189,7 @@ export function getTacticalTarget(
   const ball = gameState.ball.position;
 
   if (player.hasBall || owner?.id === player.id) {
-    const lane = role === "W" || role === "FB" ? Math.sign(player.homePosition.x - 50) * 4 : 0;
+    const lane = role === "W" || role === "FB" ? getWideLaneDirection(player) * 4 : 0;
     return {
       state: "DRIBBLE",
       targetPosition: clampToRoleZone(player, {
@@ -245,12 +249,15 @@ export function getTacticalTarget(
     }
 
     if (role === "W") {
-      const wideX = player.homePosition.x < 50 ? 10 : 90;
+      const wideX = getWideLaneX(player);
+      const supportX = lerp(wideX, 50, 0.18);
+      const flankRunY = ball.y + direction * 13;
+      const farPostY = ball.y + direction * 18;
       return {
         state: "MOVE_TO_SPACE",
         targetPosition: clampToRoleZone(player, {
-          x: wideX,
-          y: ball.y + direction * 13,
+          x: isSameFlank(player.homePosition.x, ball.x) ? wideX : supportX,
+          y: isSameFlank(player.homePosition.x, ball.x) ? flankRunY : farPostY,
         }),
       };
     }
@@ -305,7 +312,10 @@ export function predictBallIntercept(player: Player, ball: Ball): Vec2 {
   const playerSpeed = Math.max(0.1, getPlayerMaxSpeed(player));
   const timeToReachBallNow = length(relative) / playerSpeed;
   const predictionTime = clamp(timeToReachBallNow * 0.72, 0.15, 1.8);
-  const projected = add(ball.position, scale(ball.velocity, Math.min(predictionTime, 45 / ballSpeed)));
+  const projected = add(
+    ball.position,
+    scale(ball.velocity, Math.min(predictionTime, 45 / ballSpeed)),
+  );
 
   return clampPoint(projected);
 }
@@ -381,7 +391,10 @@ function updateBall(ball: Ball, players: Player[], deltaTime: number) {
 }
 
 function followBallCarrier(ball: Ball, owner: Player) {
-  const moveDirection = length(owner.velocity) > 0.02 ? normalize(owner.velocity) : { x: 0, y: attackDirection(owner.side) };
+  const moveDirection =
+    length(owner.velocity) > 0.02
+      ? normalize(owner.velocity)
+      : { x: 0, y: attackDirection(owner.side) };
   const offset = scale(moveDirection, 0.65);
   ball.position = clampPoint(add(owner.position, offset));
   ball.velocity = owner.velocity;
@@ -445,7 +458,10 @@ function isDesignatedPresser(player: Player, teammates: Player[], ball: Vec2) {
             : itemRole === "ST" || itemRole === "W"
               ? 2
               : 0;
-      return { id: item.id, distance: distance(item.position, ball) + leaveHome * 0.12 + rolePenalty };
+      return {
+        id: item.id,
+        distance: distance(item.position, ball) + leaveHome * 0.12 + rolePenalty,
+      };
     })
     .sort((left, right) => left.distance - right.distance)
     .slice(0, maxPressers);
@@ -464,10 +480,12 @@ function getPressTarget(player: Player, ball: Vec2) {
 }
 
 function findNearestOpponent(player: Player, opponents: Player[]) {
-  return opponents
-    .filter((item) => normalizeRole(item.role) !== "GK")
-    .map((item) => ({ player: item, distance: distance(player.homePosition, item.position) }))
-    .sort((left, right) => left.distance - right.distance)[0]?.player ?? null;
+  return (
+    opponents
+      .filter((item) => normalizeRole(item.role) !== "GK")
+      .map((item) => ({ player: item, distance: distance(player.homePosition, item.position) }))
+      .sort((left, right) => left.distance - right.distance)[0]?.player ?? null
+  );
 }
 
 function clampToRoleZone(player: Player, target: Vec2) {
@@ -501,9 +519,10 @@ function getRoleYBounds(side: Side, role: PlayerRole) {
 }
 
 function getRoleXBounds(player: Player, role: PlayerRole) {
-  const laneCenter = player.homePosition.x;
+  const laneCenter = role === "W" || role === "FB" ? getWideLaneX(player) : player.homePosition.x;
   if (role === "GK") return { min: 40, max: 60 };
-  if (role === "CB") return { min: Math.max(22, laneCenter - 16), max: Math.min(78, laneCenter + 16) };
+  if (role === "CB")
+    return { min: Math.max(22, laneCenter - 16), max: Math.min(78, laneCenter + 16) };
   if (role === "FB") {
     return laneCenter < 50 ? { min: 5, max: 34 } : { min: 66, max: 95 };
   }
@@ -512,6 +531,17 @@ function getRoleXBounds(player: Player, role: PlayerRole) {
   }
   if (role === "ST") return { min: 30, max: 70 };
   return { min: 18, max: 82 };
+}
+
+function getWideLaneX(player: Player) {
+  const role = player.role.toUpperCase();
+  if (role === "LW" || role === "LM" || role === "LB" || role === "LWB") return 10;
+  if (role === "RW" || role === "RM" || role === "RB" || role === "RWB") return 90;
+  return player.homePosition.x < 50 ? 10 : 90;
+}
+
+function getWideLaneDirection(player: Player) {
+  return getWideLaneX(player) < 50 ? -1 : 1;
 }
 
 function ownGoalY(side: Side) {

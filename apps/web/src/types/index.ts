@@ -237,6 +237,7 @@ export type MatchSnapshot = {
   matchStep?:
     | 'first_half_start'
     | 'play'
+    | 'goal_reset'
     | 'half_time'
     | 'second_half_start'
     | 'full_time';

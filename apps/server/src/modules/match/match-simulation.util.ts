@@ -36,16 +36,17 @@ const PASS_CADENCE_TICKS = Math.max(5, Math.round(5 * TICKS_PER_SECOND));
 const TACKLE_CADENCE_TICKS = Math.max(2, Math.round(1.4 * TICKS_PER_SECOND));
 const SHOT_CADENCE_TICKS = Math.max(2, Math.round(2.4 * TICKS_PER_SECOND));
 const SAVE_CADENCE_TICKS = Math.max(2, SHOT_CADENCE_TICKS * 2);
+const BALL_CONTROL_DISTANCE = 2.4;
 const PLAYER_SPEED_UNITS_PER_TICK: Record<PlayerMoveIntent, number> = {
-  anchor: 1.2,
-  kickoff: 2.2,
-  cover: 2.8,
-  mark: 3.2,
-  support: 3.8,
-  chase: 4.4,
-  run: 5.2,
-  overlap: 5.6,
-  press: 6,
+  anchor: 1.8,
+  kickoff: 4,
+  cover: 4.1,
+  mark: 4.6,
+  support: 5.2,
+  chase: 6,
+  run: 7,
+  overlap: 7.4,
+  press: 7.8,
 };
 const PASS_SPEED_UNITS_PER_TICK = MOVEMENT.passSpeed * SIM_TICK_SECONDS;
 const SHOT_SPEED_UNITS_PER_TICK = MOVEMENT.shotSpeed * SIM_TICK_SECONDS;
@@ -53,7 +54,13 @@ export const FRAMES_PER_ACTION = 5;
 export const ACTIONS_PER_HALF = 14;
 
 type Side = "home" | "away";
-type MatchStep = "first_half_start" | "play" | "half_time" | "second_half_start" | "full_time";
+type MatchStep =
+  | "first_half_start"
+  | "play"
+  | "goal_reset"
+  | "half_time"
+  | "second_half_start"
+  | "full_time";
 type PlayActionType = "pass" | "shoot" | "block" | "goal" | "save";
 type PossessionTempoKind = "pass" | "hold" | "carry" | "reposition";
 type PassStyle = "short" | "through" | "lob" | "switch";
@@ -599,12 +606,68 @@ export function generateNextMatchTick(input: {
   if (latestTick.highlight?.event === EMatchEvent.GOAL) {
     const losingSide: Side = latestTick.highlight.teamSide === "home" ? "away" : "home";
     const kickoffLineup = losingSide === "home" ? homeLineup : awayLineup;
+    resetLineupsToOwnHalf(homeLineup, awayLineup);
+    const { kickoff: kickoffPlayer } = selectKickoffPair(kickoffLineup, losingSide);
+    const kickoffSpot = getKickoffSpot(losingSide);
+    const resetPositionState = createInitialPositionState(homeLineup, awayLineup);
+    const snapshot = buildSnapshot({
+      frameId,
+      minute,
+      second,
+      tick: nextTickValue,
+      matchStep: "goal_reset",
+      phase: latestTick.phase === "second_half" ? "second_half" : "first_half",
+      homeScore: Number(latestTick.homeScore ?? 0),
+      awayScore: Number(latestTick.awayScore ?? 0),
+      possession: losingSide,
+      homeLineup,
+      awayLineup,
+      ballOwner: kickoffPlayer,
+      ball: kickoffSpot,
+      ballPath: fixedBallPath(kickoffSpot.x, kickoffSpot.y),
+      highlight: createHighlight(
+        EMatchEvent.GOAL_RESET,
+        `Tick ${nextTickValue}: ${losingSide === "home" ? "Home" : "Away"} ve phan san nha sau ban thua`,
+        losingSide,
+        kickoffPlayer.userPlayerId,
+        null,
+        null,
+      ),
+      activeSkill: null,
+      focusId: kickoffPlayer.userPlayerId,
+      pressId: null,
+      positionState: resetPositionState,
+    });
+
+    return {
+      snapshot,
+      event: {
+        event: EMatchEvent.GOAL_RESET,
+        minute,
+        teamId: kickoffPlayer.teamId,
+        actorPlayerId: kickoffPlayer.userPlayerId,
+        secondaryPlayerId: null,
+        payload: {
+          label: snapshot.highlight.label,
+          clockFrozen: true,
+          resetAfterGoal: true,
+          kickoffSide: losingSide,
+          ball: kickoffSpot,
+        },
+      },
+    };
+  }
+
+  if (latestTick.highlight?.event === EMatchEvent.GOAL_RESET) {
+    const losingSide = latestTick.possession ?? "home";
+    const kickoffLineup = losingSide === "home" ? homeLineup : awayLineup;
     const { kickoff: kickoffPlayer, partner: kickoffPartner } =
       losingSide === "home"
         ? applyHomeKickoffPair(kickoffLineup)
         : applyAwayKickoffPair(kickoffLineup);
     const kickoffSpot = { x: kickoffPlayer.anchors.x, y: kickoffPlayer.anchors.y };
     const ball = { x: kickoffPartner.anchors.x, y: kickoffPartner.anchors.y };
+    const kickoffPositionState = createInitialPositionState(homeLineup, awayLineup);
     const snapshot = buildSnapshot({
       frameId,
       minute,
@@ -631,7 +694,7 @@ export function generateNextMatchTick(input: {
       activeSkill: null,
       focusId: kickoffPartner.userPlayerId,
       pressId: null,
-      positionState: previousPositionState,
+      positionState: kickoffPositionState,
     });
 
     return {
@@ -645,8 +708,135 @@ export function generateNextMatchTick(input: {
         payload: {
           label: snapshot.highlight.label,
           kickoffAfterGoal: true,
+          clockFrozen: true,
           from: kickoffSpot,
           to: ball,
+        },
+      },
+    };
+  }
+
+  if (latestTick.highlight?.event === EMatchEvent.OFFSIDE) {
+    const freeKickSide = latestTick.possession ?? "home";
+    const freeKickLineup = freeKickSide === "home" ? homeLineup : awayLineup;
+    const taker =
+      freeKickLineup.find((player) => player.userPlayerId === latestTick.ball.ownerPlayerId) ??
+      findNearestPlayer(freeKickLineup, latestTick.ball, (player) => player.role !== "GK") ??
+      freeKickLineup[0];
+    const partner =
+      freeKickLineup
+        .filter((player) => player.userPlayerId !== taker.userPlayerId && player.role !== "GK")
+        .map((player) => ({
+          player,
+          distance: distance(player.anchors, latestTick.ball),
+        }))
+        .sort((left, right) => left.distance - right.distance)[0]?.player ??
+      taker;
+    const restartTarget = moveToward(
+      latestTick.ball,
+      {
+        x: clamp(partner.anchors.x, 8, 92),
+        y: clamp(partner.anchors.y, 8, 92),
+      },
+      PASS_SPEED_UNITS_PER_TICK,
+    );
+    const snapshot = buildSnapshot({
+      frameId,
+      minute,
+      second,
+      tick: nextTickValue,
+      matchStep: "play",
+      phase: latestTick.phase === "second_half" ? "second_half" : "first_half",
+      homeScore: Number(latestTick.homeScore ?? 0),
+      awayScore: Number(latestTick.awayScore ?? 0),
+      possession: freeKickSide,
+      homeLineup,
+      awayLineup,
+      ballOwner: partner,
+      ball: restartTarget,
+      ballPath: pathBetween({ x: latestTick.ball.x, y: latestTick.ball.y }, restartTarget),
+      highlight: createHighlight(
+        EMatchEvent.FREE_KICK,
+        `Tick ${nextTickValue}: ${taker.shortName} da phat sau loi viet vi`,
+        freeKickSide,
+        taker.userPlayerId,
+        partner.userPlayerId,
+        null,
+      ),
+      activeSkill: null,
+      focusId: partner.userPlayerId,
+      pressId: null,
+      positionState: previousPositionState,
+    });
+
+    return {
+      snapshot,
+      event: {
+        event: EMatchEvent.FREE_KICK,
+        minute,
+        teamId: taker.teamId,
+        actorPlayerId: taker.userPlayerId,
+        secondaryPlayerId: partner.userPlayerId,
+        payload: {
+          label: snapshot.highlight.label,
+          reason: "offside_restart",
+          from: { x: latestTick.ball.x, y: latestTick.ball.y },
+          to: restartTarget,
+        },
+      },
+    };
+  }
+
+  const pendingReception = resolvePendingBallReception({
+    latestTick,
+    homeLineup,
+    awayLineup,
+    previousPositionState,
+  });
+  if (pendingReception) {
+    const snapshot = buildSnapshot({
+      frameId,
+      minute,
+      second,
+      tick: nextTickValue,
+      matchStep: "play",
+      phase: latestTick.phase === "second_half" ? "second_half" : "first_half",
+      homeScore: Number(latestTick.homeScore ?? 0),
+      awayScore: Number(latestTick.awayScore ?? 0),
+      possession: latestTick.possession ?? pendingReception.receiver.side,
+      homeLineup,
+      awayLineup,
+      ballOwner: pendingReception.receiver,
+      ball: latestTick.ball,
+      ballPath: fixedBallPath(latestTick.ball.x, latestTick.ball.y),
+      highlight: createHighlight(
+        pendingReception.event,
+        `Tick ${nextTickValue}: ${pendingReception.receiver.shortName} dang chay den diem nhan bong`,
+        latestTick.possession ?? pendingReception.receiver.side,
+        pendingReception.actorId,
+        pendingReception.receiver.userPlayerId,
+        null,
+      ),
+      activeSkill: null,
+      focusId: pendingReception.receiver.userPlayerId,
+      pressId: null,
+      positionState: previousPositionState,
+    });
+
+    return {
+      snapshot,
+      event: {
+        event: pendingReception.event,
+        minute,
+        teamId: pendingReception.receiver.teamId,
+        actorPlayerId: pendingReception.actorId,
+        secondaryPlayerId: pendingReception.receiver.userPlayerId,
+        payload: {
+          label: snapshot.highlight.label,
+          pendingReception: true,
+          distanceToBall: pendingReception.distanceToBall,
+          from: { x: latestTick.ball.x, y: latestTick.ball.y },
+          to: { x: latestTick.ball.x, y: latestTick.ball.y },
         },
       },
     };
@@ -808,8 +998,69 @@ export function generateNextMatchTick(input: {
     nextTick: nextTickValue,
     possession,
   });
-  const { receiver, ballTarget, pressDefender, passStyle } = passDecision;
+  const { receiver, ballTarget, pressDefender, passStyle, offside } = passDecision;
   const defensiveAction = passDecision.interception;
+
+  if (offside?.isOffside) {
+    const newPossession: Side = possession === "home" ? "away" : "home";
+    const freeKickTaker =
+      pressDefender ??
+      findNearestPlayer(defending, ballTarget, (player) => player.role !== "GK") ??
+      defending[0];
+    const offsideSpot = {
+      x: clamp(receiver.anchors.x, 6, 94),
+      y: clamp(offside.lineY, 6, 94),
+    };
+    const snapshot = buildSnapshot({
+      frameId,
+      minute,
+      second,
+      tick: nextTickValue,
+      matchStep: "play",
+      phase,
+      homeScore: Number(latestTick.homeScore ?? 0),
+      awayScore: Number(latestTick.awayScore ?? 0),
+      possession: newPossession,
+      homeLineup,
+      awayLineup,
+      ballOwner: freeKickTaker,
+      ball: offsideSpot,
+      ballPath: pathBetween({ x: latestTick.ball.x, y: latestTick.ball.y }, offsideSpot),
+      highlight: createHighlight(
+        EMatchEvent.OFFSIDE,
+        `Tick ${nextTickValue}: ${receiver.shortName} viet vi khi nhan ${getPassStyleLabel(passStyle)}`,
+        newPossession,
+        freeKickTaker.userPlayerId,
+        null,
+        null,
+      ),
+      activeSkill: null,
+      focusId: freeKickTaker.userPlayerId,
+      pressId: null,
+      positionState: previousPositionState,
+    });
+
+    return {
+      snapshot,
+      event: {
+        event: EMatchEvent.OFFSIDE,
+        minute,
+        teamId: freeKickTaker.teamId,
+        actorPlayerId: freeKickTaker.userPlayerId,
+        secondaryPlayerId: receiver.userPlayerId,
+        payload: {
+          label: snapshot.highlight.label,
+          reason: "offside",
+          offenderPlayerId: receiver.userPlayerId,
+          passStyle,
+          lineY: offside.lineY,
+          from: { x: latestTick.ball.x, y: latestTick.ball.y },
+          to: offsideSpot,
+          recoveredPossession: newPossession,
+        },
+      },
+    };
+  }
 
   if (defensiveAction && pressDefender) {
     const newPossession: Side = possession === "home" ? "away" : "home";
@@ -908,6 +1159,7 @@ export function generateNextMatchTick(input: {
         from: { x: latestTick.ball.x, y: latestTick.ball.y },
         to: ballTarget,
         passStyle,
+        receiverRunTarget: ballTarget,
       },
     },
   };
@@ -1552,6 +1804,8 @@ function resolveDebugPassingAction(input: {
         ball: input.ball,
         tick: input.tick,
         possession: input.possession,
+        defending: input.defending,
+        previousPositionState: input.previousPositionState,
       });
       const lane = evaluatePassLane({
         from: input.ball,
@@ -1574,10 +1828,30 @@ function resolveDebugPassingAction(input: {
       const passStyle = resolvePassStyle({
         actor: input.actor,
         receiver: player,
+        receiverPosition: previous,
         from: input.ball,
         to: ballTarget,
         possession: input.possession,
         laneScore: lane.score,
+        defending: input.defending,
+        previousPositionState: input.previousPositionState,
+      });
+      const offside = evaluateOffside({
+        receiver: player,
+        receiverPosition: previous,
+        ball: input.ball,
+        defending: input.defending,
+        possession: input.possession,
+        previousPositionState: input.previousPositionState,
+      });
+      const throughRunScore = evaluateThroughRun({
+        receiver: player,
+        receiverPosition: previous,
+        ball: input.ball,
+        target: ballTarget,
+        possession: input.possession,
+        defending: input.defending,
+        previousPositionState: input.previousPositionState,
       });
       const role = normalizeRole(player.role);
       const roleWeight =
@@ -1598,14 +1872,16 @@ function resolveDebugPassingAction(input: {
           : passStyle === "lob"
             ? 0.11
             : passStyle === "through"
-              ? 0.07
+              ? 0.14 + throughRunScore * 0.16
               : 0;
+      const offsidePenalty = offside.isOffside ? 1.8 : offside.warning ? 0.18 : 0;
 
       return {
         player,
         ballTarget,
         lane,
         passStyle,
+        offside,
         score:
           lane.score * 0.34 +
           availability * 0.24 +
@@ -1613,12 +1889,14 @@ function resolveDebugPassingAction(input: {
           distanceScore * 0.14 +
           styleWeight +
           roleWeight +
-          laneRotation * 0.01,
+          laneRotation * 0.01 -
+          offsidePenalty,
       };
     })
     .sort((left, right) => right.score - left.score);
 
-  const selected = ranked[0] ?? {
+  const onsideRanked = ranked.filter((item) => !item.offside.isOffside);
+  const selected = onsideRanked[0] ?? ranked[0] ?? {
     player: candidates[0],
     ballTarget: getDebugPassTarget({
       receiver: candidates[0],
@@ -1628,6 +1906,8 @@ function resolveDebugPassingAction(input: {
       ball: input.ball,
       tick: input.tick,
       possession: input.possession,
+      defending: input.defending,
+      previousPositionState: input.previousPositionState,
     }),
     lane: evaluatePassLane({
       from: input.ball,
@@ -1636,6 +1916,7 @@ function resolveDebugPassingAction(input: {
       previousPositionState: input.previousPositionState,
     }),
     passStyle: "short" as PassStyle,
+    offside: { isOffside: false, warning: false, lineY: 50 },
     score: 0,
   };
   const pressDefender = selected.lane.defender ?? input.defending[0];
@@ -1645,6 +1926,7 @@ function resolveDebugPassingAction(input: {
     ballTarget: selected.ballTarget,
     pressDefender,
     passStyle: selected.passStyle,
+    offside: selected.offside,
     interception: resolveDebugPassInterception({
       defender: pressDefender,
       actor: input.actor,
@@ -1662,21 +1944,36 @@ function resolveDebugPassingAction(input: {
 function resolvePassStyle(input: {
   actor: InternalLineupPlayer;
   receiver: InternalLineupPlayer;
+  receiverPosition: TrajectoryPoint;
   from: TrajectoryPoint;
   to: TrajectoryPoint;
   possession: Side;
   laneScore: number;
+  defending: InternalLineupPlayer[];
+  previousPositionState: PositionState;
 }): PassStyle {
   const direction = attackDirection(input.possession);
   const receiverRole = normalizeRole(input.receiver.role);
   const forwardProgress = (input.to.y - input.from.y) * direction;
   const anchorDistance = distance(input.actor.anchors, input.receiver.anchors);
+  const offside = evaluateOffside({
+    receiver: input.receiver,
+    receiverPosition: input.receiverPosition,
+    ball: input.from,
+    defending: input.defending,
+    possession: input.possession,
+    previousPositionState: input.previousPositionState,
+  });
+  const canAttackSpace = !offside.isOffside && !offside.warning;
   const switchFlank =
     Math.abs(input.actor.anchors.x - input.receiver.anchors.x) >= 34 &&
     anchorDistance >= 24 &&
     input.laneScore >= 0.45;
 
   if (switchFlank) return "switch";
+  if (canAttackSpace && (receiverRole === "W" || receiverRole === "ST") && forwardProgress >= 6) {
+    return "through";
+  }
   if ((receiverRole === "W" || receiverRole === "ST") && forwardProgress >= 7) {
     return input.laneScore < 0.48 || anchorDistance >= 20 ? "lob" : "through";
   }
@@ -1835,12 +2132,36 @@ function getDebugPassTarget(input: {
   ball: TrajectoryPoint;
   tick: number;
   possession: Side;
+  defending: InternalLineupPlayer[];
+  previousPositionState: PositionState;
 }): TrajectoryPoint {
   const direction = attackDirection(input.possession);
   const role = normalizeRole(input.receiver.role);
+  const offside = evaluateOffside({
+    receiver: input.receiver,
+    receiverPosition: input.receiverPreviousPosition,
+    ball: input.ball,
+    defending: input.defending,
+    possession: input.possession,
+    previousPositionState: input.previousPositionState,
+  });
+  const throughPoint = getThroughPassTarget({
+    receiver: input.receiver,
+    receiverPreviousPosition: input.receiverPreviousPosition,
+    ball: input.ball,
+    tick: input.tick,
+    possession: input.possession,
+    defending: input.defending,
+    previousPositionState: input.previousPositionState,
+  });
+
+  if (throughPoint && !offside.isOffside) {
+    return moveToward(input.ball, throughPoint, PASS_SPEED_UNITS_PER_TICK);
+  }
+
   const widthPull =
     role === "W" || role === "FB"
-      ? input.receiver.anchors.x < 50
+      ? getWideLaneX(input.receiver) < 50
         ? -5
         : 5
       : (50 - input.receiverPreviousPosition.x) * 0.12;
@@ -1877,6 +2198,144 @@ function getDebugPassTarget(input: {
   );
 
   return moveToward(input.ball, receivePoint, PASS_SPEED_UNITS_PER_TICK);
+}
+
+function getThroughPassTarget(input: {
+  receiver: InternalLineupPlayer;
+  receiverPreviousPosition: TrajectoryPoint;
+  ball: TrajectoryPoint;
+  tick: number;
+  possession: Side;
+  defending: InternalLineupPlayer[];
+  previousPositionState: PositionState;
+}): TrajectoryPoint | null {
+  const role = normalizeRole(input.receiver.role);
+  if (role !== "ST" && role !== "W" && role !== "CM") return null;
+
+  const direction = attackDirection(input.possession);
+  const offside = evaluateOffside({
+    receiver: input.receiver,
+    receiverPosition: input.receiverPreviousPosition,
+    ball: input.ball,
+    defending: input.defending,
+    possession: input.possession,
+    previousPositionState: input.previousPositionState,
+  });
+  if (offside.isOffside) return null;
+
+  const lineGap = Math.abs(input.receiverPreviousPosition.y - offside.lineY);
+  const forwardFromBall = (input.receiverPreviousPosition.y - input.ball.y) * direction;
+  const canBreakLine =
+    (role === "ST" || role === "W") &&
+    forwardFromBall > -8 &&
+    lineGap <= 18 &&
+    distance(input.ball, input.receiverPreviousPosition) <= 38;
+
+  if (!canBreakLine) return null;
+
+  const laneShift =
+    role === "W"
+      ? getWideLaneDirection(input.receiver) * 5
+      : ((input.tick + input.receiver.userPlayerId) % 3 - 1) * 3;
+  const lineSafety = direction < 0 ? offside.lineY + 1.2 : offside.lineY - 1.2;
+  const breakDepth = role === "ST" ? 9.5 : 8;
+  const desiredY = clamp(Math.min(94, Math.max(6, lineSafety + direction * breakDepth)), 6, 94);
+  const desired = {
+    x: clamp(
+      role === "W"
+        ? lerp(input.receiverPreviousPosition.x, getWideLaneX(input.receiver), 0.48) + laneShift
+        : lerp(input.receiverPreviousPosition.x, input.receiver.anchors.x, 0.25) + laneShift,
+      8,
+      92,
+    ),
+    y: desiredY,
+  };
+  const receiverReach = getReceiverReachForTick(input.receiver) * 1.45;
+
+  return moveToward(input.receiverPreviousPosition, desired, receiverReach);
+}
+
+function evaluateThroughRun(input: {
+  receiver: InternalLineupPlayer;
+  receiverPosition: TrajectoryPoint;
+  ball: TrajectoryPoint;
+  target: TrajectoryPoint;
+  possession: Side;
+  defending: InternalLineupPlayer[];
+  previousPositionState: PositionState;
+}) {
+  const role = normalizeRole(input.receiver.role);
+  if (role !== "ST" && role !== "W") return 0;
+
+  const direction = attackDirection(input.possession);
+  const offside = evaluateOffside({
+    receiver: input.receiver,
+    receiverPosition: input.receiverPosition,
+    ball: input.ball,
+    defending: input.defending,
+    possession: input.possession,
+    previousPositionState: input.previousPositionState,
+  });
+  const breakProgress = (input.target.y - input.receiverPosition.y) * direction;
+  const ballProgress = (input.target.y - input.ball.y) * direction;
+  const lineGap = Math.abs(input.receiverPosition.y - offside.lineY);
+
+  return clamp(
+    clamp(breakProgress / 11, 0, 1) * 0.4 +
+      clamp(ballProgress / 22, 0, 1) * 0.32 +
+      clamp((18 - lineGap) / 18, 0, 1) * 0.28,
+    0,
+    1,
+  );
+}
+
+function evaluateOffside(input: {
+  receiver: InternalLineupPlayer;
+  receiverPosition: TrajectoryPoint;
+  ball: TrajectoryPoint;
+  defending: InternalLineupPlayer[];
+  possession: Side;
+  previousPositionState: PositionState;
+}): { isOffside: boolean; warning: boolean; lineY: number } {
+  const direction = attackDirection(input.possession);
+  const receiverRole = normalizeRole(input.receiver.role);
+  if (receiverRole === "GK" || receiverRole === "CB" || receiverRole === "FB") {
+    return { isOffside: false, warning: false, lineY: getDeepestOutfieldDefenderLine(input) };
+  }
+
+  const lineY = getDeepestOutfieldDefenderLine(input);
+  const attackingHalf = input.possession === "home" ? input.receiverPosition.y < 50 : input.receiverPosition.y > 50;
+  const aheadOfBall = (input.receiverPosition.y - input.ball.y) * direction > 1.2;
+  const beyondLine =
+    direction < 0
+      ? input.receiverPosition.y < lineY - 1.4
+      : input.receiverPosition.y > lineY + 1.4;
+  const closeToTrap =
+    attackingHalf &&
+    aheadOfBall &&
+    (direction < 0
+      ? input.receiverPosition.y < lineY + 2.2
+      : input.receiverPosition.y > lineY - 2.2);
+
+  return {
+    isOffside: attackingHalf && aheadOfBall && beyondLine,
+    warning: closeToTrap && !beyondLine,
+    lineY,
+  };
+}
+
+function getDeepestOutfieldDefenderLine(input: {
+  defending: InternalLineupPlayer[];
+  possession: Side;
+  previousPositionState: PositionState;
+}) {
+  const defenderYs = input.defending
+    .filter((defender) => normalizeRole(defender.role) !== "GK")
+    .map((defender) => input.previousPositionState.players.get(defender.userPlayerId) ?? defender.anchors)
+    .map((position) => position.y)
+    .sort((left, right) => (input.possession === "home" ? left - right : right - left));
+
+  return defenderYs[0] ?? (input.possession === "home" ? 18 : 82);
 }
 
 function getReceiverReachForTick(receiver: InternalLineupPlayer) {
@@ -2136,10 +2595,18 @@ function buildCurvedShotPath(
 }
 
 function getNextMatchClockSecond(latestTick: MatchSnapshot) {
+  if (shouldFreezeMatchClock(latestTick.highlight?.event ?? null)) {
+    return Math.min(MATCH_CLOCK_SECONDS, Number(latestTick.second ?? 0));
+  }
+
   return Math.min(
     MATCH_CLOCK_SECONDS,
-    Math.floor((latestTick.tick + DEBUG_TICK_STEP) / TICKS_PER_SECOND),
+    Number(latestTick.second ?? 0) + Math.floor(DEBUG_TICK_STEP / TICKS_PER_SECOND),
   );
+}
+
+function shouldFreezeMatchClock(event: EMatchEvent | null) {
+  return event === EMatchEvent.GOAL || event === EMatchEvent.GOAL_RESET || event === EMatchEvent.OFFSIDE;
 }
 
 function resolveMatchLifecycleAction(
@@ -2368,9 +2835,48 @@ function distanceToAttackingGoal(possession: Side, point: TrajectoryPoint) {
   return Math.abs(point.y - goalY);
 }
 
+function resolvePendingBallReception(input: {
+  latestTick: MatchSnapshot;
+  homeLineup: InternalLineupPlayer[];
+  awayLineup: InternalLineupPlayer[];
+  previousPositionState: PositionState;
+}): {
+  event: EMatchEvent.PASS | EMatchEvent.FREE_KICK;
+  receiver: InternalLineupPlayer;
+  actorId: number;
+  distanceToBall: number;
+} | null {
+  const event = input.latestTick.highlight?.event;
+  if (event !== EMatchEvent.PASS && event !== EMatchEvent.FREE_KICK) return null;
+  if (input.latestTick.ball.ownerPlayerId != null) return null;
+
+  const receiverId = input.latestTick.highlight?.secondaryPlayerId;
+  if (receiverId == null) return null;
+
+  const allPlayers = [...input.homeLineup, ...input.awayLineup];
+  const receiver = allPlayers.find((player) => player.userPlayerId === receiverId);
+  if (!receiver) return null;
+
+  const receiverPosition =
+    input.previousPositionState.players.get(receiver.userPlayerId) ?? receiver.anchors;
+  const distanceToBall = distance(receiverPosition, input.latestTick.ball);
+
+  if (distanceToBall <= BALL_CONTROL_DISTANCE) {
+    return null;
+  }
+
+  return {
+    event,
+    receiver,
+    actorId: input.latestTick.highlight?.actorPlayerId ?? receiver.userPlayerId,
+    distanceToBall,
+  };
+}
+
 function shouldAttachBallToOwner(event: EMatchEvent | null) {
   return ![
     EMatchEvent.PASS,
+    EMatchEvent.FREE_KICK,
     EMatchEvent.SHOOT,
     EMatchEvent.GOAL,
     EMatchEvent.GOALKEEPER_SAVE,
@@ -2533,6 +3039,10 @@ function buildSnapshot(input: {
   const ownerId = input.ballOwner.userPlayerId;
   const ballIsControlled = shouldAttachBallToOwner(input.highlight.event);
   const controlledOwnerId = ballIsControlled ? ownerId : null;
+  const intendedReceiverId =
+    input.highlight.event === EMatchEvent.PASS || input.highlight.event === EMatchEvent.FREE_KICK
+      ? (input.highlight.secondaryPlayerId ?? null)
+      : null;
   const homePlayers = projectPlayers({
     lineup: input.homeLineup,
     teammateLineup: input.homeLineup,
@@ -2541,7 +3051,7 @@ function buildSnapshot(input: {
     ball,
     ballVelocity,
     ballOwnerId: controlledOwnerId,
-    intendedReceiverId: input.highlight.secondaryPlayerId ?? null,
+    intendedReceiverId,
     focusId: input.focusId,
     pressId: input.pressId,
     matchStep: input.matchStep,
@@ -2555,7 +3065,7 @@ function buildSnapshot(input: {
     ball,
     ballVelocity,
     ballOwnerId: controlledOwnerId,
-    intendedReceiverId: input.highlight.secondaryPlayerId ?? null,
+    intendedReceiverId,
     focusId: input.focusId,
     pressId: input.pressId,
     matchStep: input.matchStep,
@@ -2823,10 +3333,11 @@ function getAttackingTarget(
   }
 
   if (role === "W") {
+    const wideX = getWideLaneX(player);
     return {
       target: {
-        x: clamp(sameFlank ? player.anchors.x : lerp(player.anchors.x, 50, 0.35), 8, 92),
-        y: clamp(sameFlank ? ball.y + direction * 13 : player.anchors.y + direction * 8, 8, 92),
+        x: clamp(sameFlank ? wideX : lerp(wideX, 50, 0.18), 8, 92),
+        y: clamp(sameFlank ? ball.y + direction * 13 : ball.y + direction * 18, 8, 92),
       },
       intent: sameFlank ? "run" : "support",
     };
@@ -2908,10 +3419,11 @@ function getDefensiveTarget(
   }
 
   if (role === "W") {
+    const wideX = getWideLaneX(player);
     return {
       target: {
         x: clamp(
-          sameFlank ? lerp(player.anchors.x, ball.x, 0.28) : lerp(player.anchors.x, 50, 0.24),
+          sameFlank ? lerp(wideX, ball.x, 0.28) : lerp(wideX, 50, 0.2),
           8,
           92,
         ),
@@ -2973,8 +3485,8 @@ function normalizeRole(role: string): "GK" | "CB" | "FB" | "CM" | "W" | "ST" {
   if (role === "GK") return "GK";
   if (role.includes("CB")) return "CB";
   if (role === "LB" || role === "RB") return "FB";
-  if (role.includes("CM") || role === "CM" || role === "LM" || role === "RM") return "CM";
-  if (role === "LW" || role === "RW") return "W";
+  if (role === "LW" || role === "RW" || role === "LM" || role === "RM") return "W";
+  if (role.includes("CM") || role === "CM") return "CM";
   return "ST";
 }
 
@@ -2994,6 +3506,17 @@ function isSameFlank(playerX: number, ballX: number) {
   if (playerX < 35) return ballX < 50;
   if (playerX > 65) return ballX > 50;
   return ballX >= 35 && ballX <= 65;
+}
+
+function getWideLaneX(player: { role: string; anchors: TrajectoryPoint }) {
+  const role = player.role.toUpperCase();
+  if (role === "LW" || role === "LM" || role === "LB" || role === "LWB") return 10;
+  if (role === "RW" || role === "RM" || role === "RB" || role === "RWB") return 90;
+  return player.anchors.x < 50 ? 10 : 90;
+}
+
+function getWideLaneDirection(player: { role: string; anchors: TrajectoryPoint }) {
+  return getWideLaneX(player) < 50 ? -1 : 1;
 }
 
 function createInitialPositionState(
@@ -3077,6 +3600,47 @@ function applyKickoffShape(homeLineup: InternalLineupPlayer[], awayLineup: Inter
     player.homeX = next.x;
     player.homeY = next.y;
   });
+}
+
+function resetLineupsToOwnHalf(homeLineup: InternalLineupPlayer[], awayLineup: InternalLineupPlayer[]) {
+  homeLineup.forEach((player) => resetPlayerToOwnHalf(player));
+  awayLineup.forEach((player) => resetPlayerToOwnHalf(player));
+}
+
+function resetPlayerToOwnHalf(player: InternalLineupPlayer) {
+  const role = normalizeRole(player.role);
+  const x = getResetLaneX(player);
+  const homeYByRole: Record<ReturnType<typeof normalizeRole>, number> = {
+    GK: 92,
+    CB: 78,
+    FB: 76,
+    CM: 59,
+    W: 56,
+    ST: 52,
+  };
+  const homeY = homeYByRole[role] ?? 58;
+  const next = {
+    x,
+    y: player.side === "home" ? homeY : 100 - homeY,
+  };
+
+  player.anchors = next;
+  player.x = next.x;
+  player.y = next.y;
+  player.homeX = next.x;
+  player.homeY = next.y;
+}
+
+function getResetLaneX(player: InternalLineupPlayer) {
+  const role = player.role.toUpperCase();
+  if (role === "GK" || role === "CM" || role === "CDM" || role === "CAM" || role === "ST") {
+    return role === "ST" ? 50 : 50;
+  }
+  if (role === "LCB" || role === "LST" || role === "LCM") return role === "LST" ? 42 : 36;
+  if (role === "RCB" || role === "RST" || role === "RCM") return role === "RST" ? 58 : 64;
+  if (role === "LB" || role === "LWB" || role === "LM" || role === "LW") return 18;
+  if (role === "RB" || role === "RWB" || role === "RM" || role === "RW") return 82;
+  return clamp(player.anchors.x, 14, 86);
 }
 
 function applyHomeKickoffPair(homeLineup: InternalLineupPlayer[]) {
