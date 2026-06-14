@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useParams } from 'react-router-dom';
 import './MatchView.css';
 import { useMatchMotion } from './hooks/useMatchMotion';
-import { useGetNextMatchTick } from './hooks/useMatch';
+import { useGetNextMatchTick, useStartAutoMatchTick, useStopAutoMatchTick } from './hooks/useMatch';
 import { useMatchSocket, type LiveMatchEvent } from './hooks/useMatchSocket';
 import type { MatchPitchPlayer, MatchSnapshot } from './types';
 
@@ -331,30 +331,19 @@ export function MatchView() {
     ackActiveTick,
   } = useMatchSocket(matchId);
   const getNextTick = useGetNextMatchTick(matchId);
+  const startAutoTick = useStartAutoMatchTick(matchId);
+  const stopAutoTick = useStopAutoMatchTick(matchId);
   const renderedSnapshot = useMatchMotion(snapshot, {
     onTickComplete: ackActiveTick,
   });
   const isMatchEnded = renderedSnapshot?.highlight?.event === MATCH_EVENT.MATCH_END;
 
   useEffect(() => {
-    if (!isAutoTicking || !matchId || isMatchEnded) {
-      return;
-    }
-
-    const intervalId = window.setInterval(() => {
-      if (!getNextTick.isPending && queuedTicks < 4) {
-        getNextTick.mutate();
-      }
-    }, 1000);
-
-    return () => window.clearInterval(intervalId);
-  }, [getNextTick, isAutoTicking, isMatchEnded, matchId, queuedTicks]);
-
-  useEffect(() => {
-    if (isMatchEnded) {
+    if (isMatchEnded && isAutoTicking) {
       setIsAutoTicking(false);
+      stopAutoTick.mutate();
     }
-  }, [isMatchEnded]);
+  }, [isAutoTicking, isMatchEnded, stopAutoTick]);
 
   return (
     <main className="match-view">
@@ -379,21 +368,35 @@ export function MatchView() {
           <button
             type="button"
             className="match-debug-controls__button"
-            disabled={!matchId || isAutoTicking || isMatchEnded}
-            onClick={() => setIsAutoTicking(true)}
+            disabled={!matchId || isAutoTicking || isMatchEnded || startAutoTick.isPending}
+            onClick={() => {
+              startAutoTick.mutate(undefined, {
+                onSuccess: () => setIsAutoTicking(true),
+              });
+            }}
           >
-            Auto tick
+            {startAutoTick.isPending ? 'Starting...' : 'Auto tick'}
           </button>
           <button
             type="button"
             className="match-debug-controls__button match-debug-controls__button--stop"
-            disabled={!isAutoTicking}
-            onClick={() => setIsAutoTicking(false)}
+            disabled={!isAutoTicking || stopAutoTick.isPending}
+            onClick={() => {
+              stopAutoTick.mutate(undefined, {
+                onSettled: () => setIsAutoTicking(false),
+              });
+            }}
           >
-            Stop
+            {stopAutoTick.isPending ? 'Stopping...' : 'Stop'}
           </button>
           {getNextTick.error ? (
             <span className="match-debug-controls__error">{getNextTick.error.message}</span>
+          ) : null}
+          {startAutoTick.error ? (
+            <span className="match-debug-controls__error">{startAutoTick.error.message}</span>
+          ) : null}
+          {stopAutoTick.error ? (
+            <span className="match-debug-controls__error">{stopAutoTick.error.message}</span>
           ) : null}
         </div>
         {renderedSnapshot ? (
