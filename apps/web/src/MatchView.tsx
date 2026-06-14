@@ -25,6 +25,9 @@ const MATCH_EVENT = {
   OFFSIDE: 47,
   GOAL_RESET: 48,
   FOUL: 49,
+  THROW_IN: 50,
+  CORNER_KICK: 51,
+  GOAL_KICK: 52,
 } as const;
 
 function clampPercent(value: number) {
@@ -97,6 +100,12 @@ function getEventView(eventCode: number | null | undefined) {
       return { title: 'Reset', className: 'match-event--start' };
     case MATCH_EVENT.FOUL:
       return { title: 'Foul', className: 'match-event--defense' };
+    case MATCH_EVENT.THROW_IN:
+      return { title: 'Throw in', className: 'match-event--pass' };
+    case MATCH_EVENT.CORNER_KICK:
+      return { title: 'Corner', className: 'match-event--shot' };
+    case MATCH_EVENT.GOAL_KICK:
+      return { title: 'Goal kick', className: 'match-event--pass' };
     case 7:
       return { title: 'Goal', className: 'match-event--goal' };
     default:
