@@ -12,9 +12,9 @@ export const MOVEMENT = {
   turnSmoothing: 0.88,
   arrivalRadius: 5.5,
   stopRadius: 0.45,
-  separationRadius: 3.2,
-  separationStrength: 0.7,
-  sameTargetOffset: 1.8,
+  separationRadius: 5.4,
+  separationStrength: 1.35,
+  sameTargetOffset: 3.2,
   passSpeed: 24,
   shotSpeed: 36,
   ballFriction: 8.5,
@@ -35,7 +35,7 @@ export type PlayerAIState =
   | "DRIBBLE"
   | "RECOVER_DEFENSE";
 
-export type PlayerRole = "GK" | "CB" | "FB" | "CM" | "W" | "ST";
+export type PlayerRole = "GK" | "CB" | "FB" | "DM" | "CM" | "W" | "ST";
 
 export type Player = {
   id: number;
@@ -168,7 +168,7 @@ export function applySeparation(player: Player, teammates: Player[]) {
     { x: 0, y: 0 },
   );
 
-  player.targetPosition = clampPoint(add(player.targetPosition, push));
+  player.targetPosition = clampToRoleZone(player, add(player.targetPosition, push));
 }
 
 export function getTacticalTarget(
@@ -182,12 +182,13 @@ export function getTacticalTarget(
   const hasPossession = gameState.possession === player.side;
   const role = normalizeRole(player.role);
   const direction = attackDirection(player.side);
+  const ball = gameState.ball.position;
 
   if (player.hasBall || owner?.id === player.id) {
-    const lane = role === "W" ? Math.sign(player.homePosition.x - 50) * 4 : 0;
+    const lane = role === "W" || role === "FB" ? Math.sign(player.homePosition.x - 50) * 4 : 0;
     return {
       state: "DRIBBLE",
-      targetPosition: clampPoint({
+      targetPosition: clampToRoleZone(player, {
         x: player.position.x + lane,
         y: player.position.y + direction * 6,
       }),
@@ -202,12 +203,43 @@ export function getTacticalTarget(
   }
 
   if (hasPossession) {
-    if (role === "GK" || role === "CB") {
+    if (role === "GK") {
       return {
         state: "HOLD_POSITION",
-        targetPosition: clampPoint({
-          x: lerp(player.homePosition.x, gameState.ball.position.x, role === "GK" ? 0.06 : 0.14),
-          y: player.homePosition.y + direction * (role === "GK" ? 1.5 : 5),
+        targetPosition: clampToRoleZone(player, {
+          x: lerp(player.homePosition.x, ball.x, 0.08),
+          y: ownGoalY(player.side) - direction * 3,
+        }),
+      };
+    }
+
+    if (role === "CB") {
+      return {
+        state: "HOLD_POSITION",
+        targetPosition: clampToRoleZone(player, {
+          x: lerp(player.homePosition.x, ball.x, 0.14),
+          y: player.homePosition.y + direction * 7,
+        }),
+      };
+    }
+
+    if (role === "DM") {
+      return {
+        state: "SUPPORT_ATTACK",
+        targetPosition: clampToRoleZone(player, {
+          x: lerp(player.homePosition.x, ball.x, 0.24),
+          y: ball.y - direction * 10,
+        }),
+      };
+    }
+
+    if (role === "FB") {
+      const sameFlank = isSameFlank(player.homePosition.x, ball.x);
+      return {
+        state: sameFlank ? "SUPPORT_ATTACK" : "HOLD_POSITION",
+        targetPosition: clampToRoleZone(player, {
+          x: sameFlank ? player.homePosition.x : lerp(player.homePosition.x, 50, 0.18),
+          y: player.homePosition.y + direction * (sameFlank ? 18 : 8),
         }),
       };
     }
@@ -216,9 +248,9 @@ export function getTacticalTarget(
       const wideX = player.homePosition.x < 50 ? 10 : 90;
       return {
         state: "MOVE_TO_SPACE",
-        targetPosition: clampPoint({
+        targetPosition: clampToRoleZone(player, {
           x: wideX,
-          y: Math.min(94, Math.max(6, gameState.ball.position.y + direction * 12)),
+          y: ball.y + direction * 13,
         }),
       };
     }
@@ -226,46 +258,47 @@ export function getTacticalTarget(
     if (role === "ST") {
       return {
         state: "MOVE_TO_SPACE",
-        targetPosition: clampPoint({
-          x: lerp(player.homePosition.x, gameState.ball.position.x, 0.28),
-          y: gameState.ball.position.y + direction * 15,
+        targetPosition: clampToRoleZone(player, {
+          x: lerp(player.homePosition.x, ball.x, 0.34),
+          y: ball.y + direction * 15,
         }),
       };
     }
 
     return {
       state: "SUPPORT_ATTACK",
-      targetPosition: clampPoint({
-        x: lerp(player.homePosition.x, gameState.ball.position.x, 0.35),
-        y: gameState.ball.position.y - direction * 8,
+      targetPosition: clampToRoleZone(player, {
+        x: lerp(player.homePosition.x, ball.x, 0.34),
+        y: ball.y - direction * 8,
       }),
     };
   }
 
-  if (isDesignatedPresser(player, teammates, gameState.ball.position)) {
-    return { state: "PRESS_BALL", targetPosition: getPressTarget(player, gameState.ball.position) };
+  if (isDesignatedPresser(player, teammates, ball)) {
+    return { state: "PRESS_BALL", targetPosition: getPressTarget(player, ball) };
   }
 
   const mark = findNearestOpponent(player, opponents);
   if (mark && role !== "GK") {
     const coverGoalSide = {
-      x: lerp(mark.position.x, 50, 0.18),
-      y: mark.position.y - direction * 3,
+      x: lerp(mark.position.x, 50, role === "CB" || role === "DM" ? 0.28 : 0.16),
+      y: mark.position.y - direction * getMarkGoalSideGap(role),
     };
-    return { state: "MARK_OPPONENT", targetPosition: clampPoint(coverGoalSide) };
+    return { state: "MARK_OPPONENT", targetPosition: clampToRoleZone(player, coverGoalSide) };
   }
 
   return {
     state: "RECOVER_DEFENSE",
-    targetPosition: clampPoint({
-      x: lerp(player.homePosition.x, gameState.ball.position.x, role === "GK" ? 0.12 : 0.25),
-      y: player.homePosition.y - direction * 3,
+    targetPosition: clampToRoleZone(player, {
+      x: lerp(player.homePosition.x, ball.x, role === "GK" ? 0.08 : 0.24),
+      y: player.homePosition.y - direction * getRecoveryDrop(role),
     }),
   };
 }
 
 export function predictBallIntercept(player: Player, ball: Ball): Vec2 {
   if (ball.ownerPlayerId != null) return ball.position;
+  if (ball.targetPosition) return clampPoint(ball.targetPosition);
 
   const relative = sub(ball.position, player.position);
   const ballSpeed = Math.max(0.01, length(ball.velocity));
@@ -274,7 +307,7 @@ export function predictBallIntercept(player: Player, ball: Ball): Vec2 {
   const predictionTime = clamp(timeToReachBallNow * 0.72, 0.15, 1.8);
   const projected = add(ball.position, scale(ball.velocity, Math.min(predictionTime, 45 / ballSpeed)));
 
-  return clampPoint(ball.targetPosition ? lerpVec(projected, ball.targetPosition, 0.35) : projected);
+  return clampPoint(projected);
 }
 
 export function passBall(ball: Ball, from: Player, receiver: Player, passTarget?: Vec2) {
@@ -384,7 +417,7 @@ function applySameTargetOffsets(players: Player[]) {
     if (group.length < 2) return;
     group.forEach((player, index) => {
       const angle = (Math.PI * 2 * index) / group.length;
-      player.targetPosition = clampPoint({
+      player.targetPosition = clampToRoleZone(player, {
         x: player.targetPosition.x + Math.cos(angle) * MOVEMENT.sameTargetOffset,
         y: player.targetPosition.y + Math.sin(angle) * MOVEMENT.sameTargetOffset,
       });
@@ -393,21 +426,41 @@ function applySameTargetOffsets(players: Player[]) {
 }
 
 function isDesignatedPresser(player: Player, teammates: Player[], ball: Vec2) {
+  const role = normalizeRole(player.role);
+  if (role === "GK") return false;
+
+  const direction = attackDirection(player.side);
+  const ballInDefensiveHalf = direction < 0 ? ball.y > 52 : ball.y < 48;
+  const maxPressers = ballInDefensiveHalf ? 2 : 1;
   const ranked = teammates
     .filter((item) => normalizeRole(item.role) !== "GK")
-    .map((item) => ({ id: item.id, distance: distance(item.position, ball) }))
+    .map((item) => {
+      const itemRole = normalizeRole(item.role);
+      const leaveHome = distance(item.homePosition, ball);
+      const rolePenalty =
+        itemRole === "CB" && !ballInDefensiveHalf
+          ? 18
+          : itemRole === "FB"
+            ? 4
+            : itemRole === "ST" || itemRole === "W"
+              ? 2
+              : 0;
+      return { id: item.id, distance: distance(item.position, ball) + leaveHome * 0.12 + rolePenalty };
+    })
     .sort((left, right) => left.distance - right.distance)
-    .slice(0, 2);
+    .slice(0, maxPressers);
 
   return ranked.some((item) => item.id === player.id);
 }
 
 function getPressTarget(player: Player, ball: Vec2) {
-  const maxLeaveHome = normalizeRole(player.role) === "CB" ? 14 : 22;
-  return {
+  const role = normalizeRole(player.role);
+  const maxLeaveHome =
+    role === "CB" ? 12 : role === "FB" ? 18 : role === "DM" ? 20 : role === "CM" ? 24 : 28;
+  return clampToRoleZone(player, {
     x: clamp(ball.x, player.homePosition.x - maxLeaveHome, player.homePosition.x + maxLeaveHome),
     y: clamp(ball.y, player.homePosition.y - maxLeaveHome, player.homePosition.y + maxLeaveHome),
-  };
+  });
 }
 
 function findNearestOpponent(player: Player, opponents: Player[]) {
@@ -415,6 +468,75 @@ function findNearestOpponent(player: Player, opponents: Player[]) {
     .filter((item) => normalizeRole(item.role) !== "GK")
     .map((item) => ({ player: item, distance: distance(player.homePosition, item.position) }))
     .sort((left, right) => left.distance - right.distance)[0]?.player ?? null;
+}
+
+function clampToRoleZone(player: Player, target: Vec2) {
+  const role = normalizeRole(player.role);
+  const yBounds = getRoleYBounds(player.side, role);
+  const xBounds = getRoleXBounds(player, role);
+
+  return {
+    x: clamp(target.x, xBounds.min, xBounds.max),
+    y: clamp(target.y, yBounds.min, yBounds.max),
+  };
+}
+
+function getRoleYBounds(side: Side, role: PlayerRole) {
+  const homeBounds: Record<PlayerRole, { min: number; max: number }> = {
+    GK: { min: 88, max: 96 },
+    CB: { min: 64, max: 86 },
+    FB: { min: 52, max: 84 },
+    DM: { min: 48, max: 72 },
+    CM: { min: 32, max: 66 },
+    W: { min: 12, max: 62 },
+    ST: { min: 8, max: 45 },
+  };
+  const bounds = homeBounds[role];
+
+  if (side === "home") {
+    return bounds;
+  }
+
+  return { min: 100 - bounds.max, max: 100 - bounds.min };
+}
+
+function getRoleXBounds(player: Player, role: PlayerRole) {
+  const laneCenter = player.homePosition.x;
+  if (role === "GK") return { min: 40, max: 60 };
+  if (role === "CB") return { min: Math.max(22, laneCenter - 16), max: Math.min(78, laneCenter + 16) };
+  if (role === "FB") {
+    return laneCenter < 50 ? { min: 5, max: 34 } : { min: 66, max: 95 };
+  }
+  if (role === "W") {
+    return laneCenter < 50 ? { min: 5, max: 38 } : { min: 62, max: 95 };
+  }
+  if (role === "ST") return { min: 30, max: 70 };
+  return { min: 18, max: 82 };
+}
+
+function ownGoalY(side: Side) {
+  return side === "home" ? 92 : 8;
+}
+
+function isSameFlank(playerX: number, ballX: number) {
+  if (playerX < 35) return ballX < 48;
+  if (playerX > 65) return ballX > 52;
+  return ballX >= 32 && ballX <= 68;
+}
+
+function getMarkGoalSideGap(role: PlayerRole) {
+  if (role === "CB") return 5;
+  if (role === "DM" || role === "CM") return 4;
+  if (role === "FB") return 3.5;
+  return 2.5;
+}
+
+function getRecoveryDrop(role: PlayerRole) {
+  if (role === "GK") return 0;
+  if (role === "CB") return 4;
+  if (role === "FB" || role === "DM") return 5;
+  if (role === "CM") return 6;
+  return 7;
 }
 
 function leadReceiver(receiver: Player, side: Side) {
@@ -428,8 +550,9 @@ export function normalizeRole(role: string): PlayerRole {
   if (role === "GK") return "GK";
   if (role.includes("CB")) return "CB";
   if (role === "LB" || role === "RB") return "FB";
-  if (role.includes("CM") || role === "CM" || role === "LM" || role === "RM") return "CM";
-  if (role === "LW" || role === "RW") return "W";
+  if (role === "CM" || role === "CDM" || role.includes("DM")) return "DM";
+  if (role.includes("CM")) return "CM";
+  if (role === "LM" || role === "RM" || role === "LW" || role === "RW") return "W";
   return "ST";
 }
 

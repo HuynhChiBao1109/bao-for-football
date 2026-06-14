@@ -1546,7 +1546,15 @@ function resolveDebugPassingAction(input: {
 
   const selected = ranked[0] ?? {
     player: candidates[0],
-    ballTarget: moveToward(input.ball, candidates[0].anchors, PASS_SPEED_UNITS_PER_TICK),
+    ballTarget: getDebugPassTarget({
+      receiver: candidates[0],
+      receiverPreviousPosition:
+        input.previousPositionState.players.get(candidates[0].userPlayerId) ??
+        candidates[0].anchors,
+      ball: input.ball,
+      tick: input.tick,
+      possession: input.possession,
+    }),
     lane: evaluatePassLane({
       from: input.ball,
       to: candidates[0].anchors,
@@ -1737,7 +1745,32 @@ function getDebugPassTarget(input: {
     ),
   };
 
-  return moveToward(input.ball, desired, PASS_SPEED_UNITS_PER_TICK);
+  const receivePoint = moveToward(
+    input.receiverPreviousPosition,
+    desired,
+    getReceiverReachForTick(input.receiver),
+  );
+
+  return moveToward(input.ball, receivePoint, PASS_SPEED_UNITS_PER_TICK);
+}
+
+function getReceiverReachForTick(receiver: InternalLineupPlayer) {
+  const role = normalizeRole(receiver.role);
+  const athletic = clamp(
+    (receiver.raw.stats.speed + receiver.raw.stats.acceleration) / 160,
+    0.85,
+    1.35,
+  );
+  const roleReach =
+    role === "W" || role === "ST"
+      ? 6.4
+      : role === "CM"
+        ? 5.8
+        : role === "FB"
+          ? 5.5
+          : 4.8;
+
+  return roleReach * athletic;
 }
 
 function resolveDebugDefensiveAction(input: {

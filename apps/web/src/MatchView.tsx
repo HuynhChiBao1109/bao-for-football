@@ -92,12 +92,11 @@ function getEventView(eventCode: number | null | undefined) {
   }
 }
 
-function formatMoveIntent(intent: string | undefined) {
-  if (!intent) {
-    return '';
-  }
-
-  return intent.replaceAll('_', ' ');
+function getPlayerInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
 
 function Scoreboard({
@@ -193,11 +192,13 @@ const PlayerCircle = memo(function PlayerCircle({
 }) {
   const style = toHorizontalPitchPosition(player);
   const teamClass = player.teamSide === 'away' ? 'player-circle--away' : 'player-circle--home';
+  const isGoalkeeper = player.position === 'GK';
 
   return (
     <div
       className={[
         'player-node',
+        isGoalkeeper ? 'player-node--goalkeeper' : '',
         player.hasBall ? 'player-node--has-ball' : '',
         activeHighlight ? 'player-node--highlight' : '',
       ].join(' ')}
@@ -205,18 +206,13 @@ const PlayerCircle = memo(function PlayerCircle({
       title={`${player.name} - ${player.position}`}
     >
       <div className={`player-circle ${teamClass}`}>
-        <span>{player.jerseyNumber ?? player.id}</span>
+        {player.avatarUrl ? (
+          <img src={player.avatarUrl} alt="" className="player-avatar" />
+        ) : (
+          <span className="player-avatar player-avatar--fallback">{getPlayerInitials(player.name)}</span>
+        )}
+        <span className="player-number">{player.jerseyNumber ?? player.id}</span>
       </div>
-      {player.card ? <span className={`player-card player-card--${player.card}`} /> : null}
-      {player.activeSkill ? <span className="player-skill-badge">S</span> : null}
-      <span className="player-coord">
-        x:{formatCoord(player.x)} y:{formatCoord(player.y)}
-      </span>
-      {player.move?.intent && player.move.intent !== 'anchor' ? (
-        <span className={`player-move player-move--${player.move.intent}`}>
-          {formatMoveIntent(player.move.intent)}
-        </span>
-      ) : null}
       <span className="player-name">{player.name}</span>
     </div>
   );

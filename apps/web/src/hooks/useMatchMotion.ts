@@ -6,10 +6,6 @@ export type RenderedMatchSnapshot = MatchSnapshot & {
   awayPlayers: MatchPitchPlayer[];
 };
 
-function easeOutCubic(t: number) {
-  return 1 - Math.pow(1 - t, 3);
-}
-
 function lerp(from: number, to: number, alpha: number) {
   return from + (to - from) * alpha;
 }
@@ -120,7 +116,7 @@ export function useMatchMotion(
 
       const elapsed = now - startRef.current;
       const progress = Math.min(1, elapsed / durationRef.current);
-      const frame = interpolateSnapshot(previousRef.current, next, easeOutCubic(progress));
+      const frame = interpolateSnapshot(previousRef.current, next, progress);
       lastRenderedRef.current = frame;
       setRendered(frame);
 
