@@ -34,7 +34,7 @@ const MIN_OWNER_POSSESSION_TICKS = Math.max(2, Math.round(1.8 * TICKS_PER_SECOND
 const MIN_TEAM_POSSESSION_TICKS = Math.max(1, Math.round(0.8 * TICKS_PER_SECOND));
 const PASS_CADENCE_TICKS = Math.max(5, Math.round(5 * TICKS_PER_SECOND));
 const TACKLE_CADENCE_TICKS = Math.max(2, Math.round(1.4 * TICKS_PER_SECOND));
-const SHOT_CADENCE_TICKS = Math.max(2, Math.round(2.4 * TICKS_PER_SECOND));
+const SHOT_CADENCE_TICKS = Math.max(1, Math.round(1.4 * TICKS_PER_SECOND));
 const SAVE_CADENCE_TICKS = Math.max(2, SHOT_CADENCE_TICKS * 2);
 const BALL_CONTROL_DISTANCE = 2.4;
 const PLAYER_SPEED_UNITS_PER_TICK: Record<PlayerMoveIntent, number> = {
@@ -1116,7 +1116,7 @@ export function generateNextMatchTick(input: {
       previousPositionState,
       nextTick: nextTickValue,
     },
-    tempoDecision.kind === "pass" || tempoDecision.kind === "carry",
+    true,
   );
 
   if (shotAction) {
@@ -1143,13 +1143,15 @@ export function generateNextMatchTick(input: {
       ballPath: shotAction.ballPath,
       highlight: createHighlight(
         shotAction.event,
-        `Tick ${nextTickValue}: ${actor.shortName} ${shotAction.label}`,
+        `Tick ${nextTickValue}: ${actor.shortName} ${
+          shotAction.skillLabel ? `dung ${shotAction.skillLabel}` : shotAction.label
+        }`,
         possession,
         actor.userPlayerId,
         keeper.userPlayerId,
-        null,
+        shotAction.skill,
       ),
-      activeSkill: null,
+      activeSkill: shotAction.skill,
       focusId: actor.userPlayerId,
       pressId: keeper.userPlayerId,
       positionState: previousPositionState,
@@ -1171,6 +1173,8 @@ export function generateNextMatchTick(input: {
           shotQuality: shotAction.shotQuality,
           distanceToGoal: shotAction.distanceToGoal,
           isGoal: shotAction.isGoal,
+          skill: shotAction.skill,
+          skillLabel: shotAction.skillLabel,
           homeScore,
           awayScore,
         },
@@ -1585,7 +1589,7 @@ function playSimpleAction(input: {
   let awayScore = input.awayScore;
   let action: ResolvedAction;
 
-  if (roll < 0.34 + passBias * 0.18) {
+  if (roll < 0.22 + passBias * 0.1) {
     const receiver = partner ?? actor;
     const completed =
       actor.raw.stats.pass + actor.raw.stats.vision * 0.35 + input.random() * 25 >=
@@ -1635,7 +1639,7 @@ function playSimpleAction(input: {
       receiver.userPlayerId,
       { label: action.label },
     );
-  } else if (roll < 0.62) {
+  } else if (roll < 0.5) {
     const skill = tryActivateSkill(actor.raw.skills, actor.role, "dribble", input.random);
     const activation = skill
       ? resolveSkillActivation(skill, createSkillContext(actor, defender, keeper, input.random))
@@ -1687,7 +1691,7 @@ function playSimpleAction(input: {
         skillLabel: action.skillLabel,
       },
     );
-  } else if (roll < 0.76 + shotBias * 0.18) {
+  } else if (roll < 0.9 + shotBias * 0.08) {
     const skill = tryActivateSkill(actor.raw.skills, actor.role, "shoot", input.random);
     const activation = skill
       ? resolveSkillActivation(skill, createSkillContext(actor, defender, keeper, input.random))
@@ -1965,16 +1969,20 @@ function resolveDebugPossessionTempoAction(input: {
   const role = normalizeRole(input.actor.role);
   const releaseRoll =
     ((input.nextTick * 19 + input.actor.userPlayerId * 11 + teamTicks * 7) % 100) / 100;
+  const hasShootSkill = input.actor.raw.skills.includes(EPlayerSkill.SHOOT_THUNDER);
+  const isShotRole = role === "ST" || role === "W" || role === "CM";
+  const inShotZone = goalDistance <= (hasShootSkill ? 48 : isShotRole ? 40 : 34);
   const mustSettle =
     !restartPass &&
     (teamTicks < MIN_TEAM_POSSESSION_TICKS ||
       (latestWasPass && ownerTicks < MIN_OWNER_POSSESSION_TICKS && pressure.distance > 4.5));
   const passScore = clamp(
-    pressure.score * 0.42 +
+    pressure.score * (inShotZone ? 0.24 : 0.42) +
       clamp((ownerTicks - 1) / PASS_CADENCE_TICKS, 0, 0.32) +
-      clamp((goalDistance - 18) / 42, 0, 0.18) +
+      clamp((goalDistance - 18) / 42, 0, inShotZone ? 0.06 : 0.18) +
       (role === "CB" || role === "FB" ? 0.08 : 0) +
-      releaseRoll * 0.14,
+      releaseRoll * (inShotZone ? 0.06 : 0.14) -
+      (inShotZone ? 0.18 : 0),
     0,
     1,
   );
@@ -1991,8 +1999,9 @@ function resolveDebugPossessionTempoAction(input: {
     (!mustSettle &&
       (pressure.distance <= 3.8 ||
         ownerTicks >= PASS_CADENCE_TICKS ||
-        (goalDistance <= 22 && pressure.distance <= 7) ||
-        passScore > carryScore + 0.12));
+        (!inShotZone && goalDistance <= 22 && pressure.distance <= 7) ||
+        (!inShotZone && passScore > carryScore + 0.12) ||
+        (inShotZone && pressure.distance <= 2.8 && passScore > carryScore + 0.2)));
 
   if (shouldRelease) {
     return {
@@ -2812,6 +2821,8 @@ function resolveDebugShotAction(
   distanceToGoal: number;
   isGoal: boolean;
   keeper: InternalLineupPlayer;
+  skill: EPlayerSkill | null;
+  skillLabel: string | null;
 } | null {
   if (!canReleaseBall) {
     return null;
@@ -2849,17 +2860,21 @@ function resolveDebugShotAction(
     ((input.nextTick * 23 + input.shooter.userPlayerId * 17 + Math.round(input.ball.x * 3)) %
       100) /
     100;
-  const maxShotDistance = role === "ST" || role === "W" ? 42 : 35;
-  const blockedLane = lane.distance < 4.4 && lane.blockerDistanceToBall < 18;
+  const skillRandom = createDeterministicSkillRandom(input.nextTick, input.shooter.userPlayerId);
+  const skill = tryActivateSkill(input.shooter.raw.skills, input.shooter.role, "shoot", skillRandom);
+  const hasThunderShot = skill === EPlayerSkill.SHOOT_THUNDER;
+  const maxShotDistance = hasThunderShot ? 52 : role === "ST" || role === "W" ? 46 : role === "CM" ? 40 : 36;
+  const blockedLane =
+    lane.distance < (hasThunderShot ? 3.1 : 4.1) && lane.blockerDistanceToBall < (hasThunderShot ? 13 : 17);
   const shouldShoot =
     distanceToGoal <= maxShotDistance &&
-    (input.nextTick % SHOT_CADENCE_TICKS === 0 || distanceToGoal <= 24) &&
-    !blockedLane &&
-    (distanceToGoal <= 18 ||
-      (distanceToGoal <= 26 && lane.score >= 0.36) ||
-      shotQuality >= 0.44 ||
-      (role === "ST" && shotQuality >= 0.36) ||
-      decisionRoll < shotQuality * 0.62);
+    (input.nextTick % SHOT_CADENCE_TICKS === 0 || distanceToGoal <= 30 || hasThunderShot) &&
+    (!blockedLane || hasThunderShot) &&
+    (distanceToGoal <= 24 ||
+      (distanceToGoal <= 32 && lane.score >= 0.24) ||
+      shotQuality >= (hasThunderShot ? 0.24 : 0.34) ||
+      ((role === "ST" || role === "W") && shotQuality >= 0.26) ||
+      decisionRoll < shotQuality * (hasThunderShot ? 1.05 : 0.84));
 
   if (!shouldShoot) {
     return null;
@@ -2873,13 +2888,35 @@ function resolveDebugShotAction(
     keeper.raw.stats.gkKeeping * 0.44 +
     keeper.raw.stats.gkReflex * 0.34 +
     keeper.raw.stats.gkDiving * 0.22;
+  const activation = skill
+    ? resolveSkillActivation(skill, createSkillContext(input.shooter, keeper, keeper, skillRandom))
+    : null;
   const longShotPenalty = clamp((distanceToGoal - 22) / 26, 0, 0.38);
   const blockedPenalty = clamp((8 - lane.distance) / 14, 0, 0.18);
-  const qualityEdge = clamp((shooterQuality - keeperQuality + 20) / 140, 0, 0.24);
+  const qualityEdge = clamp(
+    (shooterQuality + (activation?.attackBonus ?? 0) - keeperQuality + 20) / 140,
+    0,
+    skill === EPlayerSkill.SHOOT_THUNDER ? 0.38 : 0.24,
+  );
   const goalChance = clamp(
-    0.05 + shotQuality * 0.36 + qualityEdge - longShotPenalty - blockedPenalty,
+    0.05 +
+      shotQuality * 0.36 +
+      qualityEdge +
+      (skill === EPlayerSkill.SHOOT_THUNDER ? 0.18 : 0) -
+      longShotPenalty * (skill === EPlayerSkill.SHOOT_THUNDER ? 0.58 : 1) -
+      blockedPenalty,
     0.02,
-    distanceToGoal > 34 ? 0.08 : distanceToGoal > 27 ? 0.16 : 0.42,
+    skill === EPlayerSkill.SHOOT_THUNDER
+      ? distanceToGoal > 38
+        ? 0.18
+        : distanceToGoal > 28
+          ? 0.36
+          : 0.62
+      : distanceToGoal > 34
+        ? 0.08
+        : distanceToGoal > 27
+          ? 0.16
+          : 0.42,
   );
   const goalRoll =
     ((input.nextTick * 31 + input.shooter.userPlayerId * 29 + keeper.userPlayerId * 13) % 100) /
@@ -2891,11 +2928,23 @@ function resolveDebugShotAction(
       event: EMatchEvent.GOAL,
       label: distanceToGoal > 28 ? "sut xa ghi ban" : "ghi ban",
       target: goalTarget,
-      ballPath: buildCurvedShotPath(input.ball, goalTarget, input.possession, "goal"),
+      ballPath:
+        skill === EPlayerSkill.SHOOT_THUNDER
+          ? buildThunderShotTrajectory(
+              input.ball.x,
+              input.ball.y,
+              goalTarget.y,
+              input.possession,
+              FRAMES_PER_ACTION,
+              skillRandom,
+            ).slice(1)
+          : buildCurvedShotPath(input.ball, goalTarget, input.possession, "goal"),
       shotQuality,
       distanceToGoal,
       isGoal: true,
       keeper,
+      skill,
+      skillLabel: skill ? getSkillLabel(skill) : null,
     };
   }
 
@@ -2921,11 +2970,31 @@ function resolveDebugShotAction(
     event: isKeeperSave ? EMatchEvent.GOALKEEPER_SAVE : EMatchEvent.SHOOT,
     label: isKeeperSave ? "sut, thu mon day bong ra" : "sut bong",
     target,
-    ballPath: buildCurvedShotPath(input.ball, target, input.possession, isKeeperSave ? "save" : "miss"),
+    ballPath:
+      skill === EPlayerSkill.SHOOT_THUNDER
+        ? buildThunderShotTrajectory(
+            input.ball.x,
+            input.ball.y,
+            target.y,
+            input.possession,
+            FRAMES_PER_ACTION,
+            skillRandom,
+          ).slice(1)
+        : buildCurvedShotPath(input.ball, target, input.possession, isKeeperSave ? "save" : "miss"),
     shotQuality,
     distanceToGoal,
     isGoal: false,
     keeper,
+    skill,
+    skillLabel: skill ? getSkillLabel(skill) : null,
+  };
+}
+
+function createDeterministicSkillRandom(tick: number, playerId: number) {
+  let seed = Math.max(1, Math.floor(tick * 1103515245 + playerId * 12345));
+  return () => {
+    seed = (seed * 1664525 + 1013904223) % 4294967296;
+    return seed / 4294967296;
   };
 }
 

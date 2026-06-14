@@ -31,8 +31,8 @@ const SKILL_META: Record<
 > = {
   [EPlayerSkill.SHOOT_THUNDER]: {
     label: "Thunder Shot",
-    triggerThreshold: 0.68,
-    attackRole: ["ST", "LW", "RW", "LST", "RST"],
+    triggerThreshold: 0.34,
+    attackRole: ["ST", "LW", "RW", "LST", "RST", "CF", "CAM"],
   },
   [EPlayerSkill.DRIBBLE_MAGIC]: {
     label: "Magic Dribble",
@@ -82,8 +82,8 @@ export function resolveSkillActivation(
     return {
       skill,
       label: SKILL_META[skill].label,
-      attackBonus: 16 + context.actorShoot * 0.08,
-      defensePenalty: keeperPenalty * 0.35,
+      attackBonus: 28 + context.actorShoot * 0.16,
+      defensePenalty: keeperPenalty * 0.55,
       event: EMatchEvent.SKILL_USED,
     };
   }
@@ -124,8 +124,8 @@ export function buildThunderShotTrajectory(
 
   for (let index = 1; index <= totalSteps; index += 1) {
     const progress = index / totalSteps;
-    const zigzag = Math.sin(progress * Math.PI * 4 + random() * 0.4) * (8 - progress * 4);
-    const x = clamp(fromX + zigzag + (random() - 0.5) * 2, 8, 92);
+    const zigzag = Math.sin(progress * Math.PI * 6 + random() * 0.5) * (10 - progress * 3.5);
+    const x = clamp(fromX + zigzag + (random() - 0.5) * 3.2, 8, 92);
     const y = clamp(fromY + (goalY - fromY) * progress, 6, 94);
     points.push({ x, y });
   }

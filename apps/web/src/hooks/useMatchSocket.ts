@@ -16,6 +16,7 @@ export type LiveMatchEvent = {
   actorPlayerId?: string | null;
   teamSide?: 'home' | 'away' | null;
   frameId?: number;
+  tick?: number;
   createdAt: number;
 };
 
@@ -27,6 +28,8 @@ type SnapshotPacket = {
 type MatchEventPacket = {
   matchId?: number | string;
   minute?: number;
+  frameId?: number;
+  tick?: number;
   highlight?: Partial<MatchSnapshot['highlight']> | null;
 };
 
@@ -69,6 +72,7 @@ function eventFromSnapshot(snapshot: MatchSnapshot): LiveMatchEvent | null {
     actorPlayerId: highlight.actorPlayerId ? String(highlight.actorPlayerId) : null,
     teamSide: highlight.teamSide ?? null,
     frameId: frameIdOf(snapshot),
+    tick: Number(snapshot.tick ?? snapshot.frameId ?? 0),
     createdAt: frameIdOf(snapshot),
   };
 }
@@ -86,7 +90,9 @@ function eventFromPacket(packet: MatchEventPacket): LiveMatchEvent | null {
     label: highlight.label ?? 'Match event',
     actorPlayerId: highlight.actorPlayerId ? String(highlight.actorPlayerId) : null,
     teamSide: highlight.teamSide ?? null,
-    createdAt: Number(packet.minute ?? 0),
+    frameId: Number(packet.frameId ?? packet.tick ?? 0),
+    tick: Number(packet.tick ?? packet.frameId ?? 0),
+    createdAt: Number(packet.frameId ?? packet.tick ?? packet.minute ?? 0),
   };
 }
 
@@ -199,12 +205,23 @@ export function useMatchSocket(matchId: string | undefined) {
                 event.actorPlayerId === snapshotEvent?.actorPlayerId,
             )
           : null;
+      const eventToShow =
+        snapshotEvent && matchingSocketEvent
+          ? {
+              ...matchingSocketEvent,
+              id: snapshotEvent.id,
+              frameId: snapshotEvent.frameId,
+              tick: snapshotEvent.tick,
+              minute: snapshotEvent.minute,
+              event: snapshotEvent.event,
+            }
+          : snapshotEvent;
 
       setLiveEvents((current) => ({
         matchId,
         events: pushUniqueEvent(
           current?.matchId === matchId ? current.events : [],
-          matchingSocketEvent ?? snapshotEvent,
+          eventToShow,
         ),
       }));
       setLiveStatus({ matchId, status: snapshotToPromote.matchStep ?? 'in_progress' });

@@ -4,6 +4,7 @@ import './MatchView.css';
 import { useMatchMotion } from './hooks/useMatchMotion';
 import { useGetNextMatchTick, useStartAutoMatchTick, useStopAutoMatchTick } from './hooks/useMatch';
 import { useMatchSocket, type LiveMatchEvent } from './hooks/useMatchSocket';
+import { EPlayerSkill, skillAnimation, skillName } from './enums/skill';
 import type { MatchPitchPlayer, MatchSnapshot } from './types';
 
 const MATCH_EVENT = {
@@ -17,6 +18,7 @@ const MATCH_EVENT = {
   GOALKEEPER_SAVE: 38,
   DRIBBLE: 39,
   INTERCEPTION: 40,
+  SKILL_USED: 41,
   TACKLE: 42,
   SLIDE_TACKLE: 43,
   FIRST_HALF_STOPPAGE: 44,
@@ -62,6 +64,10 @@ function isPassEvent(snapshot: MatchSnapshot | null) {
   return snapshot?.highlight?.event === MATCH_EVENT.PASS;
 }
 
+function isThunderShot(snapshot: MatchSnapshot | null) {
+  return snapshot?.ball?.skillTrajectory === EPlayerSkill.SHOOT_THUNDER || snapshot?.highlight?.skill === EPlayerSkill.SHOOT_THUNDER;
+}
+
 function getEventView(eventCode: number | null | undefined) {
   switch (eventCode) {
     case MATCH_EVENT.FIRST_HALF_START:
@@ -90,6 +96,8 @@ function getEventView(eventCode: number | null | undefined) {
       return { title: 'Carry', className: 'match-event--standard' };
     case MATCH_EVENT.INTERCEPTION:
       return { title: 'Interception', className: 'match-event--defense' };
+    case MATCH_EVENT.SKILL_USED:
+      return { title: 'Skill', className: 'match-event--skill' };
     case MATCH_EVENT.TACKLE:
       return { title: 'Tackle', className: 'match-event--defense' };
     case MATCH_EVENT.SLIDE_TACKLE:
@@ -231,6 +239,11 @@ const PlayerCircle = memo(function PlayerCircle({
         )}
         <span className="player-number">{player.jerseyNumber ?? player.id}</span>
       </div>
+      {player.activeSkill ? (
+        <span className="player-skill-badge" title={skillName(player.activeSkill) ?? 'Skill'}>
+          {player.activeSkill === EPlayerSkill.SHOOT_THUNDER ? 'TS' : 'SK'}
+        </span>
+      ) : null}
       <span className="player-name">{player.name}</span>
     </div>
   );
@@ -238,6 +251,7 @@ const PlayerCircle = memo(function PlayerCircle({
 
 function Ball({ snapshot }: { snapshot: MatchSnapshot }) {
   const style = toHorizontalPitchPosition(snapshot.ball);
+  const thunderShot = isThunderShot(snapshot);
 
   return (
     <div
@@ -245,6 +259,7 @@ function Ball({ snapshot }: { snapshot: MatchSnapshot }) {
         'match-ball',
         isShotEvent(snapshot) ? 'match-ball--shot' : '',
         isPassEvent(snapshot) ? 'match-ball--pass' : '',
+        thunderShot ? 'match-ball--thunder' : '',
       ].join(' ')}
       style={style}
       aria-label="Ball"
@@ -252,6 +267,25 @@ function Ball({ snapshot }: { snapshot: MatchSnapshot }) {
       <span className="ball-coord">
         x:{formatCoord(snapshot.ball.x)} y:{formatCoord(snapshot.ball.y)}
       </span>
+    </div>
+  );
+}
+
+function SkillOverlay({ snapshot }: { snapshot: MatchSnapshot }) {
+  const skill = snapshot.highlight?.skill ?? snapshot.ball.skillTrajectory ?? null;
+  const animation = skillAnimation(skill);
+
+  if (!skill || !animation) {
+    return null;
+  }
+
+  return (
+    <div className="skill-overlay" data-skill={skill} aria-hidden="true">
+      <video key={`${snapshot.frameId ?? snapshot.tick}-${skill}`} src={animation} autoPlay muted playsInline />
+      <div className="skill-overlay__label">
+        <span>Skill activated</span>
+        <strong>{skillName(skill)}</strong>
+      </div>
     </div>
   );
 }
@@ -282,12 +316,16 @@ function EventFeed({ events }: { events: LiveMatchEvent[] }) {
         ) : (
           events.map((event) => {
             const view = getEventView(event.event);
+            const tickLabel = Number.isFinite(event.tick)
+              ? `T${event.tick}`
+              : Number.isFinite(event.frameId)
+                ? `T${event.frameId}`
+                : 'T-';
             return (
               <article className={`match-event ${view.className}`} key={event.id}>
-                <span className="match-event__minute">{event.minute}'</span>
+                <span className="match-event__minute">{tickLabel}</span>
                 <div>
                   <strong>{view.title}</strong>
-                  <p>{event.label}</p>
                 </div>
               </article>
             );
@@ -318,6 +356,7 @@ function MatchPitch({ snapshot }: { snapshot: MatchSnapshot }) {
           />
         ))}
         <Ball snapshot={snapshot} />
+        <SkillOverlay snapshot={snapshot} />
         <GoalOverlay
           key={`${snapshot.frameId ?? snapshot.tick ?? 'goal'}-${snapshot.homeScore}-${snapshot.awayScore}`}
           show={isGoalEvent(snapshot)}

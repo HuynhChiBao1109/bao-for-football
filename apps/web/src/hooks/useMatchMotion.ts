@@ -10,6 +10,10 @@ function lerp(from: number, to: number, alpha: number) {
   return from + (to - from) * alpha;
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
 function playerKey(player: MatchPitchPlayer) {
   return `${player.teamSide ?? 'team'}:${player.id}`;
 }
@@ -52,13 +56,21 @@ function interpolateSnapshot(
   const previousBall = previous?.ball;
   const ballFromX = previousBall?.x ?? next.ball.fromX ?? next.ball.x;
   const ballFromY = previousBall?.y ?? next.ball.fromY ?? next.ball.y;
+  const ballPath =
+    next.ball.skillTrajectory && next.ball.trajectory?.length
+      ? [{ x: ballFromX, y: ballFromY }, ...next.ball.trajectory, { x: next.ball.x, y: next.ball.y }]
+      : null;
+  const pathIndex = ballPath ? clamp(Math.floor(alpha * (ballPath.length - 1)), 0, ballPath.length - 2) : 0;
+  const pathLocalAlpha = ballPath ? alpha * (ballPath.length - 1) - pathIndex : 0;
+  const pathFrom = ballPath?.[pathIndex];
+  const pathTo = ballPath?.[pathIndex + 1];
 
   return {
     ...next,
     ball: {
       ...next.ball,
-      x: lerp(ballFromX, next.ball.x, alpha),
-      y: lerp(ballFromY, next.ball.y, alpha),
+      x: pathFrom && pathTo ? lerp(pathFrom.x, pathTo.x, pathLocalAlpha) : lerp(ballFromX, next.ball.x, alpha),
+      y: pathFrom && pathTo ? lerp(pathFrom.y, pathTo.y, pathLocalAlpha) : lerp(ballFromY, next.ball.y, alpha),
     },
     homePlayers: interpolatePlayers(previous?.homePlayers ?? [], next.homePlayers, alpha),
     awayPlayers: interpolatePlayers(previous?.awayPlayers ?? [], next.awayPlayers, alpha),

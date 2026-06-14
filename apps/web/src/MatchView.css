@@ -583,13 +583,20 @@
 .player-skill-badge {
   display: grid;
   place-items: center;
-  width: 16px;
-  height: 16px;
+  width: 24px;
+  height: 18px;
   border-radius: 999px;
-  background: #111a16;
-  color: #7cf7ff;
-  font-size: 0.62rem;
+  border: 1px solid rgba(144, 236, 255, 0.95);
+  background: linear-gradient(135deg, rgba(9, 21, 34, 0.94), rgba(70, 191, 255, 0.9));
+  color: #ffffff;
+  font-size: 0.56rem;
   font-weight: 900;
+  letter-spacing: 0;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.74);
+  box-shadow:
+    0 0 18px rgba(74, 207, 255, 0.75),
+    0 0 28px rgba(255, 245, 140, 0.32);
+  animation: skillBadgePulse 0.42s steps(2, end) infinite;
 }
 
 .match-ball {
@@ -619,6 +626,18 @@
     0 10px 18px rgba(0, 0, 0, 0.34);
 }
 
+.match-ball--thunder {
+  border-color: rgba(190, 245, 255, 0.98);
+  background:
+    radial-gradient(circle at 35% 28%, #ffffff 0 18%, #dffaff 19% 48%, #071a25 49% 58%, #f8ff93 59%);
+  box-shadow:
+    -26px 0 32px rgba(78, 205, 255, 0.72),
+    0 0 34px rgba(255, 244, 105, 0.98),
+    0 0 54px rgba(70, 190, 255, 0.86),
+    0 12px 24px rgba(0, 0, 0, 0.38);
+  animation: thunderBallJitter 0.16s steps(2, end) infinite;
+}
+
 .match-ball--shot::after {
   position: absolute;
   right: 70%;
@@ -641,6 +660,84 @@
   border-radius: 999px;
   background: linear-gradient(90deg, transparent, rgba(124, 247, 255, 0.62));
   transform: translateY(-50%);
+}
+
+.match-ball--thunder::before,
+.match-ball--thunder::after {
+  position: absolute;
+  content: '';
+  pointer-events: none;
+}
+
+.match-ball--thunder::before {
+  left: -74px;
+  top: 50%;
+  width: 82px;
+  height: 24px;
+  background:
+    linear-gradient(135deg, transparent 0 24%, rgba(144, 235, 255, 0.98) 25% 31%, transparent 32% 45%, rgba(255, 245, 118, 0.96) 46% 53%, transparent 54%),
+    linear-gradient(45deg, transparent 0 34%, rgba(85, 205, 255, 0.82) 35% 40%, transparent 41%);
+  filter: drop-shadow(0 0 10px rgba(104, 224, 255, 0.95));
+  transform: translateY(-50%);
+  animation: thunderTrailFlash 0.2s steps(2, end) infinite;
+}
+
+.match-ball--thunder::after {
+  inset: -18px;
+  border: 2px solid rgba(145, 235, 255, 0.72);
+  border-radius: 999px;
+  box-shadow: 0 0 30px rgba(255, 246, 112, 0.55), inset 0 0 18px rgba(100, 220, 255, 0.48);
+  animation: thunderRing 0.58s ease-out infinite;
+}
+
+.skill-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(118, 225, 255, 0.18), transparent 40%),
+    linear-gradient(90deg, transparent, rgba(255, 246, 117, 0.1), transparent);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation: skillOverlayFade 1.1s ease-out both;
+}
+
+.skill-overlay video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.58;
+  filter: saturate(1.45) contrast(1.18);
+}
+
+.skill-overlay__label {
+  position: absolute;
+  left: 50%;
+  top: 12%;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 8px 14px;
+  border: 1px solid rgba(144, 236, 255, 0.44);
+  border-radius: 8px;
+  background: rgba(3, 9, 18, 0.62);
+  box-shadow: 0 0 34px rgba(68, 205, 255, 0.46);
+  transform: translateX(-50%);
+}
+
+.skill-overlay__label span {
+  color: rgba(226, 248, 255, 0.78);
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.skill-overlay__label strong {
+  color: #ffffff;
+  font-size: clamp(1rem, 2.5vw, 1.7rem);
+  line-height: 1;
+  text-shadow: 0 0 18px rgba(110, 226, 255, 0.9), 0 0 28px rgba(255, 245, 125, 0.64);
 }
 
 .goal-overlay {
@@ -735,7 +832,7 @@
 
 .match-event {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
+  grid-template-columns: 54px minmax(0, 1fr);
   gap: 10px;
   padding: 10px;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -767,7 +864,8 @@
 }
 
 .match-event--skill {
-  border-left-color: #d6a7ff;
+  border-left-color: #7cf7ff;
+  background: linear-gradient(135deg, rgba(124, 247, 255, 0.13), rgba(255, 245, 120, 0.08));
 }
 
 .match-event__minute {
@@ -777,13 +875,16 @@
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.09);
   color: #ffffff;
+  font-size: 0.76rem;
   font-weight: 900;
 }
 
 .match-event strong {
   display: block;
   color: #ffffff;
-  font-size: 0.86rem;
+  font-size: 0.9rem;
+  line-height: 34px;
+  text-transform: uppercase;
 }
 
 .match-event p {
@@ -841,6 +942,65 @@
   100% {
     opacity: 0;
     transform: scale(1.03);
+  }
+}
+
+@keyframes thunderBallJitter {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) translateX(0);
+  }
+
+  35% {
+    transform: translate(-50%, -50%) translateX(-3px) translateY(2px);
+  }
+
+  70% {
+    transform: translate(-50%, -50%) translateX(3px) translateY(-2px);
+  }
+}
+
+@keyframes thunderTrailFlash {
+  50% {
+    opacity: 0.42;
+    transform: translateY(-50%) scaleX(1.18);
+  }
+}
+
+@keyframes thunderRing {
+  from {
+    opacity: 0.92;
+    transform: scale(0.62);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(1.55);
+  }
+}
+
+@keyframes skillBadgePulse {
+  50% {
+    filter: brightness(1.35);
+    transform: translateY(-1px);
+  }
+}
+
+@keyframes skillOverlayFade {
+  0% {
+    opacity: 0;
+  }
+
+  12% {
+    opacity: 1;
+  }
+
+  72% {
+    opacity: 0.82;
+  }
+
+  100% {
+    opacity: 0;
   }
 }
 
