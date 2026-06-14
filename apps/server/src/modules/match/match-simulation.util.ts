@@ -682,6 +682,7 @@ export function generateNextMatchTick(input: {
       defending,
       possession,
       ball: latestTick.ball,
+      previousPositionState,
       nextTick: nextTickValue,
     },
     tempoDecision.kind === "pass" || tempoDecision.kind === "carry",
@@ -708,7 +709,7 @@ export function generateNextMatchTick(input: {
       awayLineup,
       ballOwner: nextOwner,
       ball: shotAction.target,
-      ballPath: pathBetween({ x: latestTick.ball.x, y: latestTick.ball.y }, shotAction.target),
+      ballPath: shotAction.ballPath,
       highlight: createHighlight(
         shotAction.event,
         `Tick ${nextTickValue}: ${actor.shortName} ${shotAction.label}`,
@@ -735,6 +736,9 @@ export function generateNextMatchTick(input: {
           label: snapshot.highlight.label,
           from: { x: latestTick.ball.x, y: latestTick.ball.y },
           to: shotAction.target,
+          ballPath: shotAction.ballPath,
+          shotQuality: shotAction.shotQuality,
+          distanceToGoal: shotAction.distanceToGoal,
           isGoal: shotAction.isGoal,
           homeScore,
           awayScore,
@@ -1942,6 +1946,7 @@ function resolveDebugShotAction(
     defending: InternalLineupPlayer[];
     possession: Side;
     ball: TrajectoryPoint;
+    previousPositionState: PositionState;
     nextTick: number;
   },
   canReleaseBall = true,
@@ -1949,6 +1954,9 @@ function resolveDebugShotAction(
   event: EMatchEvent;
   label: string;
   target: TrajectoryPoint;
+  ballPath: TrajectoryPoint[];
+  shotQuality: number;
+  distanceToGoal: number;
   isGoal: boolean;
   keeper: InternalLineupPlayer;
 } | null {
@@ -1961,52 +1969,170 @@ function resolveDebugShotAction(
   const goalY = input.possession === "home" ? 4 : 96;
   const distanceToGoal = Math.abs(input.ball.y - goalY);
   const role = normalizeRole(input.shooter.role);
-  const shotWindow = distanceToGoal <= 34 || role === "ST" || role === "W";
-  const shouldShoot = shotWindow && input.nextTick % SHOT_CADENCE_TICKS === 0;
+  const goalCenter = { x: 50, y: goalY };
+  const goalTarget = chooseShotTarget(input.ball, input.possession, input.nextTick);
+  const lane = evaluateShotLane({
+    from: input.ball,
+    to: goalTarget,
+    defending: input.defending,
+    previousPositionState: input.previousPositionState,
+  });
+  const angleScore = evaluateShotAngle(input.ball, input.possession);
+  const distanceScore = clamp((42 - distanceToGoal) / 34, 0, 1);
+  const centralPenalty = clamp(Math.abs(input.ball.x - goalCenter.x) / 40, 0, 0.22);
+  const roleConfidence = role === "ST" ? 0.16 : role === "W" ? 0.1 : role === "CM" ? 0.05 : 0;
+  const shotQuality = clamp(
+    distanceScore * 0.42 + angleScore * 0.28 + lane.score * 0.22 + roleConfidence - centralPenalty,
+    0,
+    1,
+  );
+  const decisionRoll =
+    ((input.nextTick * 23 + input.shooter.userPlayerId * 17 + Math.round(input.ball.x * 3)) %
+      100) /
+    100;
+  const maxShotDistance = role === "ST" || role === "W" ? 42 : 35;
+  const blockedLane = lane.distance < 4.4 && lane.blockerDistanceToBall < 18;
+  const shouldShoot =
+    distanceToGoal <= maxShotDistance &&
+    input.nextTick % SHOT_CADENCE_TICKS === 0 &&
+    !blockedLane &&
+    (distanceToGoal <= 23 ||
+      shotQuality >= 0.5 ||
+      (role === "ST" && shotQuality >= 0.42) ||
+      decisionRoll < shotQuality * 0.42);
 
   if (!shouldShoot) {
     return null;
   }
 
-  const aimedX = clamp(50 + (((input.nextTick / 2) % 5) - 2) * 7, 28, 72);
-  const goalTarget = {
-    x: aimedX,
-    y: goalY,
-  };
-  const isGoal =
-    distance(input.ball, goalTarget) <= SHOT_SPEED_UNITS_PER_TICK &&
-    (input.nextTick % SAVE_CADENCE_TICKS === 0 ||
-      (role === "ST" && input.nextTick % (SHOT_CADENCE_TICKS * 3) === SHOT_CADENCE_TICKS));
+  const shooterQuality =
+    input.shooter.raw.stats.shoot * 0.5 +
+    input.shooter.raw.stats.dribbling * 0.16 +
+    input.shooter.raw.stats.vision * 0.08;
+  const keeperQuality =
+    keeper.raw.stats.gkKeeping * 0.44 +
+    keeper.raw.stats.gkReflex * 0.34 +
+    keeper.raw.stats.gkDiving * 0.22;
+  const longShotPenalty = clamp((distanceToGoal - 22) / 26, 0, 0.38);
+  const blockedPenalty = clamp((8 - lane.distance) / 14, 0, 0.18);
+  const qualityEdge = clamp((shooterQuality - keeperQuality + 20) / 140, 0, 0.24);
+  const goalChance = clamp(
+    0.05 + shotQuality * 0.36 + qualityEdge - longShotPenalty - blockedPenalty,
+    0.02,
+    distanceToGoal > 34 ? 0.08 : distanceToGoal > 27 ? 0.16 : 0.42,
+  );
+  const goalRoll =
+    ((input.nextTick * 31 + input.shooter.userPlayerId * 29 + keeper.userPlayerId * 13) % 100) /
+    100;
+  const isGoal = goalRoll < goalChance;
 
   if (isGoal) {
     return {
       event: EMatchEvent.GOAL,
-      label: "ghi ban",
+      label: distanceToGoal > 28 ? "sut xa ghi ban" : "ghi ban",
       target: goalTarget,
+      ballPath: buildCurvedShotPath(input.ball, goalTarget, input.possession, "goal"),
+      shotQuality,
+      distanceToGoal,
       isGoal: true,
       keeper,
     };
   }
 
-  const saveTarget = {
-    x: clamp(lerp(goalTarget.x, keeper.anchors.x, 0.42), 8, 92),
-    y: clamp(goalY - attackDirectionValue * 7, 6, 94),
+  const savePoint = {
+    x: clamp(lerp(goalTarget.x, keeper.anchors.x, 0.18), 38, 62),
+    y: clamp(goalY - attackDirectionValue * 4.8, 5, 95),
   };
-  const target = moveToward(input.ball, saveTarget, SHOT_SPEED_UNITS_PER_TICK);
+  const missPoint = {
+    x: clamp(goalTarget.x + (input.ball.x < 50 ? -6 : 6), 30, 70),
+    y: clamp(goalY - attackDirectionValue * 2, 4, 96),
+  };
+  const isKeeperSave =
+    lane.score >= 0.34 && input.nextTick % SAVE_CADENCE_TICKS === SHOT_CADENCE_TICKS;
+  const target = isKeeperSave ? savePoint : missPoint;
 
   return {
-    event:
-      input.nextTick % SAVE_CADENCE_TICKS === SHOT_CADENCE_TICKS
-        ? EMatchEvent.GOALKEEPER_SAVE
-        : EMatchEvent.SHOOT,
-    label:
-      input.nextTick % SAVE_CADENCE_TICKS === SHOT_CADENCE_TICKS
-        ? "sut, thu mon cuu thua"
-        : "sut bong",
+    event: isKeeperSave ? EMatchEvent.GOALKEEPER_SAVE : EMatchEvent.SHOOT,
+    label: isKeeperSave ? "sut, thu mon bay nguoi cuu thua" : "sut bong",
     target,
+    ballPath: buildCurvedShotPath(input.ball, target, input.possession, isKeeperSave ? "save" : "miss"),
+    shotQuality,
+    distanceToGoal,
     isGoal: false,
     keeper,
   };
+}
+
+function chooseShotTarget(ball: TrajectoryPoint, possession: Side, nextTick: number) {
+  const goalY = possession === "home" ? 4 : 96;
+  const cornerBias = ball.x < 50 ? 1 : -1;
+  const variation = (((nextTick / 2) % 3) - 1) * 2.8;
+  return {
+    x: clamp(50 + cornerBias * 8 + variation, 40, 60),
+    y: goalY,
+  };
+}
+
+function evaluateShotLane(input: {
+  from: TrajectoryPoint;
+  to: TrajectoryPoint;
+  defending: InternalLineupPlayer[];
+  previousPositionState: PositionState;
+}) {
+  const blockers = input.defending
+    .filter((player) => player.role !== "GK")
+    .map((defender) => {
+      const position =
+        input.previousPositionState.players.get(defender.userPlayerId) ?? defender.anchors;
+      return {
+        distance: distanceToSegment(position, input.from, input.to),
+        blockerDistanceToBall: distance(position, input.from),
+      };
+    })
+    .sort(
+      (left, right) =>
+        left.distance - right.distance || left.blockerDistanceToBall - right.blockerDistanceToBall,
+    );
+  const closest = blockers[0];
+
+  if (!closest) {
+    return { score: 1, distance: Number.POSITIVE_INFINITY, blockerDistanceToBall: 99 };
+  }
+
+  return {
+    score: clamp((closest.distance - 3) / 15, 0, 1),
+    distance: closest.distance,
+    blockerDistanceToBall: closest.blockerDistanceToBall,
+  };
+}
+
+function evaluateShotAngle(ball: TrajectoryPoint, possession: Side) {
+  const goalY = possession === "home" ? 4 : 96;
+  const distanceY = Math.max(1, Math.abs(ball.y - goalY));
+  const lateral = Math.abs(ball.x - 50);
+  return clamp(1 - lateral / (distanceY * 0.9 + 18), 0, 1);
+}
+
+function buildCurvedShotPath(
+  from: TrajectoryPoint,
+  to: TrajectoryPoint,
+  possession: Side,
+  outcome: "goal" | "save" | "miss",
+): TrajectoryPoint[] {
+  const direction = attackDirection(possession);
+  const curveSide = from.x <= 50 ? -1 : 1;
+  const curveStrength = outcome === "save" ? 5.2 : outcome === "goal" ? 4.4 : 6.4;
+  const lift = outcome === "save" ? 3.6 : 2.4;
+
+  return Array.from({ length: FRAMES_PER_ACTION }, (_, index) => {
+    const t = (index + 1) / FRAMES_PER_ACTION;
+    const eased = easeOut(t);
+    const arc = Math.sin(Math.PI * t);
+    return {
+      x: clamp(lerp(from.x, to.x, eased) + curveSide * arc * curveStrength, 4, 96),
+      y: clamp(lerp(from.y, to.y, eased) - direction * arc * lift, 4, 96),
+    };
+  });
 }
 
 function getNextMatchClockSecond(latestTick: MatchSnapshot) {
@@ -2576,10 +2702,19 @@ function projectPlayers(input: {
       intent = "run";
       aiState = "RECEIVE_PASS";
     } else if (isPress) {
-      const tactical = getTacticalTarget(movementPlayer, gameState);
-      target = tactical.targetPosition;
-      intent = "press";
-      aiState = "PRESS_BALL";
+      if (normalizeRole(player.role) === "GK") {
+        target = {
+          x: clamp(input.ball.x, 35, 65),
+          y: clamp(input.ball.y, player.side === "home" ? 84 : 6, player.side === "home" ? 96 : 16),
+        };
+        intent = "press";
+        aiState = "PRESS_BALL";
+      } else {
+        const tactical = getTacticalTarget(movementPlayer, gameState);
+        target = tactical.targetPosition;
+        intent = "press";
+        aiState = "PRESS_BALL";
+      }
     } else if (onAttack) {
       const tactical = getTacticalTarget(movementPlayer, gameState);
       target = tactical.targetPosition;
