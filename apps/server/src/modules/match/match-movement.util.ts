@@ -3,22 +3,22 @@ export const SIM_TICK_SECONDS = SIM_TICK_MS / 1000;
 export const SIM_TICKS_PER_SECOND = 1000 / SIM_TICK_MS;
 
 export const MOVEMENT = {
-  walkingSpeed: 4,
-  jogSpeed: 8,
-  sprintSpeed: 15,
-  playerWithBallSpeedMultiplier: 0.86,
-  acceleration: 13.5,
-  braking: 9,
-  turnSmoothing: 0.9,
-  arrivalRadius: 6.8,
-  stopRadius: 0.45,
-  separationRadius: 5.4,
-  separationStrength: 1.35,
-  sameTargetOffset: 3.2,
-  passSpeed: 15,
-  shotSpeed: 36,
-  ballFriction: 8.5,
-  ballControlRadius: 1.4,
+  walkingSpeed: 2.0,
+  jogSpeed: 4.2,
+  sprintSpeed: 7.2,
+  playerWithBallSpeedMultiplier: 0.84,
+  acceleration: 7.5,
+  braking: 8.0,
+  turnSmoothing: 0.88,
+  arrivalRadius: 4.0,
+  stopRadius: 0.3,
+  separationRadius: 4.0,
+  separationStrength: 1.2,
+  sameTargetOffset: 3.0,
+  passSpeed: 25,
+  shotSpeed: 38,
+  ballFriction: 8.0,
+  ballControlRadius: 1.1,
 };
 
 export type Vec2 = { x: number; y: number };
@@ -529,7 +529,9 @@ function findMarkAssignment(
     .filter((item) => item.target != null);
 
   return choosePreferredMark(player, opponents, owner, (candidate) => {
-    const duplicateCount = teammateMarkers.filter((item) => item.target?.id === candidate.id).length;
+    const duplicateCount = teammateMarkers.filter(
+      (item) => item.target?.id === candidate.id,
+    ).length;
     return duplicateCount * 9;
   });
 }
