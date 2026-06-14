@@ -5,7 +5,7 @@ export const SIM_TICKS_PER_SECOND = 1000 / SIM_TICK_MS;
 export const MOVEMENT = {
   walkingSpeed: 4,
   jogSpeed: 8,
-  sprintSpeed: 7.6,
+  sprintSpeed: 15,
   playerWithBallSpeedMultiplier: 0.86,
   acceleration: 13.5,
   braking: 9,

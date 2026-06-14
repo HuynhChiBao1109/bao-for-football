@@ -22,6 +22,7 @@ enum EMatchEvent {
   SECOND_HALF_STOPPAGE = 46,
   OFFSIDE = 47,
   GOAL_RESET = 48,
+  FOUL = 49,
 }
 
 export { EMatchEvent };

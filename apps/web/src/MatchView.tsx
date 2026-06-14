@@ -24,6 +24,7 @@ const MATCH_EVENT = {
   SECOND_HALF_STOPPAGE: 46,
   OFFSIDE: 47,
   GOAL_RESET: 48,
+  FOUL: 49,
 } as const;
 
 function clampPercent(value: number) {
@@ -94,6 +95,8 @@ function getEventView(eventCode: number | null | undefined) {
       return { title: 'Offside', className: 'match-event--defense' };
     case MATCH_EVENT.GOAL_RESET:
       return { title: 'Reset', className: 'match-event--start' };
+    case MATCH_EVENT.FOUL:
+      return { title: 'Foul', className: 'match-event--defense' };
     case 7:
       return { title: 'Goal', className: 'match-event--goal' };
     default:
@@ -400,7 +403,7 @@ export function MatchView() {
             </span>
           </section>
         )}
-        {/* <EventFeed events={events} /> */}
+        <EventFeed events={events} />
       </div>
     </main>
   );
