@@ -815,6 +815,49 @@
     border-radius: 22px;
   }
 
+  .club-modal {
+    align-items: stretch;
+    padding: 10px;
+  }
+
+  .club-modal__panel {
+    max-height: calc(100svh - 20px);
+    border-radius: 22px;
+  }
+
+  .club-modal__head {
+    padding: 18px;
+  }
+
+  .club-modal__head strong {
+    font-size: 28px;
+  }
+
+  .club-popup {
+    padding: 16px;
+  }
+
+  .club-popup__stats {
+    grid-template-columns: 1fr;
+  }
+
+  .club-lineup-toolbar {
+    align-items: stretch;
+  }
+
+  .club-lineup-toolbar > span {
+    margin-left: 0;
+    text-align: center;
+  }
+
+  .club-lineup-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .club-lineup-pitch {
+    min-height: 500px;
+  }
+
   .club-dashboard__identity {
     top: max(84px, calc(env(safe-area-inset-top) + 68px));
   }
@@ -861,6 +904,51 @@
 }
 
 @media (max-width: 420px) {
+  .club-modal {
+    padding: 8px;
+  }
+
+  .club-modal__panel {
+    border-radius: 18px;
+  }
+
+  .club-modal__head {
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .club-modal__head strong {
+    font-size: 24px;
+  }
+
+  .club-modal__close {
+    width: 40px;
+    height: 40px;
+  }
+
+  .club-popup {
+    padding: 12px;
+  }
+
+  .club-segment,
+  .club-lineup-toolbar > button {
+    width: 100%;
+  }
+
+  .club-lineup-pitch {
+    min-height: 430px;
+  }
+
+  .club-lineup-slot {
+    width: 72px;
+    min-height: 48px;
+  }
+
+  .club-lineup-slot strong {
+    max-width: 58px;
+    font-size: 10px;
+  }
+
   .club-dashboard__side--left {
     left: max(10px, env(safe-area-inset-left));
   }
