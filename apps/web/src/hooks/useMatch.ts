@@ -45,3 +45,37 @@ export function useGetNextMatchTick(matchId: string | undefined) {
     },
   });
 }
+
+export function useStartAutoMatchTick(matchId: string | undefined) {
+  const { token } = useAuth();
+
+  return useMutation<{ matchId: string; autoTicking: boolean }, Error>({
+    mutationFn: async () => {
+      if (!matchId) {
+        throw new Error('Missing match id');
+      }
+
+      return apiClient(`/api/v1/matches/${matchId}/auto-tick/start`, {
+        method: 'POST',
+        token,
+      }) as Promise<{ matchId: string; autoTicking: boolean }>;
+    },
+  });
+}
+
+export function useStopAutoMatchTick(matchId: string | undefined) {
+  const { token } = useAuth();
+
+  return useMutation<{ matchId: string; autoTicking: boolean }, Error>({
+    mutationFn: async () => {
+      if (!matchId) {
+        throw new Error('Missing match id');
+      }
+
+      return apiClient(`/api/v1/matches/${matchId}/auto-tick/stop`, {
+        method: 'POST',
+        token,
+      }) as Promise<{ matchId: string; autoTicking: boolean }>;
+    },
+  });
+}

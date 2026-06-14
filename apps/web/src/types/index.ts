@@ -197,6 +197,17 @@ export type PlayerMotion = {
   targetY?: number;
 };
 
+export type PlayerAIState =
+  | 'IDLE'
+  | 'HOLD_POSITION'
+  | 'MOVE_TO_SPACE'
+  | 'PRESS_BALL'
+  | 'SUPPORT_ATTACK'
+  | 'MARK_OPPONENT'
+  | 'RECEIVE_PASS'
+  | 'DRIBBLE'
+  | 'RECOVER_DEFENSE';
+
 export type MatchPitchPlayer = {
   id: string;
   name: string;
@@ -206,6 +217,13 @@ export type MatchPitchPlayer = {
   teamSide?: 'home' | 'away';
   x: number;
   y: number;
+  homeX?: number;
+  homeY?: number;
+  vx?: number;
+  vy?: number;
+  targetX?: number;
+  targetY?: number;
+  aiState?: PlayerAIState;
   hasBall: boolean;
   card?: 'yellow' | 'red' | null;
   activeSkill?: number | null;

@@ -27,4 +27,14 @@ export class MatchController {
   async getNextTick(@Param("matchId") matchId: number) {
     return this.matchService.getNextTick(matchId);
   }
+
+  @Post(":matchId/auto-tick/start")
+  async startAutoTick(@Param("matchId") matchId: number) {
+    return this.matchService.startAutoTick(matchId);
+  }
+
+  @Post(":matchId/auto-tick/stop")
+  async stopAutoTick(@Param("matchId") matchId: number) {
+    return this.matchService.stopAutoTick(matchId);
+  }
 }

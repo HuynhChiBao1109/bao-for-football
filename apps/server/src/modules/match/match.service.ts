@@ -41,8 +41,15 @@ type MatchRuntimeState = {
   latestSnapshot: MatchSnapshot | null;
 };
 
+type MatchTickOptions = {
+  emitSocket?: boolean;
+};
+
 @Injectable()
 export class MatchService implements IMatchService {
+  private readonly autoTickTimers = new Map<number, NodeJS.Timeout>();
+  private readonly autoTickInFlight = new Set<number>();
+
   constructor(
     private readonly repository: MatchRepository,
     private readonly socketService: SocketService,
@@ -167,7 +174,8 @@ export class MatchService implements IMatchService {
     return match;
   }
 
-  async getNextTick(matchId: number) {
+  async getNextTick(matchId: number, options: MatchTickOptions = {}) {
+    const shouldEmitSocket = options.emitSocket ?? true;
     const runtimeState = await this.redisService.getJson<MatchRuntimeState>(
       this.getMatchRuntimeKey(matchId),
     );
@@ -233,21 +241,62 @@ export class MatchService implements IMatchService {
       },
     ]);
 
-    this.emitSnapshot(matchId, nextTick.snapshot);
-
-    if (isFinished) {
-      this.socketService.emitToRoom({
-        roomId: `${ESocketChannel.MATCH}${String(matchId)}`,
-        event: ESocketEvent.MATCH_COMPLETED,
-        data: {
-          matchId: String(matchId),
-          homeScore: nextTick.snapshot.homeScore,
-          awayScore: nextTick.snapshot.awayScore,
-        },
-      });
+    if (shouldEmitSocket) {
+      this.emitTickResult(matchId, nextTick.snapshot, isFinished);
     }
 
     return nextTick;
+  }
+
+  async startAutoTick(matchId: number) {
+    if (this.autoTickTimers.has(matchId)) {
+      return { matchId: String(matchId), autoTicking: true };
+    }
+
+    const runTick = async () => {
+      if (this.autoTickInFlight.has(matchId)) {
+        return;
+      }
+
+      this.autoTickInFlight.add(matchId);
+      try {
+        const nextTick = await this.getNextTick(matchId, { emitSocket: false });
+        const isFinished = nextTick.snapshot.highlight?.event === EMatchEvent.MATCH_END;
+
+        if (!this.autoTickTimers.has(matchId)) {
+          return;
+        }
+
+        this.emitTickResult(matchId, nextTick.snapshot, isFinished);
+
+        if (isFinished) {
+          this.stopAutoTick(matchId);
+        }
+      } catch (error) {
+        this.stopAutoTick(matchId);
+        console.error(`Auto tick stopped for match ${matchId}`, error);
+      } finally {
+        this.autoTickInFlight.delete(matchId);
+      }
+    };
+
+    const timer = setInterval(() => {
+      void runTick();
+    }, 1000);
+    this.autoTickTimers.set(matchId, timer);
+    void runTick();
+
+    return { matchId: String(matchId), autoTicking: true };
+  }
+
+  stopAutoTick(matchId: number) {
+    const timer = this.autoTickTimers.get(matchId);
+    if (timer) {
+      clearInterval(timer);
+      this.autoTickTimers.delete(matchId);
+    }
+
+    return { matchId: String(matchId), autoTicking: false };
   }
 
   async finalize(matchId: number, payload: Partial<MatchEntity>): Promise<MatchEntity> {
@@ -308,6 +357,22 @@ export class MatchService implements IMatchService {
           tick: snapshot.tick,
           minute: snapshot.minute,
           highlight: snapshot.highlight,
+        },
+      });
+    }
+  }
+
+  private emitTickResult(matchId: number | string, snapshot: MatchSnapshot, isFinished: boolean) {
+    this.emitSnapshot(matchId, snapshot);
+
+    if (isFinished) {
+      this.socketService.emitToRoom({
+        roomId: `${ESocketChannel.MATCH}${String(matchId)}`,
+        event: ESocketEvent.MATCH_COMPLETED,
+        data: {
+          matchId: String(matchId),
+          homeScore: snapshot.homeScore,
+          awayScore: snapshot.awayScore,
         },
       });
     }

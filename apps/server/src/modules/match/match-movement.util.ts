@@ -1,17 +1,17 @@
-export const SIM_TICK_MS = 100;
+export const SIM_TICK_MS = 1000;
 export const SIM_TICK_SECONDS = SIM_TICK_MS / 1000;
 export const SIM_TICKS_PER_SECOND = 1000 / SIM_TICK_MS;
 
 export const MOVEMENT = {
-  walkingSpeed: 0.35,
-  jogSpeed: 0.65,
-  sprintSpeed: 1.05,
-  playerWithBallSpeedMultiplier: 0.75,
-  acceleration: 2.25,
-  braking: 3.8,
-  turnSmoothing: 0.18,
-  arrivalRadius: 1.5,
-  stopRadius: 0.25,
+  walkingSpeed: 1.35,
+  jogSpeed: 3.1,
+  sprintSpeed: 5.4,
+  playerWithBallSpeedMultiplier: 0.86,
+  acceleration: 9.5,
+  braking: 7,
+  turnSmoothing: 0.88,
+  arrivalRadius: 5.5,
+  stopRadius: 0.45,
   separationRadius: 3.2,
   separationStrength: 0.7,
   sameTargetOffset: 1.8,
@@ -142,8 +142,16 @@ export function updatePlayerMovement(player: Player, deltaTime: number) {
   );
 
   const nextVelocity = clampVector(add(player.velocity, steering), maxSpeed);
+  const nextStep = scale(nextVelocity, deltaTime);
+
+  if (length(nextStep) >= distance) {
+    player.position = target;
+    player.velocity = { x: 0, y: 0 };
+    return;
+  }
+
   player.velocity = nextVelocity;
-  player.position = clampPoint(add(current, scale(nextVelocity, deltaTime)));
+  player.position = clampPoint(add(current, nextStep));
 }
 
 export function applySeparation(player: Player, teammates: Player[]) {

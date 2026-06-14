@@ -30,11 +30,12 @@ export const TICKS_PER_MINUTE = 60 * TICKS_PER_SECOND;
 export const MATCH_DURATION_TICKS = MATCH_CLOCK_SECONDS * TICKS_PER_SECOND;
 export const DEBUG_TICK_STEP = 1;
 export const FRAME_DURATION_MS = MATCH_TICK_MS;
-const MIN_OWNER_POSSESSION_TICKS = Math.round(1.2 * TICKS_PER_SECOND);
-const MIN_TEAM_POSSESSION_TICKS = Math.round(0.8 * TICKS_PER_SECOND);
-const PASS_CADENCE_TICKS = Math.round(2.1 * TICKS_PER_SECOND);
-const TACKLE_CADENCE_TICKS = Math.round(1.4 * TICKS_PER_SECOND);
-const SHOT_CADENCE_TICKS = Math.round(2.4 * TICKS_PER_SECOND);
+const MIN_OWNER_POSSESSION_TICKS = Math.max(1, Math.round(1.2 * TICKS_PER_SECOND));
+const MIN_TEAM_POSSESSION_TICKS = Math.max(1, Math.round(0.8 * TICKS_PER_SECOND));
+const PASS_CADENCE_TICKS = Math.max(2, Math.round(2.1 * TICKS_PER_SECOND));
+const TACKLE_CADENCE_TICKS = Math.max(2, Math.round(1.4 * TICKS_PER_SECOND));
+const SHOT_CADENCE_TICKS = Math.max(2, Math.round(2.4 * TICKS_PER_SECOND));
+const SAVE_CADENCE_TICKS = Math.max(2, SHOT_CADENCE_TICKS * 2);
 const PLAYER_SPEED_UNITS_PER_TICK: Record<PlayerMoveIntent, number> = {
   anchor: 1.2,
   kickoff: 2.2,
@@ -129,6 +130,8 @@ export type MatchRenderPlayer = {
   skillSlugs: string[];
   x: number;
   y: number;
+  homeX?: number;
+  homeY?: number;
   vx?: number;
   vy?: number;
   targetX?: number;
@@ -1285,7 +1288,10 @@ function finishAction(
 function toInternalLineupPlayer(player: MatchRenderPlayer): InternalLineupPlayer {
   return {
     ...player,
-    anchors: { x: Number(player.x ?? 50), y: Number(player.y ?? 50) },
+    anchors: {
+      x: Number(player.homeX ?? player.x ?? 50),
+      y: Number(player.homeY ?? player.y ?? 50),
+    },
     raw: {
       userPlayerId: player.userPlayerId,
       playerId: player.playerId,
@@ -1815,7 +1821,7 @@ function resolveDebugShotAction(
   };
   const isGoal =
     distance(input.ball, goalTarget) <= SHOT_SPEED_UNITS_PER_TICK &&
-    (input.nextTick % (SHOT_CADENCE_TICKS * 2) === 0 ||
+    (input.nextTick % SAVE_CADENCE_TICKS === 0 ||
       (role === "ST" && input.nextTick % (SHOT_CADENCE_TICKS * 3) === SHOT_CADENCE_TICKS));
 
   if (isGoal) {
@@ -1836,11 +1842,11 @@ function resolveDebugShotAction(
 
   return {
     event:
-      input.nextTick % (SHOT_CADENCE_TICKS * 2) === SHOT_CADENCE_TICKS
+      input.nextTick % SAVE_CADENCE_TICKS === SHOT_CADENCE_TICKS
         ? EMatchEvent.GOALKEEPER_SAVE
         : EMatchEvent.SHOOT,
     label:
-      input.nextTick % (SHOT_CADENCE_TICKS * 2) === SHOT_CADENCE_TICKS
+      input.nextTick % SAVE_CADENCE_TICKS === SHOT_CADENCE_TICKS
         ? "sut, thu mon cuu thua"
         : "sut bong",
     target,
@@ -1870,25 +1876,7 @@ function resolveMatchLifecycleAction(
   const latestEvent = latestTick.highlight?.event;
   const halfTimeSecond = MATCH_CLOCK_SECONDS / 2;
 
-  if (latestEvent === EMatchEvent.FIRST_HALF_STOPPAGE) {
-    return {
-      event: EMatchEvent.FIRST_HALF_END,
-      label: "Ket thuc hiep 1",
-      matchStep: "half_time",
-      phase: "half_time",
-    };
-  }
-
   if (latestEvent === EMatchEvent.FIRST_HALF_END) {
-    return {
-      event: EMatchEvent.HALF_TIME_TUNNEL,
-      label: "Cau thu vao duong ham",
-      matchStep: "half_time",
-      phase: "half_time",
-    };
-  }
-
-  if (latestEvent === EMatchEvent.HALF_TIME_TUNNEL) {
     return {
       event: EMatchEvent.SECOND_HALF_START,
       label: "Bat dau hiep 2",
@@ -1898,30 +1886,21 @@ function resolveMatchLifecycleAction(
     };
   }
 
-  if (latestEvent === EMatchEvent.SECOND_HALF_STOPPAGE) {
-    return {
-      event: EMatchEvent.MATCH_END,
-      label: "Het gio",
-      matchStep: "full_time",
-      phase: "full_time",
-    };
-  }
-
   if (latestTick.phase === "first_half" && nextSecond >= halfTimeSecond) {
     return {
-      event: EMatchEvent.FIRST_HALF_STOPPAGE,
-      label: "Bu gio hiep 1",
-      matchStep: "play",
-      phase: "first_half",
+      event: EMatchEvent.FIRST_HALF_END,
+      label: "Ket thuc hiep 1",
+      matchStep: "half_time",
+      phase: "half_time",
     };
   }
 
   if (latestTick.phase === "second_half" && nextSecond >= MATCH_CLOCK_SECONDS) {
     return {
-      event: EMatchEvent.SECOND_HALF_STOPPAGE,
-      label: "Bu gio hiep 2",
-      matchStep: "play",
-      phase: "second_half",
+      event: EMatchEvent.MATCH_END,
+      label: "Het gio",
+      matchStep: "full_time",
+      phase: "full_time",
     };
   }
 
@@ -2051,6 +2030,33 @@ function createPlayerMotion(input: {
     directionY: length > 0 ? Number((dy / length).toFixed(4)) : 0,
     targetX: clamp(input.target.x, 0, 100),
     targetY: clamp(input.target.y, 0, 100),
+  };
+}
+
+function shouldAttachBallToOwner(event: EMatchEvent | null) {
+  return ![
+    EMatchEvent.PASS,
+    EMatchEvent.SHOOT,
+    EMatchEvent.GOAL,
+    EMatchEvent.GOALKEEPER_SAVE,
+  ].includes(event as EMatchEvent);
+}
+
+function getBallCarryPosition(player: MatchRenderPlayer): TrajectoryPoint {
+  const vx = Number(player.vx ?? player.move?.directionX ?? 0);
+  const vy = Number(player.vy ?? player.move?.directionY ?? 0);
+  const speed = Math.hypot(vx, vy);
+  const direction =
+    speed > 0.02
+      ? { x: vx / speed, y: vy / speed }
+      : {
+          x: Number(player.move?.directionX ?? 0),
+          y: Number(player.move?.directionY ?? (player.side === "home" ? -1 : 1)),
+        };
+
+  return {
+    x: clamp(player.x + direction.x * 0.65, 0, 100),
+    y: clamp(player.y + direction.y * 0.65, 0, 100),
   };
 }
 
@@ -2185,14 +2191,21 @@ function buildSnapshot(input: {
 }): MatchSnapshot {
   const prevBall = input.positionState.ball;
   const ball = { x: clamp(input.ball.x, 0, 100), y: clamp(input.ball.y, 0, 100) };
+  const ballVelocity = {
+    x: (ball.x - prevBall.x) / SIM_TICK_SECONDS,
+    y: (ball.y - prevBall.y) / SIM_TICK_SECONDS,
+  };
   const ownerId = input.ballOwner.userPlayerId;
+  const ballIsControlled = shouldAttachBallToOwner(input.highlight.event);
+  const controlledOwnerId = ballIsControlled ? ownerId : null;
   const homePlayers = projectPlayers({
     lineup: input.homeLineup,
     teammateLineup: input.homeLineup,
     opponentLineup: input.awayLineup,
     possession: input.possession,
     ball,
-    ballOwnerId: ownerId,
+    ballVelocity,
+    ballOwnerId: controlledOwnerId,
     intendedReceiverId: input.highlight.secondaryPlayerId ?? null,
     focusId: input.focusId,
     pressId: input.pressId,
@@ -2205,7 +2218,8 @@ function buildSnapshot(input: {
     opponentLineup: input.homeLineup,
     possession: input.possession,
     ball,
-    ballOwnerId: ownerId,
+    ballVelocity,
+    ballOwnerId: controlledOwnerId,
     intendedReceiverId: input.highlight.secondaryPlayerId ?? null,
     focusId: input.focusId,
     pressId: input.pressId,
@@ -2213,10 +2227,19 @@ function buildSnapshot(input: {
     positionState: input.positionState,
   });
 
-  [...homePlayers, ...awayPlayers].forEach((player) => {
-    player.hasBall = player.userPlayerId === ownerId;
+  const allRenderPlayers = [...homePlayers, ...awayPlayers];
+  allRenderPlayers.forEach((player) => {
+    player.hasBall = controlledOwnerId != null && player.userPlayerId === controlledOwnerId;
     if (player.hasBall && input.activeSkill) player.activeSkill = input.activeSkill;
   });
+  const ownerRenderPlayer =
+    controlledOwnerId == null
+      ? null
+      : allRenderPlayers.find((player) => player.userPlayerId === controlledOwnerId);
+  const finalBall =
+    ownerRenderPlayer
+      ? getBallCarryPosition(ownerRenderPlayer)
+      : ball;
 
   return {
     frameId: input.frameId,
@@ -2231,11 +2254,11 @@ function buildSnapshot(input: {
     awayScore: input.awayScore,
     possession: input.possession,
     ball: {
-      x: ball.x,
-      y: ball.y,
+      x: finalBall.x,
+      y: finalBall.y,
       fromX: clamp(prevBall.x, 0, 100),
       fromY: clamp(prevBall.y, 0, 100),
-      ownerPlayerId: ownerId,
+      ownerPlayerId: controlledOwnerId,
       speed: input.activeSkill ? 9 : 5,
       trajectory: input.ballPath,
       skillTrajectory: input.activeSkill,
@@ -2252,7 +2275,8 @@ function projectPlayers(input: {
   opponentLineup: InternalLineupPlayer[];
   possession: Side;
   ball: TrajectoryPoint;
-  ballOwnerId: number;
+  ballVelocity: TrajectoryPoint;
+  ballOwnerId: number | null;
   intendedReceiverId: number | null;
   focusId: number;
   pressId: number | null;
@@ -2300,7 +2324,7 @@ function projectPlayers(input: {
     awayPlayers: input.lineup[0]?.side === "away" ? teammateMovement : opponentMovement,
     ball: {
       position: input.ball,
-      velocity: { x: 0, y: 0 },
+      velocity: input.ballVelocity,
       ownerPlayerId: input.ballOwnerId,
       intendedReceiverId: input.intendedReceiverId,
       targetPosition: input.ball,
@@ -2386,6 +2410,8 @@ function projectPlayers(input: {
       skillSlugs: player.skillSlugs,
       x: clamp(movementPlayer.position.x, 0, 100),
       y: clamp(movementPlayer.position.y, 0, 100),
+      homeX: player.anchors.x,
+      homeY: player.anchors.y,
       vx: Number(movementPlayer.velocity.x.toFixed(4)),
       vy: Number(movementPlayer.velocity.y.toFixed(4)),
       targetX: clamp(movementPlayer.targetPosition.x, 0, 100),
@@ -2692,6 +2718,8 @@ function applyKickoffShape(homeLineup: InternalLineupPlayer[], awayLineup: Inter
     player.anchors = next;
     player.x = next.x;
     player.y = next.y;
+    player.homeX = next.x;
+    player.homeY = next.y;
   });
 
   awayLineup.forEach((player) => {
@@ -2702,6 +2730,8 @@ function applyKickoffShape(homeLineup: InternalLineupPlayer[], awayLineup: Inter
     player.anchors = next;
     player.x = next.x;
     player.y = next.y;
+    player.homeX = next.x;
+    player.homeY = next.y;
   });
 }
 
@@ -2715,9 +2745,13 @@ function applyHomeKickoffPair(homeLineup: InternalLineupPlayer[]) {
   homeKickoff.anchors = { x: 50, y: 51 };
   homeKickoff.x = 50;
   homeKickoff.y = 51;
+  homeKickoff.homeX = 50;
+  homeKickoff.homeY = 51;
   homeKickoffPartner.anchors = { x: 54, y: 54 };
   homeKickoffPartner.x = 54;
   homeKickoffPartner.y = 54;
+  homeKickoffPartner.homeX = 54;
+  homeKickoffPartner.homeY = 54;
 
   return { homeKickoff, homeKickoffPartner };
 }
@@ -2732,9 +2766,13 @@ function applyAwayKickoffPair(awayLineup: InternalLineupPlayer[]) {
   awayKickoff.anchors = { x: 50, y: 49 };
   awayKickoff.x = 50;
   awayKickoff.y = 49;
+  awayKickoff.homeX = 50;
+  awayKickoff.homeY = 49;
   awayKickoffPartner.anchors = { x: 46, y: 46 };
   awayKickoffPartner.x = 46;
   awayKickoffPartner.y = 46;
+  awayKickoffPartner.homeX = 46;
+  awayKickoffPartner.homeY = 46;
 
   return { awayKickoff, awayKickoffPartner };
 }
@@ -2776,6 +2814,8 @@ function selectLineup(team: SimulationTeamInput, side: Side): InternalLineupPlay
       skillSlugs: picked.skillSlugs,
       x: anchors.x,
       y: anchors.y,
+      homeX: anchors.x,
+      homeY: anchors.y,
       stamina: picked.stats.stamina,
       activeSkill: null,
       hasBall: false,

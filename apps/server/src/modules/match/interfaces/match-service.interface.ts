@@ -17,5 +17,9 @@ export interface IMatchService {
 
   getNextTick(matchId: number): Promise<unknown>;
 
+  startAutoTick(matchId: number): Promise<unknown>;
+
+  stopAutoTick(matchId: number): unknown;
+
   finalize(matchId: number, payload: Partial<MatchEntity>): Promise<MatchEntity>;
 }
