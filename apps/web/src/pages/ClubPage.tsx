@@ -1,4 +1,15 @@
-import { startTransition, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  startTransition,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type MouseEvent,
+  type PointerEvent,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Banner } from '../components/feedback';
 import { MatchMode } from '../enums/match';
@@ -8,9 +19,14 @@ import { usePlayerCards } from '../hooks/usePlayerCards';
 import { useSession } from '../hooks/useSession';
 import { useStartCampaignMatch } from '../hooks/useMatch';
 import { useSaveTactics, useTactics } from '../hooks/useTactics';
+import { useTrainingRoom, useTriggerTrainingEvent, type TrainingEventType } from '../hooks/useTrainingRoom';
+import { useMatchMotion } from '../hooks/useMatchMotion';
+import { EPlayerSkill, skillAnimation, skillName } from '../enums/skill';
 import { queryClient } from '../lib/queryClient';
+import { normalizeSnapshot } from '../lib/normalizeMatchSnapshot';
 import { matchLivePath, ROUTES } from '../routes';
-import type { CampaignMatch, Tactics, UserPlayerCard } from '../types';
+import type { CampaignMatch, MatchPitchPlayer, MatchSnapshot, Tactics, UserPlayerCard } from '../types';
+import '../MatchView.css';
 import './ClubPage.css';
 
 type DockAction = {
@@ -20,7 +36,7 @@ type DockAction = {
   tone?: 'cyan' | 'gold' | 'red';
 };
 
-type ClubModal = 'campaign' | 'lineup' | null;
+type ClubModal = 'campaign' | 'lineup' | 'training' | null;
 type LineupSlot = {
   slotId: string;
   role: string;
@@ -28,6 +44,15 @@ type LineupSlot = {
   x: number;
   y: number;
 };
+type TrainingPosition = { x: number; y: number };
+type TrainingEventKey = TrainingEventType;
+
+const TRAINING_MATCH_EVENT = {
+  PASS: 35,
+  SHOOT: 36,
+  DRIBBLE: 39,
+  SKILL_USED: 41,
+} as const;
 
 const DEFAULT_TACTICS: Tactics = {
   formation: '4-3-3',
@@ -102,6 +127,7 @@ export function ClubPage() {
     { label: 'Campaign', icon: <WhistleIcon />, onClick: () => setActiveModal('campaign'), tone: 'gold' },
     { label: 'PvP', icon: <VersusIcon />, onClick: () => navigate(ROUTES.pvp), tone: 'red' },
     { label: 'Lineup', icon: <FormationIcon />, onClick: () => setActiveModal('lineup') },
+    { label: 'Training', icon: <TrainingIcon />, onClick: () => setActiveModal('training') },
     { label: 'Shop', icon: <ShopIcon />, onClick: () => setNotice('Shop dang cap nhat.'), tone: 'gold' },
   ];
 
@@ -213,19 +239,27 @@ export function ClubPage() {
 
       {activeModal ? (
         <ClubModalShell
-          title={activeModal === 'campaign' ? 'Campaign' : 'Lineup'}
+          title={getClubModalTitle(activeModal)}
           tone={activeModal === 'campaign' ? 'gold' : 'cyan'}
           onClose={() => setActiveModal(null)}
         >
           {activeModal === 'campaign' ? (
             <CampaignPopup teamId={Number(team.id)} />
-          ) : (
+          ) : activeModal === 'lineup' ? (
             <LineupPopup teamId={String(team.id)} />
+          ) : (
+            <TrainingPopup />
           )}
         </ClubModalShell>
       ) : null}
     </section>
   );
+}
+
+function getClubModalTitle(modal: Exclude<ClubModal, null>) {
+  if (modal === 'campaign') return 'Campaign';
+  if (modal === 'lineup') return 'Lineup';
+  return 'Training Room';
 }
 
 function ClubModalShell({
@@ -503,6 +537,572 @@ function LineupPopup({ teamId }: { teamId: string }) {
   );
 }
 
+const TRAINING_EVENTS: Array<{
+  key: TrainingEventKey;
+  label: string;
+  description: string;
+  tone: 'cyan' | 'gold' | 'red';
+}> = [
+  { key: 'warmup', label: 'Warm Up', description: 'Tang do san sang', tone: 'cyan' },
+  { key: 'sprint', label: 'Sprint', description: 'Chay toc do cao', tone: 'red' },
+  { key: 'pass_normal', label: 'Pass', description: 'Chuyen thuong', tone: 'cyan' },
+  { key: 'pass_through', label: 'Through', description: 'Chot khe vao khoang trong', tone: 'red' },
+  { key: 'pass_lob', label: 'Lob', description: 'Chuyen bong qua tuyen', tone: 'gold' },
+  { key: 'shooting', label: 'Shoot Drill', description: 'Dut diem lien tuc', tone: 'gold' },
+  { key: 'skill', label: 'Skill Burst', description: 'Kich hoat skill', tone: 'red' },
+  { key: 'dribble_magic', label: 'Magic 1v1', description: 'Re bong qua nguoi', tone: 'red' },
+  { key: 'tank_tackle', label: 'Tank Tackle', description: 'Huc va cuop bong', tone: 'gold' },
+  { key: 'free_kick_pass', label: 'FK Pass', description: 'Da phat chuyen ngan', tone: 'cyan' },
+  { key: 'free_kick_through', label: 'FK Through', description: 'Da phat chot khe', tone: 'red' },
+  { key: 'free_kick_lob', label: 'FK Lob', description: 'Da phat treo bong', tone: 'gold' },
+  { key: 'free_kick_shoot', label: 'FK Shoot', description: 'Da phat sut thang', tone: 'red' },
+];
+
+function TrainingPopup() {
+  const { data: trainingRoom, isLoading, error } = useTrainingRoom();
+  const triggerTrainingEvent = useTriggerTrainingEvent();
+  const pitchRef = useRef<HTMLDivElement | null>(null);
+  const [positions, setPositions] = useState<Record<number, TrainingPosition>>({});
+  const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
+  const [draggingPlayerId, setDraggingPlayerId] = useState<number | null>(null);
+  const [activeEvent, setActiveEvent] = useState<TrainingEventKey>('warmup');
+  const [playerCount, setPlayerCount] = useState(11);
+  const [activePlayerIds, setActivePlayerIds] = useState<number[]>([]);
+  const [eventLog, setEventLog] = useState<Array<{ id: number; tick: number; event: string; player: string }>>([]);
+  const [snapshot, setSnapshot] = useState<MatchSnapshot | null>(null);
+  const [metrics, setMetrics] = useState({
+    event: 'idle',
+    playerSpeed: 0,
+    ballSpeed: 0,
+    distance: 0,
+    durationSeconds: 0,
+  });
+  const cards = trainingRoom?.players ?? [];
+  const goalkeeper = useMemo(() => cards.find(isGoalkeeperCard) ?? cards[0] ?? null, [cards]);
+  const activeCards = useMemo(() => {
+    const activeSet = new Set(activePlayerIds);
+    const picked = cards.filter((card) => activeSet.has(card.userPlayerId));
+    if (!goalkeeper) return picked;
+    if (picked.some((card) => card.userPlayerId === goalkeeper.userPlayerId)) return picked;
+    return [goalkeeper, ...picked].slice(0, playerCount);
+  }, [activePlayerIds, cards, goalkeeper, playerCount]);
+  const renderedSnapshot = useMatchMotion(snapshot);
+
+  useEffect(() => {
+    if (!trainingRoom) return;
+    setSnapshot(normalizeSnapshot(trainingRoom.snapshot));
+    setPositions(
+      Object.fromEntries(
+        trainingRoom.playerStates.map((player) => [
+          player.userPlayerId,
+          {
+            x: player.x,
+            y: player.y,
+          },
+        ]),
+      ),
+    );
+    setMetrics(trainingRoom.metrics);
+    setSelectedPlayerId((current) => current ?? trainingRoom.playerStates[0]?.userPlayerId ?? null);
+  }, [trainingRoom]);
+
+  useEffect(() => {
+    if (trainingRoom) return;
+    setPositions((current) => {
+      const next = { ...current };
+      cards.forEach((card, index) => {
+        if (next[card.userPlayerId]) return;
+        const column = index % 6;
+        const row = Math.floor(index / 6);
+        next[card.userPlayerId] = {
+          x: 12 + column * 15,
+          y: 18 + (row % 5) * 16,
+        };
+      });
+      return next;
+    });
+  }, [cards, trainingRoom]);
+
+  useEffect(() => {
+    if (!cards.length || activePlayerIds.length > 0) return;
+    setActivePlayerIds(pickTrainingPlayerIds(cards, playerCount));
+  }, [activePlayerIds.length, cards, playerCount]);
+
+  useEffect(() => {
+    if (!cards.length) return;
+    setActivePlayerIds((current) => normalizeTrainingPlayerIds(cards, current, playerCount));
+  }, [cards, playerCount]);
+
+  useEffect(() => {
+    if (!activeCards.length) return;
+    setSelectedPlayerId((current) =>
+      activeCards.some((card) => card.userPlayerId === current) ? current : activeCards[0].userPlayerId,
+    );
+  }, [activeCards]);
+
+  const selectedPlayer = useMemo(
+    () => activeCards.find((card) => card.userPlayerId === selectedPlayerId) ?? activeCards[0] ?? null,
+    [activeCards, selectedPlayerId],
+  );
+
+  function pointFromEvent(event: { clientX: number; clientY: number }): TrainingPosition | null {
+    const rect = pitchRef.current?.getBoundingClientRect();
+    if (!rect) return null;
+    return {
+      x: clampNumber(((event.clientY - rect.top) / rect.height) * 100, 5, 95),
+      y: clampNumber(((event.clientX - rect.left) / rect.width) * 100, 7, 93),
+    };
+  }
+
+  function movePlayer(playerId: number, point: TrainingPosition | null) {
+    if (!point) return;
+    setPositions((current) => ({
+      ...current,
+      [playerId]: point,
+    }));
+  }
+
+  function handlePitchPointerMove(event: PointerEvent<HTMLDivElement>) {
+    if (!draggingPlayerId) return;
+    movePlayer(draggingPlayerId, pointFromEvent(event));
+  }
+
+  function handlePitchPointerUp(event: PointerEvent<HTMLDivElement>) {
+    if (draggingPlayerId) {
+      movePlayer(draggingPlayerId, pointFromEvent(event));
+      setDraggingPlayerId(null);
+    }
+  }
+
+  function handlePitchClick(event: MouseEvent<HTMLDivElement>) {
+    if (!selectedPlayerId || draggingPlayerId) return;
+    movePlayer(selectedPlayerId, pointFromEvent(event));
+  }
+
+  async function triggerEvent(eventKey: TrainingEventKey) {
+    setActiveEvent(eventKey);
+    const response = await triggerTrainingEvent.mutateAsync({
+      event: eventKey,
+      selectedPlayerId: selectedPlayer?.userPlayerId ?? null,
+      activePlayerIds: activeCards.map((card) => card.userPlayerId),
+      positions: Object.fromEntries(
+        Object.entries(positions).map(([playerId, point]) => [playerId, point]),
+      ),
+      tick: metrics.event === 'idle' ? 0 : eventLog[0]?.tick ?? trainingRoom?.tick ?? 0,
+    });
+    setSnapshot(normalizeSnapshot(response.snapshot));
+    setPositions(
+      Object.fromEntries(
+        response.playerStates.map((player) => [
+          player.userPlayerId,
+          {
+            x: player.x,
+            y: player.y,
+          },
+        ]),
+      ),
+    );
+    setMetrics(response.metrics);
+    setEventLog((current) => [
+      ...response.eventLog.map((item) => ({
+        id: Date.now() + item.tick,
+        tick: item.tick,
+        event: item.label,
+        player: item.playerName,
+      })),
+      ...current,
+    ].slice(0, 8));
+  }
+
+  function autoSpread() {
+    setPositions(
+      Object.fromEntries(
+        activeCards.map((card, index) => {
+          const column = index % 6;
+          const row = Math.floor(index / 6);
+          return [
+            card.userPlayerId,
+            {
+              x: 10 + column * 16,
+              y: 16 + (row % 5) * 17,
+            },
+          ];
+        }),
+      ),
+    );
+  }
+
+  function toggleActivePlayer(playerId: number) {
+    const card = cards.find((item) => item.userPlayerId === playerId);
+    if (!card || isGoalkeeperCard(card)) return;
+    setActivePlayerIds((current) => {
+      const hasPlayer = current.includes(playerId);
+      const withoutPlayer = current.filter((id) => id !== playerId);
+      if (hasPlayer) {
+        return normalizeTrainingPlayerIds(cards, withoutPlayer, playerCount);
+      }
+      return normalizeTrainingPlayerIds(cards, [...current, playerId], playerCount);
+    });
+  }
+
+  return (
+    <div className="club-popup club-popup--training">
+      {error ? <Banner text={(error as Error).message} tone="error" /> : null}
+      {triggerTrainingEvent.error ? <Banner text={triggerTrainingEvent.error.message} tone="error" /> : null}
+      <div className="club-training">
+        <TrainingMatchStage
+          snapshot={renderedSnapshot}
+          selectedPlayerId={selectedPlayerId}
+          isLoading={isLoading}
+          hasPlayers={activeCards.length > 0}
+          activePlayerIds={activeCards.map((card) => card.userPlayerId)}
+          positions={positions}
+          pitchRef={pitchRef}
+          activeEvent={activeEvent}
+          draggingPlayerId={draggingPlayerId}
+          onSelectPlayer={setSelectedPlayerId}
+          onDragStart={setDraggingPlayerId}
+          onDragEnd={setDraggingPlayerId}
+          onPointerMove={handlePitchPointerMove}
+          onPointerUp={handlePitchPointerUp}
+          onPitchClick={handlePitchClick}
+        />
+
+        <aside className="club-training-panel">
+          <div className="club-training-panel__head">
+            <span>Selected</span>
+            <strong>{selectedPlayer?.name ?? 'None'}</strong>
+            <small>{selectedPlayer?.positions?.[0]?.position ?? 'ANY'} / OVR {Math.round(selectedPlayer ? playerOverall(selectedPlayer) : 0)}</small>
+          </div>
+
+          <div className="club-training-roster">
+            <div className="club-training-roster__head">
+              <span>Players on pitch</span>
+              <strong>{activeCards.length}/{Math.min(11, cards.length || 11)}</strong>
+            </div>
+            <input
+              type="range"
+              min={goalkeeper ? 1 : 0}
+              max={Math.min(11, cards.length || 11)}
+              value={Math.min(playerCount, Math.min(11, cards.length || 11))}
+              onChange={(event) => setPlayerCount(Number(event.target.value))}
+            />
+            <div className="club-training-roster__list">
+              {cards.slice(0, 18).map((card) => {
+                const isGk = isGoalkeeperCard(card);
+                const isActive = activeCards.some((item) => item.userPlayerId === card.userPlayerId);
+                return (
+                  <button
+                    key={card.userPlayerId}
+                    type="button"
+                    data-active={isActive}
+                    data-gk={isGk}
+                    disabled={isGk}
+                    onClick={() => toggleActivePlayer(card.userPlayerId)}
+                  >
+                    <span>{card.positions?.[0]?.position ?? 'ANY'}</span>
+                    <strong>{card.name}</strong>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="club-training-actions">
+            {TRAINING_EVENTS.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                data-tone={item.tone}
+                data-active={activeEvent === item.key}
+                onClick={() => triggerEvent(item.key)}
+                disabled={triggerTrainingEvent.isPending}
+              >
+                <strong>{item.label}</strong>
+                <span>{item.description}</span>
+              </button>
+            ))}
+          </div>
+
+          <button type="button" className="club-training-panel__auto" onClick={autoSpread}>
+            Auto arrange
+          </button>
+
+          <div className="club-training-metrics">
+            <article>
+              <span>Ball speed</span>
+              <strong>{Number(metrics.ballSpeed ?? 0).toFixed(1)}</strong>
+            </article>
+            <article>
+              <span>Player speed</span>
+              <strong>{Number(metrics.playerSpeed ?? 0).toFixed(1)}</strong>
+            </article>
+            <article>
+              <span>Distance</span>
+              <strong>{Number(metrics.distance ?? 0).toFixed(1)}</strong>
+            </article>
+          </div>
+
+          <div className="club-training-log">
+            <span>Event Log</span>
+            {eventLog.length === 0 ? (
+              <p>Chua co event nao.</p>
+            ) : (
+              eventLog.map((item) => (
+                <article key={item.id}>
+                  <strong>T{item.tick}</strong>
+                  <span>{item.event}</span>
+                  <small>{item.player}</small>
+                </article>
+              ))
+            )}
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function TrainingMatchStage({
+  snapshot,
+  selectedPlayerId,
+  positions,
+  activePlayerIds,
+  isLoading,
+  hasPlayers,
+  pitchRef,
+  activeEvent,
+  draggingPlayerId,
+  onSelectPlayer,
+  onDragStart,
+  onDragEnd,
+  onPointerMove,
+  onPointerUp,
+  onPitchClick,
+}: {
+  snapshot: MatchSnapshot | null;
+  selectedPlayerId: number | null;
+  positions: Record<number, TrainingPosition>;
+  activePlayerIds: number[];
+  isLoading: boolean;
+  hasPlayers: boolean;
+  pitchRef: RefObject<HTMLDivElement | null>;
+  activeEvent: TrainingEventKey;
+  draggingPlayerId: number | null;
+  onSelectPlayer: (playerId: number) => void;
+  onDragStart: (playerId: number) => void;
+  onDragEnd: (playerId: number | null) => void;
+  onPointerMove: (event: PointerEvent<HTMLDivElement>) => void;
+  onPointerUp: (event: PointerEvent<HTMLDivElement>) => void;
+  onPitchClick: (event: MouseEvent<HTMLDivElement>) => void;
+}) {
+  const players = useMemo(
+    () =>
+      snapshot
+        ? [...snapshot.homePlayers, ...snapshot.awayPlayers].filter((player) => activePlayerIds.includes(Number(player.id))).map((player) => {
+            const override = positions[Number(player.id)];
+            return override ? { ...player, x: override.x, y: override.y } : player;
+          })
+        : [],
+    [activePlayerIds, positions, snapshot],
+  );
+  const highlightedPlayerId = snapshot?.highlight?.actorPlayerId ? Number(snapshot.highlight.actorPlayerId) : null;
+
+  return (
+    <section className="club-training-stage" aria-label="Training match view">
+      <header className="club-training-scorebar">
+        <div>
+          <span>Training Tick</span>
+          <strong>{snapshot?.clockLabel ?? 'TR:00'}</strong>
+        </div>
+        <div>
+          <span>Event</span>
+          <strong>{snapshot?.highlight?.label || activeEvent.replaceAll('_', ' ')}</strong>
+        </div>
+        <div>
+          <span>Ball</span>
+          <strong>{Number(snapshot?.ball.speed ?? 0).toFixed(1)}</strong>
+        </div>
+      </header>
+
+      <div
+        ref={pitchRef}
+        className="match-pitch club-training-match-pitch"
+        data-event={activeEvent}
+        data-dragging={Boolean(draggingPlayerId)}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerLeave={onPointerUp}
+        onClick={onPitchClick}
+      >
+        <TrainingPitchLines />
+        {snapshot ? (
+          <>
+            {players.map((player) => (
+              <TrainingPlayerNode
+                key={`${player.teamSide}-${player.id}`}
+                player={player}
+                selected={Number(player.id) === selectedPlayerId}
+                activeHighlight={highlightedPlayerId === Number(player.id)}
+                onSelectPlayer={onSelectPlayer}
+                onDragStart={onDragStart}
+                onDragEnd={onDragEnd}
+              />
+            ))}
+            <TrainingBall snapshot={snapshot} />
+            <TrainingSkillOverlay snapshot={snapshot} />
+          </>
+        ) : (
+          <div className="club-training__empty">
+            {isLoading ? 'Dang tai phong tap...' : hasPlayers ? 'Chon cau thu de bat dau.' : 'Chua co cau thu.'}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function TrainingPitchLines() {
+  return (
+    <div className="match-pitch__lines" aria-hidden="true">
+      <div className="pitch-line pitch-line--outer" />
+      <div className="pitch-line pitch-line--mid" />
+      <div className="pitch-circle pitch-circle--center" />
+      <div className="pitch-spot pitch-spot--center" />
+      <div className="pitch-box pitch-box--penalty pitch-box--home" />
+      <div className="pitch-box pitch-box--penalty pitch-box--away" />
+      <div className="pitch-box pitch-box--goal pitch-box--home" />
+      <div className="pitch-box pitch-box--goal pitch-box--away" />
+      <div className="pitch-spot pitch-spot--home" />
+      <div className="pitch-spot pitch-spot--away" />
+      <div className="pitch-goal pitch-goal--home" />
+      <div className="pitch-goal pitch-goal--away" />
+    </div>
+  );
+}
+
+function TrainingPlayerNode({
+  player,
+  selected,
+  activeHighlight,
+  onSelectPlayer,
+  onDragStart,
+  onDragEnd,
+}: {
+  player: MatchPitchPlayer;
+  selected: boolean;
+  activeHighlight: boolean;
+  onSelectPlayer: (playerId: number) => void;
+  onDragStart: (playerId: number) => void;
+  onDragEnd: (playerId: number | null) => void;
+}) {
+  const playerId = Number(player.id);
+  const teamClass = player.teamSide === 'away' ? 'player-circle--away' : 'player-circle--home';
+  const isGoalkeeper = player.position === 'GK';
+
+  return (
+    <button
+      type="button"
+      className={[
+        'player-node',
+        'club-training-player-node',
+        isGoalkeeper ? 'player-node--goalkeeper' : '',
+        player.hasBall ? 'player-node--has-ball' : '',
+        activeHighlight ? 'player-node--highlight' : '',
+        player.activeSkill === EPlayerSkill.DRIBBLE_MAGIC ? 'player-node--magic-dribble' : '',
+        player.activeSkill === EPlayerSkill.TANK_TACKLE ? 'player-node--tank-tackle' : '',
+      ].join(' ')}
+      data-selected={selected}
+      style={toHorizontalPitchPosition(player)}
+      title={`${player.name} - ${player.position}`}
+      onPointerDown={(event) => {
+        event.stopPropagation();
+        event.currentTarget.setPointerCapture(event.pointerId);
+        onSelectPlayer(playerId);
+        onDragStart(playerId);
+      }}
+      onPointerUp={(event) => {
+        event.stopPropagation();
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+        onDragEnd(null);
+      }}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelectPlayer(playerId);
+      }}
+    >
+      <span className={`player-circle ${teamClass}`}>
+        {player.avatarUrl ? (
+          <img src={player.avatarUrl} alt="" className="player-avatar" />
+        ) : (
+          <span className="player-avatar player-avatar--fallback">{getPlayerInitials(player.name)}</span>
+        )}
+        <span className="player-number">{player.jerseyNumber ?? player.id}</span>
+      </span>
+      {player.activeSkill ? (
+        <span className="player-skill-badge" title={skillName(player.activeSkill) ?? 'Skill'}>
+          {player.activeSkill === EPlayerSkill.SHOOT_THUNDER
+            ? 'TS'
+            : player.activeSkill === EPlayerSkill.DRIBBLE_MAGIC
+              ? 'MD'
+              : player.activeSkill === EPlayerSkill.TANK_TACKLE
+                ? 'TT'
+                : 'SK'}
+        </span>
+      ) : null}
+      <span className="player-name">{player.name}</span>
+    </button>
+  );
+}
+
+function TrainingBall({ snapshot }: { snapshot: MatchSnapshot }) {
+  const thunderShot =
+    snapshot.ball.skillTrajectory === EPlayerSkill.SHOOT_THUNDER ||
+    snapshot.highlight?.skill === EPlayerSkill.SHOOT_THUNDER;
+  const magicDribble =
+    snapshot.ball.skillTrajectory === EPlayerSkill.DRIBBLE_MAGIC ||
+    snapshot.highlight?.skill === EPlayerSkill.DRIBBLE_MAGIC;
+  const tankTackle =
+    snapshot.ball.skillTrajectory === EPlayerSkill.TANK_TACKLE ||
+    snapshot.highlight?.skill === EPlayerSkill.TANK_TACKLE;
+
+  return (
+    <div
+      className={[
+        'match-ball',
+        snapshot.highlight?.event === TRAINING_MATCH_EVENT.SHOOT ? 'match-ball--shot' : '',
+        snapshot.highlight?.event === TRAINING_MATCH_EVENT.PASS ? 'match-ball--pass' : '',
+        thunderShot ? 'match-ball--thunder' : '',
+        magicDribble ? 'match-ball--magic' : '',
+        tankTackle ? 'match-ball--tank' : '',
+      ].join(' ')}
+      style={toHorizontalPitchPosition(snapshot.ball)}
+      aria-label="Ball"
+    />
+  );
+}
+
+function TrainingSkillOverlay({ snapshot }: { snapshot: MatchSnapshot }) {
+  const skill = snapshot.highlight?.skill ?? snapshot.ball.skillTrajectory ?? null;
+  const animation = skillAnimation(skill);
+
+  if (!skill || !animation || snapshot.highlight?.event !== TRAINING_MATCH_EVENT.SKILL_USED) {
+    return null;
+  }
+
+  return (
+    <div className="skill-overlay" data-skill={skill} aria-hidden="true">
+      <video key={`${snapshot.frameId ?? snapshot.tick}-${skill}`} src={animation} autoPlay muted playsInline />
+      <div className="skill-overlay__label">
+        <span>Skill activated</span>
+        <strong>{skillName(skill)}</strong>
+      </div>
+    </div>
+  );
+}
+
 function MiniStat({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="club-mini-stat">
@@ -545,6 +1145,66 @@ function positionFit(card: UserPlayerCard, role: string) {
     return item.position?.includes(target);
   });
   return broadMatch ? 0.88 : 0.62;
+}
+
+function isGoalkeeperCard(card: UserPlayerCard) {
+  return card.positions?.some((item) => item.position === 'GK') ?? false;
+}
+
+function pickTrainingPlayerIds(cards: UserPlayerCard[], count: number) {
+  const normalizedCount = clampNumber(Math.round(count), 0, Math.min(11, cards.length));
+  const goalkeeper = cards.find(isGoalkeeperCard) ?? cards[0] ?? null;
+  const outfield = cards
+    .filter((card) => card.userPlayerId !== goalkeeper?.userPlayerId)
+    .sort((left, right) => playerOverall(right) - playerOverall(left));
+  return [goalkeeper, ...outfield]
+    .filter((card): card is UserPlayerCard => Boolean(card))
+    .slice(0, normalizedCount)
+    .map((card) => card.userPlayerId);
+}
+
+function normalizeTrainingPlayerIds(cards: UserPlayerCard[], selectedIds: number[], count: number) {
+  const maxCount = Math.min(11, cards.length);
+  const normalizedCount = clampNumber(Math.round(count), 0, maxCount);
+  const selected = new Set(selectedIds);
+  const goalkeeper = cards.find(isGoalkeeperCard) ?? cards[0] ?? null;
+  if (goalkeeper) {
+    selected.add(goalkeeper.userPlayerId);
+  }
+
+  const ordered = cards
+    .filter((card) => selected.has(card.userPlayerId))
+    .sort((left, right) => Number(isGoalkeeperCard(right)) - Number(isGoalkeeperCard(left)));
+  const picked = ordered.slice(0, normalizedCount);
+
+  if (picked.length < normalizedCount) {
+    const pickedSet = new Set(picked.map((card) => card.userPlayerId));
+    cards
+      .filter((card) => !pickedSet.has(card.userPlayerId))
+      .sort((left, right) => playerOverall(right) - playerOverall(left))
+      .slice(0, normalizedCount - picked.length)
+      .forEach((card) => picked.push(card));
+  }
+
+  return picked.map((card) => card.userPlayerId);
+}
+
+function clampNumber(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function toHorizontalPitchPosition(point: { x: number; y: number }) {
+  return {
+    left: `${clampNumber(point.y, 0, 100)}%`,
+    top: `${clampNumber(point.x, 0, 100)}%`,
+  } as CSSProperties;
+}
+
+function getPlayerInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
 
 function IconShell({ children }: { children: ReactNode }) {
@@ -637,6 +1297,16 @@ function VersusIcon() {
   return (
     <IconShell>
       <path d="M5 6l4.2 12M10 6L5.8 18M14 6l5 6-5 6" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+    </IconShell>
+  );
+}
+
+function TrainingIcon() {
+  return (
+    <IconShell>
+      <path d="M4 18h16M6 18l2-9h8l2 9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 9l1.5-3h3L15 9M8 13h8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="12" cy="15.5" r="1.4" fill="currentColor" />
     </IconShell>
   );
 }

@@ -17,8 +17,11 @@ import { CampainModule } from "./modules/campain/campain.module";
 import { ReferenceModule } from "./modules/reference/reference.module";
 import { SocketModule } from "./modules/socket/socket.module";
 import { RedisModule } from "./modules/redis/redis.module";
+import { TrainingRoomModule } from "./modules/training/training-room.module";
 
 const escapeIdentifier = (value: string) => value.replace(/`/g, "``");
+
+const isEnabled = (value: unknown) => String(value ?? "").toLowerCase() === "true";
 
 const dropTablesNotInEntities = async (dataSource: DataSource) => {
   const databaseName = String(dataSource.options.database || "");
@@ -88,8 +91,12 @@ const dropTablesNotInEntities = async (dataSource: DataSource) => {
       dataSourceFactory: async (options) => {
         const dataSource = new DataSource(options as DataSourceOptions);
         await dataSource.initialize();
-        await dropTablesNotInEntities(dataSource);
-        await dataSource.synchronize();
+        if (isEnabled(process.env.DB_DROP_UNMAPPED_TABLES)) {
+          await dropTablesNotInEntities(dataSource);
+        }
+        if (isEnabled(process.env.DB_SYNC_SCHEMA)) {
+          await dataSource.synchronize();
+        }
         return dataSource;
       },
     }),
@@ -104,6 +111,7 @@ const dropTablesNotInEntities = async (dataSource: DataSource) => {
     ReferenceModule,
     SocketModule,
     RedisModule,
+    TrainingRoomModule,
   ],
   controllers: [AppController],
 })

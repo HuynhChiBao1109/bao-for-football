@@ -1268,9 +1268,9 @@ export function generateNextMatchTick(input: {
           newPossession,
           tempoDecision.pressDefender.userPlayerId,
           actor.userPlayerId,
-          null,
+          tackleDecision.skill ?? null,
         ),
-        activeSkill: null,
+        activeSkill: tackleDecision.skill ?? null,
         focusId: tempoDecision.pressDefender.userPlayerId,
         pressId: actor.userPlayerId,
         positionState: previousPositionState,
@@ -1289,6 +1289,8 @@ export function generateNextMatchTick(input: {
             from: { x: latestTick.ball.x, y: latestTick.ball.y },
             to: tackleDecision.target,
             recoveredPossession: newPossession,
+            skill: tackleDecision.skill ?? null,
+            skillLabel: tackleDecision.skillLabel ?? null,
           },
         },
       };
@@ -1659,7 +1661,7 @@ function playSimpleAction(input: {
     if (!success) addTackle(input.statsMap, defender.userPlayerId);
     action = makeAction(
       success ? "pass" : "block",
-      EMatchEvent.DRIBBLE,
+      skill ? EMatchEvent.SKILL_USED : EMatchEvent.DRIBBLE,
       skill ? `${actor.shortName} dung ${getSkillLabel(skill)}` : `${actor.shortName} qua nguoi`,
       possession,
       actor,
@@ -2725,7 +2727,7 @@ function resolveDebugDefensiveAction(input: {
   ballTarget: TrajectoryPoint;
   previousPositionState: PositionState;
   nextTick: number;
-}): { event: EMatchEvent; label: string; target: TrajectoryPoint; isFoul?: boolean } | null {
+}): { event: EMatchEvent; label: string; target: TrajectoryPoint; isFoul?: boolean; skill?: EPlayerSkill | null; skillLabel?: string | null } | null {
   const defenderPosition =
     input.previousPositionState.players.get(input.defender.userPlayerId) ?? input.defender.anchors;
   const distanceToLane = distance(defenderPosition, input.ballTarget);
@@ -2750,16 +2752,28 @@ function resolveDebugDefensiveAction(input: {
     ((input.nextTick * 37 + input.defender.userPlayerId * 17 + input.actor.userPlayerId * 11) %
       100) /
     100;
+  const skillRandom = createDeterministicSkillRandom(input.nextTick, input.defender.userPlayerId);
+  const skill = tryActivateSkill(input.defender.raw.skills, input.defender.role, "tackle", skillRandom);
+  const activation = skill
+    ? resolveSkillActivation(skill, createSkillContext(input.actor, input.defender, input.defender, skillRandom))
+    : null;
   const challengeDistancePenalty = clamp((Math.min(distanceToLane, distanceToBall) - 5) / 18, 0, 0.32);
   const successChance = clamp(
-    0.34 + (tackleQuality - carrierQuality) / 180 - challengeDistancePenalty,
+    0.34 +
+      (tackleQuality - carrierQuality + (activation?.defensePenalty ?? 0)) / 180 -
+      challengeDistancePenalty +
+      (skill === EPlayerSkill.TANK_TACKLE ? 0.18 : 0),
     0.12,
-    0.74,
+    skill === EPlayerSkill.TANK_TACKLE ? 0.9 : 0.74,
   );
 
   if (input.nextTick % TACKLE_CADENCE_TICKS === 0 && Math.min(distanceToLane, distanceToBall) <= 15) {
     const isClean = timingRoll < successChance;
-    const foulChance = clamp(0.18 + challengeDistancePenalty + (1 - successChance) * 0.28, 0.08, 0.72);
+    const foulChance = clamp(
+      0.18 + challengeDistancePenalty + (1 - successChance) * 0.28 - (skill === EPlayerSkill.TANK_TACKLE ? 0.14 : 0),
+      0.04,
+      0.72,
+    );
     const target = {
       x: clamp(lerp(input.ball.x, defenderPosition.x, isClean ? 0.78 : 0.34), 6, 94),
       y: clamp(lerp(input.ball.y, defenderPosition.y, isClean ? 0.78 : 0.34), 6, 94),
@@ -2777,9 +2791,11 @@ function resolveDebugDefensiveAction(input: {
     if (!isClean) return null;
 
     return {
-      event: EMatchEvent.SLIDE_TACKLE,
-      label: "xoac bong",
+      event: skill === EPlayerSkill.TANK_TACKLE ? EMatchEvent.SKILL_USED : EMatchEvent.SLIDE_TACKLE,
+      label: skill === EPlayerSkill.TANK_TACKLE ? `dung ${getSkillLabel(skill)} cuop bong` : "xoac bong",
       target: moveToward(input.ball, target, PASS_SPEED_UNITS_PER_TICK * 0.8),
+      skill,
+      skillLabel: skill ? getSkillLabel(skill) : null,
     };
   }
 
@@ -2793,9 +2809,11 @@ function resolveDebugDefensiveAction(input: {
       y: clamp(lerp(input.ballTarget.y, defenderPosition.y, 0.55), 6, 94),
     };
     return {
-      event: EMatchEvent.TACKLE,
-      label: "tac bong",
+      event: skill === EPlayerSkill.TANK_TACKLE ? EMatchEvent.SKILL_USED : EMatchEvent.TACKLE,
+      label: skill === EPlayerSkill.TANK_TACKLE ? `dung ${getSkillLabel(skill)} huc vang bong` : "tac bong",
       target: moveToward(input.ballTarget, target, PASS_SPEED_UNITS_PER_TICK * 0.7),
+      skill,
+      skillLabel: skill ? getSkillLabel(skill) : null,
     };
   }
 

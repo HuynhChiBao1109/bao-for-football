@@ -32,6 +32,36 @@ export class PlayerRepository {
     });
   }
 
+  async getUserPlayersByUserId(userId: number): Promise<UserPlayerEntity[]> {
+    return this.userPlayerRepository.find({
+      where: { userId },
+      order: { id: "ASC" },
+    });
+  }
+
+  async getPlayersByIds(playerIds: number[]): Promise<PlayerEntity[]> {
+    if (!playerIds.length) {
+      return [];
+    }
+
+    return this.playerRepository
+      .createQueryBuilder("player")
+      .leftJoinAndSelect("player.skills", "skills")
+      .where("player.id IN (:...playerIds)", { playerIds })
+      .getMany();
+  }
+
+  async getUserPlayerSkills(userPlayerIds: number[]): Promise<UserPlayerSkillEntity[]> {
+    if (!userPlayerIds.length) {
+      return [];
+    }
+
+    return this.userPlayerSkillRepository
+      .createQueryBuilder("skill")
+      .where("skill.user_player_id IN (:...userPlayerIds)", { userPlayerIds })
+      .getMany();
+  }
+
   async createPlayerUser(userId: number, playerId: number): Promise<UserPlayerEntity> {
     const player = await this.getPlayerById(playerId);
     if (!player) {

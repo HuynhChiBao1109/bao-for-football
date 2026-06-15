@@ -36,15 +36,20 @@ const SKILL_META: Record<
   },
   [EPlayerSkill.DRIBBLE_MAGIC]: {
     label: "Magic Dribble",
-    triggerThreshold: 0.7,
+    triggerThreshold: 0.42,
     attackRole: ["LW", "RW", "ST", "LST", "RST", "LM", "RM", "LCM", "CM", "RCM"],
+  },
+  [EPlayerSkill.TANK_TACKLE]: {
+    label: "Tank Tackle",
+    triggerThreshold: 0.38,
+    attackRole: ["CB", "LCB", "RCB", "LB", "RB", "DM", "CDM", "CM", "LCM", "RCM"],
   },
 };
 
 export function tryActivateSkill(
   skills: EPlayerSkill[],
   role: string,
-  phase: "shoot" | "dribble" | "build_up",
+  phase: "shoot" | "dribble" | "tackle" | "build_up",
   random: () => number,
 ): EPlayerSkill | null {
   for (const skill of skills) {
@@ -60,6 +65,12 @@ export function tryActivateSkill(
     }
 
     if (phase === "dribble" && skill === EPlayerSkill.DRIBBLE_MAGIC) {
+      if ((meta.attackRole ?? []).includes(role) && random() > meta.triggerThreshold) {
+        return skill;
+      }
+    }
+
+    if (phase === "tackle" && skill === EPlayerSkill.TANK_TACKLE) {
       if ((meta.attackRole ?? []).includes(role) && random() > meta.triggerThreshold) {
         return skill;
       }
@@ -90,15 +101,28 @@ export function resolveSkillActivation(
 
   if (skill === EPlayerSkill.DRIBBLE_MAGIC) {
     const dribblePower = context.actorDribbling * 0.4 + context.actorSpeed * 0.25;
-    const success = dribblePower + context.random() * 22 > context.defenderTackle + 8;
+    const success = dribblePower + context.random() * 34 > context.defenderTackle - 2;
 
     return {
       skill,
       label: SKILL_META[skill].label,
       attackBonus: 12 + context.actorDribbling * 0.1,
       defensePenalty: context.defenderTackle * 0.28,
-      event: EMatchEvent.DRIBBLE,
+      event: EMatchEvent.SKILL_USED,
       dribbleSuccess: success,
+    };
+  }
+
+  if (skill === EPlayerSkill.TANK_TACKLE) {
+    const tacklePower = context.defenderTackle * 0.48 + context.defenseScore * 0.08;
+
+    return {
+      skill,
+      label: SKILL_META[skill].label,
+      attackBonus: 0,
+      defensePenalty: 24 + tacklePower * 0.18,
+      event: EMatchEvent.SKILL_USED,
+      dribbleSuccess: tacklePower + context.random() * 30 > context.actorDribbling * 0.62 + context.actorSpeed * 0.24,
     };
   }
 

@@ -68,6 +68,14 @@ function isThunderShot(snapshot: MatchSnapshot | null) {
   return snapshot?.ball?.skillTrajectory === EPlayerSkill.SHOOT_THUNDER || snapshot?.highlight?.skill === EPlayerSkill.SHOOT_THUNDER;
 }
 
+function isMagicDribble(snapshot: MatchSnapshot | null) {
+  return snapshot?.ball?.skillTrajectory === EPlayerSkill.DRIBBLE_MAGIC || snapshot?.highlight?.skill === EPlayerSkill.DRIBBLE_MAGIC;
+}
+
+function isTankTackle(snapshot: MatchSnapshot | null) {
+  return snapshot?.ball?.skillTrajectory === EPlayerSkill.TANK_TACKLE || snapshot?.highlight?.skill === EPlayerSkill.TANK_TACKLE;
+}
+
 function getEventView(eventCode: number | null | undefined) {
   switch (eventCode) {
     case MATCH_EVENT.FIRST_HALF_START:
@@ -225,6 +233,8 @@ const PlayerCircle = memo(function PlayerCircle({
         isGoalkeeper ? 'player-node--goalkeeper' : '',
         player.hasBall ? 'player-node--has-ball' : '',
         activeHighlight ? 'player-node--highlight' : '',
+        player.activeSkill === EPlayerSkill.DRIBBLE_MAGIC ? 'player-node--magic-dribble' : '',
+        player.activeSkill === EPlayerSkill.TANK_TACKLE ? 'player-node--tank-tackle' : '',
       ].join(' ')}
       style={style}
       title={`${player.name} - ${player.position}`}
@@ -241,7 +251,13 @@ const PlayerCircle = memo(function PlayerCircle({
       </div>
       {player.activeSkill ? (
         <span className="player-skill-badge" title={skillName(player.activeSkill) ?? 'Skill'}>
-          {player.activeSkill === EPlayerSkill.SHOOT_THUNDER ? 'TS' : 'SK'}
+          {player.activeSkill === EPlayerSkill.SHOOT_THUNDER
+            ? 'TS'
+            : player.activeSkill === EPlayerSkill.DRIBBLE_MAGIC
+              ? 'MD'
+              : player.activeSkill === EPlayerSkill.TANK_TACKLE
+                ? 'TT'
+                : 'SK'}
         </span>
       ) : null}
       <span className="player-name">{player.name}</span>
@@ -252,6 +268,8 @@ const PlayerCircle = memo(function PlayerCircle({
 function Ball({ snapshot }: { snapshot: MatchSnapshot }) {
   const style = toHorizontalPitchPosition(snapshot.ball);
   const thunderShot = isThunderShot(snapshot);
+  const magicDribble = isMagicDribble(snapshot);
+  const tankTackle = isTankTackle(snapshot);
 
   return (
     <div
@@ -260,6 +278,8 @@ function Ball({ snapshot }: { snapshot: MatchSnapshot }) {
         isShotEvent(snapshot) ? 'match-ball--shot' : '',
         isPassEvent(snapshot) ? 'match-ball--pass' : '',
         thunderShot ? 'match-ball--thunder' : '',
+        magicDribble ? 'match-ball--magic' : '',
+        tankTackle ? 'match-ball--tank' : '',
       ].join(' ')}
       style={style}
       aria-label="Ball"
