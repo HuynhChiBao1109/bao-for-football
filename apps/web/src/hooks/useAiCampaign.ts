@@ -10,9 +10,14 @@ function normalizeCampaignMatches(payload: unknown): CampaignMatch[] {
 
   const directMatches = payload.filter(
     (item) => item && typeof item === 'object' && 'campainId' in (item as object),
-  ) as CampaignMatch[];
+  ) as Array<CampaignMatch & { campain?: { level?: number } }>;
   if (directMatches.length > 0) {
-    return directMatches.sort((a, b) => Number(a.level ?? 0) - Number(b.level ?? 0));
+    return directMatches
+      .map((match) => ({
+        ...match,
+        campainLevel: Number(match.campainLevel ?? match.campain?.level ?? 1),
+      }))
+      .sort((a, b) => Number(a.level ?? 0) - Number(b.level ?? 0));
   }
 
   const fromCampains = payload
@@ -20,8 +25,19 @@ function normalizeCampaignMatches(payload: unknown): CampaignMatch[] {
       if (!item || typeof item !== 'object') {
         return [] as CampaignMatch[];
       }
-      const matches = (item as { campainMatches?: CampaignMatch[] }).campainMatches;
-      return Array.isArray(matches) ? matches : [];
+      const campain = item as { id?: number | string; level?: number; campainMatches?: CampaignMatch[] };
+      const campainLevel = Number(campain.level ?? 1);
+      const matches = campain.campainMatches;
+      return Array.isArray(matches)
+        ? matches.map((match) => ({
+            ...match,
+            campainLevel,
+            campain: {
+              id: campain.id ?? match.campainId,
+              level: campainLevel,
+            },
+          }))
+        : [];
     })
     .sort((a, b) => Number(a.level ?? 0) - Number(b.level ?? 0));
 

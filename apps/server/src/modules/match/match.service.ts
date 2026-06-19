@@ -100,6 +100,9 @@ export class MatchService implements IMatchService {
       }
 
       if (existingHomeWon || alreadyCleared) {
+        if (existingHomeWon) {
+          await this.completeCampaignProgress(existingMatch.id);
+        }
         return {
           matchId: String(existingMatch.id),
           homeLineup: existingMatch.homeLineup ?? [],
@@ -227,6 +230,10 @@ export class MatchService implements IMatchService {
         status: EMatchStatus.FINISHED,
         endedAt: new Date(),
       });
+
+      if (nextTick.snapshot.homeScore > nextTick.snapshot.awayScore) {
+        await this.completeCampaignProgress(matchId);
+      }
     }
 
     await this.repository.saveEvents([
@@ -329,6 +336,37 @@ export class MatchService implements IMatchService {
     };
 
     await this.redisService.setJson(this.getMatchRuntimeKey(match.id), runtimeState);
+  }
+
+  private async completeCampaignProgress(matchId: number) {
+    const match = await this.repository.findMatchById(matchId);
+    const campaignMatch = match?.campainMatch;
+    const campaign = campaignMatch?.campain;
+
+    if (!match || !campaignMatch || !campaign) {
+      return;
+    }
+
+    const homeScore = Number(match.homeScore ?? 0);
+    const awayScore = Number(match.awayScore ?? 0);
+    if (homeScore <= awayScore) {
+      return;
+    }
+
+    const completedLevel = Number(campaignMatch.level ?? 0);
+    const nextLevel = completedLevel + 1;
+    const currentLevel = Number(campaign.level ?? 1);
+
+    if (nextLevel <= currentLevel) {
+      return;
+    }
+
+    await this.repository.completeCampaignMatch({
+      campaignId: campaign.id,
+      teamId: campaign.teamId,
+      nextLevel,
+      reward: Number(campaignMatch.matchReward ?? 0),
+    });
   }
 
   private emitSnapshot(matchIdValue: number | string, snapshot: MatchSnapshot) {

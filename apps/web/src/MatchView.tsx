@@ -1,4 +1,5 @@
-import { memo, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import './MatchView.css';
 import { useMatchMotion } from './hooks/useMatchMotion';
@@ -391,7 +392,9 @@ function MatchPitch({ snapshot }: { snapshot: MatchSnapshot }) {
 export function MatchView() {
   const { matchId } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [isAutoTicking, setIsAutoTicking] = useState(false);
+  const handledMatchEndRef = useRef(false);
   const { snapshot, events, status, isConnected, isLoading, error, queuedTicks, ackActiveTick } =
     useMatchSocket(matchId);
   const getNextTick = useGetNextMatchTick(matchId);
@@ -403,11 +406,18 @@ export function MatchView() {
   const isMatchEnded = renderedSnapshot?.highlight?.event === MATCH_EVENT.MATCH_END;
 
   useEffect(() => {
-    if (isMatchEnded && isAutoTicking) {
+    if (!isMatchEnded || handledMatchEndRef.current) {
+      return;
+    }
+
+    handledMatchEndRef.current = true;
+    if (isAutoTicking) {
       setIsAutoTicking(false);
       stopAutoTick.mutate();
     }
-  }, [isAutoTicking, isMatchEnded, stopAutoTick]);
+    void queryClient.invalidateQueries({ queryKey: ['campainMatches'] });
+    void queryClient.invalidateQueries({ queryKey: ['session'] });
+  }, [isAutoTicking, isMatchEnded, queryClient, stopAutoTick]);
 
   return (
     <main className="match-view">
@@ -421,7 +431,11 @@ export function MatchView() {
           <button
             type="button"
             className="match-modal__close"
-            onClick={() => navigate(ROUTES.club)}
+            onClick={() => {
+              void queryClient.invalidateQueries({ queryKey: ['campainMatches'] });
+              void queryClient.invalidateQueries({ queryKey: ['session'] });
+              navigate(ROUTES.club);
+            }}
             aria-label="Close match"
             title="Close"
           >

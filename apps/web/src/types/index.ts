@@ -162,8 +162,13 @@ export type CampaignMatch = {
   id: number | string;
   campainId: number | string;
   level: number;
+  campainLevel?: number;
   competitorId?: number | string;
   matchReward: number | string;
+  campain?: {
+    id: number | string;
+    level: number;
+  };
   competitor?: {
     id: number | string;
     name: string;

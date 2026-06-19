@@ -53,6 +53,14 @@ export function AiMatchPage() {
       }, 0),
     [matches],
   );
+  const campaignLevel = useMemo(
+    () =>
+      matches.reduce((max, item) => {
+        const value = Number(item.campainLevel ?? item.campain?.level ?? 1);
+        return Number.isFinite(value) ? Math.max(max, value) : max;
+      }, 1),
+    [matches],
+  );
 
   if (!teamId) {
     return (
@@ -110,7 +118,7 @@ export function AiMatchPage() {
             </div>
             <div className="game-stat-card">
               <p className="game-stat-card__label">Trang thai</p>
-              <p className="game-stat-card__value">San sang</p>
+              <p className="game-stat-card__value">Level {campaignLevel}</p>
             </div>
           </div>
 
@@ -122,6 +130,7 @@ export function AiMatchPage() {
                 <CampaignMatchCard
                   key={String(item.id)}
                   match={item}
+                  campaignLevel={campaignLevel}
                   isStarting={startMatch.isPending}
                   onStart={async () => {
                     const response = await startMatch.mutateAsync({ campainMatchId: item.id });
@@ -141,19 +150,30 @@ export function AiMatchPage() {
 
 function CampaignMatchCard({
   match,
+  campaignLevel,
   onStart,
   isStarting,
 }: {
   match: CampaignMatch;
+  campaignLevel: number;
   onStart: () => Promise<void>;
   isStarting: boolean;
 }) {
   const reward = Number(match.matchReward ?? 0);
   const clubName = match.competitor?.name || `BOT #${String(match.competitorId ?? '-')}`;
+  const level = Number(match.level ?? 0);
+  const isCleared = level < campaignLevel;
+  const isUnlocked = level <= campaignLevel;
+  const isLocked = !isUnlocked;
 
   return (
-    <article className="campaign-match-card">
-      <p className="campaign-match-card__stage">Match {Number(match.level ?? 0)}</p>
+    <article className="campaign-match-card" data-locked={isLocked} data-cleared={isCleared}>
+      <p className="campaign-match-card__stage">
+        Match {level}
+        <span className="ml-2 text-[10px] text-slate-400">
+          {isCleared ? 'CLEARED' : isLocked ? 'LOCKED' : 'UNLOCKED'}
+        </span>
+      </p>
       <p className="campaign-match-card__club" title={clubName}>
         {clubName}
       </p>
@@ -164,12 +184,16 @@ function CampaignMatchCard({
       <button
         type="button"
         className="game-button-primary mt-3 w-full"
-        disabled={isStarting}
+        disabled={isStarting || isLocked}
+        title={isLocked ? `Mo khoa sau khi hoan thanh level ${level - 1}` : undefined}
         onClick={() => {
+          if (isLocked) {
+            return;
+          }
           void onStart();
         }}
       >
-        {isStarting ? 'Starting...' : 'Start Match'}
+        {isLocked ? 'Locked' : isCleared ? 'Replay Match' : isStarting ? 'Starting...' : 'Start Match'}
       </button>
     </article>
   );

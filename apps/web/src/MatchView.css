@@ -1421,6 +1421,268 @@
   }
 }
 
+/* Dashboard visual alignment */
+.match-view {
+  min-height: calc(100svh - 120px);
+  padding: 0;
+  background:
+    linear-gradient(180deg, rgba(2, 7, 19, 0.08), rgba(2, 7, 19, 0.68)),
+    radial-gradient(circle at 50% 92%, rgba(76, 211, 194, 0.18), transparent 34%),
+    radial-gradient(circle at 15% 12%, rgba(126, 238, 255, 0.14), transparent 28%);
+}
+
+.match-view__backdrop {
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    radial-gradient(circle at 50% 20%, rgba(126, 238, 255, 0.08), transparent 34%);
+  background-size: 52px 52px, 52px 52px, auto;
+  mask-image: linear-gradient(180deg, transparent, black 18%, black 78%, transparent);
+  opacity: 0.74;
+}
+
+.match-modal {
+  width: min(1320px, 100%);
+  min-height: min(760px, calc(100svh - 148px));
+  max-height: calc(100svh - 148px);
+  border-color: rgba(126, 238, 255, 0.24);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(8, 20, 36, 0.94), rgba(3, 8, 18, 0.96)),
+    radial-gradient(circle at 50% 0, rgba(126, 238, 255, 0.13), transparent 48%);
+  box-shadow:
+    0 34px 90px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.match-modal__head {
+  padding: 18px 18px 0 22px;
+}
+
+.match-modal__head span,
+.match-scoreboard__clock,
+.match-scoreboard__status,
+.match-events__head,
+.match-events__empty {
+  color: rgba(224, 246, 255, 0.58);
+}
+
+.match-modal__head strong {
+  font-family: 'Bebas Neue', 'Barlow', sans-serif;
+  font-size: 34px;
+  letter-spacing: 0.02em;
+}
+
+.match-modal__close {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-color: rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: none;
+}
+
+.match-modal__close:hover {
+  border-color: rgba(255, 211, 103, 0.62);
+  filter: brightness(1.08);
+}
+
+.match-scoreboard,
+.match-events,
+.match-empty {
+  border-color: rgba(126, 238, 255, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(5, 16, 31, 0.78), rgba(2, 6, 15, 0.9)),
+    radial-gradient(circle at 50% 0, rgba(126, 238, 255, 0.08), transparent 52%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035);
+}
+
+.match-scoreboard {
+  width: calc(100% - 44px);
+  padding: 10px 12px;
+}
+
+.match-scoreboard__dot--home {
+  background: linear-gradient(135deg, #1f72ff, #78f8ff);
+  box-shadow: 0 0 14px rgba(126, 238, 255, 0.46);
+}
+
+.match-scoreboard__dot--away {
+  background: linear-gradient(135deg, #ff3552, #ffd367);
+  box-shadow: 0 0 14px rgba(255, 53, 82, 0.34);
+}
+
+.match-scoreboard__score {
+  font-family: 'Bebas Neue', 'Barlow', sans-serif;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  letter-spacing: 0.02em;
+}
+
+.match-scoreboard__score span {
+  color: rgba(126, 238, 255, 0.48);
+}
+
+.match-live-dot.is-on {
+  background: #78f8ff;
+  box-shadow: 0 0 16px rgba(126, 238, 255, 0.8);
+}
+
+.match-view__content {
+  gap: 14px;
+  padding: 0 22px 22px;
+}
+
+.match-debug-controls {
+  left: 12px;
+  top: 12px;
+}
+
+.match-debug-controls__button {
+  min-height: 38px;
+  border-color: rgba(126, 238, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(126, 238, 255, 0.12);
+  color: #e8fbff;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.24);
+  text-transform: uppercase;
+}
+
+.match-debug-controls__button:hover {
+  border-color: rgba(255, 211, 103, 0.6);
+  filter: brightness(1.08);
+}
+
+.match-debug-controls__button--stop {
+  border-color: rgba(255, 70, 96, 0.32);
+  background: rgba(255, 53, 82, 0.14);
+}
+
+.match-debug-controls__error {
+  border-color: rgba(255, 70, 96, 0.34);
+  border-radius: 8px;
+  background: rgba(54, 10, 18, 0.78);
+}
+
+.match-pitch {
+  border-color: rgba(126, 238, 255, 0.22);
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(126, 238, 255, 0.1), transparent 24%),
+    linear-gradient(rgba(255, 255, 255, 0.052) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.046) 1px, transparent 1px),
+    repeating-linear-gradient(90deg, rgba(10, 96, 62, 0.72) 0 11%, rgba(8, 72, 54, 0.8) 11% 22%);
+  background-size: auto, 52px 52px, 52px 52px, auto;
+  box-shadow:
+    inset 0 0 90px rgba(0, 0, 0, 0.32),
+    0 26px 60px rgba(0, 0, 0, 0.24);
+}
+
+.pitch-debug-grid {
+  opacity: 0.28;
+}
+
+.pitch-debug-grid__x,
+.pitch-debug-grid__y,
+.player-name,
+.player-coord,
+.player-move,
+.ball-coord {
+  border-color: rgba(126, 238, 255, 0.16);
+  background: rgba(3, 10, 21, 0.72);
+  color: #dffbff;
+}
+
+.player-circle {
+  border-color: rgba(255, 255, 255, 0.74);
+  box-shadow:
+    0 14px 24px rgba(0, 0, 0, 0.28),
+    inset 0 1px 12px rgba(255, 255, 255, 0.18);
+}
+
+.player-circle--home {
+  background: linear-gradient(135deg, #1f72ff, #78f8ff);
+  color: #06101d;
+}
+
+.player-circle--away {
+  background: linear-gradient(135deg, #432d09, #ffd367);
+  color: #1b1303;
+}
+
+.player-node--has-ball .player-circle::before,
+.player-node--highlight .player-circle::before {
+  border-color: rgba(255, 211, 103, 0.82);
+}
+
+.player-number {
+  background: rgba(3, 10, 21, 0.9);
+}
+
+.player-skill-badge {
+  border-color: rgba(126, 238, 255, 0.95);
+  background: linear-gradient(135deg, rgba(9, 21, 34, 0.94), rgba(70, 191, 255, 0.9));
+}
+
+.match-events__head {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.match-events__head strong {
+  color: #78f8ff;
+}
+
+.match-event {
+  border-color: rgba(126, 238, 255, 0.14);
+  border-left-color: rgba(126, 238, 255, 0.7);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.match-event__minute {
+  background: rgba(126, 238, 255, 0.1);
+  color: #78f8ff;
+}
+
+.match-event--goal,
+.match-event--shot {
+  border-left-color: #ffd367;
+  background: rgba(255, 211, 103, 0.09);
+}
+
+.match-event--skill,
+.match-event--pass {
+  border-left-color: #78f8ff;
+  background: rgba(126, 238, 255, 0.08);
+}
+
+.match-event--defense {
+  border-left-color: #ff4660;
+}
+
+@media (max-width: 980px) {
+  .match-modal {
+    width: 100%;
+    max-height: calc(100svh - 24px);
+    min-height: calc(100svh - 24px);
+  }
+}
+
+@media (max-width: 640px) {
+  .match-modal__head strong {
+    font-size: 28px;
+  }
+
+  .match-scoreboard {
+    width: calc(100% - 24px);
+  }
+
+  .match-view__content {
+    padding: 0 12px 12px;
+  }
+}
+
 
 
 
