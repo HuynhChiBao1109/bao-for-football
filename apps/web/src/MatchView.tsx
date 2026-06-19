@@ -141,6 +141,13 @@ function getPlayerInitials(name: string) {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
 
+function skillCode(skill: number) {
+  if (skill === EPlayerSkill.SHOOT_THUNDER) return 'TS';
+  if (skill === EPlayerSkill.DRIBBLE_MAGIC) return 'MD';
+  if (skill === EPlayerSkill.TANK_TACKLE) return 'TT';
+  return 'SK';
+}
+
 function Scoreboard({
   snapshot,
   status,
@@ -253,16 +260,25 @@ const PlayerCircle = memo(function PlayerCircle({
       </div>
       {player.activeSkill ? (
         <span className="player-skill-badge" title={skillName(player.activeSkill) ?? 'Skill'}>
-          {player.activeSkill === EPlayerSkill.SHOOT_THUNDER
-            ? 'TS'
-            : player.activeSkill === EPlayerSkill.DRIBBLE_MAGIC
-              ? 'MD'
-              : player.activeSkill === EPlayerSkill.TANK_TACKLE
-                ? 'TT'
-                : 'SK'}
+          {skillCode(player.activeSkill)}
         </span>
       ) : null}
       <span className="player-name">{player.name}</span>
+      {player.skillCharges?.length ? (
+        <div className="player-rage-bars" aria-label={`${player.name} skill rage`}>
+          {player.skillCharges.map((item) => (
+            <div
+              className="player-rage-bar"
+              data-ready={item.charge >= 100}
+              key={`${player.id}-${item.skill}`}
+              title={`${skillName(item.skill) ?? 'Skill'} ${Math.round(item.charge)}%`}
+            >
+              <span>{skillCode(item.skill)}</span>
+              <i style={{ width: `${Math.min(100, Math.max(0, item.charge))}%` }} />
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 });

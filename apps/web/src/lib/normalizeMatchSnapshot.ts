@@ -21,6 +21,20 @@ function toPitchPlayer(
   const move = raw.move as MatchPitchPlayer['move'] | undefined;
   const x = clampPercent(raw.x, teamSide === 'home' ? 32 : 68);
   const y = clampPercent(raw.y, 8 + index * 8);
+  const skills = Array.isArray(raw.skills)
+    ? raw.skills.map((skill) => Number(skill)).filter((skill) => Number.isFinite(skill))
+    : [];
+  const skillCharges = Array.isArray(raw.skillCharges)
+    ? raw.skillCharges
+        .map((item) => {
+          const value = item as { skill?: unknown; charge?: unknown };
+          return {
+            skill: Number(value.skill ?? 0),
+            charge: clampPercent(value.charge, 0),
+          };
+        })
+        .filter((item) => Number.isFinite(item.skill) && item.skill > 0)
+    : skills.map((skill) => ({ skill, charge: 0 }));
 
   return {
     id,
@@ -29,6 +43,8 @@ function toPitchPlayer(
     position: String(raw.displayRole ?? raw.position ?? raw.role ?? '-'),
     jerseyNumber: (raw.jerseyNumber as string | number | undefined) ?? index + 1,
     teamSide,
+    skills,
+    skillCharges,
     x,
     y,
     homeX: clampPercent(raw.homeX, x),

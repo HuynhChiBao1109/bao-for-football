@@ -220,6 +220,8 @@ export type MatchPitchPlayer = {
   position: string;
   jerseyNumber?: number | string;
   teamSide?: 'home' | 'away';
+  skills?: number[];
+  skillCharges?: Array<{ skill: number; charge: number }>;
   x: number;
   y: number;
   homeX?: number;

@@ -82,6 +82,17 @@ export class MatchRepository {
     });
   }
 
+  async findCampaignMatchesUpToLevel(campaignId: number, level: number) {
+    return this.campainMatchRepository
+      .createQueryBuilder("campaignMatch")
+      .leftJoinAndSelect("campaignMatch.match", "match")
+      .leftJoinAndSelect("campaignMatch.campain", "campain")
+      .where("campaignMatch.campain_id = :campaignId", { campaignId })
+      .andWhere("campaignMatch.level < :level", { level })
+      .orderBy("campaignMatch.level", "ASC")
+      .getMany();
+  }
+
   async create(match: Partial<MatchEntity>): Promise<MatchEntity> {
     const newMatch = this.matchRepository.create(match);
     return this.matchRepository.save(newMatch);

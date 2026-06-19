@@ -751,6 +751,59 @@
   animation: skillBadgePulse 0.42s steps(2, end) infinite;
 }
 
+.player-rage-bars {
+  display: grid;
+  gap: 3px;
+  width: 76px;
+  padding: 3px;
+  border: 1px solid rgba(144, 236, 255, 0.2);
+  border-radius: 6px;
+  background: rgba(3, 9, 18, 0.68);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.22);
+}
+
+.player-rage-bar {
+  position: relative;
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  align-items: center;
+  gap: 4px;
+  min-height: 8px;
+  overflow: hidden;
+}
+
+.player-rage-bar span {
+  color: rgba(226, 248, 255, 0.86);
+  font-size: 0.48rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.player-rage-bar::after {
+  content: '';
+  grid-column: 2;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.player-rage-bar i {
+  position: absolute;
+  left: 24px;
+  right: auto;
+  height: 5px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #46bfff, #ffe96f);
+  box-shadow: 0 0 10px rgba(74, 207, 255, 0.55);
+  z-index: 1;
+}
+
+.player-rage-bar[data-ready='true'] i {
+  background: linear-gradient(90deg, #fff27d, #ff3552);
+  box-shadow: 0 0 14px rgba(255, 211, 103, 0.88), 0 0 22px rgba(255, 53, 82, 0.46);
+  animation: skillBadgePulse 0.5s steps(2, end) infinite;
+}
+
 .match-ball {
   width: clamp(12px, 1.5vw, 18px);
   aspect-ratio: 1;

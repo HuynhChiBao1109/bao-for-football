@@ -28,6 +28,7 @@ export class CampainRepository {
       relations: {
         campainMatches: {
           competitor: true,
+          match: true,
         },
       },
       order: {
@@ -88,6 +89,7 @@ export class CampainRepository {
       relations: {
         campainMatches: {
           competitor: true,
+          match: true,
         },
       },
     });

@@ -77,17 +77,21 @@ export class MatchService implements IMatchService {
       throw new BadRequestException("You do not own this campaign match");
     }
 
-    const campaignLevel = Number(campaignMatch.campain?.level ?? 1);
+    let campaignLevel = Number(campaignMatch.campain?.level ?? 1);
+    if (Number(campaignMatch.level) > campaignLevel) {
+      campaignLevel = await this.completePreviousCampaignProgress(
+        Number(campaignMatch.campainId),
+        Number(campaignMatch.level),
+        campaignLevel,
+      );
+    }
+
     if (Number(campaignMatch.level) > campaignLevel) {
       throw new BadRequestException("Campaign match level is not unlocked yet");
     }
 
     const existingMatch = await this.repository.findMatchByCampaignMatchId(campaignMatchId);
     if (existingMatch) {
-      const existingHomeScore = Number(existingMatch.homeScore ?? 0);
-      const existingAwayScore = Number(existingMatch.awayScore ?? 0);
-      const existingHomeWon =
-        existingMatch.status === EMatchStatus.FINISHED && existingHomeScore > existingAwayScore;
       const alreadyCleared = Number(campaignMatch.level) < campaignLevel;
 
       if (existingMatch.status === EMatchStatus.IN_PROGRESS) {
@@ -99,10 +103,16 @@ export class MatchService implements IMatchService {
         };
       }
 
-      if (existingHomeWon || alreadyCleared) {
-        if (existingHomeWon) {
-          await this.completeCampaignProgress(existingMatch.id);
-        }
+      if (existingMatch.status === EMatchStatus.FINISHED) {
+        await this.completeCampaignProgress(existingMatch.id);
+        return {
+          matchId: String(existingMatch.id),
+          homeLineup: existingMatch.homeLineup ?? [],
+          awayLineup: existingMatch.awayLineup ?? [],
+        };
+      }
+
+      if (alreadyCleared) {
         return {
           matchId: String(existingMatch.id),
           homeLineup: existingMatch.homeLineup ?? [],
@@ -231,9 +241,7 @@ export class MatchService implements IMatchService {
         endedAt: new Date(),
       });
 
-      if (nextTick.snapshot.homeScore > nextTick.snapshot.awayScore) {
-        await this.completeCampaignProgress(matchId);
-      }
+      await this.completeCampaignProgress(matchId);
     }
 
     await this.repository.saveEvents([
@@ -347,9 +355,7 @@ export class MatchService implements IMatchService {
       return;
     }
 
-    const homeScore = Number(match.homeScore ?? 0);
-    const awayScore = Number(match.awayScore ?? 0);
-    if (homeScore <= awayScore) {
+    if (match.status !== EMatchStatus.FINISHED) {
       return;
     }
 
@@ -367,6 +373,41 @@ export class MatchService implements IMatchService {
       nextLevel,
       reward: Number(campaignMatch.matchReward ?? 0),
     });
+  }
+
+  private async completePreviousCampaignProgress(
+    campaignId: number,
+    targetLevel: number,
+    currentLevel: number,
+  ) {
+    const previousMatches = await this.repository.findCampaignMatchesUpToLevel(
+      campaignId,
+      targetLevel,
+    );
+    let unlockedLevel = currentLevel;
+
+    for (const campaignMatch of previousMatches) {
+      const match = campaignMatch.match;
+      const campaign = campaignMatch.campain;
+      if (!match || !campaign || match.status !== EMatchStatus.FINISHED) {
+        continue;
+      }
+
+      const nextLevel = Number(campaignMatch.level ?? 0) + 1;
+      if (nextLevel <= unlockedLevel) {
+        continue;
+      }
+
+      await this.repository.completeCampaignMatch({
+        campaignId: campaign.id,
+        teamId: campaign.teamId,
+        nextLevel,
+        reward: Number(campaignMatch.matchReward ?? 0),
+      });
+      unlockedLevel = nextLevel;
+    }
+
+    return unlockedLevel;
   }
 
   private emitSnapshot(matchIdValue: number | string, snapshot: MatchSnapshot) {

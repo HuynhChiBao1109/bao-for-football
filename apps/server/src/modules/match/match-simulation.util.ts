@@ -7,7 +7,6 @@ import {
   getSkillLabel,
   resolveSkillActivation,
   TrajectoryPoint,
-  tryActivateSkill,
 } from "./match-skills.util";
 import {
   applySeparation,
@@ -135,7 +134,9 @@ export type MatchRenderPlayer = {
   name: string;
   shortName: string;
   slug: string | null;
+  skills?: EPlayerSkill[];
   skillSlugs: string[];
+  skillCharges?: Array<{ skill: EPlayerSkill; charge: number }>;
   x: number;
   y: number;
   homeX?: number;
@@ -483,6 +484,7 @@ export function generateNextMatchTick(input: {
   const latestTick = previousTicks.at(-1);
   const homeLineup = input.homeLineup.map(toInternalLineupPlayer);
   const awayLineup = input.awayLineup.map(toInternalLineupPlayer);
+  addTickSkillCharge([...homeLineup, ...awayLineup]);
 
   if (!homeLineup.length || !awayLineup.length) {
     return null;
@@ -1126,6 +1128,7 @@ export function generateNextMatchTick(input: {
       Number(latestTick.awayScore ?? 0) + (shotAction.isGoal && possession === "away" ? 1 : 0);
     const keeper = shotAction.keeper;
     const nextOwner = shotAction.isGoal ? actor : keeper;
+    consumeSkillCharge(actor, shotAction.skill);
     const snapshot = buildSnapshot({
       frameId,
       minute,
@@ -1247,6 +1250,7 @@ export function generateNextMatchTick(input: {
       }
 
       const newPossession: Side = possession === "home" ? "away" : "home";
+      consumeSkillCharge(tempoDecision.pressDefender, tackleDecision.skill ?? null);
       const snapshot = buildSnapshot({
         frameId,
         minute,
@@ -1296,6 +1300,19 @@ export function generateNextMatchTick(input: {
       };
     }
 
+    const skill = getChargedSkill(actor, "dribble");
+    const ballPath =
+      skill === EPlayerSkill.DRIBBLE_MAGIC
+        ? buildMagicDribbleTrajectory(
+            latestTick.ball.x,
+            latestTick.ball.y,
+            tempoDecision.ballTarget.x,
+            tempoDecision.ballTarget.y,
+            FRAMES_PER_ACTION,
+            createDeterministicSkillRandom(nextTickValue, actor.userPlayerId),
+          )
+        : pathBetween({ x: latestTick.ball.x, y: latestTick.ball.y }, tempoDecision.ballTarget);
+    consumeSkillCharge(actor, skill);
     const snapshot = buildSnapshot({
       frameId,
       minute,
@@ -1310,19 +1327,18 @@ export function generateNextMatchTick(input: {
       awayLineup,
       ballOwner: actor,
       ball: tempoDecision.ballTarget,
-      ballPath: pathBetween(
-        { x: latestTick.ball.x, y: latestTick.ball.y },
-        tempoDecision.ballTarget,
-      ),
+      ballPath,
       highlight: createHighlight(
-        EMatchEvent.DRIBBLE,
-        `Tick ${nextTickValue}: ${actor.shortName} ${tempoDecision.label}`,
+        skill ? EMatchEvent.SKILL_USED : EMatchEvent.DRIBBLE,
+        `Tick ${nextTickValue}: ${actor.shortName} ${
+          skill ? `dung ${getSkillLabel(skill)}` : tempoDecision.label
+        }`,
         possession,
         actor.userPlayerId,
         null,
-        null,
+        skill,
       ),
-      activeSkill: null,
+      activeSkill: skill,
       focusId: actor.userPlayerId,
       pressId: tempoDecision.pressDefender?.userPlayerId ?? null,
       positionState: previousPositionState,
@@ -1331,7 +1347,7 @@ export function generateNextMatchTick(input: {
     return {
       snapshot,
       event: {
-        event: EMatchEvent.DRIBBLE,
+        event: skill ? EMatchEvent.SKILL_USED : EMatchEvent.DRIBBLE,
         minute,
         teamId: actor.teamId,
         actorPlayerId: actor.userPlayerId,
@@ -1341,6 +1357,8 @@ export function generateNextMatchTick(input: {
           action: tempoDecision.kind,
           from: { x: latestTick.ball.x, y: latestTick.ball.y },
           to: tempoDecision.ballTarget,
+          skill,
+          skillLabel: skill ? getSkillLabel(skill) : null,
         },
       },
     };
@@ -1642,7 +1660,7 @@ function playSimpleAction(input: {
       { label: action.label },
     );
   } else if (roll < 0.5) {
-    const skill = tryActivateSkill(actor.raw.skills, actor.role, "dribble", input.random);
+    const skill = getChargedSkill(actor, "dribble");
     const activation = skill
       ? resolveSkillActivation(skill, createSkillContext(actor, defender, keeper, input.random))
       : null;
@@ -1679,6 +1697,7 @@ function playSimpleAction(input: {
         defender.userPlayerId,
         action,
       );
+    consumeSkillCharge(actor, skill);
     pushEvent(
       input.events,
       EMatchEvent.DRIBBLE,
@@ -1694,7 +1713,8 @@ function playSimpleAction(input: {
       },
     );
   } else if (roll < 0.9 + shotBias * 0.08) {
-    const skill = tryActivateSkill(actor.raw.skills, actor.role, "shoot", input.random);
+    addSkillCharge(actor, EPlayerSkill.SHOOT_THUNDER, 25);
+    const skill = getChargedSkill(actor, "shoot");
     const activation = skill
       ? resolveSkillActivation(skill, createSkillContext(actor, defender, keeper, input.random))
       : null;
@@ -1729,6 +1749,7 @@ function playSimpleAction(input: {
           skill,
         ),
       );
+    consumeSkillCharge(actor, skill);
 
     if (shotSuccess && input.random() > (skill === EPlayerSkill.SHOOT_THUNDER ? 0.42 : 0.55)) {
       if (possession === "home") homeScore += 1;
@@ -1898,8 +1919,11 @@ function finishAction(
 }
 
 function toInternalLineupPlayer(player: MatchRenderPlayer): InternalLineupPlayer {
+  const skills = Array.isArray(player.skills) ? player.skills : [];
   return {
     ...player,
+    skills,
+    skillCharges: normalizeSkillCharges(skills, player.skillCharges),
     anchors: {
       x: Number(player.homeX ?? player.x ?? 50),
       y: Number(player.homeY ?? player.y ?? 50),
@@ -1911,7 +1935,7 @@ function toInternalLineupPlayer(player: MatchRenderPlayer): InternalLineupPlayer
       name: player.name,
       slug: player.slug,
       positions: [{ position: player.displayRole || player.role, effect: 1 }],
-      skills: [],
+      skills,
       skillSlugs: player.skillSlugs,
       stats: {
         pass: 70,
@@ -2753,7 +2777,8 @@ function resolveDebugDefensiveAction(input: {
       100) /
     100;
   const skillRandom = createDeterministicSkillRandom(input.nextTick, input.defender.userPlayerId);
-  const skill = tryActivateSkill(input.defender.raw.skills, input.defender.role, "tackle", skillRandom);
+  addSkillCharge(input.defender, EPlayerSkill.TANK_TACKLE, 25);
+  const skill = getChargedSkill(input.defender, "tackle");
   const activation = skill
     ? resolveSkillActivation(skill, createSkillContext(input.actor, input.defender, input.defender, skillRandom))
     : null;
@@ -2879,7 +2904,8 @@ function resolveDebugShotAction(
       100) /
     100;
   const skillRandom = createDeterministicSkillRandom(input.nextTick, input.shooter.userPlayerId);
-  const skill = tryActivateSkill(input.shooter.raw.skills, input.shooter.role, "shoot", skillRandom);
+  addSkillCharge(input.shooter, EPlayerSkill.SHOOT_THUNDER, 25);
+  const skill = getChargedSkill(input.shooter, "shoot");
   const hasThunderShot = skill === EPlayerSkill.SHOOT_THUNDER;
   const maxShotDistance = hasThunderShot ? 52 : role === "ST" || role === "W" ? 46 : role === "CM" ? 40 : 36;
   const blockedLane =
@@ -3990,6 +4016,82 @@ function fixedBallPath(x: number, y: number): TrajectoryPoint[] {
   return Array.from({ length: FRAMES_PER_ACTION }, () => ({ x, y }));
 }
 
+function normalizeSkillCharges(
+  skills: EPlayerSkill[],
+  charges: Array<{ skill: EPlayerSkill; charge: number }> | undefined,
+) {
+  const chargeMap = new Map(
+    (charges ?? []).map((item) => [Number(item.skill) as EPlayerSkill, Number(item.charge ?? 0)]),
+  );
+
+  return skills.map((skill) => ({
+    skill,
+    charge: clamp(chargeMap.get(skill) ?? 0, 0, 100),
+  }));
+}
+
+function addSkillCharge(player: InternalLineupPlayer, skill: EPlayerSkill, amount: number) {
+  if (!player.raw.skills.includes(skill)) {
+    return;
+  }
+
+  const charges = normalizeSkillCharges(player.raw.skills, player.skillCharges);
+  const current = charges.find((item) => item.skill === skill);
+  if (!current) {
+    charges.push({ skill, charge: clamp(amount, 0, 100) });
+  } else {
+    current.charge = clamp(current.charge + amount, 0, 100);
+  }
+  player.skillCharges = charges;
+}
+
+function addTickSkillCharge(lineups: InternalLineupPlayer[]) {
+  lineups.forEach((player) => {
+    addSkillCharge(player, EPlayerSkill.DRIBBLE_MAGIC, 10);
+  });
+}
+
+function isSkillReady(player: InternalLineupPlayer, skill: EPlayerSkill) {
+  return normalizeSkillCharges(player.raw.skills, player.skillCharges).some(
+    (item) => item.skill === skill && item.charge >= 100,
+  );
+}
+
+function consumeSkillCharge(player: InternalLineupPlayer, skill: EPlayerSkill | null) {
+  if (!skill) {
+    return;
+  }
+
+  player.skillCharges = normalizeSkillCharges(player.raw.skills, player.skillCharges).map((item) =>
+    item.skill === skill ? { ...item, charge: 0 } : item,
+  );
+}
+
+function getChargedSkill(
+  player: InternalLineupPlayer,
+  phase: "shoot" | "dribble" | "tackle" | "build_up",
+) {
+  if (phase === "shoot" && isSkillReady(player, EPlayerSkill.SHOOT_THUNDER)) {
+    return player.raw.skills.includes(EPlayerSkill.SHOOT_THUNDER)
+      ? EPlayerSkill.SHOOT_THUNDER
+      : null;
+  }
+
+  if (phase === "dribble" && isSkillReady(player, EPlayerSkill.DRIBBLE_MAGIC)) {
+    return player.raw.skills.includes(EPlayerSkill.DRIBBLE_MAGIC)
+      ? EPlayerSkill.DRIBBLE_MAGIC
+      : null;
+  }
+
+  if (phase === "tackle" && isSkillReady(player, EPlayerSkill.TANK_TACKLE)) {
+    return player.raw.skills.includes(EPlayerSkill.TANK_TACKLE)
+      ? EPlayerSkill.TANK_TACKLE
+      : null;
+  }
+
+  return null;
+}
+
 function buildSnapshot(input: {
   frameId: number;
   minute: number;
@@ -4269,7 +4371,9 @@ function projectPlayers(input: {
       name: player.name,
       shortName: player.shortName,
       slug: player.slug,
+      skills: player.raw.skills,
       skillSlugs: player.skillSlugs,
+      skillCharges: normalizeSkillCharges(player.raw.skills, player.skillCharges),
       x: clamp(movementPlayer.position.x, 0, 100),
       y: clamp(movementPlayer.position.y, 0, 100),
       homeX: player.anchors.x,
@@ -4776,7 +4880,9 @@ function selectLineup(team: SimulationTeamInput, side: Side): InternalLineupPlay
       name: picked.name,
       shortName: shortenName(picked.name),
       slug: picked.slug,
+      skills: picked.skills,
       skillSlugs: picked.skillSlugs,
+      skillCharges: normalizeSkillCharges(picked.skills, undefined),
       x: anchors.x,
       y: anchors.y,
       homeX: anchors.x,
