@@ -1,10 +1,11 @@
 import { memo, useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import './MatchView.css';
 import { useMatchMotion } from './hooks/useMatchMotion';
 import { useGetNextMatchTick, useStartAutoMatchTick, useStopAutoMatchTick } from './hooks/useMatch';
 import { useMatchSocket, type LiveMatchEvent } from './hooks/useMatchSocket';
 import { EPlayerSkill, skillAnimation, skillName } from './enums/skill';
+import { ROUTES } from './routes';
 import type { MatchPitchPlayer, MatchSnapshot } from './types';
 
 const MATCH_EVENT = {
@@ -389,6 +390,7 @@ function MatchPitch({ snapshot }: { snapshot: MatchSnapshot }) {
 
 export function MatchView() {
   const { matchId } = useParams();
+  const navigate = useNavigate();
   const [isAutoTicking, setIsAutoTicking] = useState(false);
   const { snapshot, events, status, isConnected, isLoading, error, queuedTicks, ackActiveTick } =
     useMatchSocket(matchId);
@@ -409,70 +411,91 @@ export function MatchView() {
 
   return (
     <main className="match-view">
-      <Scoreboard
-        snapshot={renderedSnapshot}
-        status={status}
-        isConnected={isConnected}
-        queuedTicks={queuedTicks}
-      />
-      <div className="match-view__content">
-        <div className="match-debug-controls">
+      <div className="match-view__backdrop" aria-hidden="true" />
+      <section className="match-modal" role="dialog" aria-modal="true" aria-label="Live match">
+        <header className="match-modal__head">
+          <div>
+            <span>Live battle</span>
+            <strong>Match View</strong>
+          </div>
           <button
             type="button"
-            className="match-debug-controls__button"
-            disabled={!matchId || getNextTick.isPending}
-            onClick={() => {
-              getNextTick.mutate();
-            }}
+            className="match-modal__close"
+            onClick={() => navigate(ROUTES.club)}
+            aria-label="Close match"
+            title="Close"
           >
-            {getNextTick.isPending ? 'Generating tick...' : 'Get next tick'}
+            <span />
+            <span />
           </button>
-          <button
-            type="button"
-            className="match-debug-controls__button"
-            disabled={!matchId || isAutoTicking || isMatchEnded || startAutoTick.isPending}
-            onClick={() => {
-              startAutoTick.mutate(undefined, {
-                onSuccess: () => setIsAutoTicking(true),
-              });
-            }}
-          >
-            {startAutoTick.isPending ? 'Starting...' : 'Auto tick'}
-          </button>
-          <button
-            type="button"
-            className="match-debug-controls__button match-debug-controls__button--stop"
-            disabled={!isAutoTicking || stopAutoTick.isPending}
-            onClick={() => {
-              stopAutoTick.mutate(undefined, {
-                onSettled: () => setIsAutoTicking(false),
-              });
-            }}
-          >
-            {stopAutoTick.isPending ? 'Stopping...' : 'Stop'}
-          </button>
-          {getNextTick.error ? (
-            <span className="match-debug-controls__error">{getNextTick.error.message}</span>
-          ) : null}
-          {startAutoTick.error ? (
-            <span className="match-debug-controls__error">{startAutoTick.error.message}</span>
-          ) : null}
-          {stopAutoTick.error ? (
-            <span className="match-debug-controls__error">{stopAutoTick.error.message}</span>
-          ) : null}
+        </header>
+
+        <Scoreboard
+          snapshot={renderedSnapshot}
+          status={status}
+          isConnected={isConnected}
+          queuedTicks={queuedTicks}
+        />
+
+        <div className="match-view__content">
+          <div className="match-debug-controls">
+            <button
+              type="button"
+              className="match-debug-controls__button"
+              disabled={!matchId || getNextTick.isPending}
+              onClick={() => {
+                getNextTick.mutate();
+              }}
+            >
+              {getNextTick.isPending ? 'Generating tick...' : 'Get next tick'}
+            </button>
+            <button
+              type="button"
+              className="match-debug-controls__button"
+              disabled={!matchId || isAutoTicking || isMatchEnded || startAutoTick.isPending}
+              onClick={() => {
+                startAutoTick.mutate(undefined, {
+                  onSuccess: () => setIsAutoTicking(true),
+                });
+              }}
+            >
+              {startAutoTick.isPending ? 'Starting...' : 'Auto tick'}
+            </button>
+            <button
+              type="button"
+              className="match-debug-controls__button match-debug-controls__button--stop"
+              disabled={!isAutoTicking || stopAutoTick.isPending}
+              onClick={() => {
+                stopAutoTick.mutate(undefined, {
+                  onSettled: () => setIsAutoTicking(false),
+                });
+              }}
+            >
+              {stopAutoTick.isPending ? 'Stopping...' : 'Stop'}
+            </button>
+            {getNextTick.error ? (
+              <span className="match-debug-controls__error">{getNextTick.error.message}</span>
+            ) : null}
+            {startAutoTick.error ? (
+              <span className="match-debug-controls__error">{startAutoTick.error.message}</span>
+            ) : null}
+            {stopAutoTick.error ? (
+              <span className="match-debug-controls__error">{stopAutoTick.error.message}</span>
+            ) : null}
+          </div>
+          {renderedSnapshot ? (
+            <MatchPitch snapshot={renderedSnapshot} />
+          ) : (
+            <section className="match-empty">
+              <strong>{isLoading ? 'Loading match...' : 'No live snapshot'}</strong>
+              <span>
+                {error ? error.message : 'Press Get next tick to render the next server tick.'}
+              </span>
+            </section>
+          )}
+          <EventFeed events={events} />
         </div>
-        {renderedSnapshot ? (
-          <MatchPitch snapshot={renderedSnapshot} />
-        ) : (
-          <section className="match-empty">
-            <strong>{isLoading ? 'Loading match...' : 'No live snapshot'}</strong>
-            <span>
-              {error ? error.message : 'Press Get next tick to render the next server tick.'}
-            </span>
-          </section>
-        )}
-        <EventFeed events={events} />
-      </div>
+      </section>
     </main>
   );
 }
