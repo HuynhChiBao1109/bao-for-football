@@ -5,6 +5,7 @@ import { MatchEntity } from "./entities/match.entity";
 import { AuthUser } from "../auth/types";
 import { EMatchStatus } from "./enums";
 import {
+  AUTO_TICK_INTERVAL_MS,
   generateNextMatchTick,
   MatchSnapshot,
   prepareMatchKickoffLineups,
@@ -297,7 +298,7 @@ export class MatchService implements IMatchService {
 
     const timer = setInterval(() => {
       void runTick();
-    }, 1000);
+    }, AUTO_TICK_INTERVAL_MS);
     this.autoTickTimers.set(matchId, timer);
     void runTick();
 

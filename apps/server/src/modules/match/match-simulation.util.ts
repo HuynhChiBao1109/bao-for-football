@@ -29,7 +29,11 @@ export const TICKS_PER_SECOND = SIM_TICKS_PER_SECOND;
 export const TICKS_PER_MINUTE = 60 * TICKS_PER_SECOND;
 export const MATCH_DURATION_TICKS = MATCH_CLOCK_SECONDS * TICKS_PER_SECOND;
 export const DEBUG_TICK_STEP = 1;
-export const FRAME_DURATION_MS = MATCH_TICK_MS;
+export const FRAME_DURATION_MS = 620;
+export const AUTO_TICK_INTERVAL_MS = FRAME_DURATION_MS;
+const SKILL_FRAME_DURATION_MS = 620;
+const PASS_FRAME_DURATION_MS = 560;
+const DEAD_BALL_FRAME_DURATION_MS = 720;
 const MIN_OWNER_POSSESSION_TICKS = Math.max(2, Math.round(1.8 * TICKS_PER_SECOND));
 const MIN_TEAM_POSSESSION_TICKS = Math.max(1, Math.round(0.8 * TICKS_PER_SECOND));
 const PASS_CADENCE_TICKS = Math.max(5, Math.round(5 * TICKS_PER_SECOND));
@@ -4624,7 +4628,7 @@ function buildSnapshot(input: {
   return {
     frameId: input.frameId,
     tick: input.tick,
-    durationMs: FRAME_DURATION_MS,
+    durationMs: getSnapshotFrameDuration(input.highlight.event, input.activeSkill),
     matchStep: input.matchStep,
     minute: input.minute,
     second: input.second,
@@ -4639,7 +4643,7 @@ function buildSnapshot(input: {
       fromX: clamp(prevBall.x, 0, 100),
       fromY: clamp(prevBall.y, 0, 100),
       ownerPlayerId: controlledOwnerId,
-      speed: input.activeSkill ? 9 : 5,
+      speed: getBallVisualSpeed(input.highlight.event, input.activeSkill),
       trajectory: input.ballPath,
       skillTrajectory: input.activeSkill,
     },
@@ -4651,6 +4655,41 @@ function buildSnapshot(input: {
     },
     highlight: input.highlight,
   };
+}
+
+function getSnapshotFrameDuration(event: EMatchEvent | null, activeSkill: EPlayerSkill | null) {
+  if (activeSkill) return SKILL_FRAME_DURATION_MS;
+
+  if (event === EMatchEvent.PASS) return PASS_FRAME_DURATION_MS;
+
+  if (
+    event === EMatchEvent.FREE_KICK ||
+    event === EMatchEvent.THROW_IN ||
+    event === EMatchEvent.CORNER_KICK ||
+    event === EMatchEvent.GOAL_KICK ||
+    event === EMatchEvent.GOAL_RESET ||
+    event === EMatchEvent.OFFSIDE ||
+    event === EMatchEvent.FOUL
+  ) {
+    return DEAD_BALL_FRAME_DURATION_MS;
+  }
+
+  return FRAME_DURATION_MS;
+}
+
+function getBallVisualSpeed(event: EMatchEvent | null, activeSkill: EPlayerSkill | null) {
+  if (activeSkill === EPlayerSkill.SHOOT_THUNDER) return 14;
+  if (
+    event === EMatchEvent.SHOOT ||
+    event === EMatchEvent.GOAL ||
+    event === EMatchEvent.GOALKEEPER_SAVE
+  ) {
+    return 12;
+  }
+
+  if (event === EMatchEvent.PASS) return 6;
+  if (activeSkill) return 9;
+  return 5;
 }
 
 function resolveSnapshotTacticalPhase(input: {
