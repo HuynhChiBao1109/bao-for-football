@@ -43,10 +43,10 @@ function clampPercent(value: number) {
   return Math.min(100, Math.max(0, value));
 }
 
-function toHorizontalPitchPosition(point: { x: number; y: number }) {
+function toVerticalPitchPosition(point: { x: number; y: number }) {
   return {
-    left: `${clampPercent(point.y)}%`,
-    top: `${clampPercent(point.x)}%`,
+    left: `${clampPercent(point.x)}%`,
+    top: `${clampPercent(point.y)}%`,
   } as CSSProperties;
 }
 
@@ -216,12 +216,12 @@ function PitchDebugGrid() {
   return (
     <div className="pitch-debug-grid" aria-hidden="true">
       {marks.map((value) => (
-        <span className="pitch-debug-grid__x" key={`x-${value}`} style={{ top: `${value}%` }}>
+        <span className="pitch-debug-grid__x" key={`x-${value}`} style={{ left: `${value}%` }}>
           x {value}
         </span>
       ))}
       {marks.map((value) => (
-        <span className="pitch-debug-grid__y" key={`y-${value}`} style={{ left: `${value}%` }}>
+        <span className="pitch-debug-grid__y" key={`y-${value}`} style={{ top: `${value}%` }}>
           y {value}
         </span>
       ))}
@@ -236,7 +236,7 @@ const PlayerCircle = memo(function PlayerCircle({
   player: MatchPitchPlayer;
   activeHighlight: boolean;
 }) {
-  const style = toHorizontalPitchPosition(player);
+  const style = toVerticalPitchPosition(player);
   const teamClass = player.teamSide === 'away' ? 'player-circle--away' : 'player-circle--home';
   const isGoalkeeper = player.position === 'GK';
 
@@ -289,7 +289,7 @@ const PlayerCircle = memo(function PlayerCircle({
 });
 
 function Ball({ snapshot }: { snapshot: MatchSnapshot }) {
-  const style = toHorizontalPitchPosition(snapshot.ball);
+  const style = toVerticalPitchPosition(snapshot.ball);
   const thunderShot = isThunderShot(snapshot);
   const magicDribble = isMagicDribble(snapshot);
   const tankTackle = isTankTackle(snapshot);
