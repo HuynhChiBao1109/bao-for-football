@@ -29,8 +29,8 @@ export const MOVEMENT = {
 
   ballControlRadius: 2.0,
 
-  tacticalDeadZoneRadius: 3.2,
-  supportDeadZoneRadius: 2.2,
+  tacticalDeadZoneRadius: 4.2,
+  supportDeadZoneRadius: 2.8,
   pressDeadZoneRadius: 1.1,
 };
 
@@ -107,6 +107,7 @@ type MovementContext = {
   role: PlayerRole;
   direction: number;
   ball: Vec2;
+  ballVelocity: Vec2;
   tick: number;
 };
 
@@ -213,6 +214,7 @@ export function getTacticalTarget(
     role: normalizeRole(player.role),
     direction: attackDirection(player.side),
     ball: gameState.ball.position,
+    ballVelocity: gameState.ball.velocity,
     tick: gameState.tick,
   };
 
@@ -590,6 +592,7 @@ function getShapePreservingTarget(
             const itemRole = normalizeRole(item.role);
             return itemRole === "CB" || itemRole === "FB";
           }),
+          context.ballVelocity,
         ),
       },
       zone,
@@ -634,8 +637,10 @@ function getBallActionPriorityWeight(
   if (state === "PRESS_BALL" || state === "RECEIVE_PASS" || state === "DRIBBLE") return 0.7;
 
   const gap = distance(player.position, context.ball);
-  if (gap <= 14) return 0.34;
-  if (gap <= 34) return 0.16;
+  const sameFlank = isSameFlank(player.homePosition.x, context.ball.x);
+  if (gap <= 12) return 0.28;
+  if (gap <= 28) return sameFlank ? 0.13 : 0.08;
+  if (gap <= 46 && sameFlank) return 0.04;
   return 0;
 }
 
@@ -1087,7 +1092,7 @@ function getBackLineCohesionDecision(
   if (backLine.length < 2) return null;
 
   const lineShiftX = getDefensiveUnitShiftX(ball);
-  const lineDepth = getDefensiveLineDepth(player.side, ball, backLine);
+  const lineDepth = getDefensiveLineDepth(player.side, ball, backLine, context.ballVelocity);
   const runner = role === "CB" ? findDangerousRunnerBehindLine(player, context, lineDepth) : null;
   if (runner) {
     return {
@@ -1148,7 +1153,7 @@ function getBackLineCohesionDecision(
 }
 
 function getDefensiveUnitShiftX(ball: Vec2) {
-  return clamp((ball.x - 50) * 0.28, -8, 8);
+  return clamp((ball.x - 50) * 0.22, -6.5, 6.5);
 }
 
 function getAttackingBackLineDepth(side: Side, ball: Vec2, backLine: Player[]) {
@@ -1159,19 +1164,23 @@ function getAttackingBackLineDepth(side: Side, ball: Vec2, backLine: Player[]) {
         ? 74
         : 26;
   const direction = attackDirection(side);
-  const advance = direction < 0 ? 58 - ball.y : ball.y - 42;
-  const push = clamp(7 + advance * 0.16, 4, 15);
+  const advance = direction < 0 ? 62 - ball.y : ball.y - 38;
+  const push = clamp(9 + advance * 0.18, 5, 19);
 
-  return direction < 0 ? clamp(averageHomeY - push, 58, 82) : clamp(averageHomeY + push, 18, 42);
+  return direction < 0 ? clamp(averageHomeY - push, 56, 82) : clamp(averageHomeY + push, 18, 44);
 }
 
-function getDefensiveLineDepth(side: Side, ball: Vec2, backLine: Player[]) {
+function getDefensiveLineDepth(side: Side, ball: Vec2, backLine: Player[], ballVelocity: Vec2) {
   const averageHomeY =
     backLine.reduce((total, player) => total + player.homePosition.y, 0) / backLine.length;
   const direction = attackDirection(side);
   const ownGoal = ownGoalY(side);
-  const dangerDepth = direction < 0 ? clamp(ball.y + 12, 58, 86) : clamp(ball.y - 12, 14, 42);
-  const lineDepth = lerp(averageHomeY, dangerDepth, 0.34);
+  const opponentDirection = -direction;
+  const attackTempo = clamp((ballVelocity.y * opponentDirection + 4) / 18, 0, 1);
+  const ballPressureDepth = direction < 0 ? clamp(ball.y + 12, 58, 86) : clamp(ball.y - 12, 14, 42);
+  const retreatDepth = direction < 0 ? ownGoal - 13 : ownGoal + 13;
+  const dangerDepth = lerp(ballPressureDepth, retreatDepth, attackTempo * 0.48);
+  const lineDepth = lerp(averageHomeY, dangerDepth, 0.34 + attackTempo * 0.16);
 
   return direction < 0
     ? clamp(lineDepth, Math.min(ownGoal - 28, averageHomeY), ownGoal - 8)
@@ -1519,8 +1528,8 @@ function clampToRoleZone(player: Player, target: Vec2) {
 function getRoleYBounds(side: Side, role: PlayerRole) {
   const homeBounds: Record<PlayerRole, { min: number; max: number }> = {
     GK: { min: 88, max: 96 },
-    CB: { min: 64, max: 86 },
-    FB: { min: 52, max: 84 },
+    CB: { min: 56, max: 86 },
+    FB: { min: 46, max: 84 },
     DM: { min: 48, max: 72 },
     CM: { min: 32, max: 66 },
     W: { min: 12, max: 62 },
