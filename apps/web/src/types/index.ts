@@ -182,10 +182,19 @@ export type PlayerMoveIntent =
   | 'run'
   | 'press'
   | 'support'
+  | 'pass_support'
+  | 'attack_space'
   | 'chase'
   | 'cover'
+  | 'cover_space'
   | 'mark'
+  | 'track'
   | 'overlap'
+  | 'underlap'
+  | 'cut_inside'
+  | 'hold_width'
+  | 'hold_depth'
+  | 'hold_line'
   | 'idle'
   | 'kickoff'
   | 'recover';
@@ -211,6 +220,18 @@ export type PlayerAIState =
   | 'MARK_OPPONENT'
   | 'RECEIVE_PASS'
   | 'DRIBBLE'
+  | 'PASS_SUPPORT'
+  | 'ATTACK_SPACE'
+  | 'OVERLAP'
+  | 'UNDERLAP'
+  | 'CUT_INSIDE'
+  | 'HOLD_WIDTH'
+  | 'HOLD_DEPTH'
+  | 'COVER_SPACE'
+  | 'MARK_MAN'
+  | 'TRACK_RUNNER'
+  | 'RECOVER_SHAPE'
+  | 'HOLD_LINE'
   | 'RECOVER_DEFENSE';
 
 export type MatchPitchPlayer = {
@@ -276,6 +297,16 @@ export type MatchSnapshot = {
   };
   homePlayers: MatchPitchPlayer[];
   awayPlayers: MatchPitchPlayer[];
+  tactical?: {
+    phase:
+      | 'IN_POSSESSION_BUILDUP'
+      | 'IN_POSSESSION_ATTACK'
+      | 'DEFENSIVE_PRESS'
+      | 'DEFENSIVE_BLOCK'
+      | 'TRANSITION_LOST_BALL'
+      | 'TRANSITION_WON_BALL';
+    possessionTicks: number;
+  };
 };
 
 export type MatchEventRecord = {
