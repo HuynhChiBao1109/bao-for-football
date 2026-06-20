@@ -25,8 +25,7 @@ const DEFAULT_TACTICS: Tactics = {
 type Role =
   | 'GK'
   | 'LB'
-  | 'LCB'
-  | 'RCB'
+  | 'CB'
   | 'RB'
   | 'LM'
   | 'LCM'
@@ -57,8 +56,8 @@ const FORMATION_SLOTS: Record<string, FieldSlot[]> = {
   '4-3-3': [
     { slotId: 'gk', role: 'GK', label: 'GK', x: 50, y: 92 },
     { slotId: 'lb', role: 'LB', label: 'LB', x: 17, y: 76 },
-    { slotId: 'lcb', role: 'LCB', label: 'LCB', x: 38, y: 78 },
-    { slotId: 'rcb', role: 'RCB', label: 'RCB', x: 62, y: 78 },
+    { slotId: 'lcb', role: 'CB', label: 'CB', x: 38, y: 78 },
+    { slotId: 'rcb', role: 'CB', label: 'CB', x: 62, y: 78 },
     { slotId: 'rb', role: 'RB', label: 'RB', x: 83, y: 76 },
     { slotId: 'lcm', role: 'LCM', label: 'LCM', x: 30, y: 57 },
     { slotId: 'cm', role: 'CM', label: 'CM', x: 50, y: 55 },
@@ -70,8 +69,8 @@ const FORMATION_SLOTS: Record<string, FieldSlot[]> = {
   '4-4-2': [
     { slotId: 'gk', role: 'GK', label: 'GK', x: 50, y: 92 },
     { slotId: 'lb', role: 'LB', label: 'LB', x: 17, y: 76 },
-    { slotId: 'lcb', role: 'LCB', label: 'LCB', x: 38, y: 78 },
-    { slotId: 'rcb', role: 'RCB', label: 'RCB', x: 62, y: 78 },
+    { slotId: 'lcb', role: 'CB', label: 'CB', x: 38, y: 78 },
+    { slotId: 'rcb', role: 'CB', label: 'CB', x: 62, y: 78 },
     { slotId: 'rb', role: 'RB', label: 'RB', x: 83, y: 76 },
     { slotId: 'lm', role: 'LM', label: 'LM', x: 18, y: 55 },
     { slotId: 'lcm', role: 'LCM', label: 'LCM', x: 40, y: 56 },
@@ -96,14 +95,7 @@ const ROLE_PROFILES: Record<Role, Array<{ key: string; weight: number }>> = {
     { key: 'stamina', weight: 0.12 },
     { key: 'passing', weight: 0.12 },
   ],
-  LCB: [
-    { key: 'defensiveAwareness', weight: 0.3 },
-    { key: 'standingTackle', weight: 0.24 },
-    { key: 'duels', weight: 0.2 },
-    { key: 'strength', weight: 0.16 },
-    { key: 'longPass', weight: 0.1 },
-  ],
-  RCB: [
+  CB: [
     { key: 'defensiveAwareness', weight: 0.3 },
     { key: 'standingTackle', weight: 0.24 },
     { key: 'duels', weight: 0.2 },
@@ -194,8 +186,7 @@ const ROLE_PROFILES: Record<Role, Array<{ key: string; weight: number }>> = {
 const PRIMARY_ROLE_POOL: Role[] = [
   'GK',
   'LB',
-  'LCB',
-  'RCB',
+  'CB',
   'RB',
   'LM',
   'LCM',
@@ -209,8 +200,7 @@ const PRIMARY_ROLE_POOL: Role[] = [
 
 function roleToPosition(role: Role): string {
   switch (role) {
-    case 'LCB':
-    case 'RCB':
+    case 'CB':
       return 'CB';
     case 'LM':
       return 'LMF';

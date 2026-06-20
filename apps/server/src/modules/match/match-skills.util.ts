@@ -42,7 +42,7 @@ const SKILL_META: Record<
   [EPlayerSkill.TANK_TACKLE]: {
     label: "Tank Tackle",
     triggerThreshold: 0.38,
-    attackRole: ["CB", "LCB", "RCB", "LB", "RB", "DM", "CDM", "CM", "LCM", "RCM"],
+    attackRole: ["CB", "LB", "RB", "DM", "CDM", "CM", "LCM", "RCM"],
   },
 };
 

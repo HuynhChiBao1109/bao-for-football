@@ -276,8 +276,8 @@ const FORMATION_LAYOUTS: Record<number, FormationSlot[]> = {
   [ETeamFormation.F433]: [
     { role: "GK", label: "GK", x: 50, y: 92 },
     { role: "LB", label: "LB", x: 18, y: 77 },
-    { role: "LCB", label: "CB", x: 38, y: 79 },
-    { role: "RCB", label: "CB", x: 62, y: 79 },
+    { role: "CB", label: "CB", x: 38, y: 79 },
+    { role: "CB", label: "CB", x: 62, y: 79 },
     { role: "RB", label: "RB", x: 82, y: 77 },
     { role: "LCM", label: "CM", x: 31, y: 57 },
     { role: "CM", label: "CM", x: 50, y: 53 },
@@ -289,8 +289,8 @@ const FORMATION_LAYOUTS: Record<number, FormationSlot[]> = {
   [ETeamFormation.F442]: [
     { role: "GK", label: "GK", x: 50, y: 92 },
     { role: "LB", label: "LB", x: 18, y: 77 },
-    { role: "LCB", label: "CB", x: 38, y: 79 },
-    { role: "RCB", label: "CB", x: 62, y: 79 },
+    { role: "CB", label: "CB", x: 38, y: 79 },
+    { role: "CB", label: "CB", x: 62, y: 79 },
     { role: "RB", label: "RB", x: 82, y: 77 },
     { role: "LM", label: "LM", x: 18, y: 56 },
     { role: "LCM", label: "CM", x: 40, y: 58 },
@@ -305,8 +305,7 @@ const SLOT_POSITION_MAP: Record<string, string[]> = {
   GK: ["GK"],
   LB: ["LB"],
   RB: ["RB"],
-  LCB: ["CB"],
-  RCB: ["CB"],
+  CB: ["CB"],
   LCM: ["CM", "CDM", "AM"],
   CM: ["CM", "CDM", "AM"],
   RCM: ["CM", "CDM", "AM"],
@@ -4748,8 +4747,9 @@ function getResetLaneX(player: InternalLineupPlayer) {
   if (role === "GK" || role === "CM" || role === "CDM" || role === "CAM" || role === "ST") {
     return role === "ST" ? 50 : 50;
   }
-  if (role === "LCB" || role === "LST" || role === "LCM") return role === "LST" ? 42 : 36;
-  if (role === "RCB" || role === "RST" || role === "RCM") return role === "RST" ? 58 : 64;
+  if (role === "CB") return player.anchors.x < 50 ? 36 : 64;
+  if (role === "LST" || role === "LCM") return role === "LST" ? 42 : 36;
+  if (role === "RST" || role === "RCM") return role === "RST" ? 58 : 64;
   if (role === "LB" || role === "LWB" || role === "LM" || role === "LW") return 18;
   if (role === "RB" || role === "RWB" || role === "RM" || role === "RW") return 82;
   return clamp(player.anchors.x, 14, 86);
@@ -4868,8 +4868,7 @@ function selectLineup(team: SimulationTeamInput, side: Side): InternalLineupPlay
       { index: 0, score: Number.NEGATIVE_INFINITY },
     ).index;
     const picked = pool.splice(bestIndex, 1)[0] ?? team.players[index];
-    const anchors =
-      side === "home" ? { x: slot.x, y: slot.y } : { x: 100 - slot.x, y: 100 - slot.y };
+    const anchors = side === "home" ? { x: slot.x, y: slot.y } : { x: slot.x, y: 100 - slot.y };
     return {
       userPlayerId: picked.userPlayerId,
       playerId: picked.playerId,
