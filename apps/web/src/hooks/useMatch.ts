@@ -79,3 +79,20 @@ export function useStopAutoMatchTick(matchId: string | undefined) {
     },
   });
 }
+
+export function useResetMatch(matchId: string | undefined) {
+  const { token } = useAuth();
+
+  return useMutation<MatchState, Error>({
+    mutationFn: async () => {
+      if (!matchId) {
+        throw new Error('Missing match id');
+      }
+
+      return apiClient(`/api/v1/matches/${matchId}/reset`, {
+        method: 'POST',
+        token,
+      }) as Promise<MatchState>;
+    },
+  });
+}

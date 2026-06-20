@@ -9,6 +9,7 @@ import { TeamEntity } from "../team/entities/team.entity";
 import { TeamFormationEntity } from "../team/entities/team-formatition.entity";
 import { UserPlayerEntity, UserPlayerSkillEntity } from "../player/entities/player-user.entity";
 import { PlayerEntity } from "../player/entities/player-admin.entity";
+import { EMatchStatus } from "./enums";
 
 @Injectable()
 export class MatchRepository {
@@ -100,6 +101,27 @@ export class MatchRepository {
 
   async update(matchId: number, payload: Partial<MatchEntity>): Promise<void> {
     await this.matchRepository.update({ id: matchId }, payload);
+  }
+
+  async resetMatchProgress(matchId: number): Promise<void> {
+    await this.matchRepository.manager.transaction(async (manager) => {
+      await manager.delete(MatchEventEntity, { matchId });
+      await manager.delete(MatchPlayerStatsEntity, { matchId });
+      await manager.update(
+        MatchEntity,
+        { id: matchId },
+        {
+          status: EMatchStatus.IN_PROGRESS,
+          currentMinute: 0,
+          clockSeconds: 0,
+          homeScore: 0,
+          awayScore: 0,
+          latestSnapshot: null,
+          timeline: [],
+          endedAt: null,
+        },
+      );
+    });
   }
 
   async completeCampaignMatch(data: {

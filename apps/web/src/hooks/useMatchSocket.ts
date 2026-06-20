@@ -265,6 +265,32 @@ export function useMatchSocket(matchId: string | undefined) {
     [matchId, promoteSnapshotEvent],
   );
 
+  const resetLiveState = useCallback(
+    (match: MatchState) => {
+      if (!matchId) {
+        return;
+      }
+
+      const resetSnapshot = buildLineupSnapshot(match);
+      initialFrameIdRef.current = -1;
+      completedFrameIdRef.current = -1;
+      pendingSocketEventsRef.current = null;
+      setLiveEvents({ matchId, events: [] });
+      setLiveStatus({ matchId, status: match.status ?? 'in_progress' });
+      setTickBuffer(
+        resetSnapshot
+          ? {
+              matchId,
+              active: resetSnapshot,
+              queue: [],
+              lastAcceptedFrameId: -1,
+            }
+          : null,
+      );
+    },
+    [matchId],
+  );
+
   useEffect(() => {
     if (!socket || !matchId) {
       return;
@@ -392,7 +418,18 @@ export function useMatchSocket(matchId: string | undefined) {
       error,
       queuedTicks,
       ackActiveTick,
+      resetLiveState,
     }),
-    [ackActiveTick, error, events, isConnected, isLoading, queuedTicks, snapshot, status],
+    [
+      ackActiveTick,
+      error,
+      events,
+      isConnected,
+      isLoading,
+      queuedTicks,
+      resetLiveState,
+      snapshot,
+      status,
+    ],
   );
 }

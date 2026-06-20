@@ -254,6 +254,10 @@
   background: linear-gradient(135deg, rgba(255, 112, 112, 0.98), rgba(255, 203, 107, 0.92));
 }
 
+.match-debug-controls__button--reset {
+  background: linear-gradient(135deg, rgba(255, 236, 153, 0.98), rgba(255, 150, 92, 0.92));
+}
+
 .match-debug-controls__error {
   max-width: 260px;
   padding: 7px 9px;
@@ -1611,6 +1615,11 @@
 .match-debug-controls__button--stop {
   border-color: rgba(255, 70, 96, 0.32);
   background: rgba(255, 53, 82, 0.14);
+}
+
+.match-debug-controls__button--reset {
+  border-color: rgba(255, 211, 103, 0.34);
+  background: rgba(255, 176, 70, 0.14);
 }
 
 .match-debug-controls__error {

@@ -21,5 +21,7 @@ export interface IMatchService {
 
   stopAutoTick(matchId: number): unknown;
 
+  resetMatch(matchId: number): Promise<MatchEntity>;
+
   finalize(matchId: number, payload: Partial<MatchEntity>): Promise<MatchEntity>;
 }

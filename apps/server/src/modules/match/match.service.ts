@@ -314,6 +314,25 @@ export class MatchService implements IMatchService {
     return { matchId: String(matchId), autoTicking: false };
   }
 
+  async resetMatch(matchId: number): Promise<MatchEntity> {
+    const match = await this.repository.findMatchById(matchId);
+    if (!match) {
+      throw new NotFoundException("Match not found");
+    }
+
+    this.stopAutoTick(matchId);
+    this.autoTickInFlight.delete(matchId);
+
+    await this.repository.resetMatchProgress(matchId);
+    const resetMatch = await this.repository.findMatchById(matchId);
+    if (!resetMatch) {
+      throw new NotFoundException("Match not found");
+    }
+
+    await this.cacheMatchRuntimeState(resetMatch);
+    return resetMatch;
+  }
+
   async finalize(matchId: number, payload: Partial<MatchEntity>): Promise<MatchEntity> {
     await this.repository.update(matchId, payload);
     const match = await this.repository.findMatchById(matchId);

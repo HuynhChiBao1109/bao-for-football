@@ -37,4 +37,9 @@ export class MatchController {
   async stopAutoTick(@Param("matchId") matchId: number) {
     return this.matchService.stopAutoTick(matchId);
   }
+
+  @Post(":matchId/reset")
+  async resetMatch(@Param("matchId") matchId: number) {
+    return this.matchService.resetMatch(matchId);
+  }
 }

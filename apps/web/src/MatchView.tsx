@@ -3,7 +3,12 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import './MatchView.css';
 import { useMatchMotion } from './hooks/useMatchMotion';
-import { useGetNextMatchTick, useStartAutoMatchTick, useStopAutoMatchTick } from './hooks/useMatch';
+import {
+  useGetNextMatchTick,
+  useResetMatch,
+  useStartAutoMatchTick,
+  useStopAutoMatchTick,
+} from './hooks/useMatch';
 import { useMatchSocket, type LiveMatchEvent } from './hooks/useMatchSocket';
 import { EPlayerSkill, skillAnimation, skillName } from './enums/skill';
 import { ROUTES } from './routes';
@@ -411,11 +416,21 @@ export function MatchView() {
   const queryClient = useQueryClient();
   const [isAutoTicking, setIsAutoTicking] = useState(false);
   const handledMatchEndRef = useRef(false);
-  const { snapshot, events, status, isConnected, isLoading, error, queuedTicks, ackActiveTick } =
-    useMatchSocket(matchId);
+  const {
+    snapshot,
+    events,
+    status,
+    isConnected,
+    isLoading,
+    error,
+    queuedTicks,
+    ackActiveTick,
+    resetLiveState,
+  } = useMatchSocket(matchId);
   const getNextTick = useGetNextMatchTick(matchId);
   const startAutoTick = useStartAutoMatchTick(matchId);
   const stopAutoTick = useStopAutoMatchTick(matchId);
+  const resetMatch = useResetMatch(matchId);
   const renderedSnapshot = useMatchMotion(snapshot, {
     onTickComplete: ackActiveTick,
   });
@@ -503,6 +518,23 @@ export function MatchView() {
             >
               {stopAutoTick.isPending ? 'Stopping...' : 'Stop'}
             </button>
+            <button
+              type="button"
+              className="match-debug-controls__button match-debug-controls__button--reset"
+              disabled={!matchId || resetMatch.isPending}
+              onClick={() => {
+                resetMatch.mutate(undefined, {
+                  onSuccess: (match) => {
+                    setIsAutoTicking(false);
+                    handledMatchEndRef.current = false;
+                    resetLiveState(match);
+                    void queryClient.invalidateQueries({ queryKey: ['match'] });
+                  },
+                });
+              }}
+            >
+              {resetMatch.isPending ? 'Resetting...' : 'Reset match'}
+            </button>
             {getNextTick.error ? (
               <span className="match-debug-controls__error">{getNextTick.error.message}</span>
             ) : null}
@@ -511,6 +543,9 @@ export function MatchView() {
             ) : null}
             {stopAutoTick.error ? (
               <span className="match-debug-controls__error">{stopAutoTick.error.message}</span>
+            ) : null}
+            {resetMatch.error ? (
+              <span className="match-debug-controls__error">{resetMatch.error.message}</span>
             ) : null}
           </div>
           {renderedSnapshot ? (
