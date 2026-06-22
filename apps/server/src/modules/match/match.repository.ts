@@ -99,11 +99,18 @@ export class MatchRepository {
     return this.matchRepository.save(newMatch);
   }
 
+  async findTeamById(teamId: number): Promise<TeamEntity | null> {
+    return this.teamRepository.findOne({ where: { id: teamId } });
+  }
+
   async update(matchId: number, payload: Partial<MatchEntity>): Promise<void> {
     await this.matchRepository.update({ id: matchId }, payload);
   }
 
-  async resetMatchProgress(matchId: number): Promise<void> {
+  async resetMatchProgress(
+    matchId: number,
+    lineups?: Pick<MatchEntity, "homeLineup" | "awayLineup">,
+  ): Promise<void> {
     await this.matchRepository.manager.transaction(async (manager) => {
       await manager.delete(MatchEventEntity, { matchId });
       await manager.delete(MatchPlayerStatsEntity, { matchId });
@@ -118,6 +125,8 @@ export class MatchRepository {
           awayScore: 0,
           latestSnapshot: null,
           timeline: [],
+          homeLineup: lineups?.homeLineup ?? null,
+          awayLineup: lineups?.awayLineup ?? null,
           endedAt: null,
         },
       );

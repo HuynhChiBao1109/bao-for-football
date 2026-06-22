@@ -20,6 +20,7 @@ import { ETeamFormation } from "../team/enums/team-formation.enum";
 import { EMatchEvent } from "./enums";
 import { RedisService } from "../redis/redis.service";
 import { getPlayerSkillSlug } from "../player/enum/player-skill.enum";
+import { TeamEntity } from "../team/entities/team.entity";
 
 type MatchStartPayload = {
   matchId: string;
@@ -40,6 +41,7 @@ type MatchRuntimeState = {
   awayLineup: unknown[];
   timeline: MatchSnapshot[];
   latestSnapshot: MatchSnapshot | null;
+  simulationSeed: number;
 };
 
 type MatchTickOptions = {
@@ -96,11 +98,20 @@ export class MatchService implements IMatchService {
       const alreadyCleared = Number(campaignMatch.level) < campaignLevel;
 
       if (existingMatch.status === EMatchStatus.IN_PROGRESS) {
-        await this.cacheMatchRuntimeState(existingMatch);
+        const runtimeState = await this.redisService.getJson<MatchRuntimeState>(
+          this.getMatchRuntimeKey(existingMatch.id),
+        );
+
+        if (!runtimeState) {
+          await this.cacheMatchRuntimeState(existingMatch, {
+            simulationSeed: this.createSimulationSeed(existingMatch.id),
+          });
+        }
+
         return {
           matchId: String(existingMatch.id),
-          homeLineup: existingMatch.homeLineup ?? [],
-          awayLineup: existingMatch.awayLineup ?? [],
+          homeLineup: runtimeState?.homeLineup ?? existingMatch.homeLineup ?? [],
+          awayLineup: runtimeState?.awayLineup ?? existingMatch.awayLineup ?? [],
         };
       }
 
@@ -125,35 +136,7 @@ export class MatchService implements IMatchService {
       await this.redisService.del(this.getMatchRuntimeKey(existingMatch.id));
     }
 
-    const [homePlayers, awayPlayers] = await Promise.all([
-      this.buildTeamRoster(homeTeam.id, homeTeam.userId, homeTeam.teamName),
-      this.buildTeamRoster(awayTeam.id, awayTeam.userId, awayTeam.teamName),
-    ]);
-
-    if (homePlayers.length < 11 || awayPlayers.length < 11) {
-      throw new BadRequestException("One of the teams does not have enough players to start");
-    }
-
-    const lineups = prepareMatchKickoffLineups(
-      {
-        id: homeTeam.id,
-        name: homeTeam.teamName,
-        formation: homeTeam.formation ?? ETeamFormation.F433,
-        passRatio: Number(homeTeam.passRatio ?? 50),
-        shotRatio: Number(homeTeam.shotRatio ?? 50),
-        pressure: Number(homeTeam.pressure ?? 50),
-        players: homePlayers,
-      },
-      {
-        id: awayTeam.id,
-        name: awayTeam.teamName,
-        formation: awayTeam.formation ?? ETeamFormation.F433,
-        passRatio: Number(awayTeam.passRatio ?? 50),
-        shotRatio: Number(awayTeam.shotRatio ?? 50),
-        pressure: Number(awayTeam.pressure ?? 50),
-        players: awayPlayers,
-      },
-    );
+    const lineups = await this.buildKickoffLineups(homeTeam, awayTeam);
 
     const match = await this.repository.create({
       campainId: campaignMatch.id,
@@ -210,6 +193,7 @@ export class MatchService implements IMatchService {
       homeLineup: (runtimeState.homeLineup ?? []) as any,
       awayLineup: (runtimeState.awayLineup ?? []) as any,
       homeTeamId: runtimeState.homeTeamId ?? null,
+      simulationSeed: runtimeState.simulationSeed,
     });
 
     if (!nextTick) {
@@ -326,15 +310,32 @@ export class MatchService implements IMatchService {
     }
 
     this.stopAutoTick(matchId);
+    await this.waitForAutoTickToSettle(matchId);
     this.autoTickInFlight.delete(matchId);
+    await this.redisService.del(this.getMatchRuntimeKey(matchId));
 
-    await this.repository.resetMatchProgress(matchId);
+    const [homeTeam, awayTeam] = await Promise.all([
+      this.repository.findTeamById(Number(match.homeTeamId)),
+      this.repository.findTeamById(Number(match.awayTeamId)),
+    ]);
+
+    if (!homeTeam || !awayTeam) {
+      throw new BadRequestException("Match is missing team data");
+    }
+
+    const lineups = await this.buildKickoffLineups(homeTeam, awayTeam);
+    await this.repository.resetMatchProgress(matchId, {
+      homeLineup: lineups.homeLineup,
+      awayLineup: lineups.awayLineup,
+    });
     const resetMatch = await this.repository.findMatchById(matchId);
     if (!resetMatch) {
       throw new NotFoundException("Match not found");
     }
 
-    await this.cacheMatchRuntimeState(resetMatch);
+    await this.cacheMatchRuntimeState(resetMatch, {
+      simulationSeed: this.createSimulationSeed(matchId),
+    });
     return resetMatch;
   }
 
@@ -351,7 +352,23 @@ export class MatchService implements IMatchService {
     return `match:${matchId}:runtime`;
   }
 
-  private async cacheMatchRuntimeState(match: MatchEntity) {
+  private createSimulationSeed(matchId: number) {
+    return Date.now() + matchId * 1009;
+  }
+
+  private async waitForAutoTickToSettle(matchId: number) {
+    const maxWaitMs = AUTO_TICK_INTERVAL_MS + 250;
+    const startedAt = Date.now();
+
+    while (this.autoTickInFlight.has(matchId) && Date.now() - startedAt < maxWaitMs) {
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+  }
+
+  private async cacheMatchRuntimeState(
+    match: MatchEntity,
+    options: { simulationSeed?: number } = {},
+  ) {
     const runtimeState: MatchRuntimeState = {
       matchId: match.id,
       homeTeamId: match.homeTeamId ?? null,
@@ -365,6 +382,7 @@ export class MatchService implements IMatchService {
       awayLineup: match.awayLineup ?? [],
       timeline: ((match.timeline ?? []) as MatchSnapshot[]).filter(Boolean),
       latestSnapshot: (match.latestSnapshot as MatchSnapshot | null) ?? null,
+      simulationSeed: options.simulationSeed ?? this.createSimulationSeed(match.id),
     };
 
     await this.redisService.setJson(this.getMatchRuntimeKey(match.id), runtimeState);
@@ -479,6 +497,38 @@ export class MatchService implements IMatchService {
         },
       });
     }
+  }
+
+  private async buildKickoffLineups(homeTeam: TeamEntity, awayTeam: TeamEntity) {
+    const [homePlayers, awayPlayers] = await Promise.all([
+      this.buildTeamRoster(homeTeam.id, homeTeam.userId, homeTeam.teamName),
+      this.buildTeamRoster(awayTeam.id, awayTeam.userId, awayTeam.teamName),
+    ]);
+
+    if (homePlayers.length < 11 || awayPlayers.length < 11) {
+      throw new BadRequestException("One of the teams does not have enough players to start");
+    }
+
+    return prepareMatchKickoffLineups(
+      {
+        id: homeTeam.id,
+        name: homeTeam.teamName,
+        formation: homeTeam.formation ?? ETeamFormation.F433,
+        passRatio: Number(homeTeam.passRatio ?? 50),
+        shotRatio: Number(homeTeam.shotRatio ?? 50),
+        pressure: Number(homeTeam.pressure ?? 50),
+        players: homePlayers,
+      },
+      {
+        id: awayTeam.id,
+        name: awayTeam.teamName,
+        formation: awayTeam.formation ?? ETeamFormation.F433,
+        passRatio: Number(awayTeam.passRatio ?? 50),
+        shotRatio: Number(awayTeam.shotRatio ?? 50),
+        pressure: Number(awayTeam.pressure ?? 50),
+        players: awayPlayers,
+      },
+    );
   }
 
   private async buildTeamRoster(

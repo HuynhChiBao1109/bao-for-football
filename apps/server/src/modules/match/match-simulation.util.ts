@@ -39,7 +39,6 @@ const MIN_TEAM_POSSESSION_TICKS = Math.max(1, Math.round(0.8 * TICKS_PER_SECOND)
 const PASS_CADENCE_TICKS = Math.max(5, Math.round(5 * TICKS_PER_SECOND));
 const TACKLE_CADENCE_TICKS = Math.max(2, Math.round(1.4 * TICKS_PER_SECOND));
 const SHOT_CADENCE_TICKS = Math.max(1, Math.round(1.4 * TICKS_PER_SECOND));
-const SAVE_CADENCE_TICKS = Math.max(2, SHOT_CADENCE_TICKS * 2);
 const BALL_CONTROL_DISTANCE = 2.4;
 const PLAYER_SPEED_UNITS_PER_TICK: Record<PlayerMoveIntent, number> = {
   anchor: 1.8,
@@ -78,6 +77,45 @@ type MatchStep =
 type PlayActionType = "pass" | "shoot" | "block" | "goal" | "save";
 type PossessionTempoKind = "pass" | "hold" | "carry" | "reposition";
 type PassStyle = "short" | "through" | "lob" | "switch";
+type ShotType =
+  | "POWER_SHOT"
+  | "PLACED_SHOT"
+  | "LOW_DRIVEN_SHOT"
+  | "CHIP_SHOT"
+  | "NEAR_POST_SHOT"
+  | "FAR_POST_SHOT"
+  | "FIRST_TIME_SHOT"
+  | "DESPERATE_SHOT";
+type ShotTargetZone =
+  | "top-left corner"
+  | "top-right corner"
+  | "bottom-left corner"
+  | "bottom-right corner"
+  | "center-low"
+  | "center-high"
+  | "near post"
+  | "far post"
+  | "across-goal finish"
+  | "low driven shot"
+  | "high powerful shot";
+type ShotHeightProfile = "low" | "mid" | "high" | "chip";
+type ShotMetadata = {
+  shooterId: number;
+  shotType: ShotType;
+  targetZone: ShotTargetZone;
+  originalTarget: TrajectoryPoint;
+  finalTargetAfterError: TrajectoryPoint;
+  shotSpeed: number;
+  accuracy: number;
+  difficulty: number;
+  expectedGoalValue: number;
+  isOnTarget: boolean;
+  isSaveable: boolean;
+  saveDifficulty: number;
+  missReason: string | null;
+  goalkeeperPosition: TrajectoryPoint;
+  goalkeeperReactionDifficulty: number;
+};
 
 export type PlayerMoveIntent =
   | "run"
@@ -507,6 +545,7 @@ export function generateNextMatchTick(input: {
   homeLineup: MatchRenderPlayer[];
   awayLineup: MatchRenderPlayer[];
   homeTeamId: number | null;
+  simulationSeed?: number;
 }): MatchNextTickResult | null {
   const previousTicks = [...input.previousTicks].sort(
     (left, right) => left.frameId - right.frameId,
@@ -571,6 +610,7 @@ export function generateNextMatchTick(input: {
   }
 
   const nextTickValue = latestTick.tick + DEBUG_TICK_STEP;
+  const actionTick = nextTickValue + Math.abs(Math.floor(input.simulationSeed ?? 0) % 997);
   const second = getNextMatchClockSecond(latestTick);
   const minute = Math.floor(second / 60);
   const lifecycleAction = resolveMatchLifecycleAction(latestTick, nextTickValue, second);
@@ -836,7 +876,7 @@ export function generateNextMatchTick(input: {
       ball: latestTick.ball,
       possession: freeKickSide,
       previousPositionState,
-      nextTick: nextTickValue,
+      nextTick: actionTick,
     });
     const homeScore =
       Number(latestTick.homeScore ?? 0) + (freeKick.isGoal && freeKickSide === "home" ? 1 : 0);
@@ -902,7 +942,7 @@ export function generateNextMatchTick(input: {
       homeLineup,
       awayLineup,
       previousPositionState,
-      nextTick: nextTickValue,
+      nextTick: actionTick,
     });
     const snapshot = buildSnapshot({
       frameId,
@@ -1144,7 +1184,7 @@ export function generateNextMatchTick(input: {
     defending,
     previousPositionState,
     ball: latestTick.ball,
-    nextTick: nextTickValue,
+    nextTick: actionTick,
     possession,
   });
   const shotAction = resolveDebugShotAction(
@@ -1155,7 +1195,8 @@ export function generateNextMatchTick(input: {
       possession,
       ball: latestTick.ball,
       previousPositionState,
-      nextTick: nextTickValue,
+      nextTick: actionTick,
+      latestEvent: latestTick.highlight?.event ?? null,
     },
     true,
   );
@@ -1215,6 +1256,7 @@ export function generateNextMatchTick(input: {
           shotQuality: shotAction.shotQuality,
           distanceToGoal: shotAction.distanceToGoal,
           isGoal: shotAction.isGoal,
+          shotMetadata: shotAction.shotMetadata,
           skill: shotAction.skill,
           skillLabel: shotAction.skillLabel,
           homeScore,
@@ -1233,7 +1275,7 @@ export function generateNextMatchTick(input: {
             ball: latestTick.ball,
             ballTarget: tempoDecision.ballTarget,
             previousPositionState,
-            nextTick: nextTickValue,
+            nextTick: actionTick,
           })
         : null;
 
@@ -1356,7 +1398,7 @@ export function generateNextMatchTick(input: {
             tempoDecision.ballTarget.x,
             tempoDecision.ballTarget.y,
             FRAMES_PER_ACTION,
-            createDeterministicSkillRandom(nextTickValue, actor.userPlayerId),
+            createDeterministicSkillRandom(actionTick, actor.userPlayerId),
           )
         : pathBetween({ x: latestTick.ball.x, y: latestTick.ball.y }, tempoDecision.ballTarget);
     consumeSkillCharge(actor, skill);
@@ -1418,7 +1460,7 @@ export function generateNextMatchTick(input: {
     previousPositionState,
     ball: latestTick.ball,
     tick: latestTick.tick,
-    nextTick: nextTickValue,
+    nextTick: actionTick,
     possession,
   });
   const { receiver, ballTarget, pressDefender, passStyle, offside } = passDecision;
@@ -3105,6 +3147,7 @@ function resolveDebugShotAction(
     ball: TrajectoryPoint;
     previousPositionState: PositionState;
     nextTick: number;
+    latestEvent: EMatchEvent | null;
   },
   canReleaseBall = true,
 ): {
@@ -3118,6 +3161,7 @@ function resolveDebugShotAction(
   keeper: InternalLineupPlayer;
   skill: EPlayerSkill | null;
   skillLabel: string | null;
+  shotMetadata: ShotMetadata;
 } | null {
   if (!canReleaseBall) {
     return null;
@@ -3133,13 +3177,7 @@ function resolveDebugShotAction(
   const role = normalizeRole(input.shooter.role);
   const goalCenter = { x: 50, y: goalY };
   const distanceToGoal = distance(input.ball, goalCenter);
-  const goalTarget = chooseShotTarget(input.ball, input.possession, input.nextTick);
-  const lane = evaluateShotLane({
-    from: input.ball,
-    to: goalTarget,
-    defending: input.defending,
-    previousPositionState: input.previousPositionState,
-  });
+  const keeperPosition = getPlayerPosition(input.previousPositionState, keeper);
   const pressure = evaluateBallPressure({
     actor: input.shooter,
     defending: input.defending,
@@ -3158,18 +3196,6 @@ function resolveDebugShotAction(
   const pressureUrgency = pressure.distance <= 3.2 && distanceToGoal <= 24 ? 0.08 : 0;
   const roleConfidence = role === "ST" ? 0.16 : role === "W" ? 0.1 : role === "CM" ? 0.05 : 0;
   const closeRangeBonus = distanceToGoal <= 18 ? 0.22 : distanceToGoal <= 26 ? 0.14 : 0;
-  const shotQuality = clamp(
-    distanceScore * 0.38 +
-      angleScore * 0.28 +
-      lane.score * 0.22 +
-      roleConfidence +
-      closeRangeBonus -
-      centralPenalty -
-      composurePenalty +
-      pressureUrgency,
-    0,
-    1,
-  );
   const decisionRoll =
     ((input.nextTick * 23 + input.shooter.userPlayerId * 17 + Math.round(input.ball.x * 3)) % 100) /
     100;
@@ -3178,6 +3204,47 @@ function resolveDebugShotAction(
   const skill = getChargedSkill(input.shooter, "shoot");
   const hasThunderShot = skill === EPlayerSkill.SHOOT_THUNDER;
   const maxShotDistance = getRoleMaxShotDistance(role, hasThunderShot);
+  const shotType = chooseShotType({
+    shooter: input.shooter,
+    role,
+    ball: input.ball,
+    possession: input.possession,
+    keeperPosition,
+    pressure,
+    distanceToGoal,
+    angleScore,
+    latestEvent: input.latestEvent,
+    hasThunderShot,
+    random: skillRandom,
+  });
+  const targetSelection = chooseShotTargetPlan({
+    shooter: input.shooter,
+    defending: input.defending,
+    possession: input.possession,
+    ball: input.ball,
+    previousPositionState: input.previousPositionState,
+    keeperPosition,
+    shotType,
+    pressure,
+    distanceToGoal,
+    angleScore,
+    random: skillRandom,
+  });
+  const lane = targetSelection.lane;
+  const targetScoreBonus = clamp((targetSelection.score - 0.45) * 0.16, -0.04, 0.08);
+  const shotQuality = clamp(
+    distanceScore * 0.38 +
+      angleScore * 0.28 +
+      lane.score * 0.22 +
+      targetScoreBonus +
+      roleConfidence +
+      closeRangeBonus -
+      centralPenalty -
+      composurePenalty +
+      pressureUrgency,
+    0,
+    1,
+  );
   const betterChance = evaluateBetterShotPass({
     shooter: input.shooter,
     attacking: input.attacking,
@@ -3228,14 +3295,14 @@ function resolveDebugShotAction(
     skill === EPlayerSkill.SHOOT_THUNDER ? 0.38 : 0.24,
   );
   const goalChance = clamp(
-    0.05 +
-      shotQuality * 0.36 +
+    targetSelection.metadata.expectedGoalValue +
+      shotQuality * 0.18 +
       qualityEdge +
-      (skill === EPlayerSkill.SHOOT_THUNDER ? 0.18 : 0) -
+      (skill === EPlayerSkill.SHOOT_THUNDER ? 0.12 : 0) -
       composurePenalty * 0.42 -
-      longShotPenalty * (skill === EPlayerSkill.SHOOT_THUNDER ? 0.58 : 1) -
+      longShotPenalty * (skill === EPlayerSkill.SHOOT_THUNDER ? 0.5 : 0.9) -
       blockedPenalty,
-    0.02,
+    targetSelection.metadata.isOnTarget ? 0.02 : 0,
     skill === EPlayerSkill.SHOOT_THUNDER
       ? distanceToGoal > 38
         ? 0.18
@@ -3251,35 +3318,44 @@ function resolveDebugShotAction(
   const goalRoll =
     ((input.nextTick * 31 + input.shooter.userPlayerId * 29 + keeper.userPlayerId * 13) % 100) /
     100;
-  const isGoal = goalRoll < goalChance;
+  const effectiveGoalChance = targetSelection.metadata.isOnTarget ? goalChance : 0;
+  const isGoal = goalRoll < effectiveGoalChance;
 
   if (isGoal) {
     return {
       event: EMatchEvent.GOAL,
-      label: distanceToGoal > 28 ? "sut xa ghi ban" : "ghi ban",
-      target: goalTarget,
-      ballPath:
-        skill === EPlayerSkill.SHOOT_THUNDER
-          ? buildThunderShotTrajectory(
-              input.ball.x,
-              input.ball.y,
-              goalTarget.y,
-              input.possession,
-              FRAMES_PER_ACTION,
-              skillRandom,
-            ).slice(1)
-          : buildCurvedShotPath(input.ball, goalTarget, input.possession, "goal"),
+      label: getShotLabel(shotType, "goal", distanceToGoal),
+      target: targetSelection.metadata.finalTargetAfterError,
+      ballPath: buildShotBallPath({
+        from: input.ball,
+        aimTarget: targetSelection.metadata.finalTargetAfterError,
+        endTarget: targetSelection.metadata.finalTargetAfterError,
+        possession: input.possession,
+        outcome: "goal",
+        shotType,
+        skill,
+        random: skillRandom,
+      }),
       shotQuality,
       distanceToGoal,
       isGoal: true,
       keeper,
       skill,
       skillLabel: skill ? getSkillLabel(skill) : null,
+      shotMetadata: {
+        ...targetSelection.metadata,
+        expectedGoalValue: effectiveGoalChance,
+        difficulty: clamp(targetSelection.metadata.difficulty + qualityEdge * 0.35, 0, 1),
+      },
     };
   }
 
   const savePoint = {
-    x: clamp(lerp(goalTarget.x, keeper.anchors.x, 0.18), 38, 62),
+    x: clamp(
+      lerp(targetSelection.metadata.finalTargetAfterError.x, keeperPosition.x, 0.22),
+      36,
+      64,
+    ),
     y: clamp(goalY - attackDirectionValue * 4.8, 5, 95),
   };
   const parryPoint = getKeeperParryTarget({
@@ -3288,35 +3364,34 @@ function resolveDebugShotAction(
     possession: input.possession,
     nextTick: input.nextTick,
   });
-  const missPoint = {
-    x: clamp(goalTarget.x + (input.ball.x < 50 ? -6 : 6), 30, 70),
-    y: clamp(goalY - attackDirectionValue * 2, 4, 96),
-  };
-  const isKeeperSave =
-    lane.score >= 0.34 && input.nextTick % SAVE_CADENCE_TICKS === SHOT_CADENCE_TICKS;
-  const target = isKeeperSave ? parryPoint : missPoint;
+  const isKeeperSave = targetSelection.metadata.isOnTarget;
+  const target = isKeeperSave ? parryPoint : targetSelection.metadata.finalTargetAfterError;
 
   return {
     event: isKeeperSave ? EMatchEvent.GOALKEEPER_SAVE : EMatchEvent.SHOOT,
-    label: isKeeperSave ? "sut, thu mon day bong ra" : "sut bong",
+    label: getShotLabel(shotType, isKeeperSave ? "save" : "miss", distanceToGoal),
     target,
-    ballPath:
-      skill === EPlayerSkill.SHOOT_THUNDER
-        ? buildThunderShotTrajectory(
-            input.ball.x,
-            input.ball.y,
-            target.y,
-            input.possession,
-            FRAMES_PER_ACTION,
-            skillRandom,
-          ).slice(1)
-        : buildCurvedShotPath(input.ball, target, input.possession, isKeeperSave ? "save" : "miss"),
+    ballPath: buildShotBallPath({
+      from: input.ball,
+      aimTarget: targetSelection.metadata.finalTargetAfterError,
+      endTarget: target,
+      possession: input.possession,
+      outcome: isKeeperSave ? "save" : "miss",
+      shotType,
+      skill,
+      random: skillRandom,
+    }),
     shotQuality,
     distanceToGoal,
     isGoal: false,
     keeper,
     skill,
     skillLabel: skill ? getSkillLabel(skill) : null,
+    shotMetadata: {
+      ...targetSelection.metadata,
+      expectedGoalValue: effectiveGoalChance,
+      isSaveable: isKeeperSave,
+    },
   };
 }
 
@@ -3629,13 +3704,695 @@ function getFreeKickWallTargets(input: {
 }
 
 function chooseShotTarget(ball: TrajectoryPoint, possession: Side, nextTick: number) {
+  const random = createDeterministicSkillRandom(nextTick, Math.round(ball.x * 100 + ball.y));
   const goalY = possession === "home" ? 4 : 96;
-  const cornerBias = ball.x < 50 ? 1 : -1;
-  const variation = (((nextTick / 2) % 3) - 1) * 2.8;
+  const isLeft = ball.x < 50;
+  const zones = getShotTargetZones(ball, possession, isLeft ? "FAR_POST_SHOT" : "PLACED_SHOT");
+  const picked = weightedPickTopTargets(
+    zones.map((zone) => ({
+      ...zone,
+      score:
+        (zone.zone.includes("corner") ? 0.72 : 0.48) +
+        (zone.zone === "far post" || zone.zone === "across-goal finish" ? 0.24 : 0) +
+        random() * 0.08,
+    })),
+    random,
+  );
+
   return {
-    x: clamp(50 + cornerBias * 8 + variation, 40, 60),
+    x: clamp(picked.point.x + (random() - 0.5) * 1.8, 36, 64),
     y: goalY,
   };
+}
+
+function chooseShotType(input: {
+  shooter: InternalLineupPlayer;
+  role: ReturnType<typeof normalizeRole>;
+  ball: TrajectoryPoint;
+  possession: Side;
+  keeperPosition: TrajectoryPoint;
+  pressure: { distance: number; score: number };
+  distanceToGoal: number;
+  angleScore: number;
+  latestEvent: EMatchEvent | null;
+  hasThunderShot: boolean;
+  random: () => number;
+}): ShotType {
+  if (input.hasThunderShot) return "POWER_SHOT";
+
+  const goalY = input.possession === "home" ? 4 : 96;
+  const wide = Math.abs(input.ball.x - 50) > 18;
+  const veryWide = Math.abs(input.ball.x - 50) > 28;
+  const close = input.distanceToGoal <= 14;
+  const keeperAdvanced = Math.abs(input.keeperPosition.y - goalY) > 12;
+  const firstTimeWindow =
+    input.latestEvent === EMatchEvent.PASS || input.latestEvent === EMatchEvent.CORNER_KICK;
+  const scores: Array<{ type: ShotType; score: number }> = [
+    {
+      type: "POWER_SHOT",
+      score:
+        0.28 +
+        clamp((input.distanceToGoal - 16) / 18, 0, 0.28) +
+        (input.role === "CM" || input.role === "ST" ? 0.1 : 0),
+    },
+    {
+      type: "PLACED_SHOT",
+      score:
+        0.42 +
+        input.angleScore * 0.24 +
+        clamp((24 - input.distanceToGoal) / 22, 0, 0.18) +
+        (input.role === "ST" || input.role === "W" ? 0.06 : 0),
+    },
+    {
+      type: "LOW_DRIVEN_SHOT",
+      score: 0.22 + (close ? 0.34 : 0) + input.angleScore * 0.12 - input.pressure.score * 0.04,
+    },
+    {
+      type: "CHIP_SHOT",
+      score:
+        (keeperAdvanced && input.distanceToGoal <= 22 ? 0.5 : 0.04) -
+        (input.pressure.score > 0.65 ? 0.16 : 0),
+    },
+    {
+      type: "NEAR_POST_SHOT",
+      score: 0.18 + (wide ? 0.18 : 0) + (veryWide ? 0.08 : 0) + input.pressure.score * 0.05,
+    },
+    {
+      type: "FAR_POST_SHOT",
+      score: 0.26 + (wide ? 0.34 : 0) + input.angleScore * 0.08,
+    },
+    {
+      type: "FIRST_TIME_SHOT",
+      score: (firstTimeWindow ? 0.34 : 0.06) + (close ? 0.16 : 0) + input.pressure.score * 0.08,
+    },
+    {
+      type: "DESPERATE_SHOT",
+      score:
+        0.08 +
+        input.pressure.score * 0.26 +
+        clamp((0.42 - input.angleScore) * 0.45, 0, 0.18) +
+        clamp((input.distanceToGoal - 24) / 16, 0, 0.14),
+    },
+  ];
+
+  return weightedPickTopTargets(scores, input.random, 3).type;
+}
+
+function chooseShotTargetPlan(input: {
+  shooter: InternalLineupPlayer;
+  defending: InternalLineupPlayer[];
+  possession: Side;
+  ball: TrajectoryPoint;
+  previousPositionState: PositionState;
+  keeperPosition: TrajectoryPoint;
+  shotType: ShotType;
+  pressure: { distance: number; score: number };
+  distanceToGoal: number;
+  angleScore: number;
+  random: () => number;
+}): {
+  zone: ShotTargetZone;
+  score: number;
+  lane: ReturnType<typeof evaluateShotLane>;
+  metadata: ShotMetadata;
+} {
+  const candidates = getShotTargetZones(input.ball, input.possession, input.shotType).map(
+    (candidate) => {
+      const lane = evaluateShotLane({
+        from: input.ball,
+        to: candidate.point,
+        defending: input.defending,
+        previousPositionState: input.previousPositionState,
+      });
+      const score =
+        candidate.baseScore +
+        scoreTargetForShooterPosition(candidate.zone, input.ball) +
+        scoreTargetForShotType(candidate.zone, input.shotType) +
+        scoreTargetAgainstKeeper(candidate.point, input.keeperPosition) +
+        lane.score * 0.22 +
+        input.angleScore * candidate.angleWeight -
+        input.pressure.score * candidate.pressurePenalty -
+        clamp((input.distanceToGoal - 24) / 22, 0, 0.2) * candidate.longRangePenalty;
+
+      return { ...candidate, lane, score: clamp(score, 0.01, 1.5) };
+    },
+  );
+  const selected = weightedPickTopTargets(candidates, input.random, 3);
+  const accuracy = calculateShotAccuracy({
+    shooter: input.shooter,
+    ball: input.ball,
+    possession: input.possession,
+    distanceToGoal: input.distanceToGoal,
+    pressure: input.pressure,
+    shotType: input.shotType,
+    angleScore: input.angleScore,
+  });
+  const finalTarget = applyShotError({
+    originalTarget: selected.point,
+    ball: input.ball,
+    possession: input.possession,
+    distanceToGoal: input.distanceToGoal,
+    pressure: input.pressure,
+    shotType: input.shotType,
+    accuracy,
+    random: input.random,
+  });
+  const shotSpeed = calculateShotSpeed(input.shotType, input.distanceToGoal);
+  const saveDifficulty = calculateSaveDifficulty({
+    finalTarget,
+    ball: input.ball,
+    possession: input.possession,
+    keeperPosition: input.keeperPosition,
+    shotType: input.shotType,
+    shotSpeed,
+    distanceToGoal: input.distanceToGoal,
+    keeper: input.defending.find((player) => player.role === "GK") ?? input.defending[0],
+  });
+  const isOnTarget = isShotOnTarget(finalTarget, input.possession);
+  const expectedGoalValue = calculateExpectedGoalValue({
+    isOnTarget,
+    saveDifficulty,
+    shotType: input.shotType,
+    distanceToGoal: input.distanceToGoal,
+    angleScore: input.angleScore,
+    pressure: input.pressure,
+  });
+
+  return {
+    zone: selected.zone,
+    score: selected.score,
+    lane: selected.lane,
+    metadata: {
+      shooterId: input.shooter.userPlayerId,
+      shotType: input.shotType,
+      targetZone: selected.zone,
+      originalTarget: selected.point,
+      finalTargetAfterError: finalTarget,
+      shotSpeed,
+      accuracy,
+      difficulty: clamp(saveDifficulty * 0.72 + (1 - accuracy) * 0.28, 0, 1),
+      expectedGoalValue,
+      isOnTarget,
+      isSaveable: isOnTarget,
+      saveDifficulty,
+      missReason: isOnTarget ? null : getShotMissReason(finalTarget, input.possession),
+      goalkeeperPosition: input.keeperPosition,
+      goalkeeperReactionDifficulty: saveDifficulty,
+    },
+  };
+}
+
+function getShotTargetZones(
+  ball: TrajectoryPoint,
+  possession: Side,
+  shotType: ShotType,
+): Array<{
+  zone: ShotTargetZone;
+  point: TrajectoryPoint;
+  height: ShotHeightProfile;
+  baseScore: number;
+  angleWeight: number;
+  pressurePenalty: number;
+  longRangePenalty: number;
+}> {
+  const goalY = possession === "home" ? 4 : 96;
+  const leftPostX = 41.5;
+  const rightPostX = 58.5;
+  const nearPostX = ball.x < 50 ? leftPostX : rightPostX;
+  const farPostX = ball.x < 50 ? rightPostX : leftPostX;
+  const farCornerX = ball.x < 50 ? 57.8 : 42.2;
+  const nearCornerX = ball.x < 50 ? 42.2 : 57.8;
+  const highY = clamp(goalY - attackDirection(possession) * 0.9, 2, 98);
+  const lowY = clamp(goalY + attackDirection(possession) * 0.4, 2, 98);
+  const chipY = clamp(goalY - attackDirection(possession) * 1.5, 1, 99);
+  const zones: Array<{
+    zone: ShotTargetZone;
+    point: TrajectoryPoint;
+    height: ShotHeightProfile;
+    baseScore: number;
+    angleWeight: number;
+    pressurePenalty: number;
+    longRangePenalty: number;
+  }> = [
+    {
+      zone: "top-left corner",
+      point: { x: leftPostX + 1.2, y: highY },
+      height: "high",
+      baseScore: 0.42,
+      angleWeight: 0.16,
+      pressurePenalty: 0.18,
+      longRangePenalty: 0.35,
+    },
+    {
+      zone: "top-right corner",
+      point: { x: rightPostX - 1.2, y: highY },
+      height: "high",
+      baseScore: 0.42,
+      angleWeight: 0.16,
+      pressurePenalty: 0.18,
+      longRangePenalty: 0.35,
+    },
+    {
+      zone: "bottom-left corner",
+      point: { x: leftPostX + 0.9, y: lowY },
+      height: "low",
+      baseScore: 0.48,
+      angleWeight: 0.18,
+      pressurePenalty: 0.12,
+      longRangePenalty: 0.24,
+    },
+    {
+      zone: "bottom-right corner",
+      point: { x: rightPostX - 0.9, y: lowY },
+      height: "low",
+      baseScore: 0.48,
+      angleWeight: 0.18,
+      pressurePenalty: 0.12,
+      longRangePenalty: 0.24,
+    },
+    {
+      zone: "center-low",
+      point: { x: 50, y: lowY },
+      height: "low",
+      baseScore: 0.16,
+      angleWeight: 0.08,
+      pressurePenalty: -0.04,
+      longRangePenalty: 0.08,
+    },
+    {
+      zone: "center-high",
+      point: { x: 50, y: highY },
+      height: "high",
+      baseScore: 0.12,
+      angleWeight: 0.06,
+      pressurePenalty: -0.02,
+      longRangePenalty: 0.18,
+    },
+    {
+      zone: "near post",
+      point: { x: nearPostX, y: lowY },
+      height: "mid",
+      baseScore: 0.24,
+      angleWeight: 0.1,
+      pressurePenalty: 0.06,
+      longRangePenalty: 0.22,
+    },
+    {
+      zone: "far post",
+      point: { x: farPostX, y: lowY },
+      height: "mid",
+      baseScore: 0.36,
+      angleWeight: 0.12,
+      pressurePenalty: 0.08,
+      longRangePenalty: 0.18,
+    },
+    {
+      zone: "across-goal finish",
+      point: { x: farCornerX, y: lowY },
+      height: "low",
+      baseScore: 0.34,
+      angleWeight: 0.14,
+      pressurePenalty: 0.08,
+      longRangePenalty: 0.22,
+    },
+    {
+      zone: "low driven shot",
+      point: { x: farCornerX, y: lowY },
+      height: "low",
+      baseScore: shotType === "LOW_DRIVEN_SHOT" ? 0.52 : 0.22,
+      angleWeight: 0.12,
+      pressurePenalty: 0.06,
+      longRangePenalty: 0.32,
+    },
+    {
+      zone: "high powerful shot",
+      point: { x: Math.abs(ball.x - 50) > 12 ? nearCornerX : farCornerX, y: chipY },
+      height: shotType === "CHIP_SHOT" ? "chip" : "high",
+      baseScore: shotType === "POWER_SHOT" || shotType === "CHIP_SHOT" ? 0.5 : 0.2,
+      angleWeight: 0.08,
+      pressurePenalty: 0.2,
+      longRangePenalty: shotType === "POWER_SHOT" ? 0.12 : 0.3,
+    },
+  ];
+
+  return zones;
+}
+
+function weightedPickTopTargets<T extends { score: number }>(
+  candidates: T[],
+  random: () => number,
+  topCount = 3,
+): T {
+  const ranked = [...candidates]
+    .filter((candidate) => Number.isFinite(candidate.score) && candidate.score > 0)
+    .sort((left, right) => right.score - left.score)
+    .slice(0, Math.max(1, topCount));
+  const total = ranked.reduce((sum, candidate) => sum + candidate.score, 0);
+  let roll = random() * total;
+
+  for (const candidate of ranked) {
+    roll -= candidate.score;
+    if (roll <= 0) return candidate;
+  }
+
+  return ranked[0] ?? candidates[0];
+}
+
+function scoreTargetForShooterPosition(zone: ShotTargetZone, ball: TrajectoryPoint) {
+  const lateral = Math.abs(ball.x - 50);
+  const wide = lateral > 18;
+  const central = lateral <= 12;
+
+  if (wide && (zone === "far post" || zone === "across-goal finish")) return 0.3;
+  if (wide && zone === "near post") return 0.14;
+  if (wide && zone === "low driven shot") return 0.12;
+  if (central && zone.includes("corner")) return 0.26;
+  if (central && (zone === "center-low" || zone === "center-high")) return -0.12;
+  if (lateral > 28 && zone.includes("top")) return -0.08;
+  return 0;
+}
+
+function scoreTargetForShotType(zone: ShotTargetZone, shotType: ShotType) {
+  if (shotType === "POWER_SHOT") {
+    return zone === "high powerful shot" ? 0.34 : zone.includes("top") ? 0.12 : -0.02;
+  }
+  if (shotType === "PLACED_SHOT") {
+    return zone.includes("corner") ? 0.22 : zone.includes("center") ? -0.18 : 0.04;
+  }
+  if (shotType === "LOW_DRIVEN_SHOT") {
+    return zone === "low driven shot" || zone.includes("bottom")
+      ? 0.28
+      : zone.includes("top")
+        ? -0.2
+        : 0;
+  }
+  if (shotType === "CHIP_SHOT") {
+    return zone === "high powerful shot" || zone === "center-high" ? 0.28 : -0.16;
+  }
+  if (shotType === "NEAR_POST_SHOT") {
+    return zone === "near post" ? 0.32 : zone === "far post" ? -0.08 : 0;
+  }
+  if (shotType === "FAR_POST_SHOT") {
+    return zone === "far post" || zone === "across-goal finish"
+      ? 0.34
+      : zone === "near post"
+        ? -0.04
+        : 0;
+  }
+  if (shotType === "FIRST_TIME_SHOT") {
+    return zone.includes("bottom") || zone === "center-low"
+      ? 0.12
+      : zone.includes("top")
+        ? -0.08
+        : 0;
+  }
+  return zone.includes("center") || zone === "near post" ? 0.12 : -0.06;
+}
+
+function scoreTargetAgainstKeeper(target: TrajectoryPoint, keeperPosition: TrajectoryPoint) {
+  const openSide = clamp(Math.abs(target.x - keeperPosition.x) / 18, 0, 0.28);
+  const centralSaveBonus = Math.abs(target.x - 50) < 4 ? -0.18 : 0;
+  return openSide + centralSaveBonus;
+}
+
+function calculateShotAccuracy(input: {
+  shooter: InternalLineupPlayer;
+  ball: TrajectoryPoint;
+  possession: Side;
+  distanceToGoal: number;
+  pressure: { distance: number; score: number };
+  shotType: ShotType;
+  angleScore: number;
+}) {
+  const stat = clamp(input.shooter.raw.stats.shoot / 100, 0.35, 1.15);
+  const widePenalty = clamp(Math.abs(input.ball.x - 50) / 42, 0, 0.32);
+  const distancePenalty = clamp((input.distanceToGoal - 16) / 30, 0, 0.38);
+  const typeModifier =
+    input.shotType === "PLACED_SHOT"
+      ? 0.14
+      : input.shotType === "LOW_DRIVEN_SHOT"
+        ? 0.08
+        : input.shotType === "POWER_SHOT"
+          ? -0.12
+          : input.shotType === "FIRST_TIME_SHOT"
+            ? -0.16
+            : input.shotType === "DESPERATE_SHOT"
+              ? -0.22
+              : input.shotType === "CHIP_SHOT"
+                ? -0.1
+                : 0;
+
+  return clamp(
+    0.54 +
+      stat * 0.34 +
+      input.angleScore * 0.12 +
+      typeModifier -
+      input.pressure.score * 0.24 -
+      widePenalty -
+      distancePenalty,
+    0.18,
+    0.96,
+  );
+}
+
+function applyShotError(input: {
+  originalTarget: TrajectoryPoint;
+  ball: TrajectoryPoint;
+  possession: Side;
+  distanceToGoal: number;
+  pressure: { distance: number; score: number };
+  shotType: ShotType;
+  accuracy: number;
+  random: () => number;
+}) {
+  const goalY = input.possession === "home" ? 4 : 96;
+  const direction = attackDirection(input.possession);
+  const wideFactor = clamp(Math.abs(input.ball.x - 50) / 42, 0, 1);
+  const typeError =
+    input.shotType === "PLACED_SHOT"
+      ? 0.72
+      : input.shotType === "LOW_DRIVEN_SHOT"
+        ? 0.82
+        : input.shotType === "POWER_SHOT"
+          ? 1.22
+          : input.shotType === "FIRST_TIME_SHOT"
+            ? 1.35
+            : input.shotType === "DESPERATE_SHOT"
+              ? 1.55
+              : input.shotType === "CHIP_SHOT"
+                ? 1.18
+                : 1;
+  const errorRadius =
+    (0.8 +
+      input.distanceToGoal * 0.045 +
+      wideFactor * 1.6 +
+      input.pressure.score * 2.2 +
+      (1 - input.accuracy) * 4.2) *
+    typeError;
+  const lateralSign = input.ball.x < 50 ? -1 : 1;
+  const xError = (input.random() - 0.5) * errorRadius * 2.1 + lateralSign * wideFactor * 0.45;
+  const yError = (input.random() - 0.5) * errorRadius * 0.9;
+  const overHit =
+    input.shotType === "POWER_SHOT" || input.shotType === "DESPERATE_SHOT"
+      ? input.random() < clamp((1 - input.accuracy) * 0.45, 0, 0.28)
+      : false;
+
+  return {
+    x: clamp(input.originalTarget.x + xError, 28, 72),
+    y: clamp(
+      input.originalTarget.y + yError + (overHit ? direction * -3 : 0),
+      goalY - 8,
+      goalY + 8,
+    ),
+  };
+}
+
+function calculateShotSpeed(shotType: ShotType, distanceToGoal: number) {
+  const base =
+    shotType === "POWER_SHOT"
+      ? 1.28
+      : shotType === "LOW_DRIVEN_SHOT"
+        ? 1.22
+        : shotType === "NEAR_POST_SHOT"
+          ? 1.12
+          : shotType === "FAR_POST_SHOT"
+            ? 1.06
+            : shotType === "FIRST_TIME_SHOT"
+              ? 1.14
+              : shotType === "CHIP_SHOT"
+                ? 0.72
+                : shotType === "DESPERATE_SHOT"
+                  ? 1.05
+                  : 0.96;
+  const rangeBoost = clamp(distanceToGoal / 34, 0, 0.16);
+  return Number((SHOT_SPEED_UNITS_PER_TICK * (base + rangeBoost)).toFixed(2));
+}
+
+function calculateSaveDifficulty(input: {
+  finalTarget: TrajectoryPoint;
+  ball: TrajectoryPoint;
+  possession: Side;
+  keeperPosition: TrajectoryPoint;
+  shotType: ShotType;
+  shotSpeed: number;
+  distanceToGoal: number;
+  keeper: InternalLineupPlayer;
+}) {
+  const keeperStat =
+    input.keeper.raw.stats.gkKeeping * 0.36 +
+    input.keeper.raw.stats.gkReflex * 0.34 +
+    input.keeper.raw.stats.gkDiving * 0.2 +
+    input.keeper.raw.stats.gkReach * 0.1;
+  const cornerDistance = clamp(Math.abs(input.finalTarget.x - 50) / 9, 0, 1);
+  const keeperTravel = clamp(distance(input.keeperPosition, input.finalTarget) / 18, 0, 1);
+  const closeReaction = clamp((20 - input.distanceToGoal) / 18, 0, 1);
+  const speedFactor = clamp(input.shotSpeed / (SHOT_SPEED_UNITS_PER_TICK * 1.45), 0, 1);
+  const typeDifficulty =
+    input.shotType === "LOW_DRIVEN_SHOT"
+      ? 0.14
+      : input.shotType === "POWER_SHOT"
+        ? 0.12
+        : input.shotType === "CHIP_SHOT"
+          ? Math.abs(input.keeperPosition.y - (input.possession === "home" ? 4 : 96)) > 12
+            ? 0.18
+            : -0.18
+          : input.shotType === "PLACED_SHOT"
+            ? 0.08
+            : 0;
+
+  return clamp(
+    0.18 +
+      cornerDistance * 0.26 +
+      keeperTravel * 0.22 +
+      closeReaction * 0.2 +
+      speedFactor * 0.18 +
+      typeDifficulty -
+      clamp((keeperStat - 58) / 220, -0.08, 0.18),
+    0.04,
+    0.96,
+  );
+}
+
+function calculateExpectedGoalValue(input: {
+  isOnTarget: boolean;
+  saveDifficulty: number;
+  shotType: ShotType;
+  distanceToGoal: number;
+  angleScore: number;
+  pressure: { distance: number; score: number };
+}) {
+  if (!input.isOnTarget) return 0;
+
+  const closeBonus = clamp((22 - input.distanceToGoal) / 24, 0, 0.22);
+  const typeBonus =
+    input.shotType === "LOW_DRIVEN_SHOT"
+      ? 0.06
+      : input.shotType === "PLACED_SHOT"
+        ? 0.04
+        : input.shotType === "CHIP_SHOT"
+          ? 0.03
+          : input.shotType === "DESPERATE_SHOT"
+            ? -0.08
+            : 0;
+  return clamp(
+    0.04 +
+      input.saveDifficulty * 0.36 +
+      input.angleScore * 0.08 +
+      closeBonus +
+      typeBonus -
+      input.pressure.score * 0.08,
+    0.01,
+    input.distanceToGoal <= 12 ? 0.52 : input.distanceToGoal <= 22 ? 0.38 : 0.2,
+  );
+}
+
+function isShotOnTarget(target: TrajectoryPoint, possession: Side) {
+  const goalY = possession === "home" ? 4 : 96;
+  const reachesGoalLine = possession === "home" ? target.y <= goalY + 3.6 : target.y >= goalY - 3.6;
+  return target.x >= 40.5 && target.x <= 59.5 && reachesGoalLine;
+}
+
+function getShotMissReason(target: TrajectoryPoint, possession: Side) {
+  if (target.x < 40.5) return "wide-left";
+  if (target.x > 59.5) return "wide-right";
+  const goalY = possession === "home" ? 4 : 96;
+  if (possession === "home" ? target.y > goalY + 3.6 : target.y < goalY - 3.6) return "under-hit";
+  return "off-target";
+}
+
+function buildShotBallPath(input: {
+  from: TrajectoryPoint;
+  aimTarget: TrajectoryPoint;
+  endTarget: TrajectoryPoint;
+  possession: Side;
+  outcome: "goal" | "save" | "miss";
+  shotType: ShotType;
+  skill: EPlayerSkill | null;
+  random: () => number;
+}): TrajectoryPoint[] {
+  const direction = attackDirection(input.possession);
+  const curveSide = input.from.x <= 50 ? -1 : 1;
+  const isThunder = input.skill === EPlayerSkill.SHOOT_THUNDER;
+  const curveStrength =
+    input.shotType === "PLACED_SHOT" || input.shotType === "FAR_POST_SHOT"
+      ? 4.8
+      : input.shotType === "POWER_SHOT" || isThunder
+        ? 2.2
+        : input.shotType === "CHIP_SHOT"
+          ? 7.2
+          : 3.4;
+  const lift =
+    input.shotType === "CHIP_SHOT"
+      ? 9
+      : input.shotType === "LOW_DRIVEN_SHOT"
+        ? 0.8
+        : input.outcome === "save"
+          ? 2.4
+          : 1.8;
+
+  return Array.from({ length: FRAMES_PER_ACTION }, (_, index) => {
+    const t = (index + 1) / FRAMES_PER_ACTION;
+    const eased = easeOut(t);
+    const arc = Math.sin(Math.PI * t);
+    const target = input.outcome === "save" && t > 0.72 ? input.endTarget : input.aimTarget;
+    const thunderShake = isThunder ? Math.sin(t * Math.PI * 7 + input.random()) * (1 - t) * 3.6 : 0;
+    return {
+      x: clamp(
+        lerp(input.from.x, target.x, eased) + curveSide * arc * curveStrength + thunderShake,
+        0.5,
+        99.5,
+      ),
+      y: clamp(lerp(input.from.y, target.y, eased) - direction * arc * lift, 0.5, 99.5),
+    };
+  });
+}
+
+function getShotLabel(
+  shotType: ShotType,
+  outcome: "goal" | "save" | "miss",
+  distanceToGoal: number,
+) {
+  const prefix =
+    shotType === "POWER_SHOT"
+      ? "sut cang"
+      : shotType === "PLACED_SHOT"
+        ? "sut dat long"
+        : shotType === "LOW_DRIVEN_SHOT"
+          ? "sut sam"
+          : shotType === "CHIP_SHOT"
+            ? "lob bong"
+            : shotType === "NEAR_POST_SHOT"
+              ? "sut goc gan"
+              : shotType === "FAR_POST_SHOT"
+                ? "sut cheo goc xa"
+                : shotType === "FIRST_TIME_SHOT"
+                  ? "dut diem mot cham"
+                  : "sut voi";
+
+  if (outcome === "goal")
+    return distanceToGoal > 28 ? `${prefix} tu xa ghi ban` : `${prefix} ghi ban`;
+  if (outcome === "save") return `${prefix}, thu mon cuu thua`;
+  return `${prefix} ra ngoai`;
 }
 
 function evaluateShotLane(input: {
@@ -3669,6 +4426,14 @@ function evaluateShotLane(input: {
     distance: closest.distance,
     blockerDistanceToBall: closest.blockerDistanceToBall,
   };
+}
+
+function getPlayerPosition(
+  positionState: PositionState,
+  player: InternalLineupPlayer,
+): TrajectoryPoint {
+  const position = positionState.players.get(player.userPlayerId);
+  return position ? { x: position.x, y: position.y } : player.anchors;
 }
 
 function evaluateShotAngle(ball: TrajectoryPoint, possession: Side) {
