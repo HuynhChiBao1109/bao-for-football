@@ -77,6 +77,45 @@ type MatchStep =
 type PlayActionType = "pass" | "shoot" | "block" | "goal" | "save";
 type PossessionTempoKind = "pass" | "hold" | "carry" | "reposition";
 type PassStyle = "short" | "through" | "lob" | "switch";
+type RunTimingState =
+  | "STAY_ONSIDE"
+  | "CHECK_BACK_ONSIDE"
+  | "CURVED_RUN"
+  | "DELAY_RUN"
+  | "ATTACK_SPACE_BEHIND"
+  | "RUN_ON_SHOULDER"
+  | "DIAGONAL_RUN"
+  | "THIRD_MAN_RUN"
+  | "BACK_POST_RUN"
+  | "DROP_SHORT";
+type OffsideLineInfo = {
+  secondLastDefenderY: number;
+  ballY: number;
+  effectiveOffsideLineY: number;
+  safeLineY: number;
+  direction: number;
+  defendingGoalY: number;
+};
+type OffsideDebug = {
+  isOffsidePosition: boolean;
+  offsideLineY: number;
+  safeLineY: number;
+  distanceToOffsideLine: number;
+  runTimingState: RunTimingState;
+  isRequestingThroughBall: boolean;
+  isCheckingBack: boolean;
+  isLegalReceiver: boolean;
+};
+type OffsideSnapshot = {
+  passerId: number;
+  receiverId: number;
+  passStartTick: number;
+  ballStartPosition: TrajectoryPoint;
+  receiverPositionAtPass: TrajectoryPoint;
+  offsideLineAtPass: OffsideLineInfo;
+  wasReceiverOffsideAtPass: boolean;
+  involvedPlayers: number[];
+};
 type ShotType =
   | "POWER_SHOT"
   | "PLACED_SHOT"
@@ -213,6 +252,7 @@ export type MatchRenderPlayer = {
   activeSkill: EPlayerSkill | null;
   hasBall: boolean;
   move?: PlayerMotion;
+  offside?: OffsideDebug;
 };
 
 export type MatchSnapshot = {
@@ -1463,10 +1503,11 @@ export function generateNextMatchTick(input: {
     nextTick: actionTick,
     possession,
   });
-  const { receiver, ballTarget, pressDefender, passStyle, offside } = passDecision;
+  const { receiver, ballTarget, pressDefender, passStyle, offside, offsideSnapshot } = passDecision;
   const defensiveAction = passDecision.interception;
+  const offsideReceive = checkOffsideOnReceive(receiver, offsideSnapshot);
 
-  if (offside?.isOffside) {
+  if (offsideReceive.offsideCalledOnReceive) {
     const newPossession: Side = possession === "home" ? "away" : "home";
     const freeKickTaker =
       pressDefender ??
@@ -1519,6 +1560,10 @@ export function generateNextMatchTick(input: {
           offenderPlayerId: receiver.userPlayerId,
           passStyle,
           lineY: offside.lineY,
+          offsideSnapshot,
+          receiverWasOffsideAtPass: offsideReceive.receiverWasOffsideAtPass,
+          passWasLegal: false,
+          offsideCalledOnReceive: true,
           from: { x: latestTick.ball.x, y: latestTick.ball.y },
           to: offsideSpot,
           recoveredPossession: newPossession,
@@ -1576,6 +1621,10 @@ export function generateNextMatchTick(input: {
           to: recoveredBall,
           recoveredPossession: newPossession,
           passStyle,
+          offsideSnapshot,
+          receiverWasOffsideAtPass: passDecision.receiverWasOffsideAtPass,
+          passWasLegal: passDecision.passWasLegal,
+          offsideCalledOnReceive: false,
         },
       },
     };
@@ -1625,6 +1674,10 @@ export function generateNextMatchTick(input: {
         to: ballTarget,
         passStyle,
         receiverRunTarget: ballTarget,
+        offsideSnapshot,
+        receiverWasOffsideAtPass: passDecision.receiverWasOffsideAtPass,
+        passWasLegal: passDecision.passWasLegal,
+        offsideCalledOnReceive: false,
       },
     },
   };
@@ -2363,6 +2416,16 @@ function resolveDebugPassingAction(input: {
         possession: input.possession,
         previousPositionState: input.previousPositionState,
       });
+      const offsideSnapshot = captureOffsideSnapshot({
+        passer: input.actor,
+        receiver: player,
+        receiverPosition: previous,
+        passStartTick: input.nextTick,
+        ball: input.ball,
+        defending: input.defending,
+        possession: input.possession,
+        previousPositionState: input.previousPositionState,
+      });
       const throughRunScore = evaluateThroughRun({
         receiver: player,
         receiverPosition: previous,
@@ -2393,7 +2456,11 @@ function resolveDebugPassingAction(input: {
             : passStyle === "through"
               ? 0.14 + throughRunScore * 0.16
               : 0;
-      const offsidePenalty = offside.isOffside ? 1.8 : offside.warning ? 0.18 : 0;
+      const offsidePenalty = offside.isOffside ? 2.2 : offside.warning ? 0.24 : 0;
+      const legalRunBonus =
+        !offside.isOffside && (passStyle === "through" || passStyle === "lob")
+          ? throughRunScore * 0.12
+          : 0;
 
       return {
         player,
@@ -2401,6 +2468,7 @@ function resolveDebugPassingAction(input: {
         lane,
         passStyle,
         offside,
+        offsideSnapshot,
         score:
           lane.score * 0.3 +
           availability * 0.22 +
@@ -2409,6 +2477,7 @@ function resolveDebugPassingAction(input: {
           combinationValue * 0.14 +
           distanceScore * 0.1 +
           styleWeight +
+          legalRunBonus +
           roleWeight +
           laneRotation * 0.01 -
           offsidePenalty,
@@ -2439,6 +2508,7 @@ function resolveDebugPassingAction(input: {
       }),
       passStyle: "short" as PassStyle,
       offside: { isOffside: false, warning: false, lineY: 50 },
+      offsideSnapshot: null as OffsideSnapshot | null,
       score: 0,
     };
   const pressDefender = selected.lane.defender ?? input.defending[0];
@@ -2449,6 +2519,9 @@ function resolveDebugPassingAction(input: {
     pressDefender,
     passStyle: selected.passStyle,
     offside: selected.offside,
+    offsideSnapshot: selected.offsideSnapshot,
+    receiverWasOffsideAtPass: Boolean(selected.offsideSnapshot?.wasReceiverOffsideAtPass),
+    passWasLegal: !Boolean(selected.offsideSnapshot?.wasReceiverOffsideAtPass),
     interception: resolveDebugPassInterception({
       defender: pressDefender,
       actor: input.actor,
@@ -2930,48 +3003,177 @@ function evaluateOffside(input: {
   defending: InternalLineupPlayer[];
   possession: Side;
   previousPositionState: PositionState;
-}): { isOffside: boolean; warning: boolean; lineY: number } {
+}): {
+  isOffside: boolean;
+  warning: boolean;
+  lineY: number;
+  safeLineY: number;
+  distanceToLine: number;
+  lineInfo: OffsideLineInfo;
+} {
   const direction = attackDirection(input.possession);
   const receiverRole = normalizeRole(input.receiver.role);
+  const lineInfo = getOffsideLine(
+    input.possession,
+    input.defending,
+    input.ball,
+    input.previousPositionState,
+  );
   if (receiverRole === "GK" || receiverRole === "CB" || receiverRole === "FB") {
-    return { isOffside: false, warning: false, lineY: getDeepestOutfieldDefenderLine(input) };
+    return {
+      isOffside: false,
+      warning: false,
+      lineY: lineInfo.effectiveOffsideLineY,
+      safeLineY: lineInfo.safeLineY,
+      distanceToLine: getDistanceToOffsideLine(input.receiverPosition, lineInfo),
+      lineInfo,
+    };
   }
 
-  const lineY = getDeepestOutfieldDefenderLine(input);
-  const attackingHalf =
-    input.possession === "home" ? input.receiverPosition.y < 50 : input.receiverPosition.y > 50;
-  const aheadOfBall = (input.receiverPosition.y - input.ball.y) * direction > 1.2;
-  const beyondLine =
-    direction < 0 ? input.receiverPosition.y < lineY - 1.4 : input.receiverPosition.y > lineY + 1.4;
-  const closeToTrap =
-    attackingHalf &&
-    aheadOfBall &&
-    (direction < 0
-      ? input.receiverPosition.y < lineY + 2.2
-      : input.receiverPosition.y > lineY - 2.2);
+  const isOffside = isInOffsidePosition({
+    attacker: input.receiver,
+    attackerPosition: input.receiverPosition,
+    attackingSide: input.possession,
+    defenders: input.defending,
+    ball: input.ball,
+    previousPositionState: input.previousPositionState,
+  });
+  const distanceToLine = getDistanceToOffsideLine(input.receiverPosition, lineInfo);
+  const warning =
+    !isOffside &&
+    distanceToLine <= 3.2 &&
+    isInOpponentHalf(input.receiverPosition, input.possession);
 
   return {
-    isOffside: attackingHalf && aheadOfBall && beyondLine,
-    warning: closeToTrap && !beyondLine,
-    lineY,
+    isOffside,
+    warning,
+    lineY: lineInfo.effectiveOffsideLineY,
+    safeLineY: lineInfo.safeLineY,
+    distanceToLine,
+    lineInfo,
   };
 }
 
-function getDeepestOutfieldDefenderLine(input: {
+function getOffsideLine(
+  attackingSide: Side,
+  defenders: InternalLineupPlayer[],
+  ball: TrajectoryPoint,
+  previousPositionState: PositionState,
+): OffsideLineInfo {
+  const direction = attackDirection(attackingSide);
+  const defendingGoalY = attackingSide === "home" ? 0 : 100;
+  const defenderYs = defenders
+    .map((defender) => previousPositionState.players.get(defender.userPlayerId) ?? defender.anchors)
+    .map((position) => position.y)
+    .sort((left, right) => (attackingSide === "home" ? left - right : right - left));
+  const fallback = attackingSide === "home" ? 18 : 82;
+  const secondLastDefenderY = defenderYs[1] ?? defenderYs[0] ?? fallback;
+  const effectiveOffsideLineY =
+    attackingSide === "home"
+      ? Math.max(secondLastDefenderY, ball.y)
+      : Math.min(secondLastDefenderY, ball.y);
+  const offsideBuffer = 1.6;
+  const safeLineY =
+    attackingSide === "home"
+      ? effectiveOffsideLineY + offsideBuffer
+      : effectiveOffsideLineY - offsideBuffer;
+
+  return {
+    secondLastDefenderY,
+    ballY: ball.y,
+    effectiveOffsideLineY,
+    safeLineY: clamp(safeLineY, 4, 96),
+    direction,
+    defendingGoalY,
+  };
+}
+
+function isInOffsidePosition(input: {
+  attacker: InternalLineupPlayer;
+  attackerPosition: TrajectoryPoint;
+  attackingSide: Side;
+  defenders: InternalLineupPlayer[];
+  ball: TrajectoryPoint;
+  previousPositionState: PositionState;
+}) {
+  const role = normalizeRole(input.attacker.role);
+  if (role === "GK" || role === "CB" || role === "FB") return false;
+
+  const line = getOffsideLine(
+    input.attackingSide,
+    input.defenders,
+    input.ball,
+    input.previousPositionState,
+  );
+  const attackingHalf = isInOpponentHalf(input.attackerPosition, input.attackingSide);
+  const aheadOfBall =
+    input.attackingSide === "home"
+      ? input.attackerPosition.y < input.ball.y - 0.1
+      : input.attackerPosition.y > input.ball.y + 0.1;
+  const beyondSecondLast =
+    input.attackingSide === "home"
+      ? input.attackerPosition.y < line.secondLastDefenderY - 0.1
+      : input.attackerPosition.y > line.secondLastDefenderY + 0.1;
+
+  return attackingHalf && aheadOfBall && beyondSecondLast;
+}
+
+function captureOffsideSnapshot(input: {
+  passer: InternalLineupPlayer;
+  receiver: InternalLineupPlayer;
+  receiverPosition: TrajectoryPoint;
+  passStartTick: number;
+  ball: TrajectoryPoint;
   defending: InternalLineupPlayer[];
   possession: Side;
   previousPositionState: PositionState;
-}) {
-  const defenderYs = input.defending
-    .filter((defender) => normalizeRole(defender.role) !== "GK")
-    .map(
-      (defender) =>
-        input.previousPositionState.players.get(defender.userPlayerId) ?? defender.anchors,
-    )
-    .map((position) => position.y)
-    .sort((left, right) => (input.possession === "home" ? left - right : right - left));
+}): OffsideSnapshot {
+  const offsideLineAtPass = getOffsideLine(
+    input.possession,
+    input.defending,
+    input.ball,
+    input.previousPositionState,
+  );
+  const wasReceiverOffsideAtPass = isInOffsidePosition({
+    attacker: input.receiver,
+    attackerPosition: input.receiverPosition,
+    attackingSide: input.possession,
+    defenders: input.defending,
+    ball: input.ball,
+    previousPositionState: input.previousPositionState,
+  });
 
-  return defenderYs[0] ?? (input.possession === "home" ? 18 : 82);
+  return {
+    passerId: input.passer.userPlayerId,
+    receiverId: input.receiver.userPlayerId,
+    passStartTick: input.passStartTick,
+    ballStartPosition: { x: input.ball.x, y: input.ball.y },
+    receiverPositionAtPass: { x: input.receiverPosition.x, y: input.receiverPosition.y },
+    offsideLineAtPass,
+    wasReceiverOffsideAtPass,
+    involvedPlayers: [input.passer.userPlayerId, input.receiver.userPlayerId],
+  };
+}
+
+function checkOffsideOnReceive(receiver: InternalLineupPlayer, snapshot: OffsideSnapshot | null) {
+  const receiverWasOffsideAtPass = Boolean(
+    snapshot?.receiverId === receiver.userPlayerId && snapshot.wasReceiverOffsideAtPass,
+  );
+
+  return {
+    receiverWasOffsideAtPass,
+    offsideCalledOnReceive: receiverWasOffsideAtPass,
+  };
+}
+
+function getDistanceToOffsideLine(position: TrajectoryPoint, line: OffsideLineInfo) {
+  return line.direction < 0
+    ? position.y - line.effectiveOffsideLineY
+    : line.effectiveOffsideLineY - position.y;
+}
+
+function isInOpponentHalf(position: TrajectoryPoint, attackingSide: Side) {
+  return attackingSide === "home" ? position.y < 50 : position.y > 50;
 }
 
 function getReceiverReachForTick(receiver: InternalLineupPlayer) {
@@ -5077,7 +5279,18 @@ function getIntentForState(state: PlayerAIState): PlayerMoveIntent {
     case "PASS_SUPPORT":
       return "pass_support";
     case "ATTACK_SPACE":
+    case "ATTACK_SPACE_BEHIND":
+    case "RUN_ON_SHOULDER":
+    case "DIAGONAL_RUN":
+    case "THIRD_MAN_RUN":
+    case "BACK_POST_RUN":
       return "attack_space";
+    case "CHECK_BACK_ONSIDE":
+    case "CURVED_RUN":
+    case "DELAY_RUN":
+    case "STAY_ONSIDE":
+    case "DROP_SHORT":
+      return "support";
     case "MARK_OPPONENT":
     case "MARK_MAN":
       return "mark";
@@ -5625,6 +5838,20 @@ function projectPlayers(input: {
       target = tactical.targetPosition;
       intent = getIntentForState(tactical.state);
       aiState = tactical.state;
+      const offsideAware = getOffsideAwareTarget({
+        player,
+        playerPosition: { x: prev.x, y: prev.y },
+        desiredTarget: target,
+        possession: input.possession,
+        ball: input.ball,
+        defending: input.opponentLineup,
+        previousPositionState: input.positionState,
+        isIntendedReceiver: input.intendedReceiverId === player.userPlayerId,
+        tick: input.tick,
+      });
+      target = offsideAware.target;
+      aiState = offsideAware.aiState;
+      intent = getIntentForState(aiState);
     } else {
       const tactical = getTacticalTarget(movementPlayer, gameState);
       target = tactical.targetPosition;
@@ -5671,9 +5898,189 @@ function projectPlayers(input: {
       stamina: player.stamina,
       activeSkill: null,
       hasBall: false,
+      offside: buildOffsideDebug({
+        player,
+        playerPosition: movementPlayer.position,
+        possession: input.possession,
+        ball: input.ball,
+        defending: input.opponentLineup,
+        previousPositionState: input.positionState,
+        runTimingState: aiState,
+        isIntendedReceiver: input.intendedReceiverId === player.userPlayerId,
+      }),
       move: movement,
     };
   });
+}
+
+function getOffsideAwareTarget(input: {
+  player: InternalLineupPlayer;
+  playerPosition: TrajectoryPoint;
+  desiredTarget: TrajectoryPoint;
+  possession: Side;
+  ball: TrajectoryPoint;
+  defending: InternalLineupPlayer[];
+  previousPositionState: PositionState;
+  isIntendedReceiver: boolean;
+  tick: number;
+}): { target: TrajectoryPoint; aiState: PlayerAIState } {
+  const role = normalizeRole(input.player.role);
+  if (role === "GK" || role === "CB" || input.player.side !== input.possession) {
+    return { target: input.desiredTarget, aiState: "HOLD_POSITION" };
+  }
+
+  const currentOffside = evaluateOffside({
+    receiver: input.player,
+    receiverPosition: input.playerPosition,
+    ball: input.ball,
+    defending: input.defending,
+    possession: input.possession,
+    previousPositionState: input.previousPositionState,
+  });
+  const targetOffside = evaluateOffside({
+    receiver: input.player,
+    receiverPosition: input.desiredTarget,
+    ball: input.ball,
+    defending: input.defending,
+    possession: input.possession,
+    previousPositionState: input.previousPositionState,
+  });
+  const direction = attackDirection(input.possession);
+  const runTimingBuffer = role === "ST" ? 2.4 : role === "W" ? 3 : 3.6;
+  const safeY = clamp(
+    currentOffside.lineInfo.effectiveOffsideLineY - direction * runTimingBuffer,
+    6,
+    94,
+  );
+  const lateralMicro = Math.sin((input.tick + input.player.userPlayerId * 5) * 0.55) * 3.2;
+  const passReady =
+    input.isIntendedReceiver &&
+    !currentOffside.isOffside &&
+    distance(input.playerPosition, input.ball) <= 42;
+
+  if (currentOffside.isOffside) {
+    return {
+      target: {
+        x: clamp(input.playerPosition.x + lateralMicro * 0.6, 8, 92),
+        y: safeY,
+      },
+      aiState: role === "ST" || role === "W" ? "CHECK_BACK_ONSIDE" : "DROP_SHORT",
+    };
+  }
+
+  if (targetOffside.isOffside && !passReady) {
+    const state: PlayerAIState =
+      role === "ST"
+        ? "RUN_ON_SHOULDER"
+        : role === "W"
+          ? "CURVED_RUN"
+          : role === "CM"
+            ? "THIRD_MAN_RUN"
+            : "STAY_ONSIDE";
+
+    return {
+      target: {
+        x: clamp(input.desiredTarget.x + lateralMicro, 8, 92),
+        y: safeY,
+      },
+      aiState: state,
+    };
+  }
+
+  if (currentOffside.warning && !passReady) {
+    const state: PlayerAIState =
+      role === "ST" ? "DELAY_RUN" : role === "W" ? "DIAGONAL_RUN" : "STAY_ONSIDE";
+    return {
+      target: {
+        x: clamp(input.desiredTarget.x + lateralMicro, 8, 92),
+        y: lerp(input.desiredTarget.y, safeY, 0.58),
+      },
+      aiState: state,
+    };
+  }
+
+  if (passReady && (role === "ST" || role === "W")) {
+    return {
+      target: input.desiredTarget,
+      aiState: role === "W" ? "DIAGONAL_RUN" : "ATTACK_SPACE_BEHIND",
+    };
+  }
+
+  return {
+    target: input.desiredTarget,
+    aiState: role === "FB" ? "OVERLAP" : role === "CM" ? "THIRD_MAN_RUN" : "ATTACK_SPACE",
+  };
+}
+
+function buildOffsideDebug(input: {
+  player: InternalLineupPlayer;
+  playerPosition: TrajectoryPoint;
+  possession: Side;
+  ball: TrajectoryPoint;
+  defending: InternalLineupPlayer[];
+  previousPositionState: PositionState;
+  runTimingState: PlayerAIState;
+  isIntendedReceiver: boolean;
+}): OffsideDebug {
+  if (input.player.side !== input.possession) {
+    return {
+      isOffsidePosition: false,
+      offsideLineY: 50,
+      safeLineY: 50,
+      distanceToOffsideLine: 99,
+      runTimingState: "STAY_ONSIDE",
+      isRequestingThroughBall: false,
+      isCheckingBack: false,
+      isLegalReceiver: false,
+    };
+  }
+
+  const offside = evaluateOffside({
+    receiver: input.player,
+    receiverPosition: input.playerPosition,
+    ball: input.ball,
+    defending: input.defending,
+    possession: input.possession,
+    previousPositionState: input.previousPositionState,
+  });
+
+  return {
+    isOffsidePosition: offside.isOffside,
+    offsideLineY: Number(offside.lineY.toFixed(2)),
+    safeLineY: Number(offside.safeLineY.toFixed(2)),
+    distanceToOffsideLine: Number(offside.distanceToLine.toFixed(2)),
+    runTimingState: normalizeRunTimingState(input.runTimingState),
+    isRequestingThroughBall:
+      input.isIntendedReceiver &&
+      (input.runTimingState === "ATTACK_SPACE_BEHIND" ||
+        input.runTimingState === "DIAGONAL_RUN" ||
+        input.runTimingState === "RUN_ON_SHOULDER"),
+    isCheckingBack:
+      input.runTimingState === "CHECK_BACK_ONSIDE" || input.runTimingState === "DROP_SHORT",
+    isLegalReceiver: !offside.isOffside,
+  };
+}
+
+function normalizeRunTimingState(state: PlayerAIState): RunTimingState {
+  if (
+    state === "STAY_ONSIDE" ||
+    state === "CHECK_BACK_ONSIDE" ||
+    state === "CURVED_RUN" ||
+    state === "DELAY_RUN" ||
+    state === "ATTACK_SPACE_BEHIND" ||
+    state === "RUN_ON_SHOULDER" ||
+    state === "DIAGONAL_RUN" ||
+    state === "THIRD_MAN_RUN" ||
+    state === "BACK_POST_RUN" ||
+    state === "DROP_SHORT"
+  ) {
+    return state;
+  }
+
+  if (state === "OVERLAP" || state === "UNDERLAP") return "DELAY_RUN";
+  if (state === "ATTACK_SPACE") return "ATTACK_SPACE_BEHIND";
+  if (state === "PASS_SUPPORT" || state === "SUPPORT_ATTACK") return "STAY_ONSIDE";
+  return "STAY_ONSIDE";
 }
 
 function getAttackingTarget(

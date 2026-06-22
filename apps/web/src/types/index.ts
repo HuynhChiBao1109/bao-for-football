@@ -232,7 +232,28 @@ export type PlayerAIState =
   | 'TRACK_RUNNER'
   | 'RECOVER_SHAPE'
   | 'HOLD_LINE'
-  | 'RECOVER_DEFENSE';
+  | 'RECOVER_DEFENSE'
+  | 'STAY_ONSIDE'
+  | 'CHECK_BACK_ONSIDE'
+  | 'CURVED_RUN'
+  | 'DELAY_RUN'
+  | 'ATTACK_SPACE_BEHIND'
+  | 'RUN_ON_SHOULDER'
+  | 'DIAGONAL_RUN'
+  | 'THIRD_MAN_RUN'
+  | 'BACK_POST_RUN'
+  | 'DROP_SHORT';
+
+export type OffsideDebug = {
+  isOffsidePosition: boolean;
+  offsideLineY: number;
+  safeLineY: number;
+  distanceToOffsideLine: number;
+  runTimingState: PlayerAIState;
+  isRequestingThroughBall: boolean;
+  isCheckingBack: boolean;
+  isLegalReceiver: boolean;
+};
 
 export type MatchPitchPlayer = {
   id: string;
@@ -255,6 +276,7 @@ export type MatchPitchPlayer = {
   hasBall: boolean;
   card?: 'yellow' | 'red' | null;
   activeSkill?: number | null;
+  offside?: OffsideDebug;
   move?: PlayerMotion;
 };
 

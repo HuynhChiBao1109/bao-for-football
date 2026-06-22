@@ -35,6 +35,7 @@ function toPitchPlayer(
         })
         .filter((item) => Number.isFinite(item.skill) && item.skill > 0)
     : skills.map((skill) => ({ skill, charge: 0 }));
+  const offside = raw.offside as MatchPitchPlayer['offside'] | undefined;
 
   return {
     id,
@@ -57,6 +58,7 @@ function toPitchPlayer(
     hasBall: id === ballOwnerId || Boolean(raw.hasBall),
     card: (raw.card as MatchPitchPlayer['card']) ?? null,
     activeSkill: Number(raw.activeSkill ?? 0) || null,
+    offside,
     move: move
       ? {
           fromX: clampPercent(move.fromX, x),
@@ -73,7 +75,9 @@ function toPitchPlayer(
   };
 }
 
-export function normalizeSnapshot(snapshot: Partial<MatchSnapshot> | null | undefined): MatchSnapshot {
+export function normalizeSnapshot(
+  snapshot: Partial<MatchSnapshot> | null | undefined,
+): MatchSnapshot {
   const ballOwnerId = snapshot?.ball?.ownerPlayerId ? String(snapshot.ball.ownerPlayerId) : null;
   const homePlayers = Array.isArray(snapshot?.homePlayers) ? snapshot.homePlayers : [];
   const awayPlayers = Array.isArray(snapshot?.awayPlayers) ? snapshot.awayPlayers : [];

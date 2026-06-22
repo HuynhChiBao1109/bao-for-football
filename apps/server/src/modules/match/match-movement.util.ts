@@ -58,7 +58,17 @@ export type PlayerAIState =
   | "TRACK_RUNNER"
   | "RECOVER_SHAPE"
   | "HOLD_LINE"
-  | "RECOVER_DEFENSE";
+  | "RECOVER_DEFENSE"
+  | "STAY_ONSIDE"
+  | "CHECK_BACK_ONSIDE"
+  | "CURVED_RUN"
+  | "DELAY_RUN"
+  | "ATTACK_SPACE_BEHIND"
+  | "RUN_ON_SHOULDER"
+  | "DIAGONAL_RUN"
+  | "THIRD_MAN_RUN"
+  | "BACK_POST_RUN"
+  | "DROP_SHORT";
 
 export type PlayerRole = "GK" | "CB" | "FB" | "DM" | "CM" | "W" | "ST";
 export type TacticalPhase =
