@@ -725,7 +725,7 @@ function stabilizeMovementDecision(
 
   const zone = getTacticalAnchorZone(player, context);
   const usefulPosition = isUsefulInsideZone(player, context, zone);
-  if (usefulPosition) {
+  if (usefulPosition && isSettledEnoughForMicroAdjustment(player, context, decision, zone)) {
     const microTarget = getMicroAdjustmentTarget(player, context, zone);
     return {
       ...decision,
@@ -795,15 +795,22 @@ function applyTargetDeadZone(player: Player, target: Vec2, state: PlayerAIState)
   const radius =
     state === "PRESS_BALL"
       ? MOVEMENT.pressDeadZoneRadius
-      : state === "MOVE_TO_SPACE" ||
-          state === "SUPPORT_ATTACK" ||
-          state === "PASS_SUPPORT" ||
-          state === "ATTACK_SPACE" ||
-          state === "OVERLAP" ||
-          state === "UNDERLAP" ||
-          state === "CUT_INSIDE"
-        ? MOVEMENT.supportDeadZoneRadius
-        : MOVEMENT.tacticalDeadZoneRadius;
+      : state === "HOLD_LINE" ||
+          state === "COVER_SPACE" ||
+          state === "RECOVER_SHAPE" ||
+          state === "MARK_MAN" ||
+          state === "TRACK_RUNNER" ||
+          state === "HOLD_DEPTH"
+        ? 1.25
+        : state === "MOVE_TO_SPACE" ||
+            state === "SUPPORT_ATTACK" ||
+            state === "PASS_SUPPORT" ||
+            state === "ATTACK_SPACE" ||
+            state === "OVERLAP" ||
+            state === "UNDERLAP" ||
+            state === "CUT_INSIDE"
+          ? MOVEMENT.supportDeadZoneRadius
+          : MOVEMENT.tacticalDeadZoneRadius;
 
   if (distance(player.position, target) <= radius) {
     return player.position;
@@ -869,6 +876,31 @@ function isUsefulInsideZone(
   }
 
   return true;
+}
+
+function isSettledEnoughForMicroAdjustment(
+  player: Player,
+  context: MovementContext,
+  decision: MovementDecision,
+  zone: { minX: number; maxX: number; minY: number; maxY: number },
+) {
+  const role = normalizeRole(player.role);
+  const shapeTarget = getShapePreservingTarget(player, context, zone);
+  const roleTarget = clampToTacticalZone(decision.targetPosition, zone);
+  const previousTarget = player.targetPosition ?? player.position;
+  const shapeGap = distance(player.position, shapeTarget);
+  const roleGap = distance(player.position, roleTarget);
+  const targetShift = distance(previousTarget, roleTarget);
+  const settleRadius =
+    role === "CB"
+      ? 1.25
+      : role === "FB"
+        ? 1.6
+        : role === "DM" || role === "CM"
+          ? 1.9
+          : MOVEMENT.supportDeadZoneRadius;
+
+  return shapeGap <= settleRadius && roleGap <= settleRadius && targetShift <= settleRadius;
 }
 
 function getShapePreservingTarget(
@@ -958,7 +990,7 @@ function getBallActionPriorityWeight(
   if (gap <= 12) return 0.28;
   if (gap <= 28) return sameFlank ? 0.13 : 0.08;
   if (gap <= 46 && sameFlank) return 0.04;
-  return 0;
+  return isCollectiveShapeState(state) ? 0.05 : 0;
 }
 
 function getMicroAdjustmentTarget(
@@ -1025,12 +1057,29 @@ function getTacticalRelevance(player: Player, context: MovementContext) {
   const sameSide = isSameFlank(player.homePosition.x, context.ball.x);
   const nearestTeammateGap = getNearestGap(player, context.teammates);
   const nearestOpponentGap = getNearestGap(player, context.opponents);
-  const proximity = ballGap <= 14 ? 1 : ballGap >= 58 ? 0.16 : 1 - (ballGap - 14) / 44;
+  const proximity = ballGap <= 14 ? 1 : ballGap >= 58 ? 0.34 : 1 - (ballGap - 14) / 66;
   const sideWeight = sameSide ? 0.22 : 0;
   const pressureWeight = nearestOpponentGap <= 10 ? 0.18 : 0;
   const supportWeight = nearestTeammateGap <= 14 ? 0.08 : 0;
+  const role = normalizeRole(player.role);
+  const shapeFloor =
+    role === "CB" || role === "FB" ? 0.42 : role === "DM" || role === "CM" ? 0.36 : 0.28;
 
-  return clamp(proximity * 0.64 + sideWeight + pressureWeight + supportWeight, 0.12, 1);
+  return clamp(proximity * 0.64 + sideWeight + pressureWeight + supportWeight, shapeFloor, 1);
+}
+
+function isCollectiveShapeState(state: PlayerAIState) {
+  return (
+    state === "HOLD_LINE" ||
+    state === "COVER_SPACE" ||
+    state === "RECOVER_SHAPE" ||
+    state === "RECOVER_DEFENSE" ||
+    state === "MARK_MAN" ||
+    state === "TRACK_RUNNER" ||
+    state === "PASS_SUPPORT" ||
+    state === "HOLD_DEPTH" ||
+    state === "HOLD_WIDTH"
+  );
 }
 
 function capTacticalTargetStep(player: Player, target: Vec2, maxStep: number) {
@@ -1548,8 +1597,9 @@ function getBackLineCohesionDecision(
     .sort((left, right) => left.gap - right.gap)[0];
   const canStepOut =
     nearestLineDefender?.id === player.id &&
-    isBallInDefensiveResponsibilityZone(player, ball) &&
-    distance(player.position, ball) <= (role === "CB" ? 14 : 18);
+    (isBallInDefensiveResponsibilityZone(player, ball) ||
+      canBackLinePlayerStepOutToCentralDanger(player, context, backLine, lineDepth)) &&
+    distance(player.position, ball) <= (role === "CB" ? 22 : 20);
 
   if (canStepOut) {
     return {
@@ -1585,6 +1635,41 @@ function getBackLineCohesionDecision(
       }),
     ),
   };
+}
+
+function canBackLinePlayerStepOutToCentralDanger(
+  player: Player,
+  context: MovementContext,
+  backLine: Player[],
+  lineDepth: number,
+) {
+  const role = normalizeRole(player.role);
+  if (role !== "CB" && role !== "FB") return false;
+
+  const carrier = context.owner && context.owner.side !== player.side ? context.owner : null;
+  const carrierPoint = carrier?.position ?? context.ball;
+  const centralDanger = carrierPoint.x >= 30 && carrierPoint.x <= 70;
+  const betweenLines =
+    player.side === "home"
+      ? carrierPoint.y >= lineDepth - 22 && carrierPoint.y <= lineDepth + 10
+      : carrierPoint.y <= lineDepth + 22 && carrierPoint.y >= lineDepth - 10;
+  const coverBehind = backLine.some((teammate) => {
+    if (teammate.id === player.id) return false;
+    const teammateRole = normalizeRole(teammate.role);
+    if (teammateRole !== "CB" && teammateRole !== "DM") return false;
+    return player.side === "home"
+      ? teammate.position.y >= player.position.y - 3
+      : teammate.position.y <= player.position.y + 3;
+  });
+  const noDangerousRunner = !findDangerousRunnerBehindLine(player, context, lineDepth);
+  const pressureDistance = carrier
+    ? getNearestOpponentDistance(
+        carrier.position,
+        context.teammates.filter((item) => item.id !== player.id),
+      )
+    : 99;
+
+  return centralDanger && betweenLines && coverBehind && noDangerousRunner && pressureDistance >= 4;
 }
 
 function getPriorityMarkingDecision(
@@ -1637,9 +1722,11 @@ function getAttackingBackLineDepth(side: Side, ball: Vec2, backLine: Player[]) {
         : 26;
   const direction = attackDirection(side);
   const advance = direction < 0 ? 62 - ball.y : ball.y - 38;
-  const push = clamp(10 + advance * 0.26, 6, 23);
+  const stablePossessionPush =
+    direction < 0 ? clamp(58 - ball.y, 0, 18) : clamp(ball.y - 42, 0, 18);
+  const push = clamp(12 + advance * 0.32 + stablePossessionPush * 0.18, 8, 29);
 
-  return direction < 0 ? clamp(averageHomeY - push, 52, 82) : clamp(averageHomeY + push, 18, 48);
+  return direction < 0 ? clamp(averageHomeY - push, 45, 78) : clamp(averageHomeY + push, 22, 55);
 }
 
 function getDefensiveLineDepth(side: Side, ball: Vec2, backLine: Player[], ballVelocity: Vec2) {
@@ -1649,14 +1736,14 @@ function getDefensiveLineDepth(side: Side, ball: Vec2, backLine: Player[], ballV
   const ownGoal = ownGoalY(side);
   const opponentDirection = -direction;
   const attackTempo = clamp((ballVelocity.y * opponentDirection + 4) / 18, 0, 1);
-  const ballPressureDepth = direction < 0 ? clamp(ball.y + 12, 58, 86) : clamp(ball.y - 12, 14, 42);
-  const retreatDepth = direction < 0 ? ownGoal - 13 : ownGoal + 13;
-  const dangerDepth = lerp(ballPressureDepth, retreatDepth, attackTempo * 0.48);
-  const lineDepth = lerp(averageHomeY, dangerDepth, 0.34 + attackTempo * 0.16);
+  const ballPressureDepth = direction < 0 ? clamp(ball.y + 9, 54, 78) : clamp(ball.y - 9, 22, 46);
+  const retreatDepth = direction < 0 ? ownGoal - 20 : ownGoal + 20;
+  const dangerDepth = lerp(ballPressureDepth, retreatDepth, attackTempo * 0.34);
+  const lineDepth = lerp(averageHomeY, dangerDepth, 0.42 + attackTempo * 0.1);
 
   return direction < 0
-    ? clamp(lineDepth, Math.min(ownGoal - 36, averageHomeY), ownGoal - 8)
-    : clamp(lineDepth, ownGoal + 8, Math.max(ownGoal + 36, averageHomeY));
+    ? clamp(lineDepth, Math.min(ownGoal - 42, averageHomeY), ownGoal - 15)
+    : clamp(lineDepth, ownGoal + 15, Math.max(ownGoal + 42, averageHomeY));
 }
 
 function findDangerousRunnerBehindLine(
@@ -2046,10 +2133,10 @@ function clampToRoleZone(player: Player, target: Vec2) {
 function getRoleYBounds(side: Side, role: PlayerRole) {
   const homeBounds: Record<PlayerRole, { min: number; max: number }> = {
     GK: { min: 88, max: 96 },
-    CB: { min: 52, max: 86 },
-    FB: { min: 38, max: 84 },
-    DM: { min: 48, max: 72 },
-    CM: { min: 32, max: 66 },
+    CB: { min: 44, max: 86 },
+    FB: { min: 22, max: 84 },
+    DM: { min: 38, max: 74 },
+    CM: { min: 24, max: 72 },
     W: { min: 12, max: 62 },
     ST: { min: 8, max: 45 },
   };

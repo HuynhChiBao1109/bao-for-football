@@ -5838,20 +5838,22 @@ function projectPlayers(input: {
       target = tactical.targetPosition;
       intent = getIntentForState(tactical.state);
       aiState = tactical.state;
-      const offsideAware = getOffsideAwareTarget({
-        player,
-        playerPosition: { x: prev.x, y: prev.y },
-        desiredTarget: target,
-        possession: input.possession,
-        ball: input.ball,
-        defending: input.opponentLineup,
-        previousPositionState: input.positionState,
-        isIntendedReceiver: input.intendedReceiverId === player.userPlayerId,
-        tick: input.tick,
-      });
-      target = offsideAware.target;
-      aiState = offsideAware.aiState;
-      intent = getIntentForState(aiState);
+      if (normalizeRole(player.role) !== "CB" && normalizeRole(player.role) !== "GK") {
+        const offsideAware = getOffsideAwareTarget({
+          player,
+          playerPosition: { x: prev.x, y: prev.y },
+          desiredTarget: target,
+          possession: input.possession,
+          ball: input.ball,
+          defending: input.opponentLineup,
+          previousPositionState: input.positionState,
+          isIntendedReceiver: input.intendedReceiverId === player.userPlayerId,
+          tick: input.tick,
+        });
+        target = offsideAware.target;
+        aiState = offsideAware.aiState;
+        intent = getIntentForState(aiState);
+      }
     } else {
       const tactical = getTacticalTarget(movementPlayer, gameState);
       target = tactical.targetPosition;
