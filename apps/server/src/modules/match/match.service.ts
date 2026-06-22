@@ -225,6 +225,8 @@ export class MatchService implements IMatchService {
       clockSeconds: nextTick.snapshot.second,
       homeScore: nextTick.snapshot.homeScore,
       awayScore: nextTick.snapshot.awayScore,
+      homeLineup: nextTick.snapshot.homePlayers,
+      awayLineup: nextTick.snapshot.awayPlayers,
       latestSnapshot: nextTick.snapshot,
       timeline,
     };
@@ -236,6 +238,8 @@ export class MatchService implements IMatchService {
         currentMinute: nextTick.snapshot.minute,
         clockSeconds: nextTick.snapshot.second,
         latestSnapshot: nextTick.snapshot,
+        homeLineup: nextTick.snapshot.homePlayers,
+        awayLineup: nextTick.snapshot.awayPlayers,
         homeScore: nextTick.snapshot.homeScore,
         awayScore: nextTick.snapshot.awayScore,
         status: EMatchStatus.FINISHED,
