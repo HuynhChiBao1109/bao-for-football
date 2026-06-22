@@ -5250,6 +5250,21 @@ function consumeSkillCharge(player: InternalLineupPlayer, skill: EPlayerSkill | 
   );
 }
 
+function resetUsedSkillChargeForSnapshot(
+  lineups: InternalLineupPlayer[],
+  userPlayerId: number,
+  skill: EPlayerSkill | null,
+) {
+  if (!skill) {
+    return;
+  }
+
+  const player = lineups.find((item) => item.userPlayerId === userPlayerId);
+  if (player) {
+    consumeSkillCharge(player, skill);
+  }
+}
+
 function getChargedSkill(
   player: InternalLineupPlayer,
   phase: "shoot" | "dribble" | "tackle" | "build_up",
@@ -5313,6 +5328,11 @@ function buildSnapshot(input: {
     ball,
     owner: input.ballOwner,
   });
+  resetUsedSkillChargeForSnapshot(
+    [...input.homeLineup, ...input.awayLineup],
+    input.focusId,
+    input.activeSkill,
+  );
   const ownerId = input.ballOwner.userPlayerId;
   const ballIsControlled = !input.forceLooseBall && shouldAttachBallToOwner(input.highlight.event);
   const controlledOwnerId = ballIsControlled ? ownerId : null;
