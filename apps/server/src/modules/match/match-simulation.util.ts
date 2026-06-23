@@ -1024,6 +1024,7 @@ export function generateNextMatchTick(input: {
         payload: {
           label: snapshot.highlight.label,
           restart: true,
+          restartEvent: restart.deadBallEvent,
           from: { x: latestTick.ball.x, y: latestTick.ball.y },
           to: restart.target,
         },
@@ -5124,8 +5125,20 @@ function resolveOutOfPlayRestart(input: {
   awayLineup: InternalLineupPlayer[];
   previousPositionState: PositionState;
   nextTick: number;
-}) {
-  const event = input.latestTick.highlight?.event ?? EMatchEvent.THROW_IN;
+}): {
+  event: EMatchEvent.PASS;
+  deadBallEvent: EMatchEvent.THROW_IN | EMatchEvent.CORNER_KICK | EMatchEvent.GOAL_KICK;
+  label: string;
+  possession: Side;
+  taker: InternalLineupPlayer;
+  receiver: InternalLineupPlayer;
+  target: TrajectoryPoint;
+} {
+  const deadBallEvent =
+    input.latestTick.highlight?.event === EMatchEvent.CORNER_KICK ||
+    input.latestTick.highlight?.event === EMatchEvent.GOAL_KICK
+      ? input.latestTick.highlight.event
+      : EMatchEvent.THROW_IN;
   const possession = input.latestTick.possession ?? "home";
   const lineup = possession === "home" ? input.homeLineup : input.awayLineup;
   const opponentLineup = possession === "home" ? input.awayLineup : input.homeLineup;
@@ -5134,12 +5147,12 @@ function resolveOutOfPlayRestart(input: {
     findNearestPlayer(
       lineup,
       input.latestTick.ball,
-      (player) => event === EMatchEvent.GOAL_KICK || player.role !== "GK",
+      (player) => deadBallEvent === EMatchEvent.GOAL_KICK || player.role !== "GK",
     ) ??
     lineup[0];
   const direction = attackDirection(possession);
 
-  if (event === EMatchEvent.CORNER_KICK) {
+  if (deadBallEvent === EMatchEvent.CORNER_KICK) {
     const boxTarget = {
       x: clamp(50 + ((input.nextTick % 3) - 1) * 9, 32, 68),
       y: clamp(input.latestTick.ball.y + direction * 18, 8, 92),
@@ -5154,7 +5167,8 @@ function resolveOutOfPlayRestart(input: {
         .sort((left, right) => left.score - right.score)[0]?.player ?? taker;
 
     return {
-      event: EMatchEvent.CORNER_KICK,
+      event: EMatchEvent.PASS,
+      deadBallEvent,
       label: `${taker.shortName} treo bong phat goc`,
       possession,
       taker,
@@ -5163,7 +5177,7 @@ function resolveOutOfPlayRestart(input: {
     };
   }
 
-  if (event === EMatchEvent.GOAL_KICK) {
+  if (deadBallEvent === EMatchEvent.GOAL_KICK) {
     const receiver =
       lineup
         .filter((player) => player.userPlayerId !== taker.userPlayerId && player.role !== "GK")
@@ -5181,7 +5195,8 @@ function resolveOutOfPlayRestart(input: {
     );
 
     return {
-      event: EMatchEvent.GOAL_KICK,
+      event: EMatchEvent.PASS,
+      deadBallEvent,
       label: `${taker.shortName} phat bong len`,
       possession,
       taker,
@@ -5212,7 +5227,8 @@ function resolveOutOfPlayRestart(input: {
   );
 
   return {
-    event: EMatchEvent.THROW_IN,
+    event: EMatchEvent.PASS,
+    deadBallEvent,
     label: `${taker.shortName} nem bien cho ${receiver.shortName}`,
     possession,
     taker,
