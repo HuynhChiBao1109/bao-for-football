@@ -6,7 +6,6 @@ import { ROUTES } from '../routes';
 const PLAYER_NAV = [
   { path: ROUTES.club, label: 'Dashboard', icon: 'HB' },
   { path: ROUTES.players, label: 'Players', icon: 'PL' },
-  { path: ROUTES.tactics, label: 'Tactics', icon: 'TX' },
   { path: ROUTES.gacha, label: 'Gacha', icon: 'GC' },
   { path: ROUTES.aiMatch, label: 'Campaign', icon: 'ST' },
 ];

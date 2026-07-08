@@ -4,6 +4,7 @@ export const AppRoute = {
   TeamSetup: '/team-setup',
   Club: '/club',
   Players: '/players',
+  PlayerDetail: '/players/:userPlayerId',
   Tactics: '/tactics',
   AiMatch: '/match/ai',
   Pvp: '/match/pvp',

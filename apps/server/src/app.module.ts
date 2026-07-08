@@ -2,6 +2,7 @@ import { MiddlewareConsumer, Module, NestModule, RequestMethod } from "@nestjs/c
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { ServeStaticModule } from "@nestjs/serve-static";
 import { TypeOrmModule } from "@nestjs/typeorm";
+import { createConnection } from "mysql2/promise";
 import { join, resolve } from "path";
 import { DataSource, DataSourceOptions } from "typeorm";
 import { AppController } from "./app.controller";
@@ -22,6 +23,41 @@ import { TrainingRoomModule } from "./modules/training/training-room.module";
 const escapeIdentifier = (value: string) => value.replace(/`/g, "``");
 
 const isEnabled = (value: unknown) => String(value ?? "").toLowerCase() === "true";
+
+const ensureDatabaseExists = async (options: DataSourceOptions) => {
+  if (options.type !== "mysql") {
+    return;
+  }
+
+  const mysqlOptions = options as DataSourceOptions & {
+    database?: string;
+    host?: string;
+    port?: number;
+    username?: string;
+    password?: string;
+  };
+
+  if (!mysqlOptions.database || !mysqlOptions.username) {
+    throw new Error("Missing MYSQL_DATABASE or MYSQL_USER for database bootstrap.");
+  }
+
+  const connection = await createConnection({
+    host: mysqlOptions.host,
+    port: mysqlOptions.port,
+    user: mysqlOptions.username,
+    password: mysqlOptions.password,
+  });
+
+  try {
+    await connection.query(
+      `CREATE DATABASE IF NOT EXISTS \`${escapeIdentifier(
+        mysqlOptions.database,
+      )}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
+    );
+  } finally {
+    await connection.end();
+  }
+};
 
 const dropTablesNotInEntities = async (dataSource: DataSource) => {
   const databaseName = String(dataSource.options.database || "");
@@ -89,14 +125,15 @@ const dropTablesNotInEntities = async (dataSource: DataSource) => {
         };
       },
       dataSourceFactory: async (options) => {
-        const dataSource = new DataSource(options as DataSourceOptions);
+        const dataSourceOptions = options as DataSourceOptions;
+        await ensureDatabaseExists(dataSourceOptions);
+
+        const dataSource = new DataSource(dataSourceOptions);
         await dataSource.initialize();
         if (isEnabled(process.env.DB_DROP_UNMAPPED_TABLES)) {
           await dropTablesNotInEntities(dataSource);
         }
-        if (isEnabled(process.env.DB_SYNC_SCHEMA)) {
-          await dataSource.synchronize();
-        }
+        await dataSource.synchronize();
         return dataSource;
       },
     }),

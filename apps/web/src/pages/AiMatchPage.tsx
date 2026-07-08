@@ -1,23 +1,20 @@
-import { useEffect, useMemo, useState, startTransition } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
 import { useCampainMatches, useCreateCompainNormal } from '../hooks/useAiCampaign';
 import { Banner } from '../components/feedback';
 import { useSession } from '../hooks/useSession';
 import type { CampaignMatch } from '../types';
-import { useStartCampaignMatch } from '../hooks/useMatch';
-import { matchLivePath } from '../routes';
+import { TacticsPopup } from './TacticsPage';
 
 export function AiMatchPage() {
-  const navigate = useNavigate();
   const { data: sessionData } = useSession();
   const teamId = Number(((sessionData?.team as any)?.id ?? 0) as number);
   const { data: matches = [], isLoading, isFetching, error, refetch } = useCampainMatches(teamId);
   const createCompainNormal = useCreateCompainNormal();
-  const startMatch = useStartCampaignMatch();
 
   const [bootstrapping, setBootstrapping] = useState(false);
   const [createError, setCreateError] = useState('');
   const [initAttempted, setInitAttempted] = useState(false);
+  const [selectedCampaignMatchId, setSelectedCampaignMatchId] = useState<string>('');
 
   useEffect(() => {
     setInitAttempted(false);
@@ -131,12 +128,8 @@ export function AiMatchPage() {
                   key={String(item.id)}
                   match={item}
                   campaignLevel={campaignLevel}
-                  isStarting={startMatch.isPending}
                   onStart={async () => {
-                    const response = await startMatch.mutateAsync({ campainMatchId: item.id });
-                    startTransition(() => {
-                      navigate(matchLivePath(response.matchId));
-                    });
+                    setSelectedCampaignMatchId(String(item.id));
                   }}
                 />
               ))}
@@ -144,6 +137,12 @@ export function AiMatchPage() {
           )}
         </div>
       </article>
+      {selectedCampaignMatchId && (
+        <TacticsPopup
+          campaignMatchId={selectedCampaignMatchId}
+          onClose={() => setSelectedCampaignMatchId('')}
+        />
+      )}
     </section>
   );
 }
@@ -157,7 +156,7 @@ function CampaignMatchCard({
   match: CampaignMatch;
   campaignLevel: number;
   onStart: () => Promise<void>;
-  isStarting: boolean;
+  isStarting?: boolean;
 }) {
   const reward = Number(match.matchReward ?? 0);
   const clubName = match.competitor?.name || `BOT #${String(match.competitorId ?? '-')}`;
@@ -193,7 +192,13 @@ function CampaignMatchCard({
           void onStart();
         }}
       >
-        {isLocked ? 'Locked' : isCleared ? 'Replay Match' : isStarting ? 'Starting...' : 'Start Match'}
+        {isLocked
+          ? 'Locked'
+          : isCleared
+            ? 'Edit Tactics & Replay'
+            : isStarting
+              ? 'Starting...'
+              : 'Edit Tactics & Start'}
       </button>
     </article>
   );

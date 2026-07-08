@@ -1,7 +1,13 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/apiClient';
 import { useAuth } from './useAuth';
 import type { Tactics } from '../types';
+
+function normalizeRatio(value: unknown, fallback = 0): number {
+  const num = Number(value ?? fallback);
+  if (!Number.isFinite(num)) return fallback;
+  return Math.round(num <= 1 ? num * 100 : num);
+}
 
 export function useTactics(tacticsTeamId: string | undefined) {
   const { token } = useAuth();
@@ -14,9 +20,9 @@ export function useTactics(tacticsTeamId: string | undefined) {
         if (!data) return null;
         return {
           formation: data.formation ?? '4-3-3',
-          passRatio: Math.round(Number(data.passRatio ?? 0) * 100),
-          shotRatio: Math.round(Number(data.shotRatio ?? 0) * 100),
-          pressure: Math.round(Number(data.pressure ?? 0) * 100),
+          passRatio: normalizeRatio(data.passRatio),
+          shotRatio: normalizeRatio(data.shotRatio),
+          pressure: normalizeRatio(data.pressure),
           mode: data.mode ?? 'casual',
           lineup: Array.isArray(data.lineup)
             ? data.lineup
@@ -43,11 +49,13 @@ export function useTactics(tacticsTeamId: string | undefined) {
       }
     },
     enabled: Boolean(token && tacticsTeamId),
+    refetchOnMount: 'always',
   });
 }
 
 export function useSaveTactics() {
   const { token } = useAuth();
+  const qc = useQueryClient();
 
   return useMutation<Tactics, Error, { teamId: string } & Omit<Tactics, never>>({
     mutationFn: async (body) => {
@@ -74,9 +82,9 @@ export function useSaveTactics() {
       const data = payload;
       return {
         formation: data.formation,
-        passRatio: Math.round(Number(data.passRatio ?? 0) * 100),
-        shotRatio: Math.round(Number(data.shotRatio ?? 0) * 100),
-        pressure: Math.round(Number(data.pressure ?? 0) * 100),
+        passRatio: normalizeRatio(data.passRatio),
+        shotRatio: normalizeRatio(data.shotRatio),
+        pressure: normalizeRatio(data.pressure),
         mode: data.mode ?? 'casual',
         lineup: Array.isArray(data.lineup)
           ? data.lineup
@@ -97,6 +105,10 @@ export function useSaveTactics() {
           tempoScale: Number(data.gameplay?.tempoScale ?? 1.05),
         },
       } as Tactics;
+    },
+    onSuccess: (updated, variables) => {
+      qc.setQueryData(['tactics', variables.teamId], updated);
+      void qc.invalidateQueries({ queryKey: ['tactics', variables.teamId] });
     },
   });
 }

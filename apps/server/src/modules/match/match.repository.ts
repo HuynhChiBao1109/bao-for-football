@@ -179,7 +179,7 @@ export class MatchRepository {
   }
 
   async getTeamFormations(teamId: number): Promise<TeamFormationEntity[]> {
-    return this.teamFormationRepository.find({ where: { teamId } });
+    return this.teamFormationRepository.find({ where: { teamId }, order: { id: "ASC" } });
   }
 
   async getUserPlayersByUserId(userId: number): Promise<UserPlayerEntity[]> {

@@ -6,7 +6,6 @@ export const ROUTES = {
   teamSetup: AppRoute.TeamSetup,
   club: AppRoute.Club,
   players: AppRoute.Players,
-  tactics: AppRoute.Tactics,
   aiMatch: AppRoute.AiMatch,
   leagueMatch: AppRoute.LeagueMatch,
   championShipMatch: AppRoute.ChampionShipMatch,
@@ -31,8 +30,7 @@ export function navItems(isAdmin: boolean) {
 
   return [
     { path: ROUTES.club, label: 'CLB' },
-    { path: ROUTES.players, label: 'Cầu thủ' },
-    { path: ROUTES.tactics, label: 'Chiến thuật' },
+    { path: ROUTES.players, label: 'Players' },
     { path: ROUTES.aiMatch, label: 'Campaign AI' },
     { path: ROUTES.pvp, label: 'PvP' },
     { path: ROUTES.gacha, label: 'Gacha' },

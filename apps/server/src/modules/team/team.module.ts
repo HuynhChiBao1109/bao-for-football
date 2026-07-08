@@ -12,6 +12,8 @@ import { PlayerModule } from "../player/player.module";
 import { TeamController } from "./team.controller";
 import { ClubEntity } from "../reference/entities/club.entity";
 import { TeamImageService } from "./team-image.service";
+import { TacticsController } from "./tactics.controller";
+import { UserPlayerEntity } from "../player/entities/player-user.entity";
 
 @Module({
   imports: [
@@ -22,11 +24,12 @@ import { TeamImageService } from "./team-image.service";
       CampainEntity,
       CampainMatchEntity,
       ClubEntity,
+      UserPlayerEntity,
     ]),
     ReferenceModule,
     PlayerModule,
   ],
-  controllers: [TeamController],
+  controllers: [TeamController, TacticsController],
   providers: [TeamRepository, TeamService, TeamImageService],
   exports: [TeamService],
 })

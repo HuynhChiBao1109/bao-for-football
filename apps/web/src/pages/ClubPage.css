@@ -641,6 +641,25 @@
   white-space: nowrap;
 }
 
+.club-lineup-slot small[role='button'] {
+  display: inline-flex;
+  justify-content: center;
+  margin-top: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  padding: 2px 7px;
+  background: rgba(0, 0, 0, 0.34);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.club-lineup-slot small[role='button']:hover {
+  border-color: rgba(91, 232, 255, 0.66);
+  color: #ffffff;
+}
+
 .club-player-select {
   min-height: 560px;
   overflow: hidden;

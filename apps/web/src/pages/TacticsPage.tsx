@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { startTransition, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTactics, useSaveTactics } from '../hooks/useTactics';
 import { useSession } from '../hooks/useSession';
 import { usePlayerCards } from '../hooks/usePlayerCards';
@@ -7,6 +8,9 @@ import { API_BASE_URL } from '../lib/apiClient';
 import { MatchMode } from '../enums/match';
 import type { Tactics } from '../types';
 import type { UserPlayerCard } from '../types';
+import { useStartCampaignMatch } from '../hooks/useMatch';
+import { matchLivePath } from '../routes';
+import { PlayerDetailPopup } from './PlayerDetailPage';
 
 const DEFAULT_TACTICS: Tactics = {
   formation: '4-3-3',
@@ -276,7 +280,41 @@ function shortName(value: string): string {
   return `${parts[0].slice(0, 1)}. ${parts[parts.length - 1]}`;
 }
 
-export function TacticsPage() {
+type TacticsEditorProps = {
+  pendingCampaignMatchIdOverride?: string;
+  isPopup?: boolean;
+  onClose?: () => void;
+};
+
+export function TacticsPopup({
+  campaignMatchId,
+  onClose,
+}: {
+  campaignMatchId: string;
+  onClose: () => void;
+}) {
+  return (
+    <div className="game-modal-backdrop tactics-popup-backdrop" role="dialog" aria-modal="true">
+      <div className="tactics-popup-card game-scroll">
+        <TacticsPage
+          pendingCampaignMatchIdOverride={campaignMatchId}
+          isPopup
+          onClose={onClose}
+        />
+      </div>
+    </div>
+  );
+}
+
+export function TacticsPage({
+  pendingCampaignMatchIdOverride,
+  isPopup = false,
+  onClose,
+}: TacticsEditorProps = {}) {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const pendingCampaignMatchId =
+    pendingCampaignMatchIdOverride || searchParams.get('startCampaignMatchId') || '';
   const { data: sessionData } = useSession();
   const tacticsTeamId = sessionData?.team?.id
     ? `team-${sessionData.team.id}`
@@ -287,11 +325,13 @@ export function TacticsPage() {
   const { data: loaded, isLoading, error: loadError } = useTactics(tacticsTeamId || undefined);
   const { data: cards = [], isLoading: isCardsLoading, error: cardError } = usePlayerCards();
   const saveMutation = useSaveTactics();
+  const startCampaignMatch = useStartCampaignMatch();
 
   const [form, setForm] = useState<Tactics>(DEFAULT_TACTICS);
   const [message, setMessage] = useState('');
   const [lineup, setLineup] = useState<Record<string, number | null>>({});
   const [dragOverSlot, setDragOverSlot] = useState<string>('');
+  const [detailPlayerId, setDetailPlayerId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!loaded) return;
@@ -401,6 +441,17 @@ export function TacticsPage() {
         lineup: lineupPayload,
       });
       setForm(result);
+      if (pendingCampaignMatchId) {
+        setMessage('Saved tactics. Starting match...');
+        const response = await startCampaignMatch.mutateAsync({
+          campainMatchId: pendingCampaignMatchId,
+        });
+        startTransition(() => {
+          navigate(matchLivePath(response.matchId));
+        });
+        onClose?.();
+        return;
+      }
       setMessage('Đã lưu chiến thuật thành công và đẩy sang realtime match engine.');
     } catch {
       /* handled below */
@@ -494,13 +545,22 @@ export function TacticsPage() {
   }
 
   return (
-    <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+    <section className={isPopup ? 'grid gap-6' : 'grid gap-6 lg:grid-cols-[1.2fr_0.8fr]'}>
       <article className="game-panel game-panel--accent overflow-hidden p-5 sm:p-6">
         <div className="game-panel__content">
+          <div className="flex items-start justify-between gap-3">
+            <div>
           <p className="game-header-kicker">Tactics Forge</p>
           <h2 className="game-title mt-3 text-3xl font-bold text-white">
             Bảng điều khiển lối chơi đội bóng
           </h2>
+            </div>
+            {isPopup && (
+              <button type="button" className="game-button-ghost px-3 py-2" onClick={onClose}>
+                Close
+              </button>
+            )}
+          </div>
           <p className="game-copy mt-3 max-w-2xl text-base">
             Chỉnh logic triển khai bóng, áp lực và gameplay modifiers, sau đó lưu thẳng sang service
             realtime.
@@ -521,6 +581,12 @@ export function TacticsPage() {
           {message && <Banner text={message} tone="success" />}
           {saveMutation.error && (
             <Banner text={(saveMutation.error as Error).message} tone="error" />
+          )}
+          {startCampaignMatch.error && (
+            <Banner text={(startCampaignMatch.error as Error).message} tone="error" />
+          )}
+          {pendingCampaignMatchId && (
+            <Banner text="Save this tactics setup to start the selected campaign match." tone="info" />
           )}
 
           {!isLoading && (
@@ -608,7 +674,7 @@ export function TacticsPage() {
 
               <button
                 type="submit"
-                disabled={saveMutation.isPending || !tacticsTeamId}
+                disabled={saveMutation.isPending || startCampaignMatch.isPending || !tacticsTeamId}
                 className="game-button-primary w-full"
               >
                 {saveMutation.isPending ? 'Đang lưu...' : 'Lưu Chiến Thuật'}
@@ -705,6 +771,21 @@ export function TacticsPage() {
                       <p className="text-[10px] text-amber-200/85">
                         Effect x{slot.effect ? slot.effect.toFixed(2) : '--'}
                       </p>
+                      {slot.card && (
+                        <button
+                          type="button"
+                          className="mt-1 rounded-full border border-white/20 bg-black/45 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white transition hover:border-emerald-300/70 hover:bg-emerald-400/20"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            if (slot.card) {
+                              setDetailPlayerId(slot.card.userPlayerId);
+                            }
+                          }}
+                          onMouseDown={(event) => event.stopPropagation()}
+                        >
+                          Detail
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -755,6 +836,12 @@ export function TacticsPage() {
           </div>
         </div>
       </article>
+      {detailPlayerId ? (
+        <PlayerDetailPopup
+          userPlayerId={detailPlayerId}
+          onClose={() => setDetailPlayerId(null)}
+        />
+      ) : null}
     </section>
   );
 }

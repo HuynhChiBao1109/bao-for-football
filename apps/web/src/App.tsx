@@ -6,7 +6,6 @@ import { LoginPage } from './pages/LoginPage';
 import { AdminLoginPage, AdminPage } from './pages/admin';
 import { ClubPage } from './pages/ClubPage';
 import { PlayersPage } from './pages/PlayersPage';
-import { TacticsPage } from './pages/TacticsPage';
 import { GachaPage } from './pages/GachaPage';
 import { AiMatchPage } from './pages/AiMatchPage';
 import { PvpPage } from './pages/PvpPage';
@@ -98,7 +97,6 @@ function App() {
         <Route path={ROUTES.teamSetup} element={<TeamSetupPage />} />
         <Route path={ROUTES.club} element={<ClubPage />} />
         <Route path={ROUTES.players} element={<PlayersPage />} />
-        <Route path={ROUTES.tactics} element={<TacticsPage />} />
         <Route path={ROUTES.gacha} element={<GachaPage />} />
         <Route path={ROUTES.aiMatch} element={<AiMatchPage />} />
         <Route path={ROUTES.matchLive} element={<MatchView />} />

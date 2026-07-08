@@ -1,5 +1,4 @@
 import {
-  startTransition,
   useEffect,
   useMemo,
   useRef,
@@ -17,14 +16,15 @@ import { useCampainMatches, useCreateCompainNormal } from '../hooks/useAiCampaig
 import { useAuth } from '../hooks/useAuth';
 import { usePlayerCards } from '../hooks/usePlayerCards';
 import { useSession } from '../hooks/useSession';
-import { useStartCampaignMatch } from '../hooks/useMatch';
 import { useSaveTactics, useTactics } from '../hooks/useTactics';
 import { useTrainingRoom, useTriggerTrainingEvent, type TrainingEventType } from '../hooks/useTrainingRoom';
 import { useMatchMotion } from '../hooks/useMatchMotion';
 import { EPlayerSkill, skillAnimation, skillName } from '../enums/skill';
 import { queryClient } from '../lib/queryClient';
 import { normalizeSnapshot } from '../lib/normalizeMatchSnapshot';
-import { matchLivePath, ROUTES } from '../routes';
+import { ROUTES } from '../routes';
+import { PlayerDetailPopup } from './PlayerDetailPage';
+import { TacticsPopup } from './TacticsPage';
 import type { CampaignMatch, MatchPitchPlayer, MatchSnapshot, Tactics, UserPlayerCard } from '../types';
 import '../MatchView.css';
 import './ClubPage.css';
@@ -117,7 +117,7 @@ export function ClubPage() {
   const leftActions: DockAction[] = [
     { label: 'Events', icon: <CalendarIcon />, onClick: () => setNotice('Events dang cap nhat.') },
     { label: 'Shop', icon: <ShopIcon />, onClick: () => setNotice('Shop dang cap nhat.'), tone: 'gold' },
-    { label: 'Lineup', icon: <FormationIcon />, onClick: () => navigate(ROUTES.tactics), tone: 'red' },
+    { label: 'Lineup', icon: <FormationIcon />, onClick: () => setActiveModal('lineup'), tone: 'red' },
   ];
   const rightActions: DockAction[] = [
     { label: 'Players', icon: <PlayersIcon />, onClick: () => navigate(ROUTES.players) },
@@ -246,7 +246,7 @@ export function ClubPage() {
           {activeModal === 'campaign' ? (
             <CampaignPopup teamId={Number(team.id)} />
           ) : activeModal === 'lineup' ? (
-            <LineupPopup teamId={String(team.id)} />
+            <LineupPopup teamId={`team-${team.id}`} />
           ) : (
             <TrainingPopup />
           )}
@@ -293,12 +293,11 @@ function ClubModalShell({
 }
 
 function CampaignPopup({ teamId }: { teamId: number }) {
-  const navigate = useNavigate();
   const { data: matches = [], isLoading, isFetching, error, refetch } = useCampainMatches(teamId);
   const createCampaign = useCreateCompainNormal();
-  const startMatch = useStartCampaignMatch();
   const [bootstrapping, setBootstrapping] = useState(false);
   const [initAttempted, setInitAttempted] = useState(false);
+  const [selectedCampaignMatchId, setSelectedCampaignMatchId] = useState<string>('');
 
   useEffect(() => {
     setInitAttempted(false);
@@ -336,15 +335,19 @@ function CampaignPopup({ teamId }: { teamId: number }) {
             <CampaignPopupCard
               key={String(match.id)}
               match={match}
-              isStarting={startMatch.isPending}
               onStart={async () => {
-                const response = await startMatch.mutateAsync({ campainMatchId: match.id });
-                startTransition(() => navigate(matchLivePath(response.matchId)));
+                setSelectedCampaignMatchId(String(match.id));
               }}
             />
           ))}
         </div>
       )}
+      {selectedCampaignMatchId ? (
+        <TacticsPopup
+          campaignMatchId={selectedCampaignMatchId}
+          onClose={() => setSelectedCampaignMatchId('')}
+        />
+      ) : null}
     </div>
   );
 }
@@ -355,7 +358,7 @@ function CampaignPopupCard({
   onStart,
 }: {
   match: CampaignMatch;
-  isStarting: boolean;
+  isStarting?: boolean;
   onStart: () => Promise<void>;
 }) {
   const clubName = match.competitor?.name || `BOT #${String(match.competitorId ?? '-')}`;
@@ -366,7 +369,7 @@ function CampaignPopupCard({
       <strong>{clubName}</strong>
       <p>{Number(match.matchReward ?? 0).toLocaleString()} reward</p>
       <button type="button" disabled={isStarting} onClick={() => void onStart()}>
-        {isStarting ? 'Starting...' : 'Start'}
+        {isStarting ? 'Starting...' : 'Lineup'}
       </button>
     </article>
   );
@@ -380,6 +383,7 @@ function LineupPopup({ teamId }: { teamId: string }) {
   const [lineup, setLineup] = useState<Record<string, number | null>>({});
   const [selectedSlotId, setSelectedSlotId] = useState('gk');
   const [message, setMessage] = useState('');
+  const [detailPlayerId, setDetailPlayerId] = useState<number | null>(null);
   const slots = FORMATION_SLOTS[formation] ?? FORMATION_SLOTS['4-3-3'];
 
   useEffect(() => {
@@ -506,6 +510,24 @@ function LineupPopup({ teamId }: { teamId: string }) {
               >
                 <span>{slot.label}</span>
                 <strong>{card?.name ?? 'Empty'}</strong>
+                {card ? (
+                  <small
+                    role="button"
+                    tabIndex={0}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setDetailPlayerId(card.userPlayerId);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key !== 'Enter' && event.key !== ' ') return;
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setDetailPlayerId(card.userPlayerId);
+                    }}
+                  >
+                    Detail
+                  </small>
+                ) : null}
               </button>
             );
           })}
@@ -533,6 +555,12 @@ function LineupPopup({ teamId }: { teamId: string }) {
           </div>
         </div>
       </div>
+      {detailPlayerId ? (
+        <PlayerDetailPopup
+          userPlayerId={detailPlayerId}
+          onClose={() => setDetailPlayerId(null)}
+        />
+      ) : null}
     </div>
   );
 }

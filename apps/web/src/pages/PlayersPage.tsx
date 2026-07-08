@@ -5,6 +5,7 @@ import { API_BASE_URL } from '../lib/apiClient';
 import { resolveClubImage, resolveCountryImage } from '../lib/referenceImage';
 import { Banner } from '../components/feedback';
 import type { UserPlayerCard } from '../types';
+import { PlayerDetailPopup } from './PlayerDetailPage';
 
 const DEFAULT_PLAYER_AVATAR = '/default-avatar.svg';
 
@@ -43,6 +44,7 @@ export function PlayersPage() {
   const [selectedId, setSelectedId] = useState<number>(0);
   const [allocate, setAllocate] = useState<Record<StatKey, number>>(DEFAULT_STATS);
   const [feedback, setFeedback] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+  const [detailPlayerId, setDetailPlayerId] = useState<number | null>(null);
 
   const selectedCard = useMemo(() => {
     if (cards.length === 0) return null;
@@ -149,6 +151,13 @@ export function PlayersPage() {
               <table className="game-table min-w-full text-left text-sm">
                 <thead className="text-slate-200">
                   <tr>
+                    <th className="px-4 py-3 font-medium">Player</th>
+                    <th className="px-4 py-3 font-medium">Country</th>
+                    <th className="px-4 py-3 font-medium">Level</th>
+                    <th className="px-4 py-3 font-medium">Points</th>
+                    <th className="px-4 py-3 font-medium">Detail</th>
+                  </tr>
+                  <tr className="hidden">
                     <th className="px-4 py-3 font-medium">Cầu thủ</th>
                     <th className="px-4 py-3 font-medium">Quốc gia</th>
                     <th className="px-4 py-3 font-medium">Cấp độ</th>
@@ -210,6 +219,18 @@ export function PlayersPage() {
                       </td>
                       <td className="px-4 py-3 text-slate-300">{card.level}</td>
                       <td className="px-4 py-3 text-emerald-300">{card.currentPoints}</td>
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          className="game-button-ghost px-3 py-2 text-xs"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setDetailPlayerId(card.userPlayerId);
+                          }}
+                        >
+                          View
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -340,6 +361,12 @@ export function PlayersPage() {
           )}
         </div>
       </aside>
+      {detailPlayerId ? (
+        <PlayerDetailPopup
+          userPlayerId={detailPlayerId}
+          onClose={() => setDetailPlayerId(null)}
+        />
+      ) : null}
     </section>
   );
 }
