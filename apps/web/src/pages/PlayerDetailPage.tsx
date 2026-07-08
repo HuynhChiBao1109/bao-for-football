@@ -175,22 +175,22 @@ export function PlayerDetailSheet({
   }
 
   return (
-    <section className="blue-lock-sheet">
-      <div className="blue-lock-sheet__top">
+    <section className="redlock-detail-sheet">
+      <div className="redlock-detail-sheet__top">
         <div>
-          <p className="blue-lock-kana">Skill Parameter Summary</p>
+          <p className="redlock-detail-kana">RedLock Ego Profile</p>
           <h1>{card.name}</h1>
         </div>
         {onClose ? (
-          <button type="button" onClick={onClose} className="blue-lock-back">
+          <button type="button" onClick={onClose} className="redlock-detail-back">
             Close
           </button>
         ) : null}
       </div>
 
-      <div className="blue-lock-grid">
-        <aside className="blue-lock-id">
-          <div className="blue-lock-id__portrait">
+      <div className="redlock-detail-grid">
+        <aside className="redlock-detail-id">
+          <div className="redlock-detail-id__portrait">
             <img
               src={resolvePlayerAvatarUrl(card)}
               alt={card.name}
@@ -200,12 +200,12 @@ export function PlayerDetailSheet({
               }}
             />
           </div>
-          <div className="blue-lock-id__plate">
+          <div className="redlock-detail-id__plate">
             <span>{primaryPosition}</span>
             <strong>{total}</strong>
             <b>{rank(total)}</b>
           </div>
-          <div className="blue-lock-meta">
+          <div className="redlock-detail-meta">
             <img
               src={resolveClubImage({
                 slug: card.clubSlug,
@@ -219,7 +219,7 @@ export function PlayerDetailSheet({
             />
             <span>{card.baseClub || 'Unknown Club'}</span>
           </div>
-          <div className="blue-lock-meta">
+          <div className="redlock-detail-meta">
             <img
               src={resolveCountryImage(card.country)}
               alt={card.country?.name || 'Country'}
@@ -231,37 +231,37 @@ export function PlayerDetailSheet({
           </div>
         </aside>
 
-        <div className="blue-lock-radar">
-          <div className="blue-lock-radar__circle">
-            <div className="blue-lock-radar__web" />
+        <div className="redlock-detail-radar">
+          <div className="redlock-detail-radar__circle">
+            <div className="redlock-detail-radar__web" />
             <div
-              className="blue-lock-radar__shape"
+              className="redlock-detail-radar__shape"
               style={{ clipPath: `polygon(${radarPolygon})` }}
             />
             {radar.map((axis, index) => (
               <div
                 key={axis.key}
-                className="blue-lock-radar__axis"
+                className="redlock-detail-radar__axis"
                 style={{ '--axis-angle': `${(360 / radar.length) * index}deg` } as CSSProperties}
               >
                 <span>{axis.label}</span>
                 <strong>{rank(axis.value)}</strong>
               </div>
             ))}
-            <div className="blue-lock-radar__core">
+            <div className="redlock-detail-radar__core">
               <span>Total</span>
               <strong>{total}</strong>
             </div>
           </div>
         </div>
 
-        <div className="blue-lock-stats">
+        <div className="redlock-detail-stats">
           {STAT_GROUPS.map((group) => (
-            <section key={group.title} className="blue-lock-stat-block">
+            <section key={group.title} className="redlock-detail-stat-block">
               <h2>{group.title}</h2>
-              <div className="blue-lock-stat-list">
+              <div className="redlock-detail-stat-list">
                 {group.items.map((key) => (
-                  <div key={key} className="blue-lock-stat-row">
+                  <div key={key} className="redlock-detail-stat-row">
                     <span>{STAT_LABELS[key]}</span>
                     <strong>{stat(card, key)}</strong>
                   </div>
@@ -274,3 +274,4 @@ export function PlayerDetailSheet({
     </section>
   );
 }
+

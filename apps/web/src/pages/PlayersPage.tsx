@@ -4,6 +4,7 @@ import { STAT_FIELDS, STAT_KEYS, DEFAULT_STATS, type StatKey } from '../lib/cons
 import { API_BASE_URL } from '../lib/apiClient';
 import { resolveClubImage, resolveCountryImage } from '../lib/referenceImage';
 import { Banner } from '../components/feedback';
+import { StatBar, StatusBadge } from '../components/redlock/RedLockUI';
 import type { UserPlayerCard } from '../types';
 import { PlayerDetailPopup } from './PlayerDetailPage';
 
@@ -263,6 +264,11 @@ export function PlayersPage() {
                   <p className="text-sm text-slate-400">
                     Cấp {selectedCard.level} · {selectedCard.currentPoints} điểm
                   </p>
+                  <div className="mt-2">
+                    <StatusBadge tone="red">
+                      {selectedCard.positions?.[0]?.position ?? 'RedLock Player'}
+                    </StatusBadge>
+                  </div>
                   <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-300">
                     <div className="flex items-center gap-2">
                       <img
@@ -390,12 +396,7 @@ function StatRow({
 }) {
   return (
     <div className="flex items-center gap-2 rounded-[14px] border border-white/8 bg-black/20 px-3 py-2">
-      <div className="flex-1 min-w-0">
-        <p className="text-xs text-slate-400 truncate">{label}</p>
-        <p className="text-xs text-slate-500">
-          nền {base} +{bonus}
-        </p>
-      </div>
+      <div className="flex-1 min-w-0"><StatBar label={label} value={value} hint={`base ${base} +${bonus}`} /></div>
       <button
         type="button"
         onClick={() => onChange(value - 1)}
@@ -421,3 +422,4 @@ function StatRow({
     </div>
   );
 }
+

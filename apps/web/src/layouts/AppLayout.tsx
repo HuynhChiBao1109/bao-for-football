@@ -1,5 +1,6 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { EventPopups } from '../components/ui/EventPopups';
+import { AnimatedBackground } from '../components/redlock/RedLockUI';
 import { useAuth } from '../hooks/useAuth';
 import { ROUTES } from '../routes';
 
@@ -18,11 +19,18 @@ export function AppLayout() {
   const isClubScreen = !isAdmin && location.pathname === ROUTES.club;
 
   return (
-    <main className={`app-shell wuxia-shell${isClubScreen ? ' app-shell--fullscreen' : ''}`}>
-      <div className="wuxia-shell__mist" aria-hidden="true" />
-      <div className="wuxia-shell__flare wuxia-shell__flare--left" aria-hidden="true" />
-      <div className="wuxia-shell__flare wuxia-shell__flare--right" aria-hidden="true" />
+    <main className={`app-shell redlock-shell${isClubScreen ? ' app-shell--fullscreen' : ''}`}>
+      <AnimatedBackground />
       <EventPopups />
+      {isClubScreen ? null : (
+        <header className="redlock-topbar">
+          <div className="redlock-brand" aria-label="RedLock">
+            REDLOCK
+            <small>Survival Football Academy</small>
+          </div>
+          <span className="redlock-badge redlock-badge--dark">Ego Protocol Online</span>
+        </header>
+      )}
       <div className={`app-shell__inner${isClubScreen ? ' app-shell__inner--fullscreen' : ''}`}>
         <Outlet />
       </div>

@@ -1005,7 +1005,7 @@ textarea {
   letter-spacing: 0.02em;
 }
 
-.blue-lock-sheet {
+.redlock-detail-sheet {
   position: relative;
   overflow: hidden;
   min-height: calc(100vh - 160px);
@@ -1027,34 +1027,34 @@ textarea {
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.48);
 }
 
-.blue-lock-sheet::before,
-.blue-lock-sheet::after {
+.redlock-detail-sheet::before,
+.redlock-detail-sheet::after {
   content: '';
   pointer-events: none;
   position: absolute;
   inset: 0;
 }
 
-.blue-lock-sheet::before {
+.redlock-detail-sheet::before {
   opacity: 0.18;
   background-image:
     linear-gradient(115deg, transparent 0 44%, #050505 44.2% 44.5%, transparent 44.7%),
     linear-gradient(72deg, transparent 0 74%, #050505 74.2% 74.55%, transparent 74.8%);
 }
 
-.blue-lock-sheet::after {
+.redlock-detail-sheet::after {
   opacity: 0.08;
   background-image: radial-gradient(#050505 1px, transparent 1px);
   background-size: 9px 9px;
 }
 
-.blue-lock-sheet__top,
-.blue-lock-grid {
+.redlock-detail-sheet__top,
+.redlock-detail-grid {
   position: relative;
   z-index: 1;
 }
 
-.blue-lock-sheet__top {
+.redlock-detail-sheet__top {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -1063,22 +1063,22 @@ textarea {
   padding-bottom: 14px;
 }
 
-.blue-lock-sheet h1,
-.blue-lock-stat-block h2,
-.blue-lock-id__plate b,
-.blue-lock-radar__axis strong {
+.redlock-detail-sheet h1,
+.redlock-detail-stat-block h2,
+.redlock-detail-id__plate b,
+.redlock-detail-radar__axis strong {
   font-family: 'Bebas Neue', 'Barlow', sans-serif;
   letter-spacing: 0.02em;
 }
 
-.blue-lock-sheet h1 {
+.redlock-detail-sheet h1 {
   margin: 0;
   font-size: clamp(3rem, 8vw, 7rem);
   line-height: 0.85;
   text-transform: uppercase;
 }
 
-.blue-lock-kana {
+.redlock-detail-kana {
   margin: 0 0 8px;
   font-size: 13px;
   font-weight: 900;
@@ -1086,7 +1086,7 @@ textarea {
   text-transform: uppercase;
 }
 
-.blue-lock-back {
+.redlock-detail-back {
   border: 2px solid #050505;
   background: #050505;
   padding: 9px 16px;
@@ -1095,7 +1095,7 @@ textarea {
   text-transform: uppercase;
 }
 
-.blue-lock-grid {
+.redlock-detail-grid {
   display: grid;
   grid-template-columns: 210px minmax(280px, 420px) 1fr;
   gap: clamp(18px, 3vw, 34px);
@@ -1103,12 +1103,12 @@ textarea {
   margin-top: 22px;
 }
 
-.blue-lock-id {
+.redlock-detail-id {
   display: grid;
   gap: 12px;
 }
 
-.blue-lock-id__portrait {
+.redlock-detail-id__portrait {
   aspect-ratio: 1;
   overflow: hidden;
   border: 4px solid #050505;
@@ -1116,14 +1116,14 @@ textarea {
   clip-path: polygon(12% 0, 100% 0, 100% 88%, 88% 100%, 0 100%, 0 12%);
 }
 
-.blue-lock-id__portrait img {
+.redlock-detail-id__portrait img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   filter: grayscale(1) contrast(1.28);
 }
 
-.blue-lock-id__plate {
+.redlock-detail-id__plate {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 6px;
@@ -1133,16 +1133,16 @@ textarea {
   text-transform: uppercase;
 }
 
-.blue-lock-id__plate span {
+.redlock-detail-id__plate span {
   font-weight: 900;
 }
 
-.blue-lock-id__plate strong {
+.redlock-detail-id__plate strong {
   font-size: 2.1rem;
   line-height: 1;
 }
 
-.blue-lock-id__plate b {
+.redlock-detail-id__plate b {
   grid-column: 1 / -1;
   display: block;
   background: #050505;
@@ -1152,7 +1152,7 @@ textarea {
   line-height: 0.95;
 }
 
-.blue-lock-meta {
+.redlock-detail-meta {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1161,19 +1161,19 @@ textarea {
   font-weight: 800;
 }
 
-.blue-lock-meta img {
+.redlock-detail-meta img {
   width: 26px;
   height: 26px;
   object-fit: contain;
   filter: grayscale(1) contrast(1.2);
 }
 
-.blue-lock-radar {
+.redlock-detail-radar {
   display: grid;
   place-items: center;
 }
 
-.blue-lock-radar__circle {
+.redlock-detail-radar__circle {
   position: relative;
   width: min(100%, 410px);
   aspect-ratio: 1;
@@ -1185,25 +1185,25 @@ textarea {
     #f8f8f8;
 }
 
-.blue-lock-radar__web,
-.blue-lock-radar__shape,
-.blue-lock-radar__core,
-.blue-lock-radar__axis {
+.redlock-detail-radar__web,
+.redlock-detail-radar__shape,
+.redlock-detail-radar__core,
+.redlock-detail-radar__axis {
   position: absolute;
 }
 
-.blue-lock-radar__web {
+.redlock-detail-radar__web {
   inset: 18%;
   border: 2px solid rgba(0, 0, 0, 0.45);
   clip-path: polygon(50% 0, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
 }
 
-.blue-lock-radar__shape {
+.redlock-detail-radar__shape {
   inset: 0;
   background: rgba(0, 0, 0, 0.28);
 }
 
-.blue-lock-radar__core {
+.redlock-detail-radar__core {
   inset: 39%;
   display: grid;
   place-items: center;
@@ -1213,17 +1213,17 @@ textarea {
   text-transform: uppercase;
 }
 
-.blue-lock-radar__core span {
+.redlock-detail-radar__core span {
   font-size: 10px;
   font-weight: 900;
 }
 
-.blue-lock-radar__core strong {
+.redlock-detail-radar__core strong {
   font-size: 2rem;
   line-height: 1;
 }
 
-.blue-lock-radar__axis {
+.redlock-detail-radar__axis {
   left: 50%;
   top: 50%;
   display: grid;
@@ -1238,12 +1238,12 @@ textarea {
   text-transform: uppercase;
 }
 
-.blue-lock-radar__axis span {
+.redlock-detail-radar__axis span {
   font-size: 12px;
   font-weight: 900;
 }
 
-.blue-lock-radar__axis strong {
+.redlock-detail-radar__axis strong {
   display: grid;
   place-items: center;
   width: 42px;
@@ -1254,31 +1254,31 @@ textarea {
   line-height: 1;
 }
 
-.blue-lock-stats {
+.redlock-detail-stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(220px, 1fr));
   gap: 16px 24px;
 }
 
-.blue-lock-stat-block {
+.redlock-detail-stat-block {
   border-top: 4px solid #050505;
   padding-top: 8px;
 }
 
-.blue-lock-stat-block h2 {
+.redlock-detail-stat-block h2 {
   margin: 0 0 8px;
   font-size: clamp(2rem, 4vw, 3.2rem);
   line-height: 0.9;
   text-transform: uppercase;
 }
 
-.blue-lock-stat-list {
+.redlock-detail-stat-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0 12px;
 }
 
-.blue-lock-stat-row {
+.redlock-detail-stat-row {
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: baseline;
@@ -1288,14 +1288,14 @@ textarea {
   padding: 7px 0;
 }
 
-.blue-lock-stat-row span {
+.redlock-detail-stat-row span {
   font-size: 13px;
   font-weight: 900;
   line-height: 1.05;
   text-transform: uppercase;
 }
 
-.blue-lock-stat-row strong {
+.redlock-detail-stat-row strong {
   font-size: 1.45rem;
   line-height: 1;
 }
@@ -1426,30 +1426,30 @@ textarea {
     max-height: 300px;
   }
 
-  .blue-lock-sheet {
+  .redlock-detail-sheet {
     padding: 14px;
   }
 
-  .blue-lock-sheet__top {
+  .redlock-detail-sheet__top {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .blue-lock-grid,
-  .blue-lock-stats {
+  .redlock-detail-grid,
+  .redlock-detail-stats {
     grid-template-columns: 1fr;
   }
 
-  .blue-lock-id {
+  .redlock-detail-id {
     grid-template-columns: 120px 1fr;
     align-items: start;
   }
 
-  .blue-lock-meta {
+  .redlock-detail-meta {
     grid-column: 1 / -1;
   }
 
-  .blue-lock-radar__axis {
+  .redlock-detail-radar__axis {
     transform:
       rotate(var(--axis-angle))
       translateY(-150px)
@@ -1457,7 +1457,7 @@ textarea {
       translate(-50%, -50%);
   }
 
-  .blue-lock-stat-list {
+  .redlock-detail-stat-list {
     grid-template-columns: 1fr;
   }
 }
@@ -1469,11 +1469,819 @@ textarea {
 }
 
 @media (max-width: 1180px) and (min-width: 769px) {
-  .blue-lock-grid {
+  .redlock-detail-grid {
     grid-template-columns: 220px 1fr;
   }
 
-  .blue-lock-stats {
+  .redlock-detail-stats {
     grid-column: 1 / -1;
   }
 }
+
+/* RedLock visual system */
+:root {
+  --bg-0: #050506;
+  --bg-1: #100507;
+  --bg-2: #1a0a0e;
+  --surface: rgba(13, 14, 18, 0.84);
+  --surface-soft: rgba(20, 18, 23, 0.78);
+  --surface-strong: rgba(5, 5, 7, 0.94);
+  --line: rgba(255, 46, 74, 0.26);
+  --line-strong: rgba(255, 46, 74, 0.56);
+  --text-main: #fff7f8;
+  --text-muted: #a99ca0;
+  --text-soft: #f0dfe2;
+  --accent: #ff2e4a;
+  --accent-2: #7b0616;
+  --warning: #ffb55e;
+  --danger: #ff2e4a;
+  --hero: #ff2e4a;
+  --hero-2: #ff7a45;
+  --shadow-panel: 0 28px 72px -38px rgba(0, 0, 0, 0.88);
+  --shadow-glow: 0 0 0 1px rgba(255, 46, 74, 0.14), 0 26px 68px -34px rgba(255, 46, 74, 0.72);
+  --radius-xl: 8px;
+  --radius-lg: 8px;
+}
+
+:where(.app-shell, .auth-popup-shell, .club-dashboard, .match-view) * {
+  letter-spacing: 0 !important;
+}
+
+body {
+  background:
+    radial-gradient(circle at 22% 12%, rgba(255, 46, 74, 0.24), transparent 26%),
+    radial-gradient(circle at 80% 0%, rgba(255, 122, 69, 0.14), transparent 26%),
+    linear-gradient(135deg, rgba(4, 4, 6, 0.9), rgba(17, 5, 9, 0.84)),
+    url('/app/background.png') center / cover no-repeat fixed;
+}
+
+body::before {
+  opacity: 0.32;
+  background:
+    linear-gradient(rgba(255, 46, 74, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 46, 74, 0.045) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+body::after {
+  opacity: 0.72;
+  background:
+    radial-gradient(circle at 50% 112%, rgba(255, 46, 74, 0.24), transparent 28%),
+    linear-gradient(180deg, rgba(5, 5, 7, 0.1) 0%, rgba(5, 5, 7, 0.82) 100%);
+}
+
+.redlock-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.redlock-bg__grid,
+.redlock-bg__scan,
+.redlock-bg__flare {
+  position: absolute;
+  inset: 0;
+}
+
+.redlock-bg__grid {
+  opacity: 0.4;
+  background:
+    linear-gradient(rgba(255, 46, 74, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 46, 74, 0.045) 1px, transparent 1px);
+  background-size: 72px 72px;
+  transform: perspective(700px) rotateX(58deg) translateY(12%);
+  transform-origin: bottom;
+  animation: redlockGrid 14s linear infinite;
+}
+
+.redlock-bg__scan {
+  opacity: 0.18;
+  background: linear-gradient(180deg, transparent 0 48%, rgba(255, 46, 74, 0.38) 50%, transparent 52% 100%);
+  animation: redlockScan 6.5s linear infinite;
+}
+
+.redlock-bg__flare {
+  inset: auto;
+  width: min(42vw, 440px);
+  aspect-ratio: 1;
+  border-radius: 999px;
+  filter: blur(4px);
+  opacity: 0.42;
+  animation: redlockPulse 5.8s ease-in-out infinite;
+}
+
+.redlock-bg__flare--left {
+  left: -150px;
+  top: 18%;
+  background: radial-gradient(circle, rgba(255, 46, 74, 0.5), transparent 64%);
+}
+
+.redlock-bg__flare--right {
+  right: -160px;
+  bottom: 8%;
+  background: radial-gradient(circle, rgba(255, 122, 69, 0.34), transparent 66%);
+  animation-delay: 1.2s;
+}
+
+@keyframes redlockGrid {
+  from {
+    background-position: 0 0;
+  }
+
+  to {
+    background-position: 0 72px;
+  }
+}
+
+@keyframes redlockScan {
+  from {
+    transform: translateY(-100%);
+  }
+
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes redlockPulse {
+  0%,
+  100% {
+    transform: scale(0.94);
+    opacity: 0.32;
+  }
+
+  50% {
+    transform: scale(1.08);
+    opacity: 0.52;
+  }
+}
+
+.app-shell::before,
+.wuxia-shell__mist,
+.wuxia-shell__flare {
+  display: none;
+}
+
+.app-shell__inner {
+  animation: redlockEnter 0.34s ease both;
+}
+
+@keyframes redlockEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.redlock-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: min(100%, 1360px);
+  margin: 0 auto 18px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 46, 74, 0.2);
+  border-radius: 8px;
+  background: rgba(5, 5, 7, 0.66);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.36), 0 0 32px rgba(255, 46, 74, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+.redlock-brand {
+  position: relative;
+  display: inline-grid;
+  gap: 2px;
+  color: #fff;
+  font-family: 'Bebas Neue', 'Barlow', sans-serif;
+  font-size: 1.72rem;
+  line-height: 1;
+  text-transform: uppercase;
+  text-shadow: 0 0 20px rgba(255, 46, 74, 0.62);
+}
+
+.redlock-brand::after {
+  content: 'REDLOCK';
+  position: absolute;
+  inset: 0;
+  color: rgba(255, 46, 74, 0.48);
+  transform: translate(2px, 1px);
+  clip-path: inset(58% 0 18% 0);
+  animation: redlockGlitch 3.7s steps(2, end) infinite;
+}
+
+.redlock-brand small {
+  color: rgba(255, 224, 228, 0.62);
+  font: 700 0.68rem/1 'Barlow', sans-serif;
+  text-transform: uppercase;
+}
+
+@keyframes redlockGlitch {
+  0%,
+  82%,
+  100% {
+    opacity: 0;
+    transform: translate(0);
+  }
+
+  86% {
+    opacity: 1;
+    transform: translate(2px, 1px);
+  }
+
+  90% {
+    opacity: 0.7;
+    transform: translate(-2px, -1px);
+  }
+}
+
+.app-bottom-nav {
+  width: min(calc(100vw - 24px), 560px);
+  border-color: rgba(255, 46, 74, 0.3);
+  border-radius: 8px;
+  background: rgba(6, 6, 8, 0.78);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.58), 0 0 34px rgba(255, 46, 74, 0.12);
+}
+
+.app-bottom-nav__button {
+  border-radius: 8px;
+  color: rgba(255, 235, 238, 0.78);
+}
+
+.app-bottom-nav__button[data-active='true'] {
+  background:
+    linear-gradient(180deg, rgba(255, 46, 74, 0.28), rgba(95, 8, 22, 0.3)),
+    rgba(255, 255, 255, 0.04);
+  color: #fff;
+  box-shadow: 0 0 26px rgba(255, 46, 74, 0.24), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.brand-logo__image {
+  border-radius: 8px;
+  border-color: rgba(255, 46, 74, 0.36);
+  box-shadow: 0 0 26px rgba(255, 46, 74, 0.18), 0 18px 44px -24px rgba(0, 0, 0, 0.8);
+}
+
+.brand-logo__title,
+.game-title,
+.game-header-title {
+  color: #fff;
+  text-transform: uppercase;
+  text-shadow: 0 0 24px rgba(255, 46, 74, 0.24);
+}
+
+.brand-logo__subtitle,
+.game-header-kicker {
+  color: #ff8a98;
+}
+
+.game-panel {
+  border-color: rgba(255, 46, 74, 0.24);
+  border-radius: 8px;
+  background:
+    linear-gradient(145deg, rgba(255, 46, 74, 0.08), transparent 36%),
+    linear-gradient(180deg, rgba(18, 15, 19, 0.92), rgba(6, 6, 8, 0.96));
+  box-shadow: var(--shadow-panel);
+}
+
+.game-panel::before {
+  background:
+    radial-gradient(circle at top right, rgba(255, 46, 74, 0.26), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 22%);
+}
+
+.game-panel--accent {
+  border-color: rgba(255, 46, 74, 0.5);
+  box-shadow: var(--shadow-panel), var(--shadow-glow);
+}
+
+.game-panel--soft {
+  background: linear-gradient(180deg, rgba(18, 16, 20, 0.86), rgba(6, 6, 8, 0.94));
+}
+
+.game-chip,
+.game-stat-card,
+.game-table,
+.team-club-card,
+.campaign-match-card {
+  border-color: rgba(255, 46, 74, 0.22);
+  border-radius: 8px;
+  background: rgba(9, 9, 12, 0.72);
+}
+
+.game-stat-card {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 0 28px rgba(255, 46, 74, 0.06);
+}
+
+.game-stat-card__label,
+.campaign-match-card__stage {
+  color: rgba(255, 181, 190, 0.68);
+}
+
+.game-stat-card__value,
+.campaign-match-card__meta strong {
+  color: #fff;
+}
+
+.game-button-primary,
+.game-button-secondary,
+.game-button-ghost {
+  border-radius: 8px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.game-button-primary {
+  border-color: rgba(255, 112, 128, 0.55);
+  background: linear-gradient(135deg, #ff2e4a 0%, #7b0616 100%);
+  color: #fff;
+  box-shadow: 0 18px 44px -22px rgba(255, 46, 74, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.game-button-secondary {
+  border-color: rgba(255, 46, 74, 0.28);
+  background: linear-gradient(180deg, rgba(36, 18, 23, 0.96), rgba(10, 9, 12, 0.98));
+  color: #ffe3e7;
+}
+
+.game-button-ghost {
+  border-color: rgba(255, 46, 74, 0.22);
+  background: rgba(255, 46, 74, 0.08);
+  color: #ffd7dd;
+}
+
+.game-button-primary:hover,
+.game-button-secondary:hover,
+.game-button-ghost:hover,
+.campaign-match-card:hover,
+.team-club-card:hover {
+  border-color: rgba(255, 78, 101, 0.72);
+  box-shadow: 0 18px 44px -28px rgba(255, 46, 74, 0.86);
+}
+
+.game-input,
+.game-select {
+  border-color: rgba(255, 46, 74, 0.24);
+  border-radius: 8px;
+  background: rgba(5, 5, 7, 0.72);
+  color: #fff;
+}
+
+.game-input:focus,
+.game-select:focus {
+  border-color: rgba(255, 46, 74, 0.68);
+  box-shadow: 0 0 0 3px rgba(255, 46, 74, 0.16);
+}
+
+.game-table thead {
+  background: rgba(50, 12, 20, 0.82);
+}
+
+.game-table th,
+.game-table td {
+  border-bottom-color: rgba(255, 46, 74, 0.12);
+}
+
+.game-table tbody tr[data-active='true'] {
+  background: linear-gradient(90deg, rgba(255, 46, 74, 0.2), rgba(9, 9, 12, 0.76));
+}
+
+.game-scroll {
+  scrollbar-color: rgba(255, 46, 74, 0.45) transparent;
+}
+
+.game-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 46, 74, 0.4);
+}
+
+.game-modal-backdrop {
+  background: rgba(3, 3, 5, 0.74);
+  backdrop-filter: blur(10px);
+}
+
+.game-modal-card,
+.tactics-popup-card,
+.player-detail-popup-card {
+  border-radius: 8px;
+}
+
+.campaign-match-card {
+  background:
+    radial-gradient(circle at 92% 12%, rgba(255, 46, 74, 0.24), transparent 32%),
+    linear-gradient(180deg, rgba(24, 17, 22, 0.94), rgba(6, 6, 8, 0.96));
+}
+
+.campaign-match-card[data-cleared='true'] {
+  border-color: rgba(255, 181, 94, 0.3);
+  background:
+    radial-gradient(circle at 92% 12%, rgba(255, 181, 94, 0.16), transparent 32%),
+    linear-gradient(180deg, rgba(24, 17, 22, 0.92), rgba(6, 6, 8, 0.96));
+}
+
+.redlock-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 18px;
+  min-height: 260px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 46, 74, 0.42);
+  border-radius: 8px;
+  padding: clamp(22px, 4vw, 42px);
+  background:
+    linear-gradient(90deg, rgba(5, 5, 7, 0.94), rgba(18, 5, 9, 0.72)),
+    radial-gradient(circle at 82% 24%, rgba(255, 46, 74, 0.32), transparent 32%);
+  box-shadow: var(--shadow-panel), var(--shadow-glow);
+}
+
+.redlock-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.34;
+  background:
+    linear-gradient(115deg, transparent 0 44%, rgba(255, 46, 74, 0.42) 45%, transparent 47% 100%),
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: auto, 100% 18px;
+}
+
+.redlock-hero__content,
+.redlock-hero__meta {
+  position: relative;
+  z-index: 1;
+}
+
+.redlock-hero h1 {
+  margin: 10px 0 0;
+  max-width: 760px;
+  color: #fff;
+  font-family: 'Bebas Neue', 'Barlow', sans-serif;
+  font-size: clamp(3rem, 8vw, 7.2rem);
+  line-height: 0.9;
+  text-transform: uppercase;
+  text-shadow: 0 0 36px rgba(255, 46, 74, 0.38);
+}
+
+.redlock-hero p {
+  max-width: 640px;
+  margin: 14px 0 0;
+  color: rgba(255, 233, 236, 0.78);
+  line-height: 1.6;
+}
+
+.redlock-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.redlock-hero__meta {
+  display: grid;
+  min-width: min(280px, 100%);
+  gap: 10px;
+}
+
+.redlock-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  border: 1px solid rgba(255, 46, 74, 0.32);
+  border-radius: 999px;
+  padding: 5px 10px;
+  background: rgba(255, 46, 74, 0.12);
+  color: #ffdce1;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.redlock-badge--dark {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.redlock-badge--success {
+  border-color: rgba(72, 255, 166, 0.28);
+  background: rgba(72, 255, 166, 0.1);
+  color: #bcffd9;
+}
+
+.redlock-badge--warning {
+  border-color: rgba(255, 181, 94, 0.34);
+  background: rgba(255, 181, 94, 0.1);
+  color: #ffe1b6;
+}
+
+.redlock-badge--muted {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 236, 239, 0.62);
+}
+
+.redlock-statbar {
+  display: grid;
+  gap: 6px;
+}
+
+.redlock-statbar__top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: rgba(255, 235, 238, 0.78);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.redlock-statbar__top strong {
+  color: #fff;
+}
+
+.redlock-statbar__track {
+  overflow: hidden;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.redlock-statbar__track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #7b0616, #ff2e4a 58%, #ffb55e);
+  box-shadow: 0 0 16px rgba(255, 46, 74, 0.42);
+}
+
+.redlock-statbar small {
+  color: rgba(255, 235, 238, 0.56);
+  font-size: 11px;
+}
+
+.redlock-player-card,
+.redlock-match-card,
+.redlock-skill-panel,
+.redlock-training-zone {
+  border: 1px solid rgba(255, 46, 74, 0.24);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 92% 8%, rgba(255, 46, 74, 0.18), transparent 34%),
+    rgba(8, 8, 11, 0.82);
+  box-shadow: 0 22px 52px -34px rgba(255, 46, 74, 0.62);
+}
+
+.redlock-player-card {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+}
+
+.redlock-player-card__head {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.redlock-player-card__head img {
+  width: 54px;
+  height: 54px;
+  border: 1px solid rgba(255, 46, 74, 0.32);
+  border-radius: 50%;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.redlock-player-card__head p,
+.redlock-match-card p {
+  margin: 0;
+  color: rgba(255, 181, 190, 0.72);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.redlock-player-card__head h3,
+.redlock-match-card h3 {
+  margin: 3px 0 0;
+  overflow: hidden;
+  color: #fff;
+  font-family: 'Bebas Neue', 'Barlow', sans-serif;
+  font-size: 1.35rem;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.redlock-player-card__head strong {
+  color: #fff;
+  font-family: 'Bebas Neue', 'Barlow', sans-serif;
+  font-size: 2rem;
+}
+
+.redlock-player-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.redlock-player-card__stats {
+  display: grid;
+  gap: 10px;
+}
+
+.redlock-match-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.redlock-match-card > span {
+  color: rgba(255, 235, 238, 0.72);
+  font-size: 13px;
+}
+
+.redlock-ranking {
+  display: grid;
+  gap: 8px;
+}
+
+.redlock-ranking__row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 72px 58px auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 54px;
+  border: 1px solid rgba(255, 46, 74, 0.18);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.redlock-ranking__row[data-top='true'] {
+  border-color: rgba(255, 46, 74, 0.62);
+  background: linear-gradient(90deg, rgba(255, 46, 74, 0.22), rgba(255, 255, 255, 0.04));
+  box-shadow: 0 0 28px rgba(255, 46, 74, 0.2);
+}
+
+.redlock-ranking__row strong,
+.redlock-ranking__row b {
+  color: #fff;
+  font-family: 'Bebas Neue', 'Barlow', sans-serif;
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.redlock-ranking__row span {
+  overflow: hidden;
+  color: rgba(255, 244, 246, 0.92);
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.redlock-ranking__row small {
+  color: rgba(255, 235, 238, 0.58);
+  font-size: 12px;
+}
+
+.redlock-skill-panel,
+.redlock-training-zone {
+  padding: 16px;
+}
+
+.redlock-detail-sheet {
+  border: 1px solid rgba(255, 46, 74, 0.36);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 16% 18%, rgba(255, 46, 74, 0.18), transparent 24%),
+    linear-gradient(rgba(255, 46, 74, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 46, 74, 0.035) 1px, transparent 1px),
+    #07070a;
+  background-size: auto, 38px 38px, 38px 38px, auto;
+  color: #fff;
+}
+
+.redlock-detail-sheet::before {
+  opacity: 0.18;
+  background:
+    linear-gradient(120deg, transparent 0 42%, rgba(255, 46, 74, 0.48) 43%, transparent 45% 100%),
+    repeating-linear-gradient(0deg, transparent 0 9px, rgba(255, 255, 255, 0.035) 10px);
+}
+
+.redlock-detail-sheet::after {
+  opacity: 0.12;
+  background: radial-gradient(circle at 82% 20%, rgba(255, 46, 74, 0.6), transparent 28%);
+}
+
+.redlock-detail-kana,
+.redlock-detail-stat-block h2 {
+  color: #ff8a98;
+}
+
+.redlock-detail-sheet h1,
+.redlock-detail-stat-block h2,
+.redlock-detail-id__plate b,
+.redlock-detail-radar__axis strong {
+  font-family: 'Bebas Neue', 'Barlow', sans-serif;
+  color: #fff;
+}
+
+.redlock-detail-back {
+  border-color: rgba(255, 46, 74, 0.34);
+  border-radius: 8px;
+  background: rgba(255, 46, 74, 0.12);
+  color: #fff;
+}
+
+.redlock-detail-id__portrait,
+.redlock-detail-id__plate,
+.redlock-detail-meta,
+.redlock-detail-stat-block {
+  border-color: rgba(255, 46, 74, 0.24);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.redlock-detail-id__plate {
+  color: #fff;
+}
+
+.redlock-detail-id__plate span,
+.redlock-detail-meta span,
+.redlock-detail-stat-row span,
+.redlock-detail-radar__axis span,
+.redlock-detail-radar__core span {
+  color: rgba(255, 233, 236, 0.7);
+}
+
+.redlock-detail-radar__circle {
+  border-color: rgba(255, 46, 74, 0.34);
+  background:
+    radial-gradient(circle, rgba(255, 46, 74, 0.18), transparent 56%),
+    rgba(255, 255, 255, 0.03);
+}
+
+.redlock-detail-radar__web {
+  border-color: rgba(255, 46, 74, 0.18);
+  background:
+    radial-gradient(circle, transparent 0 24%, rgba(255, 46, 74, 0.13) 25% 26%, transparent 27% 49%, rgba(255, 46, 74, 0.13) 50% 51%, transparent 52%),
+    linear-gradient(90deg, transparent 49.5%, rgba(255, 46, 74, 0.16) 50%, transparent 50.5%),
+    linear-gradient(30deg, transparent 49.5%, rgba(255, 46, 74, 0.16) 50%, transparent 50.5%),
+    linear-gradient(150deg, transparent 49.5%, rgba(255, 46, 74, 0.16) 50%, transparent 50.5%);
+}
+
+.redlock-detail-radar__shape {
+  background: rgba(255, 46, 74, 0.32);
+  box-shadow: inset 0 0 30px rgba(255, 46, 74, 0.24);
+}
+
+.redlock-detail-radar__core {
+  border-color: rgba(255, 46, 74, 0.38);
+  background: rgba(8, 8, 11, 0.86);
+}
+
+.redlock-detail-stat-row {
+  border-bottom-color: rgba(255, 46, 74, 0.13);
+}
+
+.redlock-detail-stat-row strong {
+  color: #fff;
+}
+
+@media (max-width: 760px) {
+  .redlock-topbar {
+    position: relative;
+    margin-bottom: 14px;
+  }
+
+  .redlock-hero {
+    grid-template-columns: 1fr;
+    min-height: 230px;
+    padding: 22px;
+  }
+
+  .redlock-hero__meta {
+    min-width: 0;
+  }
+
+  .redlock-ranking__row {
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+  }
+
+  .redlock-ranking__row small {
+    display: none;
+  }
+}
+

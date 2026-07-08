@@ -352,7 +352,7 @@ export function TacticsPopup({
             </div>
 
             <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_300px]">
-              <div className="relative overflow-hidden rounded-[22px] border border-emerald-300/25 bg-[radial-gradient(circle_at_50%_20%,rgba(52,211,153,0.18),transparent_42%),linear-gradient(180deg,#0f522f_0%,#0b3c23_40%,#072f1c_100%)] p-4">
+              <div className="relative overflow-hidden rounded-[8px] border border-red-400/30 bg-[radial-gradient(circle_at_50%_20%,rgba(255,46,74,0.18),transparent_42%),linear-gradient(180deg,#123c28_0%,#0b2f20_42%,#071b14_100%)] p-4">
                 <div className="pointer-events-none absolute inset-4 rounded-[18px] border border-white/18" />
                 <div className="pointer-events-none absolute left-1/2 top-4 bottom-4 w-px -translate-x-1/2 bg-white/20" />
                 <div className="pointer-events-none absolute left-1/2 top-1/2 h-20 w-20 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20" />
@@ -378,7 +378,7 @@ export function TacticsPopup({
                             }}
                           />
                         </div>
-                        <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-100">
+                        <p className="mt-1 text-[10px] font-bold uppercase text-red-100">
                           {slot.label}
                         </p>
                         <p className="max-w-[90px] truncate text-xs font-semibold text-white">
@@ -387,7 +387,7 @@ export function TacticsPopup({
                         {card ? (
                           <button
                             type="button"
-                            className="mt-1 rounded-full border border-white/20 bg-black/45 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white transition hover:border-emerald-300/70 hover:bg-emerald-400/20"
+                            className="mt-1 rounded-full border border-red-300/25 bg-black/45 px-2 py-0.5 text-[10px] font-bold uppercase text-white transition hover:border-red-300/70 hover:bg-red-500/20"
                             onClick={() => setDetailPlayerId(card.userPlayerId)}
                           >
                             Detail

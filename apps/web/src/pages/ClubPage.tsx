@@ -124,7 +124,7 @@ export function ClubPage() {
     { label: 'Gacha', icon: <SparkIcon />, onClick: () => navigate(ROUTES.gacha), tone: 'gold' },
   ];
   const quickActions: DockAction[] = [
-    { label: 'Campaign', icon: <WhistleIcon />, onClick: () => setActiveModal('campaign'), tone: 'gold' },
+    { label: 'Start Match', icon: <WhistleIcon />, onClick: () => setActiveModal('campaign'), tone: 'red' },
     { label: 'PvP', icon: <VersusIcon />, onClick: () => navigate(ROUTES.pvp), tone: 'red' },
     { label: 'Lineup', icon: <FormationIcon />, onClick: () => setActiveModal('lineup') },
     { label: 'Training', icon: <TrainingIcon />, onClick: () => setActiveModal('training') },
@@ -177,6 +177,7 @@ export function ClubPage() {
       <div className="club-dashboard__identity">
         <p>{userName}</p>
         <strong>{team.teamName}</strong>
+        <small>Awaken Your Ego. Dominate The Field.</small>
       </div>
 
       <nav className="club-dashboard__quick" aria-label="Club actions">
@@ -240,7 +241,7 @@ export function ClubPage() {
       {activeModal ? (
         <ClubModalShell
           title={getClubModalTitle(activeModal)}
-          tone={activeModal === 'campaign' ? 'gold' : 'cyan'}
+          tone={activeModal === 'campaign' ? 'red' : 'cyan'}
           onClose={() => setActiveModal(null)}
         >
           {activeModal === 'campaign' ? (
@@ -257,7 +258,7 @@ export function ClubPage() {
 }
 
 function getClubModalTitle(modal: Exclude<ClubModal, null>) {
-  if (modal === 'campaign') return 'Campaign';
+  if (modal === 'campaign') return 'Start Match';
   if (modal === 'lineup') return 'Lineup';
   return 'Training Room';
 }
@@ -269,7 +270,7 @@ function ClubModalShell({
   children,
 }: {
   title: string;
-  tone: 'cyan' | 'gold';
+  tone: 'cyan' | 'gold' | 'red';
   onClose: () => void;
   children: ReactNode;
 }) {
@@ -279,7 +280,7 @@ function ClubModalShell({
       <section className="club-modal__panel" data-tone={tone}>
         <header className="club-modal__head">
           <div>
-            <span>{tone === 'gold' ? 'Season route' : 'Match squad'}</span>
+            <span>{tone === 'red' ? 'Battle route' : 'Match squad'}</span>
             <strong>{title}</strong>
           </div>
           <button type="button" className="club-modal__close" onClick={onClose} aria-label="Close">

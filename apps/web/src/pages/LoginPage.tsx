@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useLoginMutation, useRegisterMutation } from '../hooks/useAuthMutations';
 import { ROUTES, defaultAuthenticatedRoute } from '../routes';
 import { BrandLogo } from '../components/auth';
+import { AnimatedBackground } from '../components/redlock/RedLockUI';
 import { AuthTab } from '../enums/auth';
 
 export function LoginPage() {
@@ -85,15 +86,18 @@ export function LoginPage() {
 
   return (
     <main className="app-shell auth-popup-shell">
+      <AnimatedBackground />
       <div className="app-shell__inner auth-popup-shell__inner">
         <section className="game-panel game-panel--accent scan-line overflow-hidden auth-popup-card p-5 sm:p-7">
           <div className="game-panel__content">
             <BrandLogo className="justify-center" compact />
             <h1 className="game-title mt-4 text-center text-3xl font-bold text-white sm:text-4xl">
-              {tab === AuthTab.Login ? 'BLUE LOCK LOGIN' : 'CREATE PROFILE'}
+              {tab === AuthTab.Login ? 'REDLOCK LOGIN' : 'CREATE REDLOCK PROFILE'}
             </h1>
             <p className="game-copy mt-2 text-center text-sm sm:text-base">
-              {tab === AuthTab.Login ? 'Vao tran ngay.' : 'Tao tai khoan moi.'}
+              {tab === AuthTab.Login
+                ? 'Awaken Your Ego. Dominate The Field.'
+                : 'Enter the academy and fight for the striker seat.'}
             </p>
 
             <div className="mt-5 flex gap-2 rounded-[20px] border border-white/8 bg-black/20 p-2">

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useCampainMatches, useCreateCompainNormal } from '../hooks/useAiCampaign';
 import { Banner } from '../components/feedback';
+import { StatusBadge } from '../components/redlock/RedLockUI';
 import { useSession } from '../hooks/useSession';
 import type { CampaignMatch } from '../types';
 import { TacticsPopup } from './TacticsPage';
@@ -89,11 +90,14 @@ export function AiMatchPage() {
         <div className="game-panel__content">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="game-header-kicker">Campaign AI</p>
-              <h2 className="game-title mt-3 text-3xl font-bold text-white">AI Match List</h2>
+              <p className="game-header-kicker">RedLock Campaign</p>
+              <h2 className="game-title mt-3 text-3xl font-bold text-white">Start Match</h2>
+              <p className="game-copy mt-2 max-w-2xl">
+                Review your saved lineup, then enter the next academy battle.
+              </p>
             </div>
             <div className="game-chip">
-              So tran: <span className="font-semibold text-emerald-300">{matches.length}</span>
+              Matches: <span className="font-semibold text-red-200">{matches.length}</span>
             </div>
           </div>
 
@@ -169,10 +173,12 @@ function CampaignMatchCard({
     <article className="campaign-match-card" data-locked={isLocked} data-cleared={isCleared}>
       <p className="campaign-match-card__stage">
         Match {level}
-        <span className="ml-2 text-[10px] text-slate-400">
-          {isCleared ? 'CLEARED' : isLocked ? 'LOCKED' : 'UNLOCKED'}
-        </span>
       </p>
+      <div className="mt-2">
+        <StatusBadge tone={isLocked ? 'muted' : isCleared ? 'warning' : 'red'}>
+          {isCleared ? 'Cleared' : isLocked ? 'Locked' : 'Unlocked'}
+        </StatusBadge>
+      </div>
       <p className="campaign-match-card__club" title={clubName}>
         {clubName}
       </p>

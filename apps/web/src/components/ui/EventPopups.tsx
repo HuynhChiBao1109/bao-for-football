@@ -44,7 +44,7 @@ export function EventPopups() {
   return (
     <>
       {/* <aside className="wuxia-events" aria-label="Su kien noi bat">
-        <p className="wuxia-events__title">Blue Lock Events</p>
+        <p className="wuxia-events__title">RedLock Events</p>
         <div className="wuxia-events__list">
           {EVENTS.map((event, index) => (
             <button
@@ -111,3 +111,4 @@ export function EventPopups() {
     </>
   );
 }
+
