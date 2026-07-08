@@ -369,7 +369,7 @@ function CampaignPopupCard({
       <strong>{clubName}</strong>
       <p>{Number(match.matchReward ?? 0).toLocaleString()} reward</p>
       <button type="button" disabled={isStarting} onClick={() => void onStart()}>
-        {isStarting ? 'Starting...' : 'Lineup'}
+        {isStarting ? 'Starting...' : 'Start Match'}
       </button>
     </article>
   );

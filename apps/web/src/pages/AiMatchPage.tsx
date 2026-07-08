@@ -195,10 +195,10 @@ function CampaignMatchCard({
         {isLocked
           ? 'Locked'
           : isCleared
-            ? 'Edit Tactics & Replay'
+            ? 'Replay Match'
             : isStarting
               ? 'Starting...'
-              : 'Edit Tactics & Start'}
+              : 'Start Match'}
       </button>
     </article>
   );

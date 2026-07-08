@@ -10,6 +10,11 @@ function lerp(from: number, to: number, alpha: number) {
   return from + (to - from) * alpha;
 }
 
+function easeInOut(alpha: number) {
+  const value = clamp(alpha, 0, 1);
+  return value * value * (3 - 2 * value);
+}
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
@@ -27,6 +32,7 @@ function shouldUseBallTrajectory(snapshot: MatchSnapshot) {
   return (
     Boolean(snapshot.ball.skillTrajectory) ||
     event === 7 ||
+    event === 35 ||
     event === 36 ||
     event === 38 ||
     event === 41
@@ -37,7 +43,7 @@ function getBallAnimationDuration(snapshot: MatchSnapshot, frameDuration: number
   const event = snapshot.highlight?.event;
   if (snapshot.ball.skillTrajectory || snapshot.highlight?.skill) return 220;
   if (event === 7 || event === 36 || event === 38) return 220;
-  if (event === 35) return 430;
+  if (event === 35) return Math.max(620, Math.min(900, frameDuration));
   return frameDuration;
 }
 
@@ -88,6 +94,9 @@ function interpolateSnapshot(
     ? clamp(Math.floor(ballAlpha * (ballPath.length - 1)), 0, ballPath.length - 2)
     : 0;
   const pathLocalAlpha = ballPath ? ballAlpha * (ballPath.length - 1) - pathIndex : 0;
+  const easedPlayerAlpha = easeInOut(playerAlpha);
+  const easedBallAlpha = easeInOut(ballAlpha);
+  const easedPathLocalAlpha = easeInOut(pathLocalAlpha);
   const pathFrom = ballPath?.[pathIndex];
   const pathTo = ballPath?.[pathIndex + 1];
 
@@ -97,15 +106,15 @@ function interpolateSnapshot(
       ...next.ball,
       x:
         pathFrom && pathTo
-          ? lerp(pathFrom.x, pathTo.x, pathLocalAlpha)
-          : lerp(ballFromX, next.ball.x, ballAlpha),
+          ? lerp(pathFrom.x, pathTo.x, easedPathLocalAlpha)
+          : lerp(ballFromX, next.ball.x, easedBallAlpha),
       y:
         pathFrom && pathTo
-          ? lerp(pathFrom.y, pathTo.y, pathLocalAlpha)
-          : lerp(ballFromY, next.ball.y, ballAlpha),
+          ? lerp(pathFrom.y, pathTo.y, easedPathLocalAlpha)
+          : lerp(ballFromY, next.ball.y, easedBallAlpha),
     },
-    homePlayers: interpolatePlayers(previous?.homePlayers ?? [], next.homePlayers, playerAlpha),
-    awayPlayers: interpolatePlayers(previous?.awayPlayers ?? [], next.awayPlayers, playerAlpha),
+    homePlayers: interpolatePlayers(previous?.homePlayers ?? [], next.homePlayers, easedPlayerAlpha),
+    awayPlayers: interpolatePlayers(previous?.awayPlayers ?? [], next.awayPlayers, easedPlayerAlpha),
   };
 }
 

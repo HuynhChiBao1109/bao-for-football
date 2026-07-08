@@ -32,7 +32,7 @@ export const DEBUG_TICK_STEP = 1;
 export const FRAME_DURATION_MS = 620;
 export const AUTO_TICK_INTERVAL_MS = FRAME_DURATION_MS;
 const SKILL_FRAME_DURATION_MS = 620;
-const PASS_FRAME_DURATION_MS = 560;
+const PASS_FRAME_DURATION_MS = 760;
 const DEAD_BALL_FRAME_DURATION_MS = 720;
 const MIN_OWNER_POSSESSION_TICKS = Math.max(2, Math.round(1.8 * TICKS_PER_SECOND));
 const MIN_TEAM_POSSESSION_TICKS = Math.max(1, Math.round(0.8 * TICKS_PER_SECOND));
@@ -41,27 +41,27 @@ const TACKLE_CADENCE_TICKS = Math.max(2, Math.round(1.4 * TICKS_PER_SECOND));
 const SHOT_CADENCE_TICKS = Math.max(1, Math.round(1.4 * TICKS_PER_SECOND));
 const BALL_CONTROL_DISTANCE = 2.4;
 const PLAYER_SPEED_UNITS_PER_TICK: Record<PlayerMoveIntent, number> = {
-  anchor: 1.8,
-  kickoff: 4,
-  cover: 4.1,
-  cover_space: 4.4,
-  hold_depth: 2.4,
-  hold_line: 2.4,
-  hold_width: 3,
-  mark: 4.6,
-  track: 5.4,
-  recover: 4.8,
-  support: 5.2,
-  pass_support: 5.2,
-  chase: 6,
-  run: 7,
-  attack_space: 7.2,
-  overlap: 7.4,
-  underlap: 7.2,
-  cut_inside: 7.1,
-  press: 7.8,
+  anchor: 1.25,
+  kickoff: 2.8,
+  cover: 2.9,
+  cover_space: 3.1,
+  hold_depth: 1.7,
+  hold_line: 1.7,
+  hold_width: 2.1,
+  mark: 3.2,
+  track: 3.8,
+  recover: 3.4,
+  support: 3.6,
+  pass_support: 3.6,
+  chase: 4.1,
+  run: 4.7,
+  attack_space: 4.9,
+  overlap: 5,
+  underlap: 4.9,
+  cut_inside: 4.8,
+  press: 5.2,
 };
-const PASS_SPEED_UNITS_PER_TICK = MOVEMENT.passSpeed * SIM_TICK_SECONDS;
+const PASS_SPEED_UNITS_PER_TICK = MOVEMENT.passSpeed * SIM_TICK_SECONDS * 0.62;
 const SHOT_SPEED_UNITS_PER_TICK = MOVEMENT.shotSpeed * SIM_TICK_SECONDS;
 export const FRAMES_PER_ACTION = 5;
 export const ACTIONS_PER_HALF = 14;
@@ -195,6 +195,8 @@ export type SimulationRosterPlayer = {
   teamId: number;
   name: string;
   slug: string | null;
+  savedSlotId: string | null;
+  savedPosition: string | null;
   positions: Array<{ position: string; effect: number }>;
   skills: EPlayerSkill[];
   skillSlugs: string[];
@@ -345,7 +347,7 @@ export type MatchKickoffLineups = {
   awayLineup: MatchRenderPlayer[];
 };
 
-type FormationSlot = { role: string; label: string; x: number; y: number };
+type FormationSlot = { slotId: string; role: string; label: string; x: number; y: number };
 type InternalLineupPlayer = MatchRenderPlayer & {
   anchors: { x: number; y: number };
   raw: SimulationRosterPlayer;
@@ -384,30 +386,30 @@ type ResolvedAction = {
 
 const FORMATION_LAYOUTS: Record<number, FormationSlot[]> = {
   [ETeamFormation.F433]: [
-    { role: "GK", label: "GK", x: 50, y: 92 },
-    { role: "LB", label: "LB", x: 18, y: 77 },
-    { role: "CB", label: "CB", x: 38, y: 79 },
-    { role: "CB", label: "CB", x: 62, y: 79 },
-    { role: "RB", label: "RB", x: 82, y: 77 },
-    { role: "LCM", label: "CM", x: 31, y: 57 },
-    { role: "CM", label: "CM", x: 50, y: 53 },
-    { role: "RCM", label: "CM", x: 69, y: 57 },
-    { role: "LW", label: "LW", x: 20, y: 30 },
-    { role: "ST", label: "ST", x: 50, y: 22 },
-    { role: "RW", label: "RW", x: 80, y: 30 },
+    { slotId: "gk", role: "GK", label: "GK", x: 50, y: 92 },
+    { slotId: "lb", role: "LB", label: "LB", x: 18, y: 77 },
+    { slotId: "lcb", role: "CB", label: "CB", x: 38, y: 79 },
+    { slotId: "rcb", role: "CB", label: "CB", x: 62, y: 79 },
+    { slotId: "rb", role: "RB", label: "RB", x: 82, y: 77 },
+    { slotId: "lcm", role: "LCM", label: "CM", x: 31, y: 57 },
+    { slotId: "cm", role: "CM", label: "CM", x: 50, y: 53 },
+    { slotId: "rcm", role: "RCM", label: "CM", x: 69, y: 57 },
+    { slotId: "lw", role: "LW", label: "LW", x: 20, y: 30 },
+    { slotId: "st", role: "ST", label: "ST", x: 50, y: 22 },
+    { slotId: "rw", role: "RW", label: "RW", x: 80, y: 30 },
   ],
   [ETeamFormation.F442]: [
-    { role: "GK", label: "GK", x: 50, y: 92 },
-    { role: "LB", label: "LB", x: 18, y: 77 },
-    { role: "CB", label: "CB", x: 38, y: 79 },
-    { role: "CB", label: "CB", x: 62, y: 79 },
-    { role: "RB", label: "RB", x: 82, y: 77 },
-    { role: "LM", label: "LM", x: 18, y: 56 },
-    { role: "LCM", label: "CM", x: 40, y: 58 },
-    { role: "RCM", label: "CM", x: 60, y: 58 },
-    { role: "RM", label: "RM", x: 82, y: 56 },
-    { role: "LST", label: "ST", x: 42, y: 25 },
-    { role: "RST", label: "ST", x: 58, y: 25 },
+    { slotId: "gk", role: "GK", label: "GK", x: 50, y: 92 },
+    { slotId: "lb", role: "LB", label: "LB", x: 18, y: 77 },
+    { slotId: "lcb", role: "CB", label: "CB", x: 38, y: 79 },
+    { slotId: "rcb", role: "CB", label: "CB", x: 62, y: 79 },
+    { slotId: "rb", role: "RB", label: "RB", x: 82, y: 77 },
+    { slotId: "lm", role: "LM", label: "LM", x: 18, y: 56 },
+    { slotId: "lcm", role: "LCM", label: "CM", x: 40, y: 58 },
+    { slotId: "rcm", role: "RCM", label: "CM", x: 60, y: 58 },
+    { slotId: "rm", role: "RM", label: "RM", x: 82, y: 56 },
+    { slotId: "st", role: "LST", label: "ST", x: 42, y: 25 },
+    { slotId: "st2", role: "RST", label: "ST", x: 58, y: 25 },
   ],
 };
 
@@ -2077,6 +2079,8 @@ function toInternalLineupPlayer(player: MatchRenderPlayer): InternalLineupPlayer
       teamId: player.teamId,
       name: player.name,
       slug: player.slug,
+      savedSlotId: null,
+      savedPosition: null,
       positions: [{ position: player.displayRole || player.role, effect: 1 }],
       skills,
       skillSlugs: player.skillSlugs,
@@ -5415,7 +5419,8 @@ function buildBallPath(action: ResolvedAction, random: () => number): Trajectory
 
 function pathBetween(from: TrajectoryPoint, to: TrajectoryPoint): TrajectoryPoint[] {
   return Array.from({ length: FRAMES_PER_ACTION }, (_, index) => {
-    const t = easeOut((index + 1) / FRAMES_PER_ACTION);
+    const progress = (index + 1) / FRAMES_PER_ACTION;
+    const t = progress * progress * (3 - 2 * progress);
     return { x: clamp(lerp(from.x, to.x, t), 4, 96), y: clamp(lerp(from.y, to.y, t), 4, 96) };
   });
 }
@@ -6585,7 +6590,8 @@ function selectLineup(team: SimulationTeamInput, side: Side): InternalLineupPlay
     FORMATION_LAYOUTS[ETeamFormation.F433];
   const pool = [...team.players];
   return formation.map((slot, index) => {
-    const bestIndex = pool.reduce(
+    const savedSlotIndex = pool.findIndex((player) => player.savedSlotId === slot.slotId);
+    const bestIndex = savedSlotIndex >= 0 ? savedSlotIndex : pool.reduce(
       (best, player, playerIndex) => {
         const score = playerFitScore(player, slot);
         return score > best.score ? { index: playerIndex, score } : best;

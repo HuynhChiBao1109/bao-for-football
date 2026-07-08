@@ -3,29 +3,29 @@ export const SIM_TICK_SECONDS = SIM_TICK_MS / 1000;
 export const SIM_TICKS_PER_SECOND = 1000 / SIM_TICK_MS;
 
 export const MOVEMENT = {
-  walkingSpeed: 5,
-  jogSpeed: 10,
-  sprintSpeed: 16,
+  walkingSpeed: 3.4,
+  jogSpeed: 6.8,
+  sprintSpeed: 10.2,
 
-  playerWithBallSpeedMultiplier: 0.9,
+  playerWithBallSpeedMultiplier: 0.82,
 
-  acceleration: 18,
-  braking: 20,
+  acceleration: 8.5,
+  braking: 12,
 
-  turnSmoothing: 0.95,
+  turnSmoothing: 0.42,
 
-  arrivalRadius: 7,
-  stopRadius: 0.5,
+  arrivalRadius: 11,
+  stopRadius: 0.8,
 
   separationRadius: 6,
   separationStrength: 1.4,
 
   sameTargetOffset: 4,
 
-  passSpeed: 45,
-  shotSpeed: 75,
+  passSpeed: 27,
+  shotSpeed: 62,
 
-  ballFriction: 15,
+  ballFriction: 10,
 
   ballControlRadius: 2.0,
 

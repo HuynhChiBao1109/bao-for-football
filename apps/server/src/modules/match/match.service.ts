@@ -563,8 +563,14 @@ export class MatchService implements IMatchService {
       skillMap.set(key, current);
     });
 
-    const formationOrder = formations.reduce<Record<string, number>>((acc, item, index) => {
-      acc[String(item.userPlayerId)] = index;
+    const formationByUserPlayerId = formations.reduce<
+      Record<string, { order: number; slotId: string | null; position: string | null }>
+    >((acc, item, index) => {
+      acc[String(item.userPlayerId)] = {
+        order: index,
+        slotId: item.position?.slotId ? String(item.position.slotId) : null,
+        position: item.position?.position ? String(item.position.position) : null,
+      };
       return acc;
     }, {});
 
@@ -582,6 +588,8 @@ export class MatchService implements IMatchService {
           teamId,
           name: player.name,
           slug: player.slug,
+          savedSlotId: formationByUserPlayerId[String(item.id)]?.slotId ?? null,
+          savedPosition: formationByUserPlayerId[String(item.id)]?.position ?? null,
           positions: (item.positions ?? []).map((position) => ({
             position: String(position.position),
             effect: Number(position.rating ?? 1),
@@ -612,8 +620,8 @@ export class MatchService implements IMatchService {
       .filter((item): item is SimulationRosterPlayer => Boolean(item))
       .sort(
         (left, right) =>
-          (formationOrder[String(left.userPlayerId)] ?? Number.MAX_SAFE_INTEGER) -
-          (formationOrder[String(right.userPlayerId)] ?? Number.MAX_SAFE_INTEGER),
+          (formationByUserPlayerId[String(left.userPlayerId)]?.order ?? Number.MAX_SAFE_INTEGER) -
+          (formationByUserPlayerId[String(right.userPlayerId)]?.order ?? Number.MAX_SAFE_INTEGER),
       );
   }
 }

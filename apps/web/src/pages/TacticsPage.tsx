@@ -293,14 +293,144 @@ export function TacticsPopup({
   campaignMatchId: string;
   onClose: () => void;
 }) {
+  const navigate = useNavigate();
+  const { data: sessionData } = useSession();
+  const tacticsTeamId = sessionData?.team?.id ? `team-${sessionData.team.id}` : undefined;
+  const { data: loaded, isLoading, error } = useTactics(tacticsTeamId);
+  const { data: cards = [] } = usePlayerCards();
+  const startCampaignMatch = useStartCampaignMatch();
+  const [detailPlayerId, setDetailPlayerId] = useState<number | null>(null);
+
+  const formation = loaded?.formation || '4-3-3';
+  const slots = FORMATION_SLOTS[formation] ?? FORMATION_SLOTS['4-3-3'];
+  const cardsById = useMemo(() => new Map(cards.map((card) => [card.userPlayerId, card])), [cards]);
+  const lineupBySlot = useMemo(() => {
+    const next: Record<string, number> = {};
+    loaded?.lineup?.forEach((item) => {
+      if (item.slotId && Number(item.userPlayerId) > 0) {
+        next[item.slotId] = Number(item.userPlayerId);
+      }
+    });
+    return next;
+  }, [loaded]);
+  const starterCount = slots.filter((slot) => Boolean(lineupBySlot[slot.slotId])).length;
+
+  async function startMatch() {
+    const response = await startCampaignMatch.mutateAsync({ campainMatchId: campaignMatchId });
+    navigate(matchLivePath(response.matchId));
+    onClose();
+  }
+
   return (
     <div className="game-modal-backdrop tactics-popup-backdrop" role="dialog" aria-modal="true">
       <div className="tactics-popup-card game-scroll">
-        <TacticsPage
-          pendingCampaignMatchIdOverride={campaignMatchId}
-          isPopup
-          onClose={onClose}
-        />
+        <article className="game-panel game-panel--accent overflow-hidden p-5 sm:p-6">
+          <div className="game-panel__content">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="game-header-kicker">Match Lineup</p>
+                <h2 className="game-title mt-3 text-3xl font-bold text-white">Saved Lineup</h2>
+                <p className="game-copy mt-2">
+                  Review the current saved lineup before starting the match.
+                </p>
+              </div>
+              <button type="button" className="game-button-ghost px-3 py-2" onClick={onClose}>
+                Close
+              </button>
+            </div>
+
+            {isLoading ? <Banner text="Loading saved lineup..." tone="info" /> : null}
+            {error ? <Banner text={(error as Error).message} tone="error" /> : null}
+
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <span className="game-chip">
+                Formation <strong>{formation}</strong>
+              </span>
+              <span className="game-chip">
+                Starters <strong>{starterCount}/11</strong>
+              </span>
+            </div>
+
+            <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_300px]">
+              <div className="relative overflow-hidden rounded-[22px] border border-emerald-300/25 bg-[radial-gradient(circle_at_50%_20%,rgba(52,211,153,0.18),transparent_42%),linear-gradient(180deg,#0f522f_0%,#0b3c23_40%,#072f1c_100%)] p-4">
+                <div className="pointer-events-none absolute inset-4 rounded-[18px] border border-white/18" />
+                <div className="pointer-events-none absolute left-1/2 top-4 bottom-4 w-px -translate-x-1/2 bg-white/20" />
+                <div className="pointer-events-none absolute left-1/2 top-1/2 h-20 w-20 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20" />
+                <div className="relative h-[640px] sm:h-[720px]">
+                  {slots.map((slot) => {
+                    const card = lineupBySlot[slot.slotId]
+                      ? cardsById.get(lineupBySlot[slot.slotId])
+                      : null;
+                    return (
+                      <div
+                        key={slot.slotId}
+                        className="absolute -translate-x-1/2 -translate-y-1/2 rounded-xl p-1 text-center"
+                        style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
+                      >
+                        <div className="mx-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-2 border-white/60 bg-black/30 shadow-[0_0_20px_rgba(0,0,0,0.35)]">
+                          <img
+                            src={resolvePlayerAvatarUrl(card)}
+                            alt={card?.name || slot.label}
+                            className="h-full w-full object-cover"
+                            onError={(event) => {
+                              event.currentTarget.onerror = null;
+                              event.currentTarget.src = DEFAULT_PLAYER_AVATAR;
+                            }}
+                          />
+                        </div>
+                        <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-100">
+                          {slot.label}
+                        </p>
+                        <p className="max-w-[90px] truncate text-xs font-semibold text-white">
+                          {card ? shortName(card.name) : 'Empty'}
+                        </p>
+                        {card ? (
+                          <button
+                            type="button"
+                            className="mt-1 rounded-full border border-white/20 bg-black/45 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white transition hover:border-emerald-300/70 hover:bg-emerald-400/20"
+                            onClick={() => setDetailPlayerId(card.userPlayerId)}
+                          >
+                            Detail
+                          </button>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="game-stat-card">
+                <p className="game-stat-card__label">Match Ready</p>
+                <p className="game-stat-card__value">{starterCount}/11</p>
+                <p className="game-stat-card__hint">
+                  Match will use these saved players in their saved slots.
+                </p>
+                <button
+                  type="button"
+                  className="game-button-primary mt-4 w-full"
+                  disabled={startCampaignMatch.isPending || starterCount < 11}
+                  onClick={() => void startMatch()}
+                >
+                  {startCampaignMatch.isPending ? 'Starting...' : 'Start Match'}
+                </button>
+                {starterCount < 11 ? (
+                  <p className="mt-3 text-sm text-amber-200">
+                    Save a full lineup before starting this match.
+                  </p>
+                ) : null}
+                {startCampaignMatch.error ? (
+                  <Banner text={(startCampaignMatch.error as Error).message} tone="error" />
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </article>
+        {detailPlayerId ? (
+          <PlayerDetailPopup
+            userPlayerId={detailPlayerId}
+            onClose={() => setDetailPlayerId(null)}
+          />
+        ) : null}
       </div>
     </div>
   );
