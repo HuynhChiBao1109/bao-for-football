@@ -44,9 +44,9 @@ function clampPercent(value: number) {
   return Math.min(100, Math.max(0, value));
 }
 
-function toVerticalPitchPosition(point: { x: number; y: number }) {
+function toVerticalPitchPosition(point: { x: number; y: number }, mirrorY = false) {
   const x = clampPercent(point.x);
-  const y = clampPercent(point.y);
+  const y = clampPercent(mirrorY ? 100 - point.y : point.y);
 
   return {
     '--x': x,
@@ -75,6 +75,13 @@ function isShotEvent(snapshot: MatchSnapshot | null) {
 
 function isPassEvent(snapshot: MatchSnapshot | null) {
   return snapshot?.highlight?.event === MATCH_EVENT.PASS;
+}
+
+function isTackleEvent(snapshot: MatchSnapshot | null) {
+  return (
+    snapshot?.highlight?.event === MATCH_EVENT.TACKLE ||
+    snapshot?.highlight?.event === MATCH_EVENT.SLIDE_TACKLE
+  );
 }
 
 function isThunderShot(snapshot: MatchSnapshot | null) {
@@ -240,11 +247,15 @@ function PitchDebugGrid() {
 const PlayerCircle = memo(function PlayerCircle({
   player,
   activeHighlight,
+  slideTackleActive,
+  mirrorY,
 }: {
   player: MatchPitchPlayer;
   activeHighlight: boolean;
+  slideTackleActive: boolean;
+  mirrorY: boolean;
 }) {
-  const style = toVerticalPitchPosition(player);
+  const style = toVerticalPitchPosition(player, mirrorY);
   const teamClass = player.teamSide === 'away' ? 'player-circle--away' : 'player-circle--home';
   const isGoalkeeper = player.position === 'GK';
   const keeperAction =
@@ -270,6 +281,7 @@ const PlayerCircle = memo(function PlayerCircle({
         keeperAction ? `player-node--keeper-${keeperAction}` : '',
         player.hasBall ? 'player-node--has-ball' : '',
         activeHighlight ? 'player-node--highlight' : '',
+        slideTackleActive ? 'player-node--slide-tackle' : '',
         player.activeSkill === EPlayerSkill.DRIBBLE_MAGIC ? 'player-node--magic-dribble' : '',
         player.activeSkill === EPlayerSkill.TANK_TACKLE ? 'player-node--tank-tackle' : '',
       ].join(' ')}
@@ -312,8 +324,8 @@ const PlayerCircle = memo(function PlayerCircle({
   );
 });
 
-function Ball({ snapshot }: { snapshot: MatchSnapshot }) {
-  const style = toVerticalPitchPosition(snapshot.ball);
+function Ball({ snapshot, mirrorY }: { snapshot: MatchSnapshot; mirrorY: boolean }) {
+  const style = toVerticalPitchPosition(snapshot.ball, mirrorY);
   const thunderShot = isThunderShot(snapshot);
   const magicDribble = isMagicDribble(snapshot);
   const tankTackle = isTankTackle(snapshot);
@@ -324,6 +336,7 @@ function Ball({ snapshot }: { snapshot: MatchSnapshot }) {
         'match-ball',
         isShotEvent(snapshot) ? 'match-ball--shot' : '',
         isPassEvent(snapshot) ? 'match-ball--pass' : '',
+        isTackleEvent(snapshot) ? 'match-ball--tackle' : '',
         thunderShot ? 'match-ball--thunder' : '',
         magicDribble ? 'match-ball--magic' : '',
         tankTackle ? 'match-ball--tank' : '',
@@ -409,26 +422,50 @@ function MatchPitch({ snapshot }: { snapshot: MatchSnapshot }) {
     [snapshot.homePlayers, snapshot.awayPlayers],
   );
   const highlightedPlayerId = snapshot.highlight?.actorPlayerId;
+  const mirrorY = snapshot.phase === 'second_half';
+  const tunnelActive =
+    snapshot.highlight?.event === MATCH_EVENT.FIRST_HALF_END ||
+    snapshot.highlight?.event === MATCH_EVENT.HALF_TIME_TUNNEL ||
+    snapshot.highlight?.event === MATCH_EVENT.SECOND_HALF_START;
+  const slideTackleActorId =
+    snapshot.highlight?.event === MATCH_EVENT.SLIDE_TACKLE ? highlightedPlayerId : null;
 
   return (
     <section className="match-pitch-shell" aria-label="Top down football pitch">
-      <div className="match-pitch">
-        <PitchLines />
-        <PitchDebugGrid />
-        {allPlayers.map((player) => (
-          <PlayerCircle
-            key={`${player.teamSide}-${player.id}`}
-            player={player}
-            activeHighlight={Boolean(highlightedPlayerId && player.id === highlightedPlayerId)}
+      <div className={`match-stadium ${tunnelActive ? 'match-stadium--tunnel-active' : ''}`}>
+        <div className="technical-area technical-area--home" aria-label="Home technical area">
+          <span className="technical-area__bench" />
+          <span className="technical-area__coach technical-area__coach--one" />
+          <span className="technical-area__coach technical-area__coach--two" />
+        </div>
+        <div className="match-pitch">
+          <PitchLines />
+          <PitchDebugGrid />
+          {allPlayers.map((player) => (
+            <PlayerCircle
+              key={`${player.teamSide}-${player.id}`}
+              player={player}
+              activeHighlight={Boolean(highlightedPlayerId && player.id === highlightedPlayerId)}
+              slideTackleActive={Boolean(slideTackleActorId && player.id === slideTackleActorId)}
+              mirrorY={mirrorY}
+            />
+          ))}
+          <Ball snapshot={snapshot} mirrorY={mirrorY} />
+          <SkillOverlay snapshot={snapshot} />
+          <GoalOverlay
+            key={`${snapshot.frameId ?? snapshot.tick ?? 'goal'}-${snapshot.homeScore}-${snapshot.awayScore}`}
+            show={isGoalEvent(snapshot)}
+            label={snapshot.highlight?.label ?? ''}
           />
-        ))}
-        <Ball snapshot={snapshot} />
-        <SkillOverlay snapshot={snapshot} />
-        <GoalOverlay
-          key={`${snapshot.frameId ?? snapshot.tick ?? 'goal'}-${snapshot.homeScore}-${snapshot.awayScore}`}
-          show={isGoalEvent(snapshot)}
-          label={snapshot.highlight?.label ?? ''}
-        />
+        </div>
+        <div className="technical-area technical-area--away" aria-label="Away technical area">
+          <span className="technical-area__bench" />
+          <span className="technical-area__coach technical-area__coach--one" />
+          <span className="technical-area__coach technical-area__coach--two" />
+        </div>
+        <div className="stadium-tunnel" aria-hidden="true">
+          <span />
+        </div>
       </div>
     </section>
   );

@@ -57,7 +57,9 @@ function getBallAnimationDuration(snapshot: MatchSnapshot, frameDuration: number
   if (snapshot.ball.ownerPlayerId) return frameDuration;
   if (event === 35) return frameDuration;
   if (snapshot.ball.skillTrajectory || snapshot.highlight?.skill) return Math.max(520, frameDuration * 0.9);
-  if (event === 7 || event === 36 || event === 38) return Math.max(500, frameDuration * 0.86);
+  if (event === 7 || event === 36 || event === 38) {
+    return frameDuration;
+  }
   return frameDuration;
 }
 
@@ -65,8 +67,13 @@ function getBallProgressAlpha(snapshot: MatchSnapshot, alpha: number) {
   const event = snapshot.highlight?.event;
   if (snapshot.ball.ownerPlayerId || event === 35) return linear(alpha);
   if (snapshot.ball.skillTrajectory || snapshot.highlight?.skill) return easeOut(alpha);
-  if (event === 7 || event === 36 || event === 38) return easeOut(alpha);
+  if (event === 7 || event === 36 || event === 38) return linear(alpha);
   return easeInOut(alpha);
+}
+
+function shouldSnapPlayers(snapshot: MatchSnapshot) {
+  const event = snapshot.highlight?.event;
+  return event === 51 || event === 53;
 }
 
 function normalizeBallPath(points: Array<{ x: number; y: number }>) {
@@ -157,7 +164,7 @@ function interpolateSnapshot(
           { x: next.ball.x, y: next.ball.y },
         ]
       : null;
-  const easedPlayerAlpha = linear(playerAlpha);
+  const easedPlayerAlpha = shouldSnapPlayers(next) ? 1 : linear(playerAlpha);
   const easedBallAlpha = getBallProgressAlpha(next, ballAlpha);
   const ballPosition = ballPath
     ? interpolatePathByDistance(ballPath, easedBallAlpha)
@@ -219,7 +226,7 @@ export function useMatchMotion(
 
     previousRef.current = lastRenderedRef.current ?? nextRef.current;
     nextRef.current = snapshot;
-    durationRef.current = Math.max(160, Math.min(1400, snapshot.durationMs ?? 1000));
+    durationRef.current = Math.max(160, Math.min(1800, snapshot.durationMs ?? 1000));
     ballDurationRef.current = Math.max(
       160,
       Math.min(durationRef.current, getBallAnimationDuration(snapshot, durationRef.current)),

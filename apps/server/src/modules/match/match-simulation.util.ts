@@ -33,7 +33,19 @@ export const FRAME_DURATION_MS = 560;
 export const AUTO_TICK_INTERVAL_MS = 540;
 const SKILL_FRAME_DURATION_MS = 620;
 const PASS_FRAME_DURATION_MS = FRAME_DURATION_MS;
+const SHOT_FRAME_DURATION_MS = 860;
+const POWER_SHOT_FRAME_DURATION_MS = 780;
+const TACKLE_FRAME_DURATION_MS = 760;
 const DEAD_BALL_FRAME_DURATION_MS = 620;
+const KEEPER_HOLD_FRAME_DURATION_MS = Math.round(FRAME_DURATION_MS * 0.75);
+const CORNER_SETUP_DELAY_MS = 1180;
+const CORNER_DELIVERY_FRAME_DURATION_MS = 960;
+const CORNER_FINISH_FRAME_DURATION_MS = 900;
+const PENALTY_SETUP_DELAY_MS = 1160;
+const PENALTY_KICK_FRAME_DURATION_MS = 1220;
+const HALF_TIME_WHISTLE_DURATION_MS = 760;
+const HALF_TIME_TUNNEL_DURATION_MS = 1450;
+const SECOND_HALF_KICKOFF_DURATION_MS = 1350;
 const MIN_OWNER_POSSESSION_TICKS = Math.max(2, Math.round(1.8 * TICKS_PER_SECOND));
 const MIN_TEAM_POSSESSION_TICKS = Math.max(1, Math.round(0.8 * TICKS_PER_SECOND));
 const PASS_CADENCE_TICKS = Math.max(5, Math.round(5 * TICKS_PER_SECOND));
@@ -202,6 +214,22 @@ type SetPiecePlayerTarget = {
   target: TrajectoryPoint;
   intent: PlayerMoveIntent;
   aiState: PlayerAIState;
+};
+
+type CornerDeliveryResult = {
+  event: EMatchEvent;
+  label: string;
+  actor: InternalLineupPlayer;
+  secondaryPlayerId: number | null;
+  possession: Side;
+  target: TrajectoryPoint;
+  ballPath: TrajectoryPoint[];
+  nextOwner: InternalLineupPlayer;
+  isGoal: boolean;
+  keeperAction: KeeperReactionAction | null;
+  forceAttachBall?: boolean;
+  durationMsOverride?: number;
+  payload: Record<string, unknown>;
 };
 
 export type SimulationRosterPlayer = {
@@ -672,24 +700,29 @@ export function generateNextMatchTick(input: {
   const minute = Math.floor(second / 60);
   const lifecycleAction = resolveMatchLifecycleAction(latestTick, nextTickValue, second);
   if (lifecycleAction) {
+    const isHalfTimeWhistle = lifecycleAction.event === EMatchEvent.FIRST_HALF_END;
+    const isHalfTimeTunnel = lifecycleAction.event === EMatchEvent.HALF_TIME_TUNNEL;
+    const isSecondHalfStart = lifecycleAction.event === EMatchEvent.SECOND_HALF_START;
+    if (isSecondHalfStart) {
+      resetLineupsToOwnHalf(homeLineup, awayLineup);
+    }
     const allPlayers = [...homeLineup, ...awayLineup];
     const currentOwnerId = Number(
       latestTick.ball.ownerPlayerId ?? latestTick.highlight?.actorPlayerId,
     );
     const currentOwner =
       allPlayers.find((player) => player.userPlayerId === currentOwnerId) ??
-      (lifecycleAction.event === EMatchEvent.SECOND_HALF_START
+      (isSecondHalfStart
         ? (awayLineup.find((player) => player.role !== "GK") ?? awayLineup[0])
         : fallbackHomeKickoff);
-    const secondHalfKickoff =
-      lifecycleAction.event === EMatchEvent.SECOND_HALF_START
-        ? applyAwayKickoffPair(awayLineup)
-        : null;
+    const secondHalfKickoff = isSecondHalfStart ? applyAwayKickoffPair(awayLineup) : null;
     const lifecycleOwner = secondHalfKickoff?.awayKickoff ?? currentOwner;
     const lifecyclePartner = secondHalfKickoff?.awayKickoffPartner ?? null;
-    const ball =
-      lifecycleAction.event === EMatchEvent.SECOND_HALF_START
-        ? { x: lifecycleOwner.anchors.x, y: lifecycleOwner.anchors.y }
+    const lifecyclePositionState = previousPositionState;
+    const ball = isSecondHalfStart
+      ? { x: lifecycleOwner.anchors.x, y: lifecycleOwner.anchors.y }
+      : isHalfTimeTunnel
+        ? getTunnelBallSpot()
         : { x: latestTick.ball.x, y: latestTick.ball.y };
     const snapshot = buildSnapshot({
       frameId,
@@ -717,7 +750,15 @@ export function generateNextMatchTick(input: {
       activeSkill: null,
       focusId: lifecycleOwner.userPlayerId,
       pressId: null,
-      positionState: previousPositionState,
+      forceLooseBall: isHalfTimeWhistle || isHalfTimeTunnel,
+      durationMsOverride: isHalfTimeWhistle
+        ? HALF_TIME_WHISTLE_DURATION_MS
+        : isHalfTimeTunnel
+          ? HALF_TIME_TUNNEL_DURATION_MS
+        : isSecondHalfStart
+          ? SECOND_HALF_KICKOFF_DURATION_MS
+          : undefined,
+      positionState: lifecyclePositionState,
     });
 
     return {
@@ -962,6 +1003,7 @@ export function generateNextMatchTick(input: {
       activeSkill: null,
       focusId: taker.userPlayerId,
       pressId: penalty.keeper.userPlayerId,
+      durationMsOverride: PENALTY_KICK_FRAME_DURATION_MS,
       positionState: previousPositionState,
     });
 
@@ -1027,6 +1069,7 @@ export function generateNextMatchTick(input: {
         activeSkill: null,
         focusId: penaltyTaker.userPlayerId,
         pressId: keeper.userPlayerId,
+        durationMsOverride: PENALTY_SETUP_DELAY_MS,
         positionState: previousPositionState,
       });
 
@@ -1137,7 +1180,15 @@ export function generateNextMatchTick(input: {
       awayLineup,
       ballOwner: restart.receiver,
       ball: restart.target,
-      ballPath: pathBetween({ x: latestTick.ball.x, y: latestTick.ball.y }, restart.target),
+      ballPath:
+        restart.deadBallEvent === EMatchEvent.CORNER_KICK
+          ? buildCornerCrossPath({
+              from: { x: latestTick.ball.x, y: latestTick.ball.y },
+              to: restart.target,
+              possession: restart.possession,
+              nextTick: actionTick,
+            })
+          : pathBetween({ x: latestTick.ball.x, y: latestTick.ball.y }, restart.target),
       highlight: createHighlight(
         restart.event,
         `Tick ${nextTickValue}: ${restart.label}`,
@@ -1149,6 +1200,22 @@ export function generateNextMatchTick(input: {
       activeSkill: null,
       focusId: restart.receiver.userPlayerId,
       pressId: null,
+      durationMsOverride:
+        restart.deadBallEvent === EMatchEvent.CORNER_KICK
+          ? CORNER_DELIVERY_FRAME_DURATION_MS
+          : undefined,
+      setPieceTargetsOverride:
+        restart.deadBallEvent === EMatchEvent.CORNER_KICK
+          ? getCornerKickAttackTargets({
+              attacking: restart.possession === "home" ? homeLineup : awayLineup,
+              defending: restart.possession === "home" ? awayLineup : homeLineup,
+              possession: restart.possession,
+              ball: latestTick.ball,
+              target: restart.target,
+              takerId: restart.taker.userPlayerId,
+              receiverId: restart.receiver.userPlayerId,
+            })
+          : undefined,
       positionState: previousPositionState,
     });
 
@@ -1166,6 +1233,74 @@ export function generateNextMatchTick(input: {
           restartEvent: restart.deadBallEvent,
           from: { x: latestTick.ball.x, y: latestTick.ball.y },
           to: restart.target,
+        },
+      },
+    };
+  }
+
+  const cornerDelivery = resolveCornerDeliveryResult({
+    latestTick,
+    homeLineup,
+    awayLineup,
+    previousPositionState,
+    nextTick: actionTick,
+  });
+  if (cornerDelivery) {
+    const homeScore =
+      Number(latestTick.homeScore ?? 0) +
+      (cornerDelivery.isGoal && cornerDelivery.possession === "home" ? 1 : 0);
+    const awayScore =
+      Number(latestTick.awayScore ?? 0) +
+      (cornerDelivery.isGoal && cornerDelivery.possession === "away" ? 1 : 0);
+    const snapshot = buildSnapshot({
+      frameId,
+      minute,
+      second,
+      tick: nextTickValue,
+      matchStep: "play",
+      phase: latestTick.phase === "second_half" ? "second_half" : "first_half",
+      homeScore,
+      awayScore,
+      possession: cornerDelivery.possession,
+      homeLineup,
+      awayLineup,
+      ballOwner: cornerDelivery.nextOwner,
+      ball: cornerDelivery.target,
+      ballPath: cornerDelivery.ballPath,
+      highlight: createHighlight(
+        cornerDelivery.event,
+        `Tick ${nextTickValue}: ${cornerDelivery.label}`,
+        cornerDelivery.possession,
+        cornerDelivery.actor.userPlayerId,
+        cornerDelivery.secondaryPlayerId,
+        null,
+      ),
+      activeSkill: null,
+      focusId: cornerDelivery.actor.userPlayerId,
+      pressId: cornerDelivery.secondaryPlayerId,
+      keeperAction: cornerDelivery.keeperAction,
+      forceAttachBall: cornerDelivery.forceAttachBall,
+      durationMsOverride: cornerDelivery.durationMsOverride,
+      positionState: previousPositionState,
+    });
+
+    return {
+      snapshot,
+      event: {
+        event: cornerDelivery.event,
+        minute,
+        teamId: cornerDelivery.actor.teamId,
+        actorPlayerId: cornerDelivery.actor.userPlayerId,
+        secondaryPlayerId: cornerDelivery.secondaryPlayerId,
+        payload: {
+          label: snapshot.highlight.label,
+          cornerDelivery: true,
+          from: { x: latestTick.ball.x, y: latestTick.ball.y },
+          to: cornerDelivery.target,
+          isGoal: cornerDelivery.isGoal,
+          homeScore,
+          awayScore,
+          ...cornerDelivery.payload,
         },
       },
     };
@@ -1219,7 +1354,7 @@ export function generateNextMatchTick(input: {
           outcome: "hold",
         },
         forceAttachBall: true,
-        durationMsOverride: FRAME_DURATION_MS,
+        durationMsOverride: KEEPER_HOLD_FRAME_DURATION_MS,
         positionState: previousPositionState,
       });
 
@@ -1274,6 +1409,8 @@ export function generateNextMatchTick(input: {
       activeSkill: null,
       focusId: outOfPlay.taker.userPlayerId,
       pressId: null,
+      durationMsOverride:
+        outOfPlay.event === EMatchEvent.CORNER_KICK ? CORNER_SETUP_DELAY_MS : undefined,
       positionState: previousPositionState,
     });
 
@@ -1364,6 +1501,15 @@ export function generateNextMatchTick(input: {
       };
     }
 
+    const isGoalkeeperParryLooseBall = looseBallContest.event === EMatchEvent.GOALKEEPER_SAVE;
+    const looseEvent = isGoalkeeperParryLooseBall ? EMatchEvent.TACKLE : looseBallContest.event;
+    const looseActorId = isGoalkeeperParryLooseBall
+      ? looseBallContest.receiver.userPlayerId
+      : looseBallContest.actorId;
+    const looseLabel =
+      isGoalkeeperParryLooseBall
+        ? `Tick ${nextTickValue}: bong bat ra sau pha can pha, ${looseBallContest.receiver.shortName} va ${looseBallContest.challenger?.shortName ?? "doi thu"} lao vao`
+        : `Tick ${nextTickValue}: ${looseBallContest.receiver.shortName} va ${looseBallContest.challenger?.shortName ?? "doi thu"} lao vao bong loi`;
     const snapshot = buildSnapshot({
       frameId,
       minute,
@@ -1380,30 +1526,33 @@ export function generateNextMatchTick(input: {
       ball: looseBallContest.ball,
       ballPath: pathBetween({ x: latestTick.ball.x, y: latestTick.ball.y }, looseBallContest.ball),
       highlight: createHighlight(
-        looseBallContest.event,
-        `Tick ${nextTickValue}: ${looseBallContest.receiver.shortName} va ${looseBallContest.challenger?.shortName ?? "doi thu"} lao vao bong loi`,
+        looseEvent,
+        looseLabel,
         latestTick.possession ?? looseBallContest.receiver.side,
-        looseBallContest.actorId,
+        looseActorId,
         looseBallContest.receiver.userPlayerId,
         null,
       ),
       activeSkill: null,
       focusId: looseBallContest.receiver.userPlayerId,
       pressId: looseBallContest.challenger?.userPlayerId ?? null,
+      forceLooseBall: true,
       positionState: previousPositionState,
     });
 
     return {
       snapshot,
       event: {
-        event: looseBallContest.event,
+        event: looseEvent,
         minute,
         teamId: looseBallContest.receiver.teamId,
-        actorPlayerId: looseBallContest.actorId,
+        actorPlayerId: looseActorId,
         secondaryPlayerId: looseBallContest.receiver.userPlayerId,
         payload: {
           label: snapshot.highlight.label,
           looseBallContest: true,
+          sourceEvent: looseBallContest.event,
+          goalkeeperParryLooseBall: isGoalkeeperParryLooseBall,
           challengerPlayerId: looseBallContest.challenger?.userPlayerId ?? null,
           receiverDistanceToBall: looseBallContest.receiverDistanceToBall,
           challengerDistanceToBall: looseBallContest.challengerDistanceToBall,
@@ -4155,7 +4304,7 @@ function resolveDebugShotAction(
     skillLabel: skill ? getSkillLabel(skill) : null,
     keeperAction,
     forceAttachBall: isCaught,
-    durationMsOverride: isCaught ? FRAME_DURATION_MS * 2 : undefined,
+    durationMsOverride: isCaught ? SHOT_FRAME_DURATION_MS : undefined,
     shotMetadata: {
       ...targetSelection.metadata,
       expectedGoalValue: effectiveGoalChance,
@@ -5491,6 +5640,9 @@ function shouldFreezeMatchClock(event: EMatchEvent | null) {
   return (
     event === EMatchEvent.GOAL ||
     event === EMatchEvent.GOAL_RESET ||
+    event === EMatchEvent.FIRST_HALF_END ||
+    event === EMatchEvent.HALF_TIME_TUNNEL ||
+    event === EMatchEvent.SECOND_HALF_START ||
     event === EMatchEvent.OFFSIDE ||
     event === EMatchEvent.FOUL ||
     event === EMatchEvent.PENALTY ||
@@ -5516,8 +5668,17 @@ function resolveMatchLifecycleAction(
 
   if (latestEvent === EMatchEvent.FIRST_HALF_END) {
     return {
+      event: EMatchEvent.HALF_TIME_TUNNEL,
+      label: "Hai doi vao duong ham",
+      matchStep: "half_time",
+      phase: "half_time",
+    };
+  }
+
+  if (latestEvent === EMatchEvent.HALF_TIME_TUNNEL) {
+    return {
       event: EMatchEvent.SECOND_HALF_START,
-      label: "Bat dau hiep 2",
+      label: "Hai doi ra san bat dau hiep 2",
       matchStep: "second_half_start",
       phase: "second_half",
       possession: "away",
@@ -5979,27 +6140,30 @@ function resolveOutOfPlayRestart(input: {
   const direction = attackDirection(possession);
 
   if (deadBallEvent === EMatchEvent.CORNER_KICK) {
-    const boxTarget = {
-      x: clamp(50 + ((input.nextTick % 3) - 1) * 9, 32, 68),
-      y: clamp(input.latestTick.ball.y + direction * 18, 8, 92),
-    };
+    const boxTarget = getCornerDeliveryTarget({
+      cornerSpot: input.latestTick.ball,
+      possession,
+      nextTick: input.nextTick,
+    });
     const receiver =
       lineup
         .filter((player) => player.userPlayerId !== taker.userPlayerId && player.role !== "GK")
         .map((player) => ({
           player,
-          score: normalizeRole(player.role) === "ST" ? 0 : distance(player.anchors, boxTarget),
+          score:
+            distance(getPlayerPosition(input.previousPositionState, player), boxTarget) -
+            getCornerAerialRating(player) * 0.08,
         }))
         .sort((left, right) => left.score - right.score)[0]?.player ?? taker;
 
     return {
       event: EMatchEvent.PASS,
       deadBallEvent,
-      label: `${taker.shortName} treo bong phat goc`,
+      label: `${taker.shortName} treo bong phat goc cho ${receiver.shortName}`,
       possession,
       taker,
       receiver,
-      target: moveToward(input.latestTick.ball, boxTarget, PASS_SPEED_UNITS_PER_TICK),
+      target: boxTarget,
     };
   }
 
@@ -6061,6 +6225,531 @@ function resolveOutOfPlayRestart(input: {
     receiver,
     target,
   };
+}
+
+function isCornerDeliverySnapshot(snapshot: MatchSnapshot) {
+  return (
+    snapshot.highlight?.event === EMatchEvent.PASS &&
+    snapshot.highlight.label.toLowerCase().includes("phat goc")
+  );
+}
+
+function resolveCornerDeliveryResult(input: {
+  latestTick: MatchSnapshot;
+  homeLineup: InternalLineupPlayer[];
+  awayLineup: InternalLineupPlayer[];
+  previousPositionState: PositionState;
+  nextTick: number;
+}): CornerDeliveryResult | null {
+  if (!isCornerDeliverySnapshot(input.latestTick)) return null;
+
+  const possession = input.latestTick.possession ?? input.latestTick.highlight.teamSide ?? "home";
+  const attacking = possession === "home" ? input.homeLineup : input.awayLineup;
+  const defending = possession === "home" ? input.awayLineup : input.homeLineup;
+  const deliveryPoint = { x: input.latestTick.ball.x, y: input.latestTick.ball.y };
+  const keeper = defending.find((player) => normalizeRole(player.role) === "GK") ?? defending[0];
+  const intendedReceiver =
+    attacking.find((player) => player.userPlayerId === input.latestTick.highlight.secondaryPlayerId) ??
+    null;
+  const attacker =
+    intendedReceiver ??
+    attacking
+      .filter((player) => normalizeRole(player.role) !== "GK")
+      .map((player) => {
+        const position = getPlayerPosition(input.previousPositionState, player);
+        return {
+          player,
+          score: distance(position, deliveryPoint) * 6.5 - getCornerAerialRating(player) * 0.1,
+        };
+      })
+      .sort((left, right) => left.score - right.score)[0]?.player ??
+    attacking[0];
+  const nearestDefender =
+    defending
+      .filter((player) => normalizeRole(player.role) !== "GK")
+      .map((player) => {
+        const position = getPlayerPosition(input.previousPositionState, player);
+        return {
+          player,
+          position,
+          distanceToDelivery: distance(position, deliveryPoint),
+        };
+      })
+      .sort((left, right) => left.distanceToDelivery - right.distanceToDelivery)[0] ?? null;
+  const attackerPosition = getPlayerPosition(input.previousPositionState, attacker);
+  const attackerScore =
+    getCornerAerialRating(attacker) -
+    distance(attackerPosition, deliveryPoint) * 5.5 +
+    (intendedReceiver?.userPlayerId === attacker.userPlayerId ? 12 : 0);
+  const defenderScore = nearestDefender
+    ? getCornerDefensiveAerialRating(nearestDefender.player) -
+      nearestDefender.distanceToDelivery * 5.3 +
+      5
+    : 0;
+  const duelRoll =
+    ((input.nextTick * 29 + attacker.userPlayerId * 17 + (nearestDefender?.player.userPlayerId ?? 3)) %
+      100) /
+    100;
+
+  if (nearestDefender && defenderScore + duelRoll * 18 > attackerScore + 8) {
+    const clearTarget = getCornerClearanceTarget({
+      ball: deliveryPoint,
+      possession,
+      defender: nearestDefender.player,
+      nextTick: input.nextTick,
+    });
+
+    return {
+      event: EMatchEvent.INTERCEPTION,
+      label: `${nearestDefender.player.shortName} pha bong tu phat goc`,
+      actor: nearestDefender.player,
+      secondaryPlayerId: attacker.userPlayerId,
+      possession: nearestDefender.player.side,
+      target: clearTarget,
+      ballPath: pathBetween(deliveryPoint, clearTarget),
+      nextOwner: nearestDefender.player,
+      isGoal: false,
+      keeperAction: null,
+      durationMsOverride: CORNER_FINISH_FRAME_DURATION_MS,
+      payload: {
+        cornerOutcome: "clearance",
+        aerialWinnerPlayerId: nearestDefender.player.userPlayerId,
+        aerialLoserPlayerId: attacker.userPlayerId,
+      },
+    };
+  }
+
+  const random = createDeterministicSkillRandom(input.nextTick, attacker.userPlayerId);
+  const keeperPosition = getPlayerPosition(input.previousPositionState, keeper);
+  const pressureDistance = nearestDefender?.distanceToDelivery ?? 9;
+  const pressure = {
+    distance: pressureDistance,
+    score: clamp((8 - pressureDistance) / 7, 0, 1),
+  };
+  const distanceToGoal = distanceToAttackingGoal(possession, deliveryPoint);
+  const angleScore = evaluateShotAngle(deliveryPoint, possession);
+  const shotType: ShotType = "FIRST_TIME_SHOT";
+  const targetSelection = chooseShotTargetPlan({
+    shooter: attacker,
+    defending,
+    possession,
+    ball: deliveryPoint,
+    previousPositionState: input.previousPositionState,
+    keeperPosition,
+    shotType,
+    pressure,
+    distanceToGoal,
+    angleScore,
+    random,
+  });
+  const attackerQuality =
+    attacker.raw.stats.shoot * 0.42 +
+    attacker.raw.stats.balance * 0.28 +
+    attacker.raw.stats.speed * 0.12 +
+    attacker.raw.stats.acceleration * 0.08 +
+    getCornerAerialRating(attacker) * 0.1;
+  const keeperQuality =
+    keeper.raw.stats.gkKeeping * 0.44 +
+    keeper.raw.stats.gkReflex * 0.34 +
+    keeper.raw.stats.gkDiving * 0.22;
+  const aerialEdge = clamp((attackerScore - defenderScore) / 90, -0.08, 0.16);
+  const goalChance = clamp(
+    targetSelection.metadata.expectedGoalValue +
+      aerialEdge +
+      clamp((attackerQuality - keeperQuality + 12) / 180, -0.04, 0.14) +
+      (distanceToGoal <= 13 ? 0.08 : 0.02) -
+      pressure.score * 0.07,
+    targetSelection.metadata.isOnTarget ? 0.03 : 0,
+    distanceToGoal <= 10 ? 0.5 : 0.36,
+  );
+  const goalRoll =
+    ((input.nextTick * 37 + attacker.userPlayerId * 23 + keeper.userPlayerId * 11) % 100) / 100;
+  const isGoal = targetSelection.metadata.isOnTarget && goalRoll < goalChance;
+  const keeperDive = buildKeeperReactionAction({
+    keeper,
+    keeperPosition,
+    shotTarget: targetSelection.metadata.finalTargetAfterError,
+    possession,
+    outcome: "dive",
+  });
+
+  if (isGoal) {
+    return {
+      event: EMatchEvent.GOAL,
+      label: `${attacker.shortName} danh dau tu phat goc ghi ban`,
+      actor: attacker,
+      secondaryPlayerId: keeper.userPlayerId,
+      possession,
+      target: targetSelection.metadata.finalTargetAfterError,
+      ballPath: buildShotBallPath({
+        from: deliveryPoint,
+        aimTarget: targetSelection.metadata.finalTargetAfterError,
+        endTarget: targetSelection.metadata.finalTargetAfterError,
+        possession,
+        outcome: "goal",
+        shotType,
+        skill: null,
+        random,
+      }),
+      nextOwner: attacker,
+      isGoal: true,
+      keeperAction: keeperDive,
+      durationMsOverride: CORNER_FINISH_FRAME_DURATION_MS,
+      payload: {
+        cornerOutcome: "header_goal",
+        shotMetadata: {
+          ...targetSelection.metadata,
+          expectedGoalValue: goalChance,
+          goalkeeperAction: "dive",
+          goalkeeperTarget: keeperDive.target,
+        },
+      },
+    };
+  }
+
+  const isKeeperSave = targetSelection.metadata.isOnTarget;
+  const savePoint = {
+    x: clamp(lerp(targetSelection.metadata.finalTargetAfterError.x, keeperPosition.x, 0.2), 36, 64),
+    y: clamp((possession === "home" ? 4 : 96) - attackDirection(possession) * 4.6, 5, 95),
+  };
+  const catchChance = isKeeperSave
+    ? calculateKeeperCatchChance({
+        keeper,
+        shooterQuality: attackerQuality,
+        keeperQuality,
+        saveDifficulty: targetSelection.metadata.saveDifficulty,
+        shotType,
+        shotSpeed: targetSelection.metadata.shotSpeed,
+        finalTarget: targetSelection.metadata.finalTargetAfterError,
+      })
+    : 0;
+  const catchRoll =
+    ((input.nextTick * 47 + attacker.userPlayerId * 13 + keeper.userPlayerId * 19) % 100) / 100;
+  const isCaught = isKeeperSave && catchRoll < catchChance;
+  const keeperAction = isKeeperSave
+    ? buildKeeperReactionAction({
+        keeper,
+        keeperPosition,
+        shotTarget: savePoint,
+        possession,
+        outcome: isCaught ? "catch" : "parry",
+      })
+    : keeperDive;
+  const target = isKeeperSave
+    ? isCaught
+      ? savePoint
+      : getKeeperParryTarget({
+          savePoint,
+          ball: deliveryPoint,
+          possession,
+          nextTick: input.nextTick,
+        })
+    : targetSelection.metadata.finalTargetAfterError;
+
+  return {
+    event: isKeeperSave ? EMatchEvent.GOALKEEPER_SAVE : EMatchEvent.SHOOT,
+    label: isCaught
+      ? `${keeper.shortName} bat gon cu danh dau tu phat goc`
+      : isKeeperSave
+        ? `${keeper.shortName} bay nguoi can pha cu danh dau tu phat goc`
+        : `${attacker.shortName} danh dau tu phat goc ra ngoai`,
+    actor: isKeeperSave ? keeper : attacker,
+    secondaryPlayerId: isKeeperSave ? attacker.userPlayerId : keeper.userPlayerId,
+    possession: isKeeperSave ? keeper.side : possession,
+    target,
+    ballPath: buildShotBallPath({
+      from: deliveryPoint,
+      aimTarget: targetSelection.metadata.finalTargetAfterError,
+      endTarget: target,
+      possession,
+      outcome: isKeeperSave ? "save" : "miss",
+      shotType,
+      skill: null,
+      random,
+    }),
+    nextOwner: isKeeperSave ? keeper : keeper,
+    isGoal: false,
+    keeperAction,
+    forceAttachBall: isCaught,
+    durationMsOverride: isCaught ? FRAME_DURATION_MS : CORNER_FINISH_FRAME_DURATION_MS,
+    payload: {
+      cornerOutcome: isCaught ? "keeper_catch" : isKeeperSave ? "keeper_save" : "header_miss",
+      shooterPlayerId: attacker.userPlayerId,
+      keeperPlayerId: keeper.userPlayerId,
+      shotMetadata: {
+        ...targetSelection.metadata,
+        expectedGoalValue: goalChance,
+        goalkeeperAction: isCaught ? "catch" : isKeeperSave ? "parry" : "dive",
+        goalkeeperTarget: keeperAction.target,
+      },
+    },
+  };
+}
+
+function getCornerDeliveryTarget(input: {
+  cornerSpot: TrajectoryPoint;
+  possession: Side;
+  nextTick: number;
+}) {
+  const direction = attackDirection(input.possession);
+  const goalY = input.possession === "home" ? 4 : 96;
+  const variant = input.nextTick % 4;
+  const farPost = input.cornerSpot.x < 50 ? 57 : 43;
+  const nearPost = input.cornerSpot.x < 50 ? 43 : 57;
+  return {
+    x: clamp(variant === 0 ? nearPost : variant === 1 ? farPost : 50 + (variant - 2) * 6, 39, 61),
+    y: clamp(goalY - direction * (variant <= 1 ? 9.5 : 13.5), 7, 93),
+  };
+}
+
+function getCornerAerialRating(player: InternalLineupPlayer) {
+  const role = normalizeRole(player.role);
+  return (
+    player.raw.stats.balance * 0.36 +
+    player.raw.stats.shoot * 0.26 +
+    player.raw.stats.speed * 0.14 +
+    player.raw.stats.acceleration * 0.12 +
+    player.raw.stats.stamina * 0.08 +
+    (role === "ST" ? 16 : role === "CB" ? 12 : role === "CM" ? 5 : 0)
+  );
+}
+
+function getCornerDefensiveAerialRating(player: InternalLineupPlayer) {
+  const role = normalizeRole(player.role);
+  return (
+    player.raw.stats.balance * 0.3 +
+    player.raw.stats.tackle * 0.3 +
+    player.raw.stats.speed * 0.12 +
+    player.raw.stats.acceleration * 0.1 +
+    player.raw.stats.stamina * 0.08 +
+    (role === "CB" ? 18 : role === "FB" ? 8 : role === "DM" ? 6 : 0)
+  );
+}
+
+function getCornerClearanceTarget(input: {
+  ball: TrajectoryPoint;
+  possession: Side;
+  defender: InternalLineupPlayer;
+  nextTick: number;
+}) {
+  const direction = attackDirection(input.possession);
+  const side = input.nextTick % 2 === 0 ? -1 : 1;
+  return {
+    x: clamp(input.ball.x + side * (10 + (input.defender.userPlayerId % 5)), 6, 94),
+    y: clamp(input.ball.y - direction * 24, 8, 92),
+  };
+}
+
+function buildCornerCrossPath(input: {
+  from: TrajectoryPoint;
+  to: TrajectoryPoint;
+  possession: Side;
+  nextTick: number;
+}): TrajectoryPoint[] {
+  const direction = attackDirection(input.possession);
+  const curveSide = input.from.x < 50 ? 1 : -1;
+  return Array.from({ length: FRAMES_PER_ACTION }, (_, index) => {
+    const t = (index + 1) / FRAMES_PER_ACTION;
+    const eased = t * t * (3 - 2 * t);
+    const arc = Math.sin(Math.PI * t);
+    return {
+      x: clamp(lerp(input.from.x, input.to.x, eased) + curveSide * arc * 7.2, 0, 100),
+      y: clamp(lerp(input.from.y, input.to.y, eased) - direction * arc * 5.6, 0, 100),
+    };
+  });
+}
+
+function getCornerKickAttackTargets(input: {
+  attacking: InternalLineupPlayer[];
+  defending: InternalLineupPlayer[];
+  possession: Side;
+  ball: TrajectoryPoint;
+  target: TrajectoryPoint;
+  takerId: number;
+  receiverId: number;
+}) {
+  const setupTargets = getCornerKickSetupTargets({
+    attacking: input.attacking,
+    defending: input.defending,
+    possession: input.possession,
+    ball: input.ball,
+    takerId: input.takerId,
+  });
+  const targets = new Map<number, SetPiecePlayerTarget>(setupTargets);
+  const direction = attackDirection(input.possession);
+  const runnerOffsets = [
+    { x: 0, y: 0 },
+    { x: -6, y: -direction * 2 },
+    { x: 6, y: -direction * 2.5 },
+    { x: -10, y: -direction * 6 },
+    { x: 10, y: -direction * 6 },
+  ];
+  const runners = input.attacking
+    .filter((player) => player.userPlayerId !== input.takerId && normalizeRole(player.role) !== "GK")
+    .sort((left, right) => getCornerAerialRating(right) - getCornerAerialRating(left));
+
+  runners.forEach((player, index) => {
+    const offset = runnerOffsets[index % runnerOffsets.length];
+    targets.set(player.userPlayerId, {
+      target:
+        player.userPlayerId === input.receiverId
+          ? input.target
+          : {
+              x: clamp(input.target.x + offset.x, 34, 68),
+              y: clamp(input.target.y + offset.y, 6, 94),
+            },
+      intent: player.userPlayerId === input.receiverId ? "attack_space" : "run",
+      aiState: player.userPlayerId === input.receiverId ? "RECEIVE_PASS" : "ATTACK_SPACE",
+    });
+  });
+
+  input.defending.forEach((player, index) => {
+    const role = normalizeRole(player.role);
+    if (role === "GK") {
+      const goalY = input.possession === "home" ? 4 : 96;
+      targets.set(player.userPlayerId, {
+        target: {
+          x: clamp(lerp(50, input.target.x, 0.22), 42, 58),
+          y: clamp(goalY - direction * 3.2, 5, 95),
+        },
+        intent: "anchor",
+        aiState: "KEEPER_HOLD",
+      });
+      return;
+    }
+
+    const offset = runnerOffsets[index % runnerOffsets.length];
+    targets.set(player.userPlayerId, {
+      target: {
+        x: clamp(input.target.x + offset.x * 0.82, 32, 70),
+        y: clamp(input.target.y + offset.y * 0.82 - direction * 1.3, 6, 94),
+      },
+      intent: role === "CB" || role === "FB" ? "mark" : "cover",
+      aiState: role === "CB" || role === "FB" ? "MARK_MAN" : "COVER_SPACE",
+    });
+  });
+
+  return targets;
+}
+
+function getPenaltyKickSetupTargets(input: {
+  attacking: InternalLineupPlayer[];
+  defending: InternalLineupPlayer[];
+  possession: Side;
+  spot: TrajectoryPoint;
+  takerId: number;
+  keeperId: number | null;
+}) {
+  const targets = new Map<number, SetPiecePlayerTarget>();
+  const direction = attackDirection(input.possession);
+  const goalY = input.possession === "home" ? 4 : 96;
+  const boxEdgeY = input.possession === "home" ? 22.5 : 77.5;
+  const waitingY = clamp(boxEdgeY - direction * 5.2, 7, 93);
+  const secondLineY = clamp(boxEdgeY - direction * 9.2, 7, 93);
+  const keeper =
+    input.defending.find((player) => player.userPlayerId === input.keeperId) ??
+    input.defending.find((player) => normalizeRole(player.role) === "GK") ??
+    input.defending[0];
+  const attackingSlots = [
+    { x: 34, y: waitingY },
+    { x: 42, y: secondLineY },
+    { x: 58, y: secondLineY },
+    { x: 66, y: waitingY },
+    { x: 48, y: clamp(waitingY - direction * 3.4, 7, 93) },
+    { x: 52, y: clamp(waitingY - direction * 3.4, 7, 93) },
+  ];
+  const defendingSlots = [
+    { x: 30, y: clamp(waitingY - direction * 1.4, 7, 93) },
+    { x: 39, y: waitingY },
+    { x: 47, y: secondLineY },
+    { x: 53, y: secondLineY },
+    { x: 61, y: waitingY },
+    { x: 70, y: clamp(waitingY - direction * 1.4, 7, 93) },
+  ];
+  const attackingRank = input.attacking
+    .filter(
+      (player) =>
+        player.userPlayerId !== input.takerId && normalizeRole(player.role) !== "GK",
+    )
+    .sort((left, right) => {
+      const leftRole = normalizeRole(left.role);
+      const rightRole = normalizeRole(right.role);
+      const leftScore =
+        left.raw.stats.speed + left.raw.stats.acceleration + (leftRole === "ST" ? 12 : 0);
+      const rightScore =
+        right.raw.stats.speed + right.raw.stats.acceleration + (rightRole === "ST" ? 12 : 0);
+      return rightScore - leftScore;
+    });
+  const defendingRank = input.defending
+    .filter((player) => player.userPlayerId !== keeper.userPlayerId)
+    .sort((left, right) => {
+      const leftRole = normalizeRole(left.role);
+      const rightRole = normalizeRole(right.role);
+      const leftScore = left.raw.stats.tackle + (leftRole === "CB" ? 15 : leftRole === "FB" ? 8 : 0);
+      const rightScore =
+        right.raw.stats.tackle + (rightRole === "CB" ? 15 : rightRole === "FB" ? 8 : 0);
+      return rightScore - leftScore;
+    });
+
+  input.attacking.forEach((player) => {
+    const role = normalizeRole(player.role);
+    if (player.userPlayerId === input.takerId) {
+      targets.set(player.userPlayerId, {
+        target: input.spot,
+        intent: "anchor",
+        aiState: "HOLD_POSITION",
+      });
+      return;
+    }
+
+    if (role === "GK") {
+      targets.set(player.userPlayerId, {
+        target: {
+          x: clamp(lerp(player.anchors.x, 50, 0.22), 35, 65),
+          y: ownGoalY(player.side) - attackDirection(player.side) * 5,
+        },
+        intent: "hold_depth",
+        aiState: "HOLD_DEPTH",
+      });
+      return;
+    }
+
+    const rankIndex = Math.max(
+      0,
+      attackingRank.findIndex((item) => item.userPlayerId === player.userPlayerId),
+    );
+    const slot = attackingSlots[rankIndex % attackingSlots.length];
+    targets.set(player.userPlayerId, {
+      target: slot,
+      intent: role === "ST" || role === "W" ? "attack_space" : "support",
+      aiState: role === "ST" || role === "W" ? "ATTACK_SPACE" : "PASS_SUPPORT",
+    });
+  });
+
+  input.defending.forEach((player) => {
+    const role = normalizeRole(player.role);
+    if (player.userPlayerId === keeper.userPlayerId || role === "GK") {
+      targets.set(player.userPlayerId, {
+        target: { x: 50, y: clamp(goalY - direction * 1.25, 5, 95) },
+        intent: "anchor",
+        aiState: "KEEPER_HOLD",
+      });
+      return;
+    }
+
+    const rankIndex = Math.max(
+      0,
+      defendingRank.findIndex((item) => item.userPlayerId === player.userPlayerId),
+    );
+    const slot = defendingSlots[rankIndex % defendingSlots.length];
+    targets.set(player.userPlayerId, {
+      target: slot,
+      intent: role === "CB" || role === "FB" ? "mark" : "cover",
+      aiState: role === "CB" || role === "FB" ? "MARK_MAN" : "COVER_SPACE",
+    });
+  });
+
+  return targets;
 }
 
 function getCornerKickSetupTargets(input: {
@@ -6480,6 +7169,8 @@ function buildSnapshot(input: {
   forceAttachBall?: boolean;
   durationMsOverride?: number;
   keeperAction?: KeeperReactionAction | null;
+  setPieceTargetsOverride?: Map<number, SetPiecePlayerTarget>;
+  instantSetPiece?: boolean;
   positionState: PositionState;
 }): MatchSnapshot {
   const prevBall = input.positionState.ball;
@@ -6533,7 +7224,8 @@ function buildSnapshot(input: {
         })
       : new Map<number, TrajectoryPoint>();
   const setPieceTargets =
-    input.highlight.event === EMatchEvent.CORNER_KICK
+    input.setPieceTargetsOverride ??
+    (input.highlight.event === EMatchEvent.CORNER_KICK
       ? getCornerKickSetupTargets({
           attacking: input.possession === "home" ? input.homeLineup : input.awayLineup,
           defending: input.possession === "home" ? input.awayLineup : input.homeLineup,
@@ -6541,7 +7233,20 @@ function buildSnapshot(input: {
           ball,
           takerId: input.highlight.actorPlayerId ?? ownerId,
         })
-      : new Map<number, SetPiecePlayerTarget>();
+      : input.highlight.event === EMatchEvent.PENALTY
+        ? getPenaltyKickSetupTargets({
+            attacking: input.possession === "home" ? input.homeLineup : input.awayLineup,
+            defending: input.possession === "home" ? input.awayLineup : input.homeLineup,
+            possession: input.possession,
+            spot: ball,
+            takerId: input.highlight.actorPlayerId ?? ownerId,
+            keeperId: input.highlight.secondaryPlayerId ?? null,
+          })
+      : new Map<number, SetPiecePlayerTarget>());
+  const instantSetPiece =
+    input.instantSetPiece ??
+    (input.highlight.event === EMatchEvent.CORNER_KICK ||
+      input.highlight.event === EMatchEvent.PENALTY);
   const homePlayers = projectPlayers({
     lineup: input.homeLineup,
     teammateLineup: input.homeLineup,
@@ -6555,6 +7260,9 @@ function buildSnapshot(input: {
     pressId: input.pressId,
     freeKickWallTargets,
     setPieceTargets,
+    instantSetPiece,
+    forceLooseBall: Boolean(input.forceLooseBall),
+    highlightEvent: input.highlight.event,
     keeperAction: input.keeperAction ?? null,
     matchStep: input.matchStep,
     tick: input.tick,
@@ -6576,6 +7284,9 @@ function buildSnapshot(input: {
     pressId: input.pressId,
     freeKickWallTargets,
     setPieceTargets,
+    instantSetPiece,
+    forceLooseBall: Boolean(input.forceLooseBall),
+    highlightEvent: input.highlight.event,
     keeperAction: input.keeperAction ?? null,
     matchStep: input.matchStep,
     tick: input.tick,
@@ -6630,6 +7341,20 @@ function buildSnapshot(input: {
 }
 
 function getSnapshotFrameDuration(event: EMatchEvent | null, activeSkill: EPlayerSkill | null) {
+  if (activeSkill === EPlayerSkill.SHOOT_THUNDER) return POWER_SHOT_FRAME_DURATION_MS;
+
+  if (
+    event === EMatchEvent.SHOOT ||
+    event === EMatchEvent.GOAL ||
+    event === EMatchEvent.GOALKEEPER_SAVE
+  ) {
+    return SHOT_FRAME_DURATION_MS;
+  }
+
+  if (event === EMatchEvent.TACKLE || event === EMatchEvent.SLIDE_TACKLE) {
+    return TACKLE_FRAME_DURATION_MS;
+  }
+
   if (activeSkill) return SKILL_FRAME_DURATION_MS;
 
   if (event === EMatchEvent.PASS) return PASS_FRAME_DURATION_MS;
@@ -6651,14 +7376,14 @@ function getSnapshotFrameDuration(event: EMatchEvent | null, activeSkill: EPlaye
 }
 
 function getBallVisualSpeed(event: EMatchEvent | null, activeSkill: EPlayerSkill | null) {
-  if (activeSkill === EPlayerSkill.SHOOT_THUNDER) return 14;
+  if (activeSkill === EPlayerSkill.SHOOT_THUNDER) return 13;
   if (
     event === EMatchEvent.PENALTY ||
     event === EMatchEvent.SHOOT ||
     event === EMatchEvent.GOAL ||
     event === EMatchEvent.GOALKEEPER_SAVE
   ) {
-    return 12;
+    return 10;
   }
 
   if (event === EMatchEvent.PASS) return 6;
@@ -6700,6 +7425,9 @@ function projectPlayers(input: {
   pressId: number | null;
   freeKickWallTargets: Map<number, TrajectoryPoint>;
   setPieceTargets: Map<number, SetPiecePlayerTarget>;
+  instantSetPiece: boolean;
+  forceLooseBall: boolean;
+  highlightEvent: EMatchEvent | null;
   keeperAction: KeeperReactionAction | null;
   matchStep: MatchStep;
   tick: number;
@@ -6755,7 +7483,9 @@ function projectPlayers(input: {
       ownerPlayerId: input.ballOwnerId,
       intendedReceiverId: input.intendedReceiverId,
       targetPosition: input.ball,
-      isLoose: input.intendedReceiverId != null && input.intendedReceiverId !== input.ballOwnerId,
+      isLoose:
+        input.forceLooseBall ||
+        (input.intendedReceiverId != null && input.intendedReceiverId !== input.ballOwnerId),
     },
   };
 
@@ -6787,7 +7517,17 @@ function projectPlayers(input: {
       target = hasBall ? { x: input.ball.x, y: input.ball.y } : player.anchors;
       intent = hasBall ? "kickoff" : "anchor";
       aiState = hasBall ? "DRIBBLE" : "HOLD_POSITION";
-    } else if (input.matchStep === "half_time" || input.matchStep === "full_time") {
+    } else if (input.matchStep === "half_time") {
+      if (input.highlightEvent === EMatchEvent.HALF_TIME_TUNNEL) {
+        target = getTunnelTargetForPlayer(player, index);
+        intent = "recover";
+        aiState = "RECOVER_SHAPE";
+      } else {
+        target = { x: prev.x, y: prev.y };
+        intent = "anchor";
+        aiState = "HOLD_POSITION";
+      }
+    } else if (input.matchStep === "full_time") {
       target = { x: 47 + (index % 4) * 2, y: 50 + Math.floor(index / 4) * 1.5 };
       aiState = "IDLE";
     } else if (keeperAction) {
@@ -6857,20 +7597,32 @@ function projectPlayers(input: {
     movementPlayer.velocity = { x: prev.vx, y: prev.vy };
     movementPlayer.targetPosition = target;
     movementPlayer.state = aiState;
-    if (!keeperAction && !setPieceTarget) {
+    const forceLifecycleTarget =
+      input.highlightEvent === EMatchEvent.HALF_TIME_TUNNEL ||
+      input.highlightEvent === EMatchEvent.SECOND_HALF_START;
+    if (forceLifecycleTarget) {
+      movementPlayer.position = target;
+      movementPlayer.velocity = { x: 0, y: 0 };
+    } else if (setPieceTarget && input.instantSetPiece) {
+      movementPlayer.position = setPieceTarget.target;
+      movementPlayer.velocity = { x: 0, y: 0 };
+    } else if (!keeperAction && !setPieceTarget) {
       applySeparation(movementPlayer, teammateMovement);
     }
-    updatePlayerMovement(
-      movementPlayer,
-      SIM_TICK_SECONDS *
-        getMovementDeltaScale({
-          isIntendedReceiver,
-          isKeeperAction: Boolean(keeperAction),
-          isPress,
-          onAttack,
-          passInFlight,
-        }),
-    );
+    if (!forceLifecycleTarget && !(setPieceTarget && input.instantSetPiece)) {
+      const isBallPressure = isPress || aiState === "PRESS_BALL";
+      updatePlayerMovement(
+        movementPlayer,
+        SIM_TICK_SECONDS *
+          getMovementDeltaScale({
+            isIntendedReceiver,
+            isKeeperAction: Boolean(keeperAction),
+            isPress: isBallPressure,
+            onAttack,
+            passInFlight,
+          }),
+      );
+    }
 
     const movement = createPlayerMotion({
       current: { x: prev.x, y: prev.y },
@@ -7374,6 +8126,21 @@ function createInitialPositionState(
     possession,
     possessionTicks: 0,
     tacticalPhase: "IN_POSSESSION_BUILDUP",
+  };
+}
+
+function getTunnelBallSpot(): TrajectoryPoint {
+  return { x: 96, y: 50 };
+}
+
+function getTunnelTargetForPlayer(player: InternalLineupPlayer, index: number): TrajectoryPoint {
+  const row = Math.floor(index / 4);
+  const lane = (index % 4) - 1.5;
+  const teamOffset = player.side === "home" ? -2.8 : 2.8;
+
+  return {
+    x: clamp(94.5 - row * 0.7, 90, 97.5),
+    y: clamp(50 + teamOffset + lane * 1.85, 41, 59),
   };
 }
 
