@@ -883,6 +883,341 @@
   color: #fff;
 }
 
+/* Floating main-screen icons */
+.club-dashboard {
+  background:
+    radial-gradient(circle at 50% 18%, rgba(255, 46, 74, 0.24), transparent 30%),
+    linear-gradient(180deg, rgba(3, 3, 5, 0.06), rgba(3, 3, 5, 0.7)),
+    url('/app/redlock-stadium.svg') center / cover no-repeat;
+}
+
+.club-dashboard::before {
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255, 46, 74, 0.18), transparent 30%),
+    linear-gradient(90deg, rgba(255, 46, 74, 0.12), transparent 24%, transparent 76%, rgba(255, 46, 74, 0.1));
+}
+
+.club-dashboard__field {
+  height: 30%;
+  opacity: 0.72;
+}
+
+.club-dashboard__player {
+  bottom: 25%;
+  width: min(300px, 58vw);
+  opacity: 0.2;
+}
+
+.club-dashboard__identity {
+  top: max(84px, calc(env(safe-area-inset-top) + 68px));
+  width: min(92vw, 620px);
+}
+
+.club-dashboard__identity::before {
+  font-size: clamp(3.4rem, 8vw, 7.5rem);
+}
+
+.club-dashboard__identity strong {
+  max-width: min(84vw, 560px);
+}
+
+.club-dashboard__quick {
+  --orbit-radius-x: min(34vw, 340px);
+  --orbit-radius-y: min(18vh, 160px);
+  left: 50%;
+  top: 58%;
+  display: block;
+  width: min(760px, calc(100vw - 40px));
+  height: min(360px, 42vh);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.club-action-card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: grid;
+  width: clamp(68px, 8vw, 86px);
+  height: clamp(68px, 8vw, 86px);
+  min-height: 0;
+  align-content: center;
+  justify-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  padding: 0;
+  pointer-events: auto;
+  transform:
+    translate(-50%, -50%)
+    translate(var(--float-x), var(--float-y));
+  animation:
+    dashboardIconIn 0.36s ease both,
+    clubFloatIcon 4.8s ease-in-out infinite;
+  animation-delay: var(--float-delay, 0ms), var(--float-delay, 0ms);
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    filter 0.18s ease;
+}
+
+.club-action-card:nth-child(1) {
+  --float-x: 0px;
+  --float-y: calc(-1 * var(--orbit-radius-y));
+  --float-delay: 0ms;
+}
+
+.club-action-card:nth-child(2) {
+  --float-x: calc(var(--orbit-radius-x) * 0.95);
+  --float-y: calc(-1 * var(--orbit-radius-y) * 0.3);
+  --float-delay: 120ms;
+}
+
+.club-action-card:nth-child(3) {
+  --float-x: calc(var(--orbit-radius-x) * 0.58);
+  --float-y: calc(var(--orbit-radius-y) * 0.82);
+  --float-delay: 240ms;
+}
+
+.club-action-card:nth-child(4) {
+  --float-x: calc(-1 * var(--orbit-radius-x) * 0.58);
+  --float-y: calc(var(--orbit-radius-y) * 0.82);
+  --float-delay: 360ms;
+}
+
+.club-action-card:nth-child(5) {
+  --float-x: calc(-1 * var(--orbit-radius-x) * 0.95);
+  --float-y: calc(-1 * var(--orbit-radius-y) * 0.3);
+  --float-delay: 480ms;
+}
+
+.club-action-card:hover {
+  filter: brightness(1.12);
+  transform:
+    translate(-50%, -50%)
+    translate(var(--float-x), var(--float-y))
+    scale(1.08);
+}
+
+.club-action-card::before,
+.club-action-card::after,
+.club-orbit-button::before,
+.club-orbit-button::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.club-action-card::before,
+.club-orbit-button::before {
+  inset: -8px;
+  border: 1px solid rgba(255, 46, 74, 0.14);
+  opacity: 0.7;
+}
+
+.club-action-card::after,
+.club-orbit-button::after {
+  inset: 10px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.16), transparent 62%);
+  opacity: 0.55;
+}
+
+.club-action-card__icon {
+  width: clamp(26px, 4vw, 34px);
+  height: clamp(26px, 4vw, 34px);
+}
+
+.club-action-card__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.club-dashboard__side {
+  top: 58%;
+  gap: 14px;
+}
+
+.club-dashboard__side--left {
+  left: max(18px, env(safe-area-inset-left));
+}
+
+.club-dashboard__side--right {
+  right: max(18px, env(safe-area-inset-right));
+}
+
+.club-orbit-button {
+  position: relative;
+  width: clamp(58px, 7vw, 70px);
+  height: clamp(58px, 7vw, 70px);
+  border-radius: 999px;
+  animation:
+    dashboardIconIn 0.44s ease both,
+    clubSideFloat 4.4s ease-in-out infinite;
+}
+
+.club-orbit-button:nth-child(2) {
+  animation-delay: 90ms, 650ms;
+}
+
+.club-orbit-button:nth-child(3) {
+  animation-delay: 180ms, 1300ms;
+}
+
+@keyframes clubFloatIcon {
+  0%,
+  100% {
+    margin-top: 0;
+  }
+
+  50% {
+    margin-top: -10px;
+  }
+}
+
+@keyframes clubSideFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@media (max-width: 780px) {
+  .club-dashboard {
+    min-height: 100svh;
+    background-position: center top;
+  }
+
+  .club-dashboard__top {
+    top: max(12px, env(safe-area-inset-top));
+    left: max(12px, env(safe-area-inset-left));
+    right: max(12px, env(safe-area-inset-right));
+  }
+
+  .club-icon-button {
+    width: 52px;
+    height: 52px;
+  }
+
+  .club-icon-button--small {
+    width: 46px;
+    height: 46px;
+  }
+
+  .club-dashboard__identity {
+    top: max(72px, calc(env(safe-area-inset-top) + 58px));
+    gap: 3px;
+  }
+
+  .club-dashboard__identity::before {
+    font-size: clamp(3rem, 16vw, 4.8rem);
+  }
+
+  .club-dashboard__identity strong {
+    max-width: 82vw;
+    font-size: clamp(1.75rem, 8vw, 2.7rem);
+  }
+
+  .club-dashboard__identity small {
+    max-width: 78vw;
+    font-size: 11px;
+  }
+
+  .club-dashboard__player {
+    bottom: 36%;
+    width: min(240px, 56vw);
+    opacity: 0.16;
+  }
+
+  .club-dashboard__quick {
+    left: 50%;
+    top: auto;
+    bottom: max(96px, calc(env(safe-area-inset-bottom) + 92px));
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    width: min(94vw, 430px);
+    height: auto;
+    transform: translateX(-50%);
+  }
+
+  .club-action-card {
+    position: relative;
+    left: auto;
+    top: auto;
+    width: 100%;
+    aspect-ratio: 1;
+    height: auto;
+    transform: none;
+    animation:
+      dashboardIconIn 0.36s ease both,
+      clubFloatIcon 4.8s ease-in-out infinite;
+  }
+
+  .club-action-card:hover {
+    transform: translateY(-4px);
+  }
+
+  .club-dashboard__side {
+    top: auto;
+    bottom: max(24px, calc(env(safe-area-inset-bottom) + 18px));
+    display: flex;
+    gap: 10px;
+    transform: none;
+  }
+
+  .club-dashboard__side--left {
+    left: max(12px, env(safe-area-inset-left));
+  }
+
+  .club-dashboard__side--right {
+    right: max(12px, env(safe-area-inset-right));
+  }
+
+  .club-orbit-button {
+    width: 48px;
+    height: 48px;
+  }
+
+  .club-orbit-button span {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+@media (max-width: 420px) {
+  .club-dashboard__quick {
+    bottom: max(94px, calc(env(safe-area-inset-bottom) + 88px));
+    gap: 7px;
+    width: min(94vw, 360px);
+  }
+
+  .club-action-card__label {
+    display: none;
+  }
+
+  .club-action-card__icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .club-dashboard__side {
+    gap: 8px;
+  }
+
+  .club-orbit-button {
+    width: 44px;
+    height: 44px;
+  }
+}
+
 .club-player-row:hover,
 .club-training-event-card:hover,
 .club-training-player-card:hover {

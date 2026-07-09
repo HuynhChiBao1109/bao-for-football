@@ -15,8 +15,17 @@ function easeInOut(alpha: number) {
   return value * value * (3 - 2 * value);
 }
 
+function easeOut(alpha: number) {
+  const value = clamp(alpha, 0, 1);
+  return 1 - Math.pow(1 - value, 3);
+}
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
+}
+
+function distance(left: { x: number; y: number }, right: { x: number; y: number }) {
+  return Math.hypot(left.x - right.x, left.y - right.y);
 }
 
 function playerKey(player: MatchPitchPlayer) {
@@ -41,10 +50,55 @@ function shouldUseBallTrajectory(snapshot: MatchSnapshot) {
 
 function getBallAnimationDuration(snapshot: MatchSnapshot, frameDuration: number) {
   const event = snapshot.highlight?.event;
-  if (snapshot.ball.skillTrajectory || snapshot.highlight?.skill) return 220;
-  if (event === 7 || event === 36 || event === 38) return 220;
-  if (event === 35) return Math.max(620, Math.min(900, frameDuration));
+  if (snapshot.ball.skillTrajectory || snapshot.highlight?.skill) return Math.max(360, frameDuration * 0.72);
+  if (event === 7 || event === 36 || event === 38) return Math.max(420, frameDuration * 0.78);
+  if (event === 35) return Math.max(720, Math.min(980, frameDuration + 140));
   return frameDuration;
+}
+
+function normalizeBallPath(points: Array<{ x: number; y: number }>) {
+  const path: Array<{ x: number; y: number }> = [];
+
+  points.forEach((point) => {
+    const last = path[path.length - 1];
+    if (!last || distance(last, point) >= 0.05) {
+      path.push(point);
+    }
+  });
+
+  return path;
+}
+
+function interpolatePathByDistance(points: Array<{ x: number; y: number }>, alpha: number) {
+  const path = normalizeBallPath(points);
+  if (path.length <= 1) {
+    return path[0] ?? { x: 50, y: 50 };
+  }
+
+  const segmentLengths = path.slice(1).map((point, index) => distance(path[index], point));
+  const totalLength = segmentLengths.reduce((sum, value) => sum + value, 0);
+  if (totalLength <= 0) {
+    return path[path.length - 1];
+  }
+
+  let traveled = clamp(alpha, 0, 1) * totalLength;
+  for (let index = 0; index < segmentLengths.length; index += 1) {
+    const segmentLength = segmentLengths[index];
+    if (traveled > segmentLength) {
+      traveled -= segmentLength;
+      continue;
+    }
+
+    const from = path[index];
+    const to = path[index + 1];
+    const localAlpha = segmentLength <= 0 ? 1 : traveled / segmentLength;
+    return {
+      x: lerp(from.x, to.x, easeInOut(localAlpha)),
+      y: lerp(from.y, to.y, easeInOut(localAlpha)),
+    };
+  }
+
+  return path[path.length - 1];
 }
 
 function interpolatePlayers(
@@ -90,28 +144,21 @@ function interpolateSnapshot(
           { x: next.ball.x, y: next.ball.y },
         ]
       : null;
-  const pathIndex = ballPath
-    ? clamp(Math.floor(ballAlpha * (ballPath.length - 1)), 0, ballPath.length - 2)
-    : 0;
-  const pathLocalAlpha = ballPath ? ballAlpha * (ballPath.length - 1) - pathIndex : 0;
   const easedPlayerAlpha = easeInOut(playerAlpha);
-  const easedBallAlpha = easeInOut(ballAlpha);
-  const easedPathLocalAlpha = easeInOut(pathLocalAlpha);
-  const pathFrom = ballPath?.[pathIndex];
-  const pathTo = ballPath?.[pathIndex + 1];
+  const easedBallAlpha = next.highlight?.event === 35 ? easeOut(ballAlpha) : easeInOut(ballAlpha);
+  const ballPosition = ballPath
+    ? interpolatePathByDistance(ballPath, easedBallAlpha)
+    : {
+        x: lerp(ballFromX, next.ball.x, easedBallAlpha),
+        y: lerp(ballFromY, next.ball.y, easedBallAlpha),
+      };
 
   return {
     ...next,
     ball: {
       ...next.ball,
-      x:
-        pathFrom && pathTo
-          ? lerp(pathFrom.x, pathTo.x, easedPathLocalAlpha)
-          : lerp(ballFromX, next.ball.x, easedBallAlpha),
-      y:
-        pathFrom && pathTo
-          ? lerp(pathFrom.y, pathTo.y, easedPathLocalAlpha)
-          : lerp(ballFromY, next.ball.y, easedBallAlpha),
+      x: ballPosition.x,
+      y: ballPosition.y,
     },
     homePlayers: interpolatePlayers(previous?.homePlayers ?? [], next.homePlayers, easedPlayerAlpha),
     awayPlayers: interpolatePlayers(previous?.awayPlayers ?? [], next.awayPlayers, easedPlayerAlpha),

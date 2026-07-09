@@ -45,8 +45,8 @@ function clampPercent(value: number) {
 
 function toVerticalPitchPosition(point: { x: number; y: number }) {
   return {
-    left: `${clampPercent(point.x)}%`,
-    top: `${clampPercent(point.y)}%`,
+    '--x': clampPercent(point.x),
+    '--y': clampPercent(point.y),
   } as CSSProperties;
 }
 

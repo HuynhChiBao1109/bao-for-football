@@ -515,7 +515,9 @@
 .player-node,
 .match-ball {
   position: absolute;
-  transform: translate(-50%, -50%);
+  left: calc(var(--x, 50) * 1%);
+  top: calc(var(--y, 50) * 1%);
+  transform: translate3d(-50%, -50%, 0);
   will-change: left, top, transform;
   z-index: 4;
 }
