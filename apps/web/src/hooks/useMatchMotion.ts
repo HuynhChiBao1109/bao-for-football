@@ -20,6 +20,10 @@ function easeOut(alpha: number) {
   return 1 - Math.pow(1 - value, 3);
 }
 
+function linear(alpha: number) {
+  return clamp(alpha, 0, 1);
+}
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
@@ -50,10 +54,19 @@ function shouldUseBallTrajectory(snapshot: MatchSnapshot) {
 
 function getBallAnimationDuration(snapshot: MatchSnapshot, frameDuration: number) {
   const event = snapshot.highlight?.event;
-  if (snapshot.ball.skillTrajectory || snapshot.highlight?.skill) return Math.max(360, frameDuration * 0.72);
-  if (event === 7 || event === 36 || event === 38) return Math.max(420, frameDuration * 0.78);
-  if (event === 35) return Math.max(720, Math.min(980, frameDuration + 140));
+  if (snapshot.ball.ownerPlayerId) return frameDuration;
+  if (event === 35) return frameDuration;
+  if (snapshot.ball.skillTrajectory || snapshot.highlight?.skill) return Math.max(520, frameDuration * 0.9);
+  if (event === 7 || event === 36 || event === 38) return Math.max(500, frameDuration * 0.86);
   return frameDuration;
+}
+
+function getBallProgressAlpha(snapshot: MatchSnapshot, alpha: number) {
+  const event = snapshot.highlight?.event;
+  if (snapshot.ball.ownerPlayerId || event === 35) return linear(alpha);
+  if (snapshot.ball.skillTrajectory || snapshot.highlight?.skill) return easeOut(alpha);
+  if (event === 7 || event === 36 || event === 38) return easeOut(alpha);
+  return easeInOut(alpha);
 }
 
 function normalizeBallPath(points: Array<{ x: number; y: number }>) {
@@ -93,8 +106,8 @@ function interpolatePathByDistance(points: Array<{ x: number; y: number }>, alph
     const to = path[index + 1];
     const localAlpha = segmentLength <= 0 ? 1 : traveled / segmentLength;
     return {
-      x: lerp(from.x, to.x, easeInOut(localAlpha)),
-      y: lerp(from.y, to.y, easeInOut(localAlpha)),
+      x: lerp(from.x, to.x, localAlpha),
+      y: lerp(from.y, to.y, localAlpha),
     };
   }
 
@@ -144,8 +157,8 @@ function interpolateSnapshot(
           { x: next.ball.x, y: next.ball.y },
         ]
       : null;
-  const easedPlayerAlpha = easeInOut(playerAlpha);
-  const easedBallAlpha = next.highlight?.event === 35 ? easeOut(ballAlpha) : easeInOut(ballAlpha);
+  const easedPlayerAlpha = linear(playerAlpha);
+  const easedBallAlpha = getBallProgressAlpha(next, ballAlpha);
   const ballPosition = ballPath
     ? interpolatePathByDistance(ballPath, easedBallAlpha)
     : {
@@ -206,9 +219,9 @@ export function useMatchMotion(
 
     previousRef.current = lastRenderedRef.current ?? nextRef.current;
     nextRef.current = snapshot;
-    durationRef.current = Math.max(80, Math.min(1200, snapshot.durationMs ?? 1000));
+    durationRef.current = Math.max(160, Math.min(1400, snapshot.durationMs ?? 1000));
     ballDurationRef.current = Math.max(
-      80,
+      160,
       Math.min(durationRef.current, getBallAnimationDuration(snapshot, durationRef.current)),
     );
     startRef.current = performance.now();

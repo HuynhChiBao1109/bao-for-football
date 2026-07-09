@@ -284,6 +284,7 @@
 
 .match-pitch {
   position: relative;
+  container-type: size;
   width: min(100%, calc((100vh - 250px) * 0.625));
   max-width: 720px;
   aspect-ratio: 10 / 16;
@@ -518,8 +519,18 @@
   left: calc(var(--x, 50) * 1%);
   top: calc(var(--y, 50) * 1%);
   transform: translate3d(-50%, -50%, 0);
-  will-change: left, top, transform;
+  will-change: transform;
   z-index: 4;
+}
+
+@supports (width: 1cqw) {
+  .player-node,
+  .match-ball {
+    left: 0;
+    top: 0;
+    transform: translate3d(var(--x-pos, 50cqw), var(--y-pos, 50cqh), 0)
+      translate3d(-50%, -50%, 0);
+  }
 }
 
 .player-node {

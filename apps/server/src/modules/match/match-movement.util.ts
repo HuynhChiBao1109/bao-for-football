@@ -3,29 +3,29 @@ export const SIM_TICK_SECONDS = SIM_TICK_MS / 1000;
 export const SIM_TICKS_PER_SECOND = 1000 / SIM_TICK_MS;
 
 export const MOVEMENT = {
-  walkingSpeed: 3.4,
-  jogSpeed: 6.8,
-  sprintSpeed: 10.2,
+  walkingSpeed: 4.2,
+  jogSpeed: 8.25,
+  sprintSpeed: 12.65,
 
-  playerWithBallSpeedMultiplier: 0.82,
+  playerWithBallSpeedMultiplier: 0.9,
 
-  acceleration: 8.5,
-  braking: 12,
+  acceleration: 14,
+  braking: 16,
 
-  turnSmoothing: 0.42,
+  turnSmoothing: 0.58,
 
-  arrivalRadius: 11,
-  stopRadius: 0.8,
+  arrivalRadius: 8.5,
+  stopRadius: 0.65,
 
   separationRadius: 6,
   separationStrength: 1.4,
 
   sameTargetOffset: 4,
 
-  passSpeed: 27,
-  shotSpeed: 62,
+  passSpeed: 34,
+  shotSpeed: 78,
 
-  ballFriction: 10,
+  ballFriction: 7,
 
   ballControlRadius: 2.0,
 
@@ -482,7 +482,7 @@ function evaluateBallRelatedAction(
     !context.hasPossession &&
     ((context.phase === "DEFENSIVE_PRESS" &&
       isDesignatedPresser(player, context.teammates, context.ball)) ||
-      isBallInDefensiveResponsibilityZone(player, context.ball))
+      isEmergencyBallPressure(player, context))
   ) {
     return { state: "PRESS_BALL", targetPosition: getPressTarget(player, context.ball) };
   }
@@ -509,6 +509,17 @@ function evaluateAttackingShape(player: Player, context: MovementContext): Movem
   }
 
   if (role === "CB") {
+    if (isBuildUpPhase(context)) {
+      return {
+        state: "PASS_SUPPORT",
+        targetPosition: applyTeamSpacing(
+          player,
+          teammates,
+          clampToRoleZone(player, getBuildUpCenterBackSupportTarget(player, context)),
+        ),
+      };
+    }
+
     const backLine = teammates
       .filter((item) => {
         const itemRole = normalizeRole(item.role);
@@ -532,6 +543,17 @@ function evaluateAttackingShape(player: Player, context: MovementContext): Movem
   }
 
   if (role === "DM") {
+    if (isBuildUpPhase(context)) {
+      return {
+        state: "PASS_SUPPORT",
+        targetPosition: applyTeamSpacing(
+          player,
+          teammates,
+          clampToRoleZone(player, getBuildUpPivotSupportTarget(player, context)),
+        ),
+      };
+    }
+
     return {
       state: "HOLD_DEPTH",
       targetPosition: applyTeamSpacing(
@@ -554,6 +576,63 @@ function evaluateAttackingShape(player: Player, context: MovementContext): Movem
   }
 
   return null;
+}
+
+function isBuildUpPhase(context: MovementContext) {
+  const ownerRole = context.owner ? normalizeRole(context.owner.role) : null;
+  const ballInOwnHalf = context.direction < 0 ? context.ball.y >= 48 : context.ball.y <= 52;
+  return (
+    context.hasPossession &&
+    (context.phase === "IN_POSSESSION_BUILDUP" ||
+      ballInOwnHalf ||
+      ownerRole === "GK" ||
+      ownerRole === "CB" ||
+      ownerRole === "DM")
+  );
+}
+
+function getBuildUpCenterBackSupportTarget(player: Player, context: MovementContext) {
+  const { ball, direction, owner, teammates } = context;
+  const laneX = getCentralLaneX(player);
+  const ownerRole = owner ? normalizeRole(owner.role) : null;
+  const sideSign = laneX < 50 ? -1 : laneX > 50 ? 1 : player.homePosition.x < 50 ? -1 : 1;
+  const splitWidth =
+    ownerRole === "GK" || ownerRole === "CB" || ownerRole === "DM" ? 5.5 : 2.5;
+  const ballBehindDepth = ownerRole === "GK" ? 16 : ownerRole === "CB" ? 10 : 13;
+  const partner = teammates.find(
+    (item) => item.id !== player.id && normalizeRole(item.role) === "CB",
+  );
+  const partnerBalance = partner
+    ? clamp((player.position.x - partner.position.x) * 0.08, -2, 2)
+    : 0;
+
+  return {
+    x: clamp(
+      laneX + sideSign * splitWidth + partnerBalance + getDefensiveUnitShiftX(ball) * 0.3,
+      24,
+      76,
+    ),
+    y: clamp(ball.y + direction * ballBehindDepth, 32, 82),
+  };
+}
+
+function getBuildUpPivotSupportTarget(player: Player, context: MovementContext) {
+  const { ball, direction, owner, opponents } = context;
+  const ownerRole = owner ? normalizeRole(owner.role) : null;
+  const nearestOpponentGap = getNearestOpponentDistance(player.position, opponents);
+  const escapeSide =
+    ball.x < 42 ? 1 : ball.x > 58 ? -1 : player.homePosition.x < 50 ? -1 : 1;
+  const depth =
+    ownerRole === "CB" || ownerRole === "GK"
+      ? direction * 8
+      : nearestOpponentGap <= 8
+        ? -direction * 4
+        : direction * 5;
+
+  return {
+    x: clamp(lerp(50, ball.x, 0.22) + escapeSide * 7, 26, 74),
+    y: clamp(ball.y + depth, 28, 78),
+  };
 }
 
 function getFullbackSupportTarget(
@@ -605,10 +684,16 @@ function getFullbackSupportTarget(
 
 function getWingerAttackState(player: Player, context: MovementContext): PlayerAIState {
   const sameFlank = isSameFlank(player.homePosition.x, context.ball.x);
-  if (!sameFlank)
-    return isInFinalThird(player.side, context.ball.y) ? "ATTACK_SPACE" : "HOLD_WIDTH";
+  const finalThird = isInFinalThird(player.side, context.ball.y);
+  const variant = (context.tick + player.id) % 6;
+  if (!sameFlank) {
+    if (finalThird) return variant <= 2 ? "BACK_POST_RUN" : "ATTACK_SPACE";
+    return variant === 0 ? "DIAGONAL_RUN" : "HOLD_WIDTH";
+  }
   if (isNearTouchline(player.position.x)) return "CUT_INSIDE";
-  return (context.tick + player.id) % 4 === 0 ? "HOLD_WIDTH" : "ATTACK_SPACE";
+  if (variant === 0) return "DROP_SHORT";
+  if (variant <= 2) return "CUT_INSIDE";
+  return variant === 3 ? "HOLD_WIDTH" : "ATTACK_SPACE";
 }
 
 function evaluateDefensiveShape(player: Player, context: MovementContext): MovementDecision | null {
@@ -1483,17 +1568,24 @@ function isDesignatedPresser(player: Player, teammates: Player[], ball: Vec2) {
 
   const direction = attackDirection(player.side);
   const ballInDefensiveHalf = direction < 0 ? ball.y > 52 : ball.y < 48;
-  const maxPressers = ballInDefensiveHalf ? 2 : 2;
+  const danger = dangerLevel(player.side, ball.y);
+  const maxPressers = ballInDefensiveHalf && danger >= 0.42 ? 2 : 1;
   const ranked = teammates
     .filter((item) => normalizeRole(item.role) !== "GK")
     .map((item) => {
       const itemRole = normalizeRole(item.role);
       const leaveHome = distance(item.homePosition, ball);
       const rolePenalty =
-        itemRole === "CB" && !ballInDefensiveHalf
-          ? 18
+        itemRole === "CB"
+          ? ballInDefensiveHalf && danger >= 0.7
+            ? 10
+            : 28
           : itemRole === "FB"
-            ? 4
+            ? ballInDefensiveHalf
+              ? 7
+              : 12
+            : itemRole === "DM"
+              ? 3
             : itemRole === "ST" || itemRole === "W"
               ? 2
               : 0;
@@ -1506,6 +1598,25 @@ function isDesignatedPresser(player: Player, teammates: Player[], ball: Vec2) {
     .slice(0, maxPressers);
 
   return ranked.some((item) => item.id === player.id);
+}
+
+function isEmergencyBallPressure(player: Player, context: MovementContext) {
+  const role = normalizeRole(player.role);
+  if (role === "GK") return distance(player.position, context.ball) <= 10;
+  if (!isBallInDefensiveResponsibilityZone(player, context.ball)) return false;
+
+  const gap = distance(player.position, context.ball);
+  const danger = dangerLevel(player.side, context.ball.y);
+  const ownerCanShoot =
+    context.owner &&
+    context.owner.side !== player.side &&
+    distance(context.owner.position, context.ball) <= 3;
+
+  if (role === "CB") return danger >= 0.68 && gap <= 11 && Boolean(ownerCanShoot);
+  if (role === "FB")
+    return danger >= 0.5 && gap <= 10 && isSameFlank(player.homePosition.x, context.ball.x);
+  if (role === "DM" || role === "CM") return gap <= 9 || (danger >= 0.52 && gap <= 13);
+  return gap <= 8;
 }
 
 function isBallInDefensiveResponsibilityZone(player: Player, ball: Vec2) {
@@ -1821,12 +1932,19 @@ function getMidfieldDefensiveSpace(player: Player, context: MovementContext) {
 }
 
 function getMidfieldAttackingSpace(player: Player, context: MovementContext) {
-  const { ball, direction, teammates } = context;
+  const { ball, direction, teammates, opponents, tick } = context;
   const triangle = getSupportTrianglePoint(player, teammates, ball, direction);
-  const betweenLineY = ball.y - direction * (normalizeRole(player.role) === "DM" ? 10 : 7);
+  const role = normalizeRole(player.role);
+  const nearestOpponentGap = getNearestOpponentDistance(player.position, opponents);
+  const escapeSide = ball.x < 45 ? 1 : ball.x > 55 ? -1 : player.homePosition.x < 50 ? -1 : 1;
+  const thirdManPulse = ((tick + player.id) % 4 === 0 ? 1 : 0) * direction * 5;
+  const betweenLineY =
+    ball.y -
+    direction * (role === "DM" ? (nearestOpponentGap <= 8 ? 5 : 10) : 7) +
+    thirdManPulse;
 
   return {
-    x: lerp(triangle.x, getCentralLaneX(player), 0.35),
+    x: lerp(triangle.x + escapeSide * (role === "DM" ? 4 : 6), getCentralLaneX(player), 0.35),
     y: lerp(triangle.y, betweenLineY, 0.45),
   };
 }
@@ -1848,10 +1966,28 @@ function getWingerDefensiveSpace(player: Player, context: MovementContext) {
 }
 
 function getWingerAttackingSpace(player: Player, context: MovementContext) {
-  const { ball, direction } = context;
+  const { ball, direction, tick, owner } = context;
   const sameFlank = isSameFlank(player.homePosition.x, ball.x);
   const wideX = getWideLaneX(player);
   const halfSpaceX = wideX < 50 ? 32 : 68;
+  const insideChannelX = wideX < 50 ? 38 : 62;
+  const finalThird = isInFinalThird(player.side, ball.y);
+  const ownerRole = owner ? normalizeRole(owner.role) : null;
+  const variant = (tick + player.id) % 6;
+
+  if (!sameFlank && finalThird) {
+    return {
+      x: clamp(lerp(wideX, insideChannelX, variant <= 2 ? 0.56 : 0.28), 8, 92),
+      y: ball.y + direction * (variant <= 2 ? 18 : 12),
+    };
+  }
+
+  if (sameFlank && (ownerRole === "FB" || ownerRole === "CM" || variant === 0)) {
+    return {
+      x: lerp(wideX, halfSpaceX, variant === 0 ? 0.8 : 0.5),
+      y: ball.y - direction * (variant === 0 ? 5 : 1),
+    };
+  }
 
   return {
     x: sameFlank ? lerp(wideX, halfSpaceX, 0.38) : wideX,
@@ -1875,6 +2011,14 @@ function getStrikerAttackingSpace(player: Player, context: MovementContext) {
   const defenderGap = getLargestHorizontalGap(centerBacks);
   const onsideLine = getOffsideLine(player.side, opponents);
   const microShift = Math.sin((tick + player.id * 11) * 0.85) * 2.4;
+  const variant = (tick + player.id) % 5;
+  if (variant === 0) {
+    return {
+      x: clamp(lerp(player.homePosition.x, ball.x, 0.28) + microShift, 32, 68),
+      y: clamp(ball.y - direction * 8, 16, 84),
+    };
+  }
+
   const targetY =
     direction < 0
       ? Math.max(onsideLine + 1.5, ball.y + direction * 16)

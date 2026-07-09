@@ -37,6 +37,7 @@ const MATCH_EVENT = {
   THROW_IN: 50,
   CORNER_KICK: 51,
   GOAL_KICK: 52,
+  PENALTY: 53,
 } as const;
 
 function clampPercent(value: number) {
@@ -44,9 +45,14 @@ function clampPercent(value: number) {
 }
 
 function toVerticalPitchPosition(point: { x: number; y: number }) {
+  const x = clampPercent(point.x);
+  const y = clampPercent(point.y);
+
   return {
-    '--x': clampPercent(point.x),
-    '--y': clampPercent(point.y),
+    '--x': x,
+    '--y': y,
+    '--x-pos': `${x}cqw`,
+    '--y-pos': `${y}cqh`,
   } as CSSProperties;
 }
 
@@ -129,6 +135,8 @@ function getEventView(eventCode: number | null | undefined) {
       return { title: 'Corner', className: 'match-event--shot' };
     case MATCH_EVENT.GOAL_KICK:
       return { title: 'Goal kick', className: 'match-event--pass' };
+    case MATCH_EVENT.PENALTY:
+      return { title: 'Penalty', className: 'match-event--shot' };
     case 7:
       return { title: 'Goal', className: 'match-event--goal' };
     default:

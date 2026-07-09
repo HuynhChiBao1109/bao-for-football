@@ -26,6 +26,7 @@ enum EMatchEvent {
   THROW_IN = 50,
   CORNER_KICK = 51,
   GOAL_KICK = 52,
+  PENALTY = 53,
 }
 
 export { EMatchEvent };
