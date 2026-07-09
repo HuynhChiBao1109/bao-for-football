@@ -6,7 +6,7 @@
   border-radius: 0;
   background:
     linear-gradient(180deg, rgba(2, 7, 19, 0.08), rgba(2, 7, 19, 0.78)),
-    url('/app/background.png') center / cover no-repeat;
+    url('/app/redlock-stadium.svg') center / cover no-repeat;
   box-shadow: 0 36px 90px rgba(0, 0, 0, 0.45);
   isolation: isolate;
 }
@@ -17,7 +17,13 @@
   inset: 0;
   z-index: -2;
   background:
-    linear-gradient(90deg, rgba(84, 234, 255, 0.08), transparent 22%, transparent 78%, rgba(255, 196, 87, 0.1)),
+    linear-gradient(
+      90deg,
+      rgba(84, 234, 255, 0.08),
+      transparent 22%,
+      transparent 78%,
+      rgba(255, 196, 87, 0.1)
+    ),
     radial-gradient(circle at 50% 92%, rgba(76, 211, 194, 0.26), transparent 34%);
 }
 
@@ -64,7 +70,12 @@
 .club-dashboard__scan {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 0 46%, rgba(126, 238, 255, 0.08) 48%, transparent 51% 100%);
+  background: linear-gradient(
+    180deg,
+    transparent 0 46%,
+    rgba(126, 238, 255, 0.08) 48%,
+    transparent 51% 100%
+  );
   animation: dashboardScan 5.4s linear infinite;
   pointer-events: none;
 }
@@ -135,9 +146,14 @@
   border: 1px solid rgba(126, 238, 255, 0.34);
   border-radius: 50%;
   background: linear-gradient(180deg, rgba(11, 28, 48, 0.76), rgba(4, 12, 26, 0.84));
-  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.28), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  box-shadow:
+    0 18px 38px rgba(0, 0, 0, 0.28),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(14px);
-  transition: transform 0.18s ease, border-color 0.18s ease, filter 0.18s ease;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    filter 0.18s ease;
 }
 
 .club-icon-button:active,
@@ -190,7 +206,9 @@
     linear-gradient(180deg, rgba(8, 31, 48, 0.68), rgba(4, 12, 24, 0.84)),
     radial-gradient(circle at 50% 0, rgba(126, 238, 255, 0.2), transparent 52%);
   color: #e8fbff;
-  box-shadow: 0 22px 46px rgba(0, 0, 0, 0.32), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  box-shadow:
+    0 22px 46px rgba(0, 0, 0, 0.32),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
   cursor: pointer;
   backdrop-filter: blur(16px);
   animation: dashboardIconIn 0.36s ease both;
@@ -275,7 +293,9 @@
     radial-gradient(circle at 30% 20%, rgba(126, 238, 255, 0.24), transparent 42%);
   box-shadow: 0 22px 44px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(14px);
-  animation: dashboardIconIn 0.44s ease both, dashboardBreath 3.6s ease-in-out infinite;
+  animation:
+    dashboardIconIn 0.44s ease both,
+    dashboardBreath 3.6s ease-in-out infinite;
 }
 
 .club-orbit-button span {
@@ -302,7 +322,9 @@
   background:
     linear-gradient(180deg, rgba(76, 14, 25, 0.72), rgba(23, 5, 11, 0.88)),
     radial-gradient(circle at 30% 20%, rgba(255, 53, 82, 0.34), transparent 42%);
-  box-shadow: 0 22px 44px rgba(0, 0, 0, 0.3), 0 0 28px rgba(255, 53, 82, 0.12);
+  box-shadow:
+    0 22px 44px rgba(0, 0, 0, 0.3),
+    0 0 28px rgba(255, 53, 82, 0.12);
 }
 
 .club-orbit-button[data-tone='red'] span {
@@ -343,7 +365,9 @@
   font-family: 'Bebas Neue', 'Barlow', sans-serif;
   font-size: 30px;
   line-height: 1;
-  box-shadow: 0 18px 46px rgba(255, 153, 43, 0.35), 0 0 0 8px rgba(255, 184, 65, 0.08);
+  box-shadow:
+    0 18px 46px rgba(255, 153, 43, 0.35),
+    0 0 0 8px rgba(255, 184, 65, 0.08);
   animation: startPulse 2.2s ease-in-out infinite;
 }
 
@@ -402,7 +426,9 @@
   background:
     linear-gradient(180deg, rgba(8, 20, 36, 0.96), rgba(3, 8, 18, 0.96)),
     radial-gradient(circle at 50% 0, rgba(126, 238, 255, 0.12), transparent 46%);
-  box-shadow: 0 34px 90px rgba(0, 0, 0, 0.62), inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  box-shadow:
+    0 34px 90px rgba(0, 0, 0, 0.62),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
   animation: dashboardMenuIn 0.18s ease both;
 }
 
@@ -596,7 +622,10 @@
     linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
     linear-gradient(180deg, rgba(8, 86, 54, 0.36), rgba(5, 34, 32, 0.78));
-  background-size: 50px 50px, 50px 50px, auto;
+  background-size:
+    50px 50px,
+    50px 50px,
+    auto;
 }
 
 .club-lineup-pitch::before {
@@ -647,12 +676,18 @@
     radial-gradient(circle at 50% 18%, rgba(255, 46, 74, 0.24), transparent 30%),
     radial-gradient(circle at 12% 72%, rgba(255, 122, 69, 0.16), transparent 26%),
     linear-gradient(180deg, rgba(4, 4, 6, 0.08), rgba(4, 4, 6, 0.86)),
-    url('/app/background.png') center / cover no-repeat;
+    url('/app/redlock-stadium.svg') center / cover no-repeat;
 }
 
 .club-dashboard::before {
   background:
-    linear-gradient(90deg, rgba(255, 46, 74, 0.16), transparent 24%, transparent 76%, rgba(255, 46, 74, 0.12)),
+    linear-gradient(
+      90deg,
+      rgba(255, 46, 74, 0.16),
+      transparent 24%,
+      transparent 76%,
+      rgba(255, 46, 74, 0.12)
+    ),
     radial-gradient(circle at 50% 92%, rgba(255, 46, 74, 0.22), transparent 34%);
 }
 
@@ -674,15 +709,17 @@
 
 .club-dashboard__player {
   opacity: 0.26;
-  filter:
-    grayscale(1)
-    contrast(1.24)
-    drop-shadow(0 0 38px rgba(255, 46, 74, 0.44))
+  filter: grayscale(1) contrast(1.24) drop-shadow(0 0 38px rgba(255, 46, 74, 0.44))
     drop-shadow(0 22px 48px rgba(0, 0, 0, 0.7));
 }
 
 .club-dashboard__scan {
-  background: linear-gradient(180deg, transparent 0 46%, rgba(255, 46, 74, 0.16) 48%, transparent 51% 100%);
+  background: linear-gradient(
+    180deg,
+    transparent 0 46%,
+    rgba(255, 46, 74, 0.16) 48%,
+    transparent 51% 100%
+  );
 }
 
 .club-dashboard__identity::before {
@@ -727,14 +764,18 @@
 .club-orbit-button {
   border-color: rgba(255, 46, 74, 0.34);
   background: linear-gradient(180deg, rgba(28, 12, 17, 0.78), rgba(5, 5, 8, 0.86));
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34), 0 0 28px rgba(255, 46, 74, 0.12);
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, 0.34),
+    0 0 28px rgba(255, 46, 74, 0.12);
 }
 
 .club-icon-button:hover,
 .club-orbit-button:hover,
 .club-start-button:hover {
   border-color: rgba(255, 70, 96, 0.76);
-  box-shadow: 0 20px 46px rgba(0, 0, 0, 0.36), 0 0 34px rgba(255, 46, 74, 0.22);
+  box-shadow:
+    0 20px 46px rgba(0, 0, 0, 0.36),
+    0 0 34px rgba(255, 46, 74, 0.22);
 }
 
 .club-icon-button--small .club-svg-icon {
@@ -747,12 +788,16 @@
     linear-gradient(180deg, rgba(29, 12, 17, 0.72), rgba(5, 5, 8, 0.88)),
     radial-gradient(circle at 50% 0, rgba(255, 46, 74, 0.22), transparent 54%);
   color: #ffe9ec;
-  box-shadow: 0 22px 46px rgba(0, 0, 0, 0.36), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  box-shadow:
+    0 22px 46px rgba(0, 0, 0, 0.36),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 .club-action-card:hover {
   border-color: rgba(255, 70, 96, 0.78);
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.36), 0 0 32px rgba(255, 46, 74, 0.18);
+  box-shadow:
+    0 24px 48px rgba(0, 0, 0, 0.36),
+    0 0 32px rgba(255, 46, 74, 0.18);
 }
 
 .club-action-card[data-tone='gold'],
@@ -788,7 +833,9 @@
   background:
     radial-gradient(circle at 50% 0, rgba(255, 46, 74, 0.13), transparent 42%),
     linear-gradient(180deg, rgba(14, 12, 16, 0.96), rgba(5, 5, 8, 0.98));
-  box-shadow: 0 34px 90px rgba(0, 0, 0, 0.66), 0 0 48px rgba(255, 46, 74, 0.16);
+  box-shadow:
+    0 34px 90px rgba(0, 0, 0, 0.66),
+    0 0 48px rgba(255, 46, 74, 0.16);
 }
 
 .club-modal__head {
@@ -833,8 +880,7 @@
   border-color: rgba(255, 46, 74, 0.2);
   border-radius: 8px;
   background:
-    radial-gradient(circle at 50% 0, rgba(255, 46, 74, 0.11), transparent 52%),
-    rgba(8, 8, 11, 0.74);
+    radial-gradient(circle at 50% 0, rgba(255, 46, 74, 0.11), transparent 52%), rgba(8, 8, 11, 0.74);
 }
 
 .club-campaign-card button,
@@ -883,6 +929,825 @@
   color: #fff;
 }
 
+/* Main dashboard status bar */
+.club-dashboard__top--status {
+  top: max(14px, env(safe-area-inset-top));
+  display: grid;
+  grid-template-columns: minmax(190px, 270px) minmax(0, 580px) 52px;
+  gap: 12px;
+  align-items: center;
+}
+
+.club-profile-card {
+  min-width: 0;
+  min-height: 64px;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(255, 46, 74, 0.28);
+  border-radius: 8px;
+  padding: 8px 12px 8px 8px;
+  background:
+    linear-gradient(180deg, rgba(13, 12, 16, 0.82), rgba(5, 5, 8, 0.9)),
+    radial-gradient(circle at 0 0, rgba(255, 46, 74, 0.18), transparent 54%);
+  color: #fff;
+  text-align: left;
+  box-shadow:
+    0 20px 44px rgba(0, 0, 0, 0.28),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  backdrop-filter: blur(16px);
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    filter 0.18s ease;
+}
+
+.club-profile-card:hover {
+  border-color: rgba(255, 80, 103, 0.76);
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+
+.club-profile-card:active {
+  transform: scale(0.98);
+}
+
+.club-profile-card__avatar {
+  width: 46px;
+  height: 46px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.club-profile-card__text {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.club-profile-card__text small,
+.club-top-stat span {
+  color: rgba(255, 181, 190, 0.78);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.club-profile-card__text strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.club-top-stats {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  justify-self: center;
+  width: min(580px, 100%);
+}
+
+.club-top-stat {
+  min-width: 0;
+  min-height: 64px;
+  display: grid;
+  align-content: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 46, 74, 0.22);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background:
+    radial-gradient(circle at 50% 0, rgba(255, 46, 74, 0.14), transparent 58%), rgba(8, 8, 11, 0.74);
+  box-shadow:
+    0 20px 44px rgba(0, 0, 0, 0.24),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(16px);
+}
+
+.club-top-stat[data-tone='gold'] {
+  border-color: rgba(255, 181, 94, 0.34);
+  background:
+    radial-gradient(circle at 50% 0, rgba(255, 181, 94, 0.14), transparent 58%),
+    rgba(10, 8, 8, 0.76);
+}
+
+.club-top-stat strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #fff;
+  font-size: clamp(1rem, 1.7vw, 1.35rem);
+  font-weight: 950;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.club-top-stat[data-tone='gold'] strong {
+  color: #ffd68f;
+}
+
+.club-dashboard__logout {
+  justify-self: end;
+}
+
+.club-dashboard__identity {
+  top: max(112px, calc(env(safe-area-inset-top) + 96px));
+}
+
+@media (max-width: 980px) {
+  .club-dashboard__top--status {
+    grid-template-columns: minmax(0, 1fr) 52px;
+    align-items: start;
+  }
+
+  .club-top-stats {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: stretch;
+    width: 100%;
+  }
+
+  .club-dashboard__logout {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .club-dashboard__identity {
+    top: max(176px, calc(env(safe-area-inset-top) + 160px));
+  }
+
+  .club-dashboard__hub {
+    margin-top: clamp(330px, 48svh, 430px);
+  }
+}
+
+@media (max-width: 560px) {
+  .club-dashboard__top--status {
+    left: max(12px, env(safe-area-inset-left));
+    right: max(12px, env(safe-area-inset-right));
+    grid-template-columns: minmax(0, 1fr) 46px;
+    gap: 8px;
+  }
+
+  .club-profile-card {
+    min-height: 58px;
+    grid-template-columns: 42px minmax(0, 1fr);
+    padding: 8px;
+  }
+
+  .club-profile-card__avatar {
+    width: 42px;
+    height: 42px;
+  }
+
+  .club-dashboard__logout {
+    width: 46px;
+    height: 46px;
+  }
+
+  .club-top-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .club-top-stat {
+    min-height: 48px;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    align-content: center;
+    gap: 10px;
+    padding: 8px 10px;
+  }
+
+  .club-top-stat strong {
+    justify-self: end;
+    font-size: 15px;
+  }
+
+  .club-dashboard__identity {
+    top: max(292px, calc(env(safe-area-inset-top) + 276px));
+  }
+
+  .club-dashboard__identity::before {
+    font-size: clamp(3.4rem, 18vw, 5.2rem);
+  }
+
+  .club-dashboard__hub {
+    margin-top: clamp(430px, 62svh, 540px);
+  }
+}
+
+/* RedLock hub final cascade */
+.club-dashboard {
+  min-height: 100svh;
+  background:
+    linear-gradient(180deg, rgba(5, 5, 7, 0.18) 0%, rgba(5, 5, 7, 0.88) 78%),
+    radial-gradient(circle at 48% 23%, rgba(255, 46, 74, 0.34), transparent 27%),
+    radial-gradient(circle at 82% 72%, rgba(255, 181, 94, 0.14), transparent 24%),
+    url('/app/redlock-stadium.svg') center / cover no-repeat;
+}
+
+.club-dashboard::before {
+  background:
+    linear-gradient(
+      100deg,
+      rgba(255, 46, 74, 0.22),
+      transparent 26%,
+      transparent 74%,
+      rgba(255, 181, 94, 0.13)
+    ),
+    radial-gradient(circle at 50% 96%, rgba(20, 82, 48, 0.28), transparent 35%);
+}
+
+.club-dashboard__field {
+  bottom: -3%;
+  height: 34%;
+}
+
+.club-dashboard__player {
+  bottom: 29%;
+  width: min(280px, 48vw);
+  opacity: 0.16;
+}
+
+.club-dashboard__identity {
+  top: max(86px, calc(env(safe-area-inset-top) + 72px));
+}
+
+.club-dashboard__identity::before {
+  font-size: clamp(4rem, 10vw, 8.4rem);
+}
+
+.club-dashboard__hub {
+  position: absolute;
+  left: 50%;
+  bottom: max(38px, calc(env(safe-area-inset-bottom) + 34px));
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(132px, 1fr));
+  gap: 10px;
+  width: min(1120px, calc(100vw - 48px));
+  transform: translateX(-50%);
+}
+
+.club-modal__panel {
+  width: min(1180px, 100%);
+}
+
+.club-lineup-grid {
+  grid-template-columns: minmax(420px, 1.08fr) minmax(300px, 0.92fr);
+}
+
+@media (max-width: 980px) {
+  .club-dashboard {
+    min-height: 100svh;
+    overflow: auto;
+  }
+
+  .club-dashboard__hub {
+    position: relative;
+    left: auto;
+    bottom: auto;
+    grid-template-columns: 1fr 1fr;
+    width: min(640px, calc(100vw - 28px));
+    margin: clamp(250px, 40svh, 340px) auto 24px;
+    transform: none;
+  }
+
+  .club-hub-card:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .club-lineup-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .club-dashboard__hub {
+    grid-template-columns: 1fr;
+    margin-top: clamp(226px, 38svh, 300px);
+  }
+}
+
+/* RedLock hub cascade lock */
+.club-dashboard {
+  min-height: 100svh;
+  background:
+    linear-gradient(180deg, rgba(5, 5, 7, 0.18) 0%, rgba(5, 5, 7, 0.88) 78%),
+    radial-gradient(circle at 48% 23%, rgba(255, 46, 74, 0.34), transparent 27%),
+    radial-gradient(circle at 82% 72%, rgba(255, 181, 94, 0.14), transparent 24%),
+    url('/app/redlock-stadium.svg') center / cover no-repeat;
+}
+
+.club-dashboard::before {
+  background:
+    linear-gradient(
+      100deg,
+      rgba(255, 46, 74, 0.22),
+      transparent 26%,
+      transparent 74%,
+      rgba(255, 181, 94, 0.13)
+    ),
+    radial-gradient(circle at 50% 96%, rgba(20, 82, 48, 0.28), transparent 35%);
+}
+
+.club-dashboard__field {
+  bottom: -3%;
+  height: 34%;
+}
+
+.club-dashboard__player {
+  bottom: 29%;
+  width: min(280px, 48vw);
+  opacity: 0.16;
+}
+
+.club-dashboard__identity {
+  top: max(86px, calc(env(safe-area-inset-top) + 72px));
+}
+
+.club-dashboard__identity::before {
+  font-size: clamp(4rem, 10vw, 8.4rem);
+}
+
+.club-dashboard__hub {
+  position: absolute;
+  left: 50%;
+  bottom: max(38px, calc(env(safe-area-inset-bottom) + 34px));
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(132px, 1fr));
+  gap: 10px;
+  width: min(1120px, calc(100vw - 48px));
+  transform: translateX(-50%);
+}
+
+.club-modal__panel {
+  width: min(1180px, 100%);
+}
+
+.club-lineup-grid {
+  grid-template-columns: minmax(420px, 1.08fr) minmax(300px, 0.92fr);
+}
+
+@media (max-width: 980px) {
+  .club-dashboard {
+    min-height: 100svh;
+    overflow: auto;
+  }
+
+  .club-dashboard__hub {
+    position: relative;
+    left: auto;
+    bottom: auto;
+    grid-template-columns: 1fr 1fr;
+    width: min(640px, calc(100vw - 28px));
+    margin: clamp(250px, 40svh, 340px) auto 24px;
+    transform: none;
+  }
+
+  .club-hub-card:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .club-lineup-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .club-dashboard__hub {
+    grid-template-columns: 1fr;
+    margin-top: clamp(226px, 38svh, 300px);
+  }
+}
+
+/* RedLock main hub refresh */
+.club-dashboard {
+  min-height: 100svh;
+  background:
+    linear-gradient(180deg, rgba(5, 5, 7, 0.18) 0%, rgba(5, 5, 7, 0.88) 78%),
+    radial-gradient(circle at 48% 23%, rgba(255, 46, 74, 0.34), transparent 27%),
+    radial-gradient(circle at 82% 72%, rgba(255, 181, 94, 0.14), transparent 24%),
+    url('/app/redlock-stadium.svg') center / cover no-repeat;
+}
+
+.club-dashboard::before {
+  background:
+    linear-gradient(
+      100deg,
+      rgba(255, 46, 74, 0.22),
+      transparent 26%,
+      transparent 74%,
+      rgba(255, 181, 94, 0.13)
+    ),
+    radial-gradient(circle at 50% 96%, rgba(20, 82, 48, 0.28), transparent 35%);
+}
+
+.club-dashboard::after {
+  opacity: 0.52;
+  background:
+    linear-gradient(rgba(255, 46, 74, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 181, 94, 0.035) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+
+.club-dashboard__field {
+  bottom: -3%;
+  height: 34%;
+  border-color: rgba(255, 255, 255, 0.16);
+  background:
+    radial-gradient(circle at 50% 12%, rgba(255, 46, 74, 0.16), transparent 34%),
+    linear-gradient(180deg, rgba(18, 83, 48, 0.16), rgba(8, 45, 28, 0.48));
+}
+
+.club-dashboard__player {
+  bottom: 29%;
+  width: min(280px, 48vw);
+  opacity: 0.16;
+}
+
+.club-dashboard__identity {
+  top: max(86px, calc(env(safe-area-inset-top) + 72px));
+}
+
+.club-dashboard__identity::before {
+  font-size: clamp(4rem, 10vw, 8.4rem);
+}
+
+.club-dashboard__identity small {
+  color: rgba(255, 235, 238, 0.78);
+}
+
+.club-dashboard__hub {
+  position: absolute;
+  left: 50%;
+  bottom: max(38px, calc(env(safe-area-inset-bottom) + 34px));
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(132px, 1fr));
+  gap: 10px;
+  width: min(1120px, calc(100vw - 48px));
+  transform: translateX(-50%);
+}
+
+.club-hub-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 116px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 46, 74, 0.28);
+  border-radius: 8px;
+  padding: 14px;
+  background:
+    linear-gradient(180deg, rgba(13, 12, 16, 0.82), rgba(5, 5, 7, 0.9)),
+    radial-gradient(circle at 50% 0, rgba(255, 46, 74, 0.16), transparent 58%);
+  color: #fff4f6;
+  text-align: left;
+  box-shadow:
+    0 24px 54px rgba(0, 0, 0, 0.34),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  backdrop-filter: blur(18px);
+  animation: dashboardIconIn 0.32s ease both;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    filter 0.18s ease;
+}
+
+.club-hub-card:hover {
+  border-color: rgba(255, 80, 103, 0.82);
+  box-shadow:
+    0 28px 58px rgba(0, 0, 0, 0.38),
+    0 0 34px rgba(255, 46, 74, 0.2);
+  filter: brightness(1.06);
+  transform: translateY(-4px);
+}
+
+.club-hub-card:active {
+  transform: translateY(-1px) scale(0.98);
+}
+
+.club-hub-card[data-tone='gold'] {
+  border-color: rgba(255, 181, 94, 0.34);
+  background:
+    linear-gradient(180deg, rgba(25, 18, 12, 0.84), rgba(6, 5, 5, 0.9)),
+    radial-gradient(circle at 50% 0, rgba(255, 181, 94, 0.16), transparent 58%);
+}
+
+.club-hub-card[data-tone='cyan'] {
+  border-color: rgba(113, 229, 255, 0.24);
+  background:
+    linear-gradient(180deg, rgba(13, 16, 18, 0.84), rgba(5, 5, 7, 0.9)),
+    radial-gradient(circle at 50% 0, rgba(113, 229, 255, 0.1), transparent 58%);
+}
+
+.club-hub-card__icon {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #ff6678;
+}
+
+.club-hub-card[data-tone='gold'] .club-hub-card__icon {
+  color: #ffce87;
+}
+
+.club-hub-card[data-tone='cyan'] .club-hub-card__icon {
+  color: #98f0ff;
+}
+
+.club-hub-card__content {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.club-hub-card__content small {
+  color: rgba(255, 181, 190, 0.76);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.club-hub-card__content strong {
+  overflow-wrap: anywhere;
+  color: #fff;
+  font-family: 'Bebas Neue', 'Barlow', sans-serif;
+  font-size: clamp(1.6rem, 2vw, 2.2rem);
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+
+.club-hub-card__content span {
+  display: -webkit-box;
+  overflow: hidden;
+  color: rgba(255, 235, 238, 0.68);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.club-modal__panel {
+  width: min(1180px, 100%);
+}
+
+.club-popup--gacha {
+  padding: 18px;
+}
+
+.club-popup--soon {
+  display: grid;
+  place-items: center;
+  min-height: min(420px, calc(100svh - 140px));
+}
+
+.club-soon-panel {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  width: min(100%, 420px);
+  border: 1px solid rgba(255, 46, 74, 0.24);
+  border-radius: 8px;
+  padding: 42px 24px;
+  background:
+    radial-gradient(circle at 50% 0, rgba(255, 46, 74, 0.18), transparent 58%), rgba(8, 8, 11, 0.74);
+}
+
+.club-soon-panel span {
+  color: rgba(255, 181, 190, 0.78);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.club-soon-panel strong {
+  color: #fff;
+  font-family: 'Bebas Neue', 'Barlow', sans-serif;
+  font-size: clamp(2.4rem, 7vw, 4.8rem);
+  line-height: 0.95;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.club-lineup-grid {
+  grid-template-columns: minmax(420px, 1.08fr) minmax(300px, 0.92fr);
+  align-items: start;
+}
+
+.club-lineup-board {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.club-starter-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.club-starter-strip button,
+.club-roster-row {
+  border: 1px solid rgba(255, 46, 74, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+  color: #fff;
+  cursor: pointer;
+}
+
+.club-starter-strip button {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  min-height: 52px;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.club-starter-strip button[data-active='true'],
+.club-roster-row[data-used='true'] {
+  border-color: rgba(255, 181, 94, 0.48);
+  background:
+    linear-gradient(135deg, rgba(255, 181, 94, 0.12), transparent 66%), rgba(255, 255, 255, 0.05);
+}
+
+.club-starter-strip span,
+.club-roster-row span {
+  color: rgba(255, 181, 190, 0.74);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.club-starter-strip strong {
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.club-player-select {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.club-player-select__head small {
+  display: block;
+  margin-top: 5px;
+  color: rgba(255, 235, 238, 0.58);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.club-roster-list {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  max-height: 620px;
+  overflow: auto;
+  padding: 10px;
+}
+
+.club-roster-row {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 9px 10px;
+  text-align: left;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    transform 0.16s ease;
+}
+
+.club-roster-row:hover {
+  border-color: rgba(255, 80, 103, 0.64);
+  transform: translateY(-1px);
+}
+
+.club-roster-row strong {
+  overflow: hidden;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.club-roster-row small {
+  color: rgba(255, 235, 238, 0.62);
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.club-roster-empty {
+  margin: 0;
+  border: 1px dashed rgba(255, 46, 74, 0.18);
+  border-radius: 8px;
+  padding: 16px;
+  color: rgba(255, 235, 238, 0.64);
+  text-align: center;
+}
+
+@media (max-width: 980px) {
+  .club-dashboard {
+    min-height: 100svh;
+    overflow: auto;
+  }
+
+  .club-dashboard__identity {
+    top: max(76px, calc(env(safe-area-inset-top) + 60px));
+  }
+
+  .club-dashboard__hub {
+    position: relative;
+    left: auto;
+    bottom: auto;
+    grid-template-columns: 1fr 1fr;
+    width: min(640px, calc(100vw - 28px));
+    margin: clamp(250px, 40svh, 340px) auto 24px;
+    transform: none;
+  }
+
+  .club-hub-card {
+    min-height: 94px;
+  }
+
+  .club-hub-card:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .club-lineup-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .club-dashboard__hub {
+    grid-template-columns: 1fr;
+    margin-top: clamp(226px, 38svh, 300px);
+  }
+
+  .club-hub-card {
+    min-height: 78px;
+    grid-template-columns: 38px minmax(0, 1fr);
+    padding: 12px;
+  }
+
+  .club-hub-card__icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .club-hub-card__content span {
+    -webkit-line-clamp: 1;
+  }
+
+  .club-starter-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .club-roster-row {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .club-roster-row small {
+    grid-column: 2;
+  }
+}
+
 /* Floating main-screen icons */
 .club-dashboard {
   background:
@@ -894,7 +1759,13 @@
 .club-dashboard::before {
   background:
     radial-gradient(circle at 50% 42%, rgba(255, 46, 74, 0.18), transparent 30%),
-    linear-gradient(90deg, rgba(255, 46, 74, 0.12), transparent 24%, transparent 76%, rgba(255, 46, 74, 0.1));
+    linear-gradient(
+      90deg,
+      rgba(255, 46, 74, 0.12),
+      transparent 24%,
+      transparent 76%,
+      rgba(255, 46, 74, 0.1)
+    );
 }
 
 .club-dashboard__field {
@@ -947,9 +1818,7 @@
   border-radius: 999px;
   padding: 0;
   pointer-events: auto;
-  transform:
-    translate(-50%, -50%)
-    translate(var(--float-x), var(--float-y));
+  transform: translate(-50%, -50%) translate(var(--float-x), var(--float-y));
   animation:
     dashboardIconIn 0.36s ease both,
     clubFloatIcon 4.8s ease-in-out infinite;
@@ -992,10 +1861,7 @@
 
 .club-action-card:hover {
   filter: brightness(1.12);
-  transform:
-    translate(-50%, -50%)
-    translate(var(--float-x), var(--float-y))
-    scale(1.08);
+  transform: translate(-50%, -50%) translate(var(--float-x), var(--float-y)) scale(1.08);
 }
 
 .club-action-card::before,
@@ -1322,18 +2188,28 @@
     linear-gradient(rgba(255, 255, 255, 0.052) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.046) 1px, transparent 1px),
     repeating-linear-gradient(90deg, rgba(10, 96, 62, 0.62) 0 11%, rgba(8, 72, 54, 0.72) 11% 22%);
-  background-size: auto, 52px 52px, 52px 52px, auto;
-  box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.32), 0 26px 60px rgba(0, 0, 0, 0.24);
+  background-size:
+    auto,
+    52px 52px,
+    52px 52px,
+    auto;
+  box-shadow:
+    inset 0 0 90px rgba(0, 0, 0, 0.32),
+    0 26px 60px rgba(0, 0, 0, 0.24);
   touch-action: none;
 }
 
 .club-training__pitch[data-event='sprint'] {
-  box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.32), 0 0 42px rgba(255, 53, 82, 0.16);
+  box-shadow:
+    inset 0 0 90px rgba(0, 0, 0, 0.32),
+    0 0 42px rgba(255, 53, 82, 0.16);
 }
 
 .club-training__pitch[data-event='shooting'],
 .club-training__pitch[data-event='skill'] {
-  box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.32), 0 0 48px rgba(255, 211, 103, 0.16);
+  box-shadow:
+    inset 0 0 90px rgba(0, 0, 0, 0.32),
+    0 0 48px rgba(255, 211, 103, 0.16);
 }
 
 .club-training__pitch-lines {
@@ -1401,9 +2277,16 @@
   height: 18px;
   border: 2px solid rgba(255, 255, 255, 0.92);
   border-radius: 50%;
-  background:
-    radial-gradient(circle at 35% 30%, #fff 0 18%, #f2eecf 19% 56%, #111 57% 64%, #fff6c8 65%);
-  box-shadow: 0 0 22px rgba(255, 238, 117, 0.8), 0 10px 18px rgba(0, 0, 0, 0.32);
+  background: radial-gradient(
+    circle at 35% 30%,
+    #fff 0 18%,
+    #f2eecf 19% 56%,
+    #111 57% 64%,
+    #fff6c8 65%
+  );
+  box-shadow:
+    0 0 22px rgba(255, 238, 117, 0.8),
+    0 10px 18px rgba(0, 0, 0, 0.32);
   transform: translate(-50%, -50%);
   pointer-events: none;
 }
@@ -1431,7 +2314,9 @@
   color: #fff;
   cursor: grab;
   transform: translate(-50%, -50%);
-  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.26), inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  box-shadow:
+    0 16px 30px rgba(0, 0, 0, 0.26),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
   touch-action: none;
 }
 
@@ -1444,7 +2329,9 @@
   background:
     linear-gradient(180deg, rgba(53, 35, 9, 0.9), rgba(6, 10, 19, 0.92)),
     radial-gradient(circle at 50% 0, rgba(255, 211, 103, 0.24), transparent 58%);
-  box-shadow: 0 0 28px rgba(255, 211, 103, 0.2), 0 18px 34px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 0 28px rgba(255, 211, 103, 0.2),
+    0 18px 34px rgba(0, 0, 0, 0.3);
 }
 
 .club-training-player[data-event='sprint'] {
@@ -1496,8 +2383,7 @@
   border: 1px solid rgba(255, 53, 82, 0.22);
   border-radius: 8px;
   background:
-    linear-gradient(135deg, rgba(255, 53, 82, 0.12), transparent 48%),
-    rgba(5, 8, 15, 0.72);
+    linear-gradient(135deg, rgba(255, 53, 82, 0.12), transparent 48%), rgba(5, 8, 15, 0.72);
   box-shadow: inset 0 0 24px rgba(255, 53, 82, 0.08);
 }
 
@@ -1626,8 +2512,7 @@
   border: 1px solid rgba(255, 53, 82, 0.18);
   border-radius: 8px;
   background:
-    linear-gradient(135deg, rgba(255, 53, 82, 0.08), transparent 58%),
-    rgba(255, 255, 255, 0.045);
+    linear-gradient(135deg, rgba(255, 53, 82, 0.08), transparent 58%), rgba(255, 255, 255, 0.045);
 }
 
 .club-training-roster__head {
@@ -1681,8 +2566,7 @@
 .club-training-roster__list button[data-active='true'] {
   border-color: rgba(255, 53, 82, 0.62);
   background:
-    linear-gradient(135deg, rgba(255, 53, 82, 0.16), transparent 72%),
-    rgba(255, 255, 255, 0.07);
+    linear-gradient(135deg, rgba(255, 53, 82, 0.16), transparent 72%), rgba(255, 255, 255, 0.07);
   box-shadow: 0 0 18px rgba(255, 53, 82, 0.12);
 }
 
@@ -1942,7 +2826,9 @@
 
 @keyframes dashboardBreath {
   50% {
-    box-shadow: 0 22px 44px rgba(0, 0, 0, 0.3), 0 0 32px rgba(126, 238, 255, 0.16);
+    box-shadow:
+      0 22px 44px rgba(0, 0, 0, 0.3),
+      0 0 32px rgba(126, 238, 255, 0.16);
   }
 }
 
@@ -1960,7 +2846,9 @@
 
 @keyframes startPulse {
   50% {
-    box-shadow: 0 20px 54px rgba(255, 153, 43, 0.44), 0 0 0 12px rgba(255, 184, 65, 0.04);
+    box-shadow:
+      0 20px 54px rgba(255, 153, 43, 0.44),
+      0 0 0 12px rgba(255, 184, 65, 0.04);
   }
 }
 
@@ -1972,14 +2860,18 @@
 
 @keyframes trainingPulseRed {
   50% {
-    box-shadow: 0 0 34px rgba(255, 53, 82, 0.32), 0 18px 34px rgba(0, 0, 0, 0.3);
+    box-shadow:
+      0 0 34px rgba(255, 53, 82, 0.32),
+      0 18px 34px rgba(0, 0, 0, 0.3);
     transform: translate(-50%, -50%) scale(1.04);
   }
 }
 
 @keyframes trainingPulseGold {
   50% {
-    box-shadow: 0 0 38px rgba(255, 211, 103, 0.34), 0 18px 34px rgba(0, 0, 0, 0.3);
+    box-shadow:
+      0 0 38px rgba(255, 211, 103, 0.34),
+      0 18px 34px rgba(0, 0, 0, 0.3);
     transform: translate(-50%, -50%) scale(1.05);
   }
 }
@@ -2191,16 +3083,23 @@
 
 /* RedLock final pass */
 .club-dashboard {
+  min-height: 100svh;
   background:
-    radial-gradient(circle at 50% 18%, rgba(255, 46, 74, 0.24), transparent 30%),
-    radial-gradient(circle at 12% 72%, rgba(255, 122, 69, 0.16), transparent 26%),
-    linear-gradient(180deg, rgba(4, 4, 6, 0.08), rgba(4, 4, 6, 0.86)),
-    url('/app/background.png') center / cover no-repeat;
+    linear-gradient(180deg, rgba(5, 5, 7, 0.18) 0%, rgba(5, 5, 7, 0.88) 78%),
+    radial-gradient(circle at 48% 23%, rgba(255, 46, 74, 0.34), transparent 27%),
+    radial-gradient(circle at 82% 72%, rgba(255, 181, 94, 0.14), transparent 24%),
+    url('/app/redlock-stadium.svg') center / cover no-repeat;
 }
 
 .club-dashboard::before {
   background:
-    linear-gradient(90deg, rgba(255, 46, 74, 0.16), transparent 24%, transparent 76%, rgba(255, 46, 74, 0.12)),
+    linear-gradient(
+      90deg,
+      rgba(255, 46, 74, 0.16),
+      transparent 24%,
+      transparent 76%,
+      rgba(255, 46, 74, 0.12)
+    ),
     radial-gradient(circle at 50% 92%, rgba(255, 46, 74, 0.22), transparent 34%);
 }
 
@@ -2222,7 +3121,12 @@
 }
 
 .club-dashboard__scan {
-  background: linear-gradient(180deg, transparent 0 46%, rgba(255, 46, 74, 0.16) 48%, transparent 51% 100%);
+  background: linear-gradient(
+    180deg,
+    transparent 0 46%,
+    rgba(255, 46, 74, 0.16) 48%,
+    transparent 51% 100%
+  );
 }
 
 .club-icon-button,
@@ -2267,8 +3171,7 @@
 .club-training-log,
 .club-training-scorebar > div {
   background:
-    radial-gradient(circle at 50% 0, rgba(255, 46, 74, 0.12), transparent 52%),
-    rgba(8, 8, 11, 0.78);
+    radial-gradient(circle at 50% 0, rgba(255, 46, 74, 0.12), transparent 52%), rgba(8, 8, 11, 0.78);
 }
 
 .club-action-card[data-tone='red'],

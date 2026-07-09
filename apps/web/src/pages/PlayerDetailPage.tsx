@@ -3,11 +3,15 @@ import { useMemo } from 'react';
 import type { CSSProperties } from 'react';
 import { usePlayerCards } from '../hooks/usePlayerCards';
 import { API_BASE_URL } from '../lib/apiClient';
-import { resolveClubImage, resolveCountryImage } from '../lib/referenceImage';
+import {
+  DEFAULT_CLUB_IMAGE,
+  DEFAULT_COUNTRY_IMAGE,
+  DEFAULT_PLAYER_AVATAR,
+  resolveClubImage,
+  resolveCountryImage,
+} from '../lib/referenceImage';
 import type { UserPlayerCard } from '../types';
 import type { StatKey } from '../lib/constants';
-
-const DEFAULT_PLAYER_AVATAR = '/default-avatar.svg';
 
 const STAT_LABELS: Record<StatKey, string> = {
   shooting: 'Shooting',
@@ -34,7 +38,10 @@ const STAT_LABELS: Record<StatKey, string> = {
 
 const STAT_GROUPS: Array<{ title: string; items: StatKey[] }> = [
   { title: 'Kick', items: ['shooting', 'passing', 'longPass', 'curve', 'vision', 'technique'] },
-  { title: 'Physical', items: ['stamina', 'pace', 'balance', 'strength', 'duels', 'determination'] },
+  {
+    title: 'Physical',
+    items: ['stamina', 'pace', 'balance', 'strength', 'duels', 'determination'],
+  },
   {
     title: 'Mental',
     items: ['attackingAwareness', 'defensiveAwareness', 'vision', 'determination', 'technique'],
@@ -48,7 +55,11 @@ const STAT_GROUPS: Array<{ title: string; items: StatKey[] }> = [
 
 const RADAR_AXES: Array<{ key: string; label: string; items: StatKey[] }> = [
   { key: 'speed', label: 'Speed', items: ['pace', 'stamina'] },
-  { key: 'defense', label: 'Defense', items: ['defensiveAwareness', 'standingTackle', 'slidingTackle'] },
+  {
+    key: 'defense',
+    label: 'Defense',
+    items: ['defensiveAwareness', 'standingTackle', 'slidingTackle'],
+  },
   { key: 'pass', label: 'Pass', items: ['passing', 'longPass', 'vision'] },
   { key: 'dribble', label: 'Dribble', items: ['dribbling', 'technique', 'balance'] },
   { key: 'shoot', label: 'Shoot', items: ['shooting', 'curve', 'attackingAwareness'] },
@@ -109,9 +120,18 @@ export function PlayerDetailPopup({
   );
 
   return (
-    <div className="game-modal-backdrop player-detail-popup-backdrop" role="dialog" aria-modal="true">
+    <div
+      className="game-modal-backdrop player-detail-popup-backdrop"
+      role="dialog"
+      aria-modal="true"
+    >
       <div className="player-detail-popup-card game-scroll">
-        <PlayerDetailSheet card={card} isLoading={isLoading} error={error as Error | null} onClose={onClose} />
+        <PlayerDetailSheet
+          card={card}
+          isLoading={isLoading}
+          error={error as Error | null}
+          onClose={onClose}
+        />
       </div>
     </div>
   );
@@ -147,7 +167,9 @@ export function PlayerDetailSheet({
     }));
   }, [card]);
 
-  const radarPolygon = radar.map((item, index) => radarPoint(index, radar.length, item.value)).join(', ');
+  const radarPolygon = radar
+    .map((item, index) => radarPoint(index, radar.length, item.value))
+    .join(', ');
   const total = card ? average(Object.values(card.totalStats || {}).map(Number)) : 0;
   const primaryPosition = card?.positions?.[0]?.position || 'FW';
 
@@ -214,7 +236,8 @@ export function PlayerDetailSheet({
               })}
               alt={card.baseClub || 'Club'}
               onError={(event) => {
-                event.currentTarget.style.display = 'none';
+                event.currentTarget.onerror = null;
+                event.currentTarget.src = DEFAULT_CLUB_IMAGE;
               }}
             />
             <span>{card.baseClub || 'Unknown Club'}</span>
@@ -224,7 +247,8 @@ export function PlayerDetailSheet({
               src={resolveCountryImage(card.country)}
               alt={card.country?.name || 'Country'}
               onError={(event) => {
-                event.currentTarget.style.display = 'none';
+                event.currentTarget.onerror = null;
+                event.currentTarget.src = DEFAULT_COUNTRY_IMAGE;
               }}
             />
             <span>{card.country?.name || 'Unknown Country'}</span>
@@ -274,4 +298,3 @@ export function PlayerDetailSheet({
     </section>
   );
 }
-

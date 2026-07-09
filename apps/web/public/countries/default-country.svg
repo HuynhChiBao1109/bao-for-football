@@ -1,0 +1,15 @@
+<svg width="256" height="170" viewBox="0 0 256 170" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Default country flag">
+  <rect width="256" height="170" rx="18" fill="#070709"/>
+  <rect x="8" y="8" width="240" height="154" rx="14" fill="url(#flag)" stroke="#FF2E4A" stroke-opacity=".42" stroke-width="2"/>
+  <path d="M8 60H248" stroke="#FF2E4A" stroke-opacity=".55" stroke-width="16"/>
+  <path d="M8 110H248" stroke="#FFB55E" stroke-opacity=".22" stroke-width="12"/>
+  <circle cx="128" cy="85" r="32" fill="#09090C" stroke="#FFB55E" stroke-width="4"/>
+  <path d="M128 54L137 75H160L142 89L149 112L128 98L107 112L114 89L96 75H119L128 54Z" fill="#FF2E4A"/>
+  <defs>
+    <linearGradient id="flag" x1="8" y1="8" x2="248" y2="162" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2A0E15"/>
+      <stop offset=".52" stop-color="#12080B"/>
+      <stop offset="1" stop-color="#070709"/>
+    </linearGradient>
+  </defs>
+</svg>

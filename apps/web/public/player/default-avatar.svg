@@ -1,6 +1,18 @@
-<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="256" height="256" rx="32" fill="#0B1220"/>
-  <circle cx="128" cy="104" r="42" fill="#1F2A44"/>
-  <path d="M54 206C63.5 171 92.5 152 128 152C163.5 152 192.5 171 202 206" stroke="#2DD4BF" stroke-width="18" stroke-linecap="round"/>
-  <circle cx="128" cy="104" r="18" fill="#94A3B8"/>
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Default RedLock player avatar">
+  <rect width="256" height="256" rx="32" fill="#060608"/>
+  <rect x="12" y="12" width="232" height="232" rx="24" fill="url(#bg)" stroke="#FF2E4A" stroke-opacity=".42" stroke-width="2"/>
+  <path d="M33 196C49 161 82 142 128 142C174 142 207 161 223 196V222H33V196Z" fill="#18080D"/>
+  <path d="M51 211C64 175 92 157 128 157C164 157 192 175 205 211" stroke="#FF2E4A" stroke-width="14" stroke-linecap="round"/>
+  <circle cx="128" cy="98" r="45" fill="#15151A" stroke="#FF2E4A" stroke-opacity=".45" stroke-width="4"/>
+  <path d="M89 92C98 63 118 49 149 52C131 61 116 74 104 92H89Z" fill="#FF2E4A" fill-opacity=".9"/>
+  <path d="M85 121C101 135 119 142 139 139C159 136 174 126 184 109" stroke="#FFB55E" stroke-width="8" stroke-linecap="round"/>
+  <path d="M60 39H196" stroke="#FF2E4A" stroke-opacity=".28" stroke-width="2"/>
+  <path d="M60 228H196" stroke="#FF2E4A" stroke-opacity=".28" stroke-width="2"/>
+  <defs>
+    <radialGradient id="bg" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(128 88) rotate(90) scale(156)">
+      <stop stop-color="#311018"/>
+      <stop offset=".48" stop-color="#12080B"/>
+      <stop offset="1" stop-color="#070709"/>
+    </radialGradient>
+  </defs>
 </svg>

@@ -2,13 +2,17 @@ import { useMemo, useState } from 'react';
 import { usePlayerCards, useAllocateStats } from '../hooks/usePlayerCards';
 import { STAT_FIELDS, STAT_KEYS, DEFAULT_STATS, type StatKey } from '../lib/constants';
 import { API_BASE_URL } from '../lib/apiClient';
-import { resolveClubImage, resolveCountryImage } from '../lib/referenceImage';
+import {
+  DEFAULT_CLUB_IMAGE,
+  DEFAULT_COUNTRY_IMAGE,
+  DEFAULT_PLAYER_AVATAR,
+  resolveClubImage,
+  resolveCountryImage,
+} from '../lib/referenceImage';
 import { Banner } from '../components/feedback';
 import { StatBar, StatusBadge } from '../components/redlock/RedLockUI';
 import type { UserPlayerCard } from '../types';
 import { PlayerDetailPopup } from './PlayerDetailPage';
-
-const DEFAULT_PLAYER_AVATAR = '/default-avatar.svg';
 
 function resolveMediaUrl(value: string | undefined | null): string {
   const source = String(value || '').trim();
@@ -197,7 +201,8 @@ export function PlayersPage() {
                                 alt={card.baseClub || 'Club'}
                                 className="h-4 w-4 rounded-full object-cover"
                                 onError={(event) => {
-                                  event.currentTarget.style.display = 'none';
+                                  event.currentTarget.onerror = null;
+                                  event.currentTarget.src = DEFAULT_CLUB_IMAGE;
                                 }}
                               />
                               <span>{card.baseClub || 'N/A'}</span>
@@ -212,7 +217,8 @@ export function PlayersPage() {
                             alt={card.country?.name || 'Country'}
                             className="h-4 w-6 rounded-sm object-cover"
                             onError={(event) => {
-                              event.currentTarget.style.display = 'none';
+                              event.currentTarget.onerror = null;
+                              event.currentTarget.src = DEFAULT_COUNTRY_IMAGE;
                             }}
                           />
                           <span>{card.country?.name ?? '—'}</span>
@@ -280,7 +286,8 @@ export function PlayersPage() {
                         alt={selectedCard.baseClub || 'Club'}
                         className="h-5 w-5 rounded-full object-cover"
                         onError={(event) => {
-                          event.currentTarget.style.display = 'none';
+                          event.currentTarget.onerror = null;
+                          event.currentTarget.src = DEFAULT_CLUB_IMAGE;
                         }}
                       />
                       <span>{selectedCard.baseClub || 'N/A'}</span>
@@ -291,7 +298,8 @@ export function PlayersPage() {
                         alt={selectedCard.country?.name || 'Country'}
                         className="h-4 w-6 rounded-sm object-cover"
                         onError={(event) => {
-                          event.currentTarget.style.display = 'none';
+                          event.currentTarget.onerror = null;
+                          event.currentTarget.src = DEFAULT_COUNTRY_IMAGE;
                         }}
                       />
                       <span>{selectedCard.country?.name || '—'}</span>
@@ -368,10 +376,7 @@ export function PlayersPage() {
         </div>
       </aside>
       {detailPlayerId ? (
-        <PlayerDetailPopup
-          userPlayerId={detailPlayerId}
-          onClose={() => setDetailPlayerId(null)}
-        />
+        <PlayerDetailPopup userPlayerId={detailPlayerId} onClose={() => setDetailPlayerId(null)} />
       ) : null}
     </section>
   );
@@ -396,7 +401,9 @@ function StatRow({
 }) {
   return (
     <div className="flex items-center gap-2 rounded-[14px] border border-white/8 bg-black/20 px-3 py-2">
-      <div className="flex-1 min-w-0"><StatBar label={label} value={value} hint={`base ${base} +${bonus}`} /></div>
+      <div className="flex-1 min-w-0">
+        <StatBar label={label} value={value} hint={`base ${base} +${bonus}`} />
+      </div>
       <button
         type="button"
         onClick={() => onChange(value - 1)}
@@ -422,4 +429,3 @@ function StatRow({
     </div>
   );
 }
-

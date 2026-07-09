@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/apiClient';
 import { useAuth } from './useAuth';
 import type { GachaBanner, GachaResult } from '../types';
@@ -34,6 +34,7 @@ export function useGachaProgress(bannerCode: string | null) {
 
 export function useGachaRoll() {
   const { token } = useAuth();
+  const qc = useQueryClient();
 
   return useMutation<GachaResult, Error, { userId: number; bannerCode: string }>({
     mutationFn: async (body) => {
@@ -43,6 +44,10 @@ export function useGachaRoll() {
         body,
       });
       return payload as GachaResult;
+    },
+    onSuccess: (_result, variables) => {
+      void qc.invalidateQueries({ queryKey: ['gacha-progress', variables.bannerCode] });
+      void qc.invalidateQueries({ queryKey: ['playerCards', token] });
     },
   });
 }

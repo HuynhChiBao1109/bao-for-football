@@ -1,0 +1,17 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Default RedLock club crest">
+  <rect width="256" height="256" rx="32" fill="#060608"/>
+  <path d="M128 20L220 54V117C220 174 185 216 128 236C71 216 36 174 36 117V54L128 20Z" fill="url(#shield)" stroke="#FF2E4A" stroke-width="5"/>
+  <path d="M68 76L128 53L188 76V117C188 157 166 187 128 203C90 187 68 157 68 117V76Z" fill="#09090C" stroke="#FFB55E" stroke-opacity=".36" stroke-width="3"/>
+  <path d="M74 132H182" stroke="#FF2E4A" stroke-width="7" stroke-linecap="round"/>
+  <path d="M128 72V190" stroke="#FF2E4A" stroke-opacity=".72" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="128" cy="132" r="34" fill="#111116" stroke="#FFB55E" stroke-width="5"/>
+  <path d="M111 133L124 147L148 112" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M88 214H168" stroke="#FF2E4A" stroke-opacity=".32" stroke-width="3" stroke-linecap="round"/>
+  <defs>
+    <linearGradient id="shield" x1="128" y1="20" x2="128" y2="236" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3A111B"/>
+      <stop offset=".58" stop-color="#12070B"/>
+      <stop offset="1" stop-color="#08080A"/>
+    </linearGradient>
+  </defs>
+</svg>

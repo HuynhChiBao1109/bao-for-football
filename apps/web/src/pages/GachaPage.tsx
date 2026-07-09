@@ -3,6 +3,7 @@ import { useGachaRoll, useGachaBanners, useGachaProgress } from '../hooks/useGac
 import { useSession } from '../hooks/useSession';
 import { Banner } from '../components/feedback';
 import { API_BASE_URL } from '../lib/apiClient';
+import { DEFAULT_PLAYER_AVATAR } from '../lib/referenceImage';
 import { GachaBannerStatus } from '../enums/gacha';
 import type { GachaBanner, GachaResult } from '../types';
 
@@ -14,7 +15,8 @@ export function GachaPage() {
   const rollMutation = useGachaRoll();
 
   const [selectedBanner, setSelectedBanner] = useState<GachaBanner | null>(null);
-  const { data: progressData } = useGachaProgress(selectedBanner?.bannerCode ?? null);
+  const activeBanner = selectedBanner ?? banners[0] ?? null;
+  const { data: progressData } = useGachaProgress(activeBanner?.bannerCode ?? null);
   const [result, setResult] = useState<GachaResult | null>(null);
   const [history, setHistory] = useState<GachaResult[]>([]);
   const [rollError, setRollError] = useState('');
@@ -24,7 +26,7 @@ export function GachaPage() {
       setRollError('Không tìm thấy user hiện tại để thực hiện roll.');
       return;
     }
-    if (!selectedBanner) {
+    if (!activeBanner) {
       setRollError('Vui lòng chọn banner trước.');
       return;
     }
@@ -32,7 +34,7 @@ export function GachaPage() {
     try {
       const data = await rollMutation.mutateAsync({
         userId,
-        bannerCode: selectedBanner.bannerCode,
+        bannerCode: activeBanner.bannerCode,
       });
       setResult(data);
       setHistory((prev) => [data, ...prev].slice(0, 10));
@@ -81,7 +83,7 @@ export function GachaPage() {
                 <BannerCard
                   key={b.id}
                   banner={b}
-                  selected={selectedBanner?.id === b.id}
+                  selected={activeBanner?.id === b.id}
                   onSelect={() => {
                     setSelectedBanner(b);
                     setResult(null);
@@ -94,16 +96,16 @@ export function GachaPage() {
           </section>
 
           {/* Roll panel */}
-          {selectedBanner && (
+          {activeBanner && (
             <section className="game-panel game-panel--soft overflow-hidden p-5">
               <div className="game-panel__content">
                 <p className="game-header-kicker">Banner đã chọn</p>
                 <h3 className="game-title mt-2 text-xl font-bold text-white">
-                  {selectedBanner.bannerName}
+                  {activeBanner.bannerName}
                 </h3>
                 <p className="mt-1 text-xs text-slate-400">
-                  Hết hạn: {formatExpiry(selectedBanner.expiredAt)} · Code:{' '}
-                  <span className="text-slate-300">{selectedBanner.bannerCode}</span>
+                  Hết hạn: {formatExpiry(activeBanner.expiredAt)} · Code:{' '}
+                  <span className="text-slate-300">{activeBanner.bannerCode}</span>
                 </p>
 
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -131,7 +133,7 @@ export function GachaPage() {
                       disabled={rollMutation.isPending}
                       className="game-button-primary w-full"
                     >
-                      {rollMutation.isPending ? 'Đang quay...' : '⚡ Quay ngay'}
+                      {rollMutation.isPending ? 'Đang quay...' : 'Quay 1 cầu thủ'}
                     </button>
                   </div>
 
@@ -146,15 +148,19 @@ export function GachaPage() {
 
                         {/* Player display */}
                         <div className="bg-black/40 rounded-[12px] p-3">
-                          {result.playerImageUrl && (
-                            <div className="relative h-32 w-full overflow-hidden rounded-[8px] bg-black/30 mb-2">
-                              <img
-                                src={result.playerImageUrl}
-                                alt={result.playerName}
-                                className="h-full w-full object-cover"
-                              />
-                            </div>
-                          )}
+                          <div className="relative h-32 w-full overflow-hidden rounded-[8px] bg-black/30 mb-2">
+                            <img
+                              src={
+                                resolveGachaMediaUrl(result.playerImageUrl) || DEFAULT_PLAYER_AVATAR
+                              }
+                              alt={result.playerName}
+                              className="h-full w-full object-cover"
+                              onError={(event) => {
+                                event.currentTarget.onerror = null;
+                                event.currentTarget.src = DEFAULT_PLAYER_AVATAR;
+                              }}
+                            />
+                          </div>
                           <p className="text-sm font-semibold text-white truncate">
                             {result.playerName}
                           </p>
@@ -244,11 +250,7 @@ function BannerCard({
   onSelect: () => void;
   formatExpiry: (d?: string) => string;
 }) {
-  const imgSrc = banner.bannerImageUrl
-    ? banner.bannerImageUrl.startsWith('http')
-      ? banner.bannerImageUrl
-      : `${API_BASE_URL}${banner.bannerImageUrl}`
-    : null;
+  const imgSrc = resolveGachaMediaUrl(banner.bannerImageUrl);
 
   return (
     <button
@@ -303,6 +305,14 @@ function BannerCard({
 }
 
 // ─── Tile ─────────────────────────────────────────────────────────────────────
+
+function resolveGachaMediaUrl(value?: string | null): string {
+  const source = String(value || '').trim();
+  if (!source) return '';
+  if (/^https?:\/\//i.test(source)) return source;
+  if (source.startsWith('/')) return `${API_BASE_URL}${source}`;
+  return `${API_BASE_URL}/${source}`;
+}
 
 function Tile({ label, value }: { label: string; value: string }) {
   return (

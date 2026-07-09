@@ -17,26 +17,41 @@ import { useAuth } from '../hooks/useAuth';
 import { usePlayerCards } from '../hooks/usePlayerCards';
 import { useSession } from '../hooks/useSession';
 import { useSaveTactics, useTactics } from '../hooks/useTactics';
-import { useTrainingRoom, useTriggerTrainingEvent, type TrainingEventType } from '../hooks/useTrainingRoom';
+import {
+  useTrainingRoom,
+  useTriggerTrainingEvent,
+  type TrainingEventType,
+} from '../hooks/useTrainingRoom';
 import { useMatchMotion } from '../hooks/useMatchMotion';
 import { EPlayerSkill, skillAnimation, skillName } from '../enums/skill';
 import { queryClient } from '../lib/queryClient';
 import { normalizeSnapshot } from '../lib/normalizeMatchSnapshot';
+import { DEFAULT_CLUB_IMAGE } from '../lib/referenceImage';
 import { ROUTES } from '../routes';
+import { GachaPage } from './GachaPage';
 import { PlayerDetailPopup } from './PlayerDetailPage';
 import { TacticsPopup } from './TacticsPage';
-import type { CampaignMatch, MatchPitchPlayer, MatchSnapshot, Tactics, UserPlayerCard } from '../types';
+import type {
+  CampaignMatch,
+  MatchPitchPlayer,
+  MatchSnapshot,
+  Tactics,
+  UserPlayerCard,
+} from '../types';
 import '../MatchView.css';
 import './ClubPage.css';
 
-type DockAction = {
+type ClubModal = 'campaign' | 'lineup' | 'gacha' | 'pvp' | 'shop' | 'training' | null;
+
+type HubAction = {
   label: string;
+  eyebrow: string;
+  description: string;
   icon: ReactNode;
-  onClick: () => void;
+  modal: Exclude<ClubModal, null>;
   tone?: 'cyan' | 'gold' | 'red';
 };
 
-type ClubModal = 'campaign' | 'lineup' | 'training' | null;
 type LineupSlot = {
   slotId: string;
   role: string;
@@ -68,6 +83,10 @@ const DEFAULT_TACTICS: Tactics = {
     tempoScale: 1.05,
   },
 };
+
+function formatDashboardNumber(value?: number | null) {
+  return Number(value ?? 0).toLocaleString('vi-VN');
+}
 
 const FORMATION_SLOTS: Record<string, LineupSlot[]> = {
   '4-3-3': [
@@ -102,7 +121,6 @@ export function ClubPage() {
   const { data: sessionData, isLoading } = useSession();
   const { setSession } = useAuth();
   const navigate = useNavigate();
-  const [notice, setNotice] = useState('');
   const [activeModal, setActiveModal] = useState<ClubModal>(null);
 
   const team = sessionData?.team ?? null;
@@ -113,23 +131,6 @@ export function ClubPage() {
     queryClient.clear();
     navigate(ROUTES.login, { replace: true });
   }
-
-  const leftActions: DockAction[] = [
-    { label: 'Events', icon: <CalendarIcon />, onClick: () => setNotice('Events dang cap nhat.') },
-    { label: 'Shop', icon: <ShopIcon />, onClick: () => setNotice('Shop dang cap nhat.'), tone: 'gold' },
-    { label: 'Lineup', icon: <FormationIcon />, onClick: () => setActiveModal('lineup'), tone: 'red' },
-  ];
-  const rightActions: DockAction[] = [
-    { label: 'Players', icon: <PlayersIcon />, onClick: () => navigate(ROUTES.players) },
-    { label: 'Gacha', icon: <SparkIcon />, onClick: () => navigate(ROUTES.gacha), tone: 'gold' },
-  ];
-  const quickActions: DockAction[] = [
-    { label: 'Start Match', icon: <WhistleIcon />, onClick: () => setActiveModal('campaign'), tone: 'red' },
-    { label: 'PvP', icon: <VersusIcon />, onClick: () => navigate(ROUTES.pvp), tone: 'red' },
-    { label: 'Lineup', icon: <FormationIcon />, onClick: () => setActiveModal('lineup') },
-    { label: 'Training', icon: <TrainingIcon />, onClick: () => setActiveModal('training') },
-    { label: 'Shop', icon: <ShopIcon />, onClick: () => setNotice('Shop dang cap nhat.'), tone: 'gold' },
-  ];
 
   if (isLoading) {
     return (
@@ -147,25 +148,99 @@ export function ClubPage() {
     );
   }
 
+  const hubActions: HubAction[] = [
+    {
+      label: 'Đội hình',
+      eyebrow: 'Squad XI',
+      description: 'Danh sách cầu thủ hiện tại và đội hình ra sân.',
+      icon: <FormationIcon />,
+      modal: 'lineup',
+      tone: 'red',
+    },
+    {
+      label: 'Campaign',
+      eyebrow: 'Red Route',
+      description: 'Vào chuỗi trận AI của học viện RedLock.',
+      icon: <WhistleIcon />,
+      modal: 'campaign',
+      tone: 'red',
+    },
+    {
+      label: 'PvP',
+      eyebrow: 'Arena',
+      description: 'Đang cập nhật.',
+      icon: <VersusIcon />,
+      modal: 'pvp',
+      tone: 'cyan',
+    },
+    {
+      label: 'Shop',
+      eyebrow: 'Locker',
+      description: 'Đang cập nhật.',
+      icon: <ShopIcon />,
+      modal: 'shop',
+      tone: 'gold',
+    },
+    {
+      label: 'Gacha',
+      eyebrow: 'Scout',
+      description: 'Roll 1 cầu thủ từ banner hiện tại.',
+      icon: <SparkIcon />,
+      modal: 'gacha',
+      tone: 'gold',
+    },
+  ];
+  const clubAvatar = team.imgUrl || DEFAULT_CLUB_IMAGE;
+  const rankText = `#${formatDashboardNumber(team.rankPoint)}`;
+  const budgetText = formatDashboardNumber(team.budget);
+
   return (
     <section className="club-dashboard">
       <div className="club-dashboard__field" aria-hidden="true" />
       <div className="club-dashboard__player" aria-hidden="true" />
       <div className="club-dashboard__scan" aria-hidden="true" />
 
-      <header className="club-dashboard__top">
+      <header className="club-dashboard__top club-dashboard__top--status">
         <button
           type="button"
-          className="club-icon-button club-icon-button--user"
+          className="club-profile-card"
           onClick={() => navigate(ROUTES.players)}
-          aria-label="Players"
+          aria-label="Mở danh sách cầu thủ"
           title="Players"
         >
-          <img src={team.imgUrl || '/app/logo.png'} alt="" />
+          <img
+            className="club-profile-card__avatar"
+            src={clubAvatar}
+            alt={`${userName} avatar`}
+            onError={(event) => {
+              event.currentTarget.onerror = null;
+              event.currentTarget.src = DEFAULT_CLUB_IMAGE;
+            }}
+          />
+          <span className="club-profile-card__text">
+            <small>Player</small>
+            <strong>{userName}</strong>
+          </span>
         </button>
+
+        <div className="club-top-stats" aria-label="Thông tin câu lạc bộ">
+          <div className="club-top-stat">
+            <span>Ranking</span>
+            <strong>{rankText}</strong>
+          </div>
+          <div className="club-top-stat">
+            <span>CLB</span>
+            <strong>{team.teamName}</strong>
+          </div>
+          <div className="club-top-stat" data-tone="gold">
+            <span>Money</span>
+            <strong>{budgetText}</strong>
+          </div>
+        </div>
+
         <button
           type="button"
-          className="club-icon-button club-icon-button--small"
+          className="club-icon-button club-icon-button--small club-dashboard__logout"
           onClick={handleLogout}
           aria-label="Logout"
           title="Logout"
@@ -177,77 +252,49 @@ export function ClubPage() {
       <div className="club-dashboard__identity">
         <p>{userName}</p>
         <strong>{team.teamName}</strong>
-        <small>Awaken Your Ego. Dominate The Field.</small>
+        <small>RedLock Stadium Protocol</small>
       </div>
 
-      <nav className="club-dashboard__quick" aria-label="Club actions">
-        {quickActions.map((action, index) => (
+      <nav className="club-dashboard__hub" aria-label="Main actions">
+        {hubActions.map((action, index) => (
           <button
             key={action.label}
             type="button"
-            className="club-action-card"
+            className="club-hub-card"
             data-tone={action.tone ?? 'cyan'}
             style={{ animationDelay: `${index * 70}ms` }}
-            onClick={action.onClick}
+            onClick={() => setActiveModal(action.modal)}
             aria-label={action.label}
             title={action.label}
           >
-            <span className="club-action-card__icon">{action.icon}</span>
-            <span className="club-action-card__label">{action.label}</span>
+            <span className="club-hub-card__icon">{action.icon}</span>
+            <span className="club-hub-card__content">
+              <small>{action.eyebrow}</small>
+              <strong>{action.label}</strong>
+              <span>{action.description}</span>
+            </span>
           </button>
         ))}
       </nav>
-
-      <nav className="club-dashboard__side club-dashboard__side--left" aria-label="Events and shop">
-        {leftActions.map((action, index) => (
-          <button
-            key={action.label}
-            type="button"
-            className="club-orbit-button"
-            data-tone={action.tone ?? 'cyan'}
-            style={{ animationDelay: `${index * 90}ms` }}
-            onClick={action.onClick}
-            aria-label={action.label}
-            title={action.label}
-          >
-            <span>{action.icon}</span>
-          </button>
-        ))}
-      </nav>
-
-      <nav className="club-dashboard__side club-dashboard__side--right" aria-label="Gacha">
-        {rightActions.map((action, index) => (
-          <button
-            key={action.label}
-            type="button"
-            className="club-orbit-button"
-            data-tone={action.tone ?? 'cyan'}
-            style={{ animationDelay: `${index * 90}ms` }}
-            onClick={action.onClick}
-            aria-label={action.label}
-            title={action.label}
-          >
-            <span>{action.icon}</span>
-          </button>
-        ))}
-      </nav>
-
-      {notice ? (
-        <button type="button" className="club-toast" onClick={() => setNotice('')}>
-          {notice}
-        </button>
-      ) : null}
 
       {activeModal ? (
         <ClubModalShell
           title={getClubModalTitle(activeModal)}
-          tone={activeModal === 'campaign' ? 'red' : 'cyan'}
+          tone={getClubModalTone(activeModal)}
           onClose={() => setActiveModal(null)}
         >
           {activeModal === 'campaign' ? (
             <CampaignPopup teamId={Number(team.id)} />
           ) : activeModal === 'lineup' ? (
             <LineupPopup teamId={`team-${team.id}`} />
+          ) : activeModal === 'gacha' ? (
+            <div className="club-popup club-popup--gacha">
+              <GachaPage />
+            </div>
+          ) : activeModal === 'pvp' ? (
+            <ComingSoonPopup feature="PvP" />
+          ) : activeModal === 'shop' ? (
+            <ComingSoonPopup feature="Shop" />
           ) : (
             <TrainingPopup />
           )}
@@ -258,9 +305,18 @@ export function ClubPage() {
 }
 
 function getClubModalTitle(modal: Exclude<ClubModal, null>) {
-  if (modal === 'campaign') return 'Start Match';
-  if (modal === 'lineup') return 'Lineup';
-  return 'Training Room';
+  if (modal === 'campaign') return 'Campaign';
+  if (modal === 'lineup') return 'Đội hình';
+  if (modal === 'gacha') return 'Gacha';
+  if (modal === 'pvp') return 'PvP';
+  if (modal === 'training') return 'Training Room';
+  return 'Shop';
+}
+
+function getClubModalTone(modal: Exclude<ClubModal, null>) {
+  if (modal === 'campaign' || modal === 'lineup') return 'red';
+  if (modal === 'gacha' || modal === 'shop') return 'gold';
+  return 'cyan';
 }
 
 function ClubModalShell({
@@ -280,7 +336,13 @@ function ClubModalShell({
       <section className="club-modal__panel" data-tone={tone}>
         <header className="club-modal__head">
           <div>
-            <span>{tone === 'red' ? 'Battle route' : 'Match squad'}</span>
+            <span>
+              {tone === 'gold'
+                ? 'Scout protocol'
+                : tone === 'red'
+                  ? 'RedLock protocol'
+                  : 'Arena status'}
+            </span>
             <strong>{title}</strong>
           </div>
           <button type="button" className="club-modal__close" onClick={onClose} aria-label="Close">
@@ -289,6 +351,17 @@ function ClubModalShell({
         </header>
         {children}
       </section>
+    </div>
+  );
+}
+
+function ComingSoonPopup({ feature }: { feature: 'PvP' | 'Shop' }) {
+  return (
+    <div className="club-popup club-popup--soon">
+      <div className="club-soon-panel">
+        <span>{feature}</span>
+        <strong>Đang cập nhật</strong>
+      </div>
     </div>
   );
 }
@@ -405,7 +478,9 @@ function LineupPopup({ teamId }: { teamId: string }) {
       });
       return next;
     });
-    setSelectedSlotId((prev) => (slots.some((slot) => slot.slotId === prev) ? prev : slots[0].slotId));
+    setSelectedSlotId((prev) =>
+      slots.some((slot) => slot.slotId === prev) ? prev : slots[0].slotId,
+    );
   }, [slots]);
 
   const cardsById = useMemo(() => new Map(cards.map((card) => [card.userPlayerId, card])), [cards]);
@@ -417,9 +492,21 @@ function LineupPopup({ teamId }: { teamId: string }) {
   const availableCards = useMemo(
     () =>
       cards
-        .map((card) => ({ card, score: playerOverall(card), fit: positionFit(card, selectedSlot.role) }))
+        .map((card) => ({
+          card,
+          score: playerOverall(card),
+          fit: positionFit(card, selectedSlot.role),
+        }))
         .sort((a, b) => b.fit - a.fit || b.score - a.score),
     [cards, selectedSlot.role],
+  );
+  const startingLineup = useMemo(
+    () =>
+      slots.map((slot) => ({
+        slot,
+        card: lineup[slot.slotId] ? cardsById.get(Number(lineup[slot.slotId])) : null,
+      })),
+    [cardsById, lineup, slots],
   );
   const starterCount = slots.filter((slot) => lineup[slot.slotId]).length;
 
@@ -487,8 +574,14 @@ function LineupPopup({ teamId }: { teamId: string }) {
           ))}
         </div>
         <span>{starterCount}/11 starters</span>
-        <button type="button" onClick={autoFill}>Auto</button>
-        <button type="button" onClick={() => void saveLineup()} disabled={saveTactics.isPending || starterCount < 11}>
+        <button type="button" onClick={autoFill}>
+          Auto
+        </button>
+        <button
+          type="button"
+          onClick={() => void saveLineup()}
+          disabled={saveTactics.isPending || starterCount < 11}
+        >
           {saveTactics.isPending ? 'Saving...' : 'Save'}
         </button>
       </div>
@@ -497,10 +590,9 @@ function LineupPopup({ teamId }: { teamId: string }) {
       {saveTactics.error ? <Banner text={saveTactics.error.message} tone="error" /> : null}
 
       <div className="club-lineup-grid">
-        <div className="club-lineup-pitch">
-          {slots.map((slot) => {
-            const card = lineup[slot.slotId] ? cardsById.get(Number(lineup[slot.slotId])) : null;
-            return (
+        <div className="club-lineup-board">
+          <div className="club-lineup-pitch">
+            {startingLineup.map(({ slot, card }) => (
               <button
                 key={slot.slotId}
                 type="button"
@@ -530,37 +622,54 @@ function LineupPopup({ teamId }: { teamId: string }) {
                   </small>
                 ) : null}
               </button>
-            );
-          })}
+            ))}
+          </div>
+
+          <div className="club-starter-strip">
+            {startingLineup.map(({ slot, card }) => (
+              <button
+                key={`strip-${slot.slotId}`}
+                type="button"
+                data-active={selectedSlotId === slot.slotId}
+                onClick={() => setSelectedSlotId(slot.slotId)}
+              >
+                <span>{slot.label}</span>
+                <strong>{card?.name ?? 'Trống'}</strong>
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="club-player-select">
           <div className="club-player-select__head">
-            <span>Choose for</span>
-            <strong>{selectedSlot.label}</strong>
+            <span>Cầu thủ hiện tại</span>
+            <strong>{cards.length} players</strong>
+            <small>Đang chọn {selectedSlot.label}</small>
           </div>
-          <div className="club-player-list">
+          <div className="club-roster-list game-scroll">
+            {availableCards.length === 0 ? (
+              <p className="club-roster-empty">Chưa có cầu thủ.</p>
+            ) : null}
             {availableCards.map(({ card, score, fit }) => (
               <button
                 key={card.userPlayerId}
                 type="button"
-                className="club-player-row"
+                className="club-roster-row"
                 data-used={usedIds.has(card.userPlayerId)}
                 onClick={() => assignPlayer(card.userPlayerId)}
               >
-                <span>{card.name}</span>
-                <small>{card.positions?.[0]?.position ?? 'ANY'}</small>
-                <strong>{Math.round(score * fit)}</strong>
+                <span>{card.positions?.[0]?.position ?? 'ANY'}</span>
+                <strong>{card.name}</strong>
+                <small>
+                  OVR {Math.round(score)} / FIT {Math.round(fit * 100)}
+                </small>
               </button>
             ))}
           </div>
         </div>
       </div>
       {detailPlayerId ? (
-        <PlayerDetailPopup
-          userPlayerId={detailPlayerId}
-          onClose={() => setDetailPlayerId(null)}
-        />
+        <PlayerDetailPopup userPlayerId={detailPlayerId} onClose={() => setDetailPlayerId(null)} />
       ) : null}
     </div>
   );
@@ -597,7 +706,9 @@ function TrainingPopup() {
   const [activeEvent, setActiveEvent] = useState<TrainingEventKey>('warmup');
   const [playerCount, setPlayerCount] = useState(11);
   const [activePlayerIds, setActivePlayerIds] = useState<number[]>([]);
-  const [eventLog, setEventLog] = useState<Array<{ id: number; tick: number; event: string; player: string }>>([]);
+  const [eventLog, setEventLog] = useState<
+    Array<{ id: number; tick: number; event: string; player: string }>
+  >([]);
   const [snapshot, setSnapshot] = useState<MatchSnapshot | null>(null);
   const [metrics, setMetrics] = useState({
     event: 'idle',
@@ -665,12 +776,15 @@ function TrainingPopup() {
   useEffect(() => {
     if (!activeCards.length) return;
     setSelectedPlayerId((current) =>
-      activeCards.some((card) => card.userPlayerId === current) ? current : activeCards[0].userPlayerId,
+      activeCards.some((card) => card.userPlayerId === current)
+        ? current
+        : activeCards[0].userPlayerId,
     );
   }, [activeCards]);
 
   const selectedPlayer = useMemo(
-    () => activeCards.find((card) => card.userPlayerId === selectedPlayerId) ?? activeCards[0] ?? null,
+    () =>
+      activeCards.find((card) => card.userPlayerId === selectedPlayerId) ?? activeCards[0] ?? null,
     [activeCards, selectedPlayerId],
   );
 
@@ -717,7 +831,7 @@ function TrainingPopup() {
       positions: Object.fromEntries(
         Object.entries(positions).map(([playerId, point]) => [playerId, point]),
       ),
-      tick: metrics.event === 'idle' ? 0 : eventLog[0]?.tick ?? trainingRoom?.tick ?? 0,
+      tick: metrics.event === 'idle' ? 0 : (eventLog[0]?.tick ?? trainingRoom?.tick ?? 0),
     });
     setSnapshot(normalizeSnapshot(response.snapshot));
     setPositions(
@@ -732,15 +846,17 @@ function TrainingPopup() {
       ),
     );
     setMetrics(response.metrics);
-    setEventLog((current) => [
-      ...response.eventLog.map((item) => ({
-        id: Date.now() + item.tick,
-        tick: item.tick,
-        event: item.label,
-        player: item.playerName,
-      })),
-      ...current,
-    ].slice(0, 8));
+    setEventLog((current) =>
+      [
+        ...response.eventLog.map((item) => ({
+          id: Date.now() + item.tick,
+          tick: item.tick,
+          event: item.label,
+          player: item.playerName,
+        })),
+        ...current,
+      ].slice(0, 8),
+    );
   }
 
   function autoSpread() {
@@ -777,7 +893,9 @@ function TrainingPopup() {
   return (
     <div className="club-popup club-popup--training">
       {error ? <Banner text={(error as Error).message} tone="error" /> : null}
-      {triggerTrainingEvent.error ? <Banner text={triggerTrainingEvent.error.message} tone="error" /> : null}
+      {triggerTrainingEvent.error ? (
+        <Banner text={triggerTrainingEvent.error.message} tone="error" />
+      ) : null}
       <div className="club-training">
         <TrainingMatchStage
           snapshot={renderedSnapshot}
@@ -801,13 +919,18 @@ function TrainingPopup() {
           <div className="club-training-panel__head">
             <span>Selected</span>
             <strong>{selectedPlayer?.name ?? 'None'}</strong>
-            <small>{selectedPlayer?.positions?.[0]?.position ?? 'ANY'} / OVR {Math.round(selectedPlayer ? playerOverall(selectedPlayer) : 0)}</small>
+            <small>
+              {selectedPlayer?.positions?.[0]?.position ?? 'ANY'} / OVR{' '}
+              {Math.round(selectedPlayer ? playerOverall(selectedPlayer) : 0)}
+            </small>
           </div>
 
           <div className="club-training-roster">
             <div className="club-training-roster__head">
               <span>Players on pitch</span>
-              <strong>{activeCards.length}/{Math.min(11, cards.length || 11)}</strong>
+              <strong>
+                {activeCards.length}/{Math.min(11, cards.length || 11)}
+              </strong>
             </div>
             <input
               type="range"
@@ -819,7 +942,9 @@ function TrainingPopup() {
             <div className="club-training-roster__list">
               {cards.slice(0, 18).map((card) => {
                 const isGk = isGoalkeeperCard(card);
-                const isActive = activeCards.some((item) => item.userPlayerId === card.userPlayerId);
+                const isActive = activeCards.some(
+                  (item) => item.userPlayerId === card.userPlayerId,
+                );
                 return (
                   <button
                     key={card.userPlayerId}
@@ -928,14 +1053,18 @@ function TrainingMatchStage({
   const players = useMemo(
     () =>
       snapshot
-        ? [...snapshot.homePlayers, ...snapshot.awayPlayers].filter((player) => activePlayerIds.includes(Number(player.id))).map((player) => {
-            const override = positions[Number(player.id)];
-            return override ? { ...player, x: override.x, y: override.y } : player;
-          })
+        ? [...snapshot.homePlayers, ...snapshot.awayPlayers]
+            .filter((player) => activePlayerIds.includes(Number(player.id)))
+            .map((player) => {
+              const override = positions[Number(player.id)];
+              return override ? { ...player, x: override.x, y: override.y } : player;
+            })
         : [],
     [activePlayerIds, positions, snapshot],
   );
-  const highlightedPlayerId = snapshot?.highlight?.actorPlayerId ? Number(snapshot.highlight.actorPlayerId) : null;
+  const highlightedPlayerId = snapshot?.highlight?.actorPlayerId
+    ? Number(snapshot.highlight.actorPlayerId)
+    : null;
 
   return (
     <section className="club-training-stage" aria-label="Training match view">
@@ -983,7 +1112,11 @@ function TrainingMatchStage({
           </>
         ) : (
           <div className="club-training__empty">
-            {isLoading ? 'Dang tai phong tap...' : hasPlayers ? 'Chon cau thu de bat dau.' : 'Chua co cau thu.'}
+            {isLoading
+              ? 'Dang tai phong tap...'
+              : hasPlayers
+                ? 'Chon cau thu de bat dau.'
+                : 'Chua co cau thu.'}
           </div>
         )}
       </div>
@@ -1066,7 +1199,9 @@ function TrainingPlayerNode({
         {player.avatarUrl ? (
           <img src={player.avatarUrl} alt="" className="player-avatar" />
         ) : (
-          <span className="player-avatar player-avatar--fallback">{getPlayerInitials(player.name)}</span>
+          <span className="player-avatar player-avatar--fallback">
+            {getPlayerInitials(player.name)}
+          </span>
         )}
         <span className="player-number">{player.jerseyNumber ?? player.id}</span>
       </span>
@@ -1123,7 +1258,13 @@ function TrainingSkillOverlay({ snapshot }: { snapshot: MatchSnapshot }) {
 
   return (
     <div className="skill-overlay" data-skill={skill} aria-hidden="true">
-      <video key={`${snapshot.frameId ?? snapshot.tick}-${skill}`} src={animation} autoPlay muted playsInline />
+      <video
+        key={`${snapshot.frameId ?? snapshot.tick}-${skill}`}
+        src={animation}
+        autoPlay
+        muted
+        playsInline
+      />
       <div className="skill-overlay__label">
         <span>Skill activated</span>
         <strong>{skillName(skill)}</strong>
@@ -1244,21 +1385,21 @@ function IconShell({ children }: { children: ReactNode }) {
   );
 }
 
-function CalendarIcon() {
-  return (
-    <IconShell>
-      <path d="M7 3v3M17 3v3M4.5 9h15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M5 5.5h14v14H5z" stroke="currentColor" strokeWidth="1.8" />
-      <path d="M8 13h2M14 13h2M8 17h2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </IconShell>
-  );
-}
-
 function ShopIcon() {
   return (
     <IconShell>
-      <path d="M6.5 10.5h11l-1 9h-9z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-      <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path
+        d="M6.5 10.5h11l-1 9h-9z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8 10.5V8a4 4 0 0 1 8 0v2.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
       <path d="M9 14h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </IconShell>
   );
@@ -1277,20 +1418,15 @@ function FormationIcon() {
   );
 }
 
-function PlayersIcon() {
-  return (
-    <IconShell>
-      <circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.8" />
-      <path d="M4.5 19c.7-3.2 2.2-5 4.5-5s3.8 1.8 4.5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M15 11.2a2.5 2.5 0 1 0-.5-4.8M15.5 14.2c2 .5 3.3 2 4 4.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </IconShell>
-  );
-}
-
 function SparkIcon() {
   return (
     <IconShell>
-      <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <path
+        d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
       <path d="M18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z" fill="currentColor" />
     </IconShell>
   );
@@ -1300,7 +1436,12 @@ function PowerIcon() {
   return (
     <IconShell>
       <path d="M12 3v8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <path d="M7.3 6.8a7 7 0 1 0 9.4 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path
+        d="M7.3 6.8a7 7 0 1 0 9.4 0"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
     </IconShell>
   );
 }
@@ -1316,8 +1457,19 @@ function CloseIcon() {
 function WhistleIcon() {
   return (
     <IconShell>
-      <path d="M4.5 14.5h7.2a4 4 0 1 0 0-8H9.2l-4.7 8z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-      <path d="M13.5 8.5h6M18 6l2 2.5-2 2.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M4.5 14.5h7.2a4 4 0 1 0 0-8H9.2l-4.7 8z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M13.5 8.5h6M18 6l2 2.5-2 2.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </IconShell>
   );
 }
@@ -1325,17 +1477,13 @@ function WhistleIcon() {
 function VersusIcon() {
   return (
     <IconShell>
-      <path d="M5 6l4.2 12M10 6L5.8 18M14 6l5 6-5 6" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
-    </IconShell>
-  );
-}
-
-function TrainingIcon() {
-  return (
-    <IconShell>
-      <path d="M4 18h16M6 18l2-9h8l2 9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M9 9l1.5-3h3L15 9M8 13h8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="12" cy="15.5" r="1.4" fill="currentColor" />
+      <path
+        d="M5 6l4.2 12M10 6L5.8 18M14 6l5 6-5 6"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </IconShell>
   );
 }

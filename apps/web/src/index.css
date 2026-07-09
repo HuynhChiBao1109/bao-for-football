@@ -47,7 +47,7 @@ body {
     linear-gradient(135deg, rgba(5, 8, 22, 0.86), rgba(8, 13, 34, 0.78)),
     radial-gradient(circle at 18% 16%, rgba(73, 211, 255, 0.22), transparent 24%),
     radial-gradient(circle at 82% 15%, rgba(92, 124, 255, 0.25), transparent 24%),
-    url('/app/background.png') center / cover no-repeat fixed;
+    url('/app/redlock-stadium.svg') center / cover no-repeat fixed;
 }
 
 body::before,
@@ -100,11 +100,8 @@ textarea {
 .app-shell {
   position: relative;
   min-height: 100vh;
-  padding:
-    max(18px, env(safe-area-inset-top))
-    max(16px, env(safe-area-inset-right))
-    calc(108px + env(safe-area-inset-bottom))
-    max(16px, env(safe-area-inset-left));
+  padding: max(18px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    calc(108px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   color: var(--text-main);
 }
 
@@ -241,7 +238,9 @@ textarea {
     linear-gradient(180deg, rgba(126, 238, 255, 0.28), rgba(255, 211, 103, 0.18)),
     rgba(255, 255, 255, 0.06);
   color: #ffffff;
-  box-shadow: 0 0 28px rgba(126, 238, 255, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 0 28px rgba(126, 238, 255, 0.18),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
 .app-bottom-nav__button:active {
@@ -1189,8 +1188,7 @@ textarea {
     linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
     linear-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1px),
     radial-gradient(circle at 18% 28%, rgba(0, 0, 0, 0.12), transparent 16%),
-    radial-gradient(circle at 80% 72%, rgba(0, 0, 0, 0.1), transparent 18%),
-    #f3f4f2;
+    radial-gradient(circle at 80% 72%, rgba(0, 0, 0, 0.1), transparent 18%), #f3f4f2;
   background-size:
     38px 38px,
     38px 38px,
@@ -1355,7 +1353,14 @@ textarea {
   border: 5px solid #050505;
   border-radius: 50%;
   background:
-    radial-gradient(circle, transparent 0 25%, rgba(0, 0, 0, 0.12) 25.5% 26%, transparent 26.5% 49%, rgba(0, 0, 0, 0.16) 49.5% 50%, transparent 50.5%),
+    radial-gradient(
+      circle,
+      transparent 0 25%,
+      rgba(0, 0, 0, 0.12) 25.5% 26%,
+      transparent 26.5% 49%,
+      rgba(0, 0, 0, 0.16) 49.5% 50%,
+      transparent 50.5%
+    ),
     repeating-conic-gradient(from -90deg, rgba(0, 0, 0, 0.22) 0 2deg, transparent 2deg 10deg),
     #f8f8f8;
 }
@@ -1404,10 +1409,7 @@ textarea {
   display: grid;
   place-items: center;
   width: 82px;
-  transform:
-    rotate(var(--axis-angle))
-    translateY(-185px)
-    rotate(calc(-1 * var(--axis-angle)))
+  transform: rotate(var(--axis-angle)) translateY(-185px) rotate(calc(-1 * var(--axis-angle)))
     translate(-50%, -50%);
   text-align: center;
   text-transform: uppercase;
@@ -1551,11 +1553,8 @@ textarea {
 
 @media (max-width: 768px) {
   .app-shell {
-    padding:
-      max(8px, env(safe-area-inset-top))
-      max(8px, env(safe-area-inset-right))
-      calc(94px + env(safe-area-inset-bottom))
-      max(8px, env(safe-area-inset-left));
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right))
+      calc(94px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
   }
 
   .auth-popup-shell {
@@ -1625,10 +1624,7 @@ textarea {
   }
 
   .redlock-detail-radar__axis {
-    transform:
-      rotate(var(--axis-angle))
-      translateY(-150px)
-      rotate(calc(-1 * var(--axis-angle)))
+    transform: rotate(var(--axis-angle)) translateY(-150px) rotate(calc(-1 * var(--axis-angle)))
       translate(-50%, -50%);
   }
 
@@ -1687,7 +1683,7 @@ body {
     radial-gradient(circle at 22% 12%, rgba(255, 46, 74, 0.24), transparent 26%),
     radial-gradient(circle at 80% 0%, rgba(255, 122, 69, 0.14), transparent 26%),
     linear-gradient(135deg, rgba(4, 4, 6, 0.9), rgba(17, 5, 9, 0.84)),
-    url('/app/background.png') center / cover no-repeat fixed;
+    url('/app/redlock-stadium.svg') center / cover no-repeat fixed;
 }
 
 body::before {
@@ -1733,7 +1729,12 @@ body::after {
 
 .redlock-bg__scan {
   opacity: 0.18;
-  background: linear-gradient(180deg, transparent 0 48%, rgba(255, 46, 74, 0.38) 50%, transparent 52% 100%);
+  background: linear-gradient(
+    180deg,
+    transparent 0 48%,
+    rgba(255, 46, 74, 0.38) 50%,
+    transparent 52% 100%
+  );
   animation: redlockScan 6.5s linear infinite;
 }
 
@@ -1829,7 +1830,9 @@ body::after {
   border: 1px solid rgba(255, 46, 74, 0.2);
   border-radius: 8px;
   background: rgba(5, 5, 7, 0.66);
-  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.36), 0 0 32px rgba(255, 46, 74, 0.08);
+  box-shadow:
+    0 18px 60px rgba(0, 0, 0, 0.36),
+    0 0 32px rgba(255, 46, 74, 0.08);
   backdrop-filter: blur(18px);
 }
 
@@ -1857,7 +1860,9 @@ body::after {
 
 .redlock-brand small {
   color: rgba(255, 224, 228, 0.62);
-  font: 700 0.68rem/1 'Barlow', sans-serif;
+  font:
+    700 0.68rem/1 'Barlow',
+    sans-serif;
   text-transform: uppercase;
 }
 
@@ -1885,7 +1890,9 @@ body::after {
   border-color: rgba(255, 46, 74, 0.3);
   border-radius: 8px;
   background: rgba(6, 6, 8, 0.78);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.58), 0 0 34px rgba(255, 46, 74, 0.12);
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.58),
+    0 0 34px rgba(255, 46, 74, 0.12);
 }
 
 .app-bottom-nav__button {
@@ -1898,13 +1905,17 @@ body::after {
     linear-gradient(180deg, rgba(255, 46, 74, 0.28), rgba(95, 8, 22, 0.3)),
     rgba(255, 255, 255, 0.04);
   color: #fff;
-  box-shadow: 0 0 26px rgba(255, 46, 74, 0.24), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 0 26px rgba(255, 46, 74, 0.24),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
 .brand-logo__image {
   border-radius: 8px;
   border-color: rgba(255, 46, 74, 0.36);
-  box-shadow: 0 0 26px rgba(255, 46, 74, 0.18), 0 18px 44px -24px rgba(0, 0, 0, 0.8);
+  box-shadow:
+    0 0 26px rgba(255, 46, 74, 0.18),
+    0 18px 44px -24px rgba(0, 0, 0, 0.8);
 }
 
 .brand-logo__title,
@@ -1955,7 +1966,9 @@ body::after {
 }
 
 .game-stat-card {
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 0 28px rgba(255, 46, 74, 0.06);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 0 28px rgba(255, 46, 74, 0.06);
 }
 
 .game-stat-card__label,
@@ -1980,7 +1993,9 @@ body::after {
   border-color: rgba(255, 112, 128, 0.55);
   background: linear-gradient(135deg, #ff2e4a 0%, #7b0616 100%);
   color: #fff;
-  box-shadow: 0 18px 44px -22px rgba(255, 46, 74, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  box-shadow:
+    0 18px 44px -22px rgba(255, 46, 74, 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 
 .game-button-secondary {
@@ -2089,7 +2104,9 @@ body::after {
   background:
     linear-gradient(115deg, transparent 0 44%, rgba(255, 46, 74, 0.42) 45%, transparent 47% 100%),
     linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
-  background-size: auto, 100% 18px;
+  background-size:
+    auto,
+    100% 18px;
 }
 
 .redlock-hero__content,
@@ -2342,9 +2359,12 @@ body::after {
   background:
     radial-gradient(circle at 16% 18%, rgba(255, 46, 74, 0.18), transparent 24%),
     linear-gradient(rgba(255, 46, 74, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 46, 74, 0.035) 1px, transparent 1px),
-    #07070a;
-  background-size: auto, 38px 38px, 38px 38px, auto;
+    linear-gradient(90deg, rgba(255, 46, 74, 0.035) 1px, transparent 1px), #07070a;
+  background-size:
+    auto,
+    38px 38px,
+    38px 38px,
+    auto;
   color: #fff;
 }
 
@@ -2404,14 +2424,20 @@ body::after {
 .redlock-detail-radar__circle {
   border-color: rgba(255, 46, 74, 0.34);
   background:
-    radial-gradient(circle, rgba(255, 46, 74, 0.18), transparent 56%),
-    rgba(255, 255, 255, 0.03);
+    radial-gradient(circle, rgba(255, 46, 74, 0.18), transparent 56%), rgba(255, 255, 255, 0.03);
 }
 
 .redlock-detail-radar__web {
   border-color: rgba(255, 46, 74, 0.18);
   background:
-    radial-gradient(circle, transparent 0 24%, rgba(255, 46, 74, 0.13) 25% 26%, transparent 27% 49%, rgba(255, 46, 74, 0.13) 50% 51%, transparent 52%),
+    radial-gradient(
+      circle,
+      transparent 0 24%,
+      rgba(255, 46, 74, 0.13) 25% 26%,
+      transparent 27% 49%,
+      rgba(255, 46, 74, 0.13) 50% 51%,
+      transparent 52%
+    ),
     linear-gradient(90deg, transparent 49.5%, rgba(255, 46, 74, 0.16) 50%, transparent 50.5%),
     linear-gradient(30deg, transparent 49.5%, rgba(255, 46, 74, 0.16) 50%, transparent 50.5%),
     linear-gradient(150deg, transparent 49.5%, rgba(255, 46, 74, 0.16) 50%, transparent 50.5%);
@@ -2487,4 +2513,3 @@ body::after {
     max-width: calc(100vw - 132px);
   }
 }
-

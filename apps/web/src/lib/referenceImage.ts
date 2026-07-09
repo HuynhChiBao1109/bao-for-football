@@ -1,5 +1,9 @@
 import { API_BASE_URL } from './apiClient';
 
+export const DEFAULT_CLUB_IMAGE = '/clubs/default-club.svg';
+export const DEFAULT_COUNTRY_IMAGE = '/countries/default-country.svg';
+export const DEFAULT_PLAYER_AVATAR = '/player/default-avatar.svg';
+
 function resolveMediaUrl(value?: string | null): string {
   const source = String(value || '').trim();
   if (!source) return '';
@@ -26,7 +30,7 @@ export function resolveCountryImage(country?: CountryImageSource | null): string
     return `/countries/${country.slug}.svg`;
   }
 
-  return resolveMediaUrl(country?.flag) || '/app/logo.png';
+  return resolveMediaUrl(country?.flag) || DEFAULT_COUNTRY_IMAGE;
 }
 
 export function resolveClubImage(club?: ClubImageSource | null): string {
@@ -34,9 +38,9 @@ export function resolveClubImage(club?: ClubImageSource | null): string {
     return `/clubs/${club.slug}.svg`;
   }
 
-  return resolveMediaUrl(club?.imgUrl ?? club?.logo) || '/app/logo.png';
+  return resolveMediaUrl(club?.imgUrl ?? club?.logo) || DEFAULT_CLUB_IMAGE;
 }
 
 export function resolveAnyImage(value?: string | null): string {
-  return resolveMediaUrl(value) || '/app/logo.png';
+  return resolveMediaUrl(value) || DEFAULT_CLUB_IMAGE;
 }

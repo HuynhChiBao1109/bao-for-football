@@ -5,7 +5,7 @@ import {
   useReferenceClubPlayers,
   useReferenceClubs,
 } from '../hooks/useReference';
-import { resolveClubImage } from '../lib/referenceImage';
+import { DEFAULT_CLUB_IMAGE, resolveClubImage } from '../lib/referenceImage';
 import type { Club, ClubPlayerPreview } from '../types';
 
 function playerOverall(player: ClubPlayerPreview): number {
@@ -169,22 +169,31 @@ export function TeamSetupPage() {
                         alt={club.name}
                         className="h-12 w-12 rounded-lg border border-white/10 bg-white/5 object-cover"
                         onError={(event) => {
-                          event.currentTarget.style.display = 'none';
+                          event.currentTarget.onerror = null;
+                          event.currentTarget.src = DEFAULT_CLUB_IMAGE;
                         }}
                       />
                       <span className="team-club-card__content">
                         <span className="team-club-card__name">{club.name}</span>
-                        <span className="team-club-card__league">{selectedLeague?.name ?? 'League'}</span>
+                        <span className="team-club-card__league">
+                          {selectedLeague?.name ?? 'League'}
+                        </span>
                       </span>
                     </button>
-                    <button type="button" className="game-button-secondary" onClick={() => openReview(club)}>
+                    <button
+                      type="button"
+                      className="game-button-secondary"
+                      onClick={() => openReview(club)}
+                    >
                       Detail
                     </button>
                   </article>
                 ))}
 
                 {(clubsQuery.data ?? []).length === 0 ? (
-                  <p className="game-notice game-notice--muted">Khong co doi nao trong giai dau nay.</p>
+                  <p className="game-notice game-notice--muted">
+                    Khong co doi nao trong giai dau nay.
+                  </p>
                 ) : null}
               </div>
             )}
@@ -241,7 +250,8 @@ function TeamReviewModal({
                 src={resolveClubImage(club)}
                 alt={club.name}
                 onError={(event) => {
-                  event.currentTarget.style.display = 'none';
+                  event.currentTarget.onerror = null;
+                  event.currentTarget.src = DEFAULT_CLUB_IMAGE;
                 }}
               />
               <div>
@@ -254,7 +264,9 @@ function TeamReviewModal({
             </button>
           </header>
 
-          {loading ? <p className="game-notice game-notice--info mt-4">Dang scan doi hinh...</p> : null}
+          {loading ? (
+            <p className="game-notice game-notice--info mt-4">Dang scan doi hinh...</p>
+          ) : null}
           {error ? <p className="game-notice game-notice--error mt-4">{error.message}</p> : null}
 
           <div className="team-review-summary mt-5">

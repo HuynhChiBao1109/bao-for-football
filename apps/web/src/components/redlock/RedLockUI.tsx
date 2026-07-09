@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { DEFAULT_PLAYER_AVATAR } from '../../lib/referenceImage';
 
 type Tone = 'red' | 'dark' | 'success' | 'warning' | 'muted';
 
@@ -62,9 +63,7 @@ export function AnimatedBackground() {
 
 export function StatusBadge({ children, tone = 'red', className = '' }: StatusBadgeProps) {
   return (
-    <span className={`redlock-badge redlock-badge--${tone} ${className}`.trim()}>
-      {children}
-    </span>
+    <span className={`redlock-badge redlock-badge--${tone} ${className}`.trim()}>{children}</span>
   );
 }
 
@@ -104,7 +103,7 @@ export function PlayerCard({
   name,
   position = 'FW',
   rating = '--',
-  avatarUrl = '/default-avatar.svg',
+  avatarUrl = DEFAULT_PLAYER_AVATAR,
   badges = [],
   stats = [],
   action,
@@ -158,7 +157,11 @@ export function RankingBoard({ rows }: { rows: RankingRow[] }) {
   return (
     <div className="redlock-ranking">
       {rows.map((row) => (
-        <div key={`${row.rank}-${row.name}`} className="redlock-ranking__row" data-top={row.rank === 1}>
+        <div
+          key={`${row.rank}-${row.name}`}
+          className="redlock-ranking__row"
+          data-top={row.rank === 1}
+        >
           <strong>#{row.rank}</strong>
           <span>{row.name}</span>
           <small>{row.winRate ?? '0%'} WR</small>
@@ -170,13 +173,7 @@ export function RankingBoard({ rows }: { rows: RankingRow[] }) {
   );
 }
 
-export function SkillPanel({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
+export function SkillPanel({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="redlock-skill-panel">
       <p className="game-header-kicker">{title}</p>

@@ -5,6 +5,7 @@ import { useSession } from '../hooks/useSession';
 import { usePlayerCards } from '../hooks/usePlayerCards';
 import { Banner } from '../components/feedback';
 import { API_BASE_URL } from '../lib/apiClient';
+import { DEFAULT_PLAYER_AVATAR } from '../lib/referenceImage';
 import { MatchMode } from '../enums/match';
 import type { Tactics } from '../types';
 import type { UserPlayerCard } from '../types';
@@ -53,8 +54,6 @@ type DragPayload = {
   playerId: number;
   fromSlotId?: string;
 };
-
-const DEFAULT_PLAYER_AVATAR = '/default-avatar.svg';
 
 const FORMATION_SLOTS: Record<string, FieldSlot[]> = {
   '4-3-3': [
@@ -680,10 +679,10 @@ export function TacticsPage({
         <div className="game-panel__content">
           <div className="flex items-start justify-between gap-3">
             <div>
-          <p className="game-header-kicker">Tactics Forge</p>
-          <h2 className="game-title mt-3 text-3xl font-bold text-white">
-            Bảng điều khiển lối chơi đội bóng
-          </h2>
+              <p className="game-header-kicker">Tactics Forge</p>
+              <h2 className="game-title mt-3 text-3xl font-bold text-white">
+                Bảng điều khiển lối chơi đội bóng
+              </h2>
             </div>
             {isPopup && (
               <button type="button" className="game-button-ghost px-3 py-2" onClick={onClose}>
@@ -716,7 +715,10 @@ export function TacticsPage({
             <Banner text={(startCampaignMatch.error as Error).message} tone="error" />
           )}
           {pendingCampaignMatchId && (
-            <Banner text="Save this tactics setup to start the selected campaign match." tone="info" />
+            <Banner
+              text="Save this tactics setup to start the selected campaign match."
+              tone="info"
+            />
           )}
 
           {!isLoading && (
@@ -967,10 +969,7 @@ export function TacticsPage({
         </div>
       </article>
       {detailPlayerId ? (
-        <PlayerDetailPopup
-          userPlayerId={detailPlayerId}
-          onClose={() => setDetailPlayerId(null)}
-        />
+        <PlayerDetailPopup userPlayerId={detailPlayerId} onClose={() => setDetailPlayerId(null)} />
       ) : null}
     </section>
   );

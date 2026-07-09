@@ -17,7 +17,7 @@ import { useClubs } from '../../hooks/useClubs';
 import { useAuth } from '../../hooks/useAuth';
 import { API_BASE_URL } from '../../lib/apiClient';
 import { STAT_FIELDS } from '../../lib/constants';
-import { resolveCountryImage } from '../../lib/referenceImage';
+import { DEFAULT_COUNTRY_IMAGE, resolveCountryImage } from '../../lib/referenceImage';
 import { CreatePlayerCard, GachaBannerCard } from '../../components/admin';
 import { Banner } from '../../components/feedback';
 import { queryClient } from '../../lib/queryClient';
@@ -352,7 +352,8 @@ function PlayerTable({
                     alt={p.country?.name ?? 'Country'}
                     className="h-4 w-6 rounded-sm object-cover"
                     onError={(event) => {
-                      event.currentTarget.style.display = 'none';
+                      event.currentTarget.onerror = null;
+                      event.currentTarget.src = DEFAULT_COUNTRY_IMAGE;
                     }}
                   />
                   <span>{p.country?.name ?? '—'}</span>
