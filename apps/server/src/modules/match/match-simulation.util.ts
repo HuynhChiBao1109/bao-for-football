@@ -1171,6 +1171,77 @@ export function generateNextMatchTick(input: {
     };
   }
 
+  if (
+    latestTick.highlight?.event === EMatchEvent.GOALKEEPER_SAVE &&
+    latestTick.ball.ownerPlayerId != null
+  ) {
+    const keeper = [...homeLineup, ...awayLineup].find(
+      (player) =>
+        player.userPlayerId === Number(latestTick.ball.ownerPlayerId) &&
+        normalizeRole(player.role) === "GK",
+    );
+
+    if (keeper) {
+      const keeperPosition = previousPositionState.players.get(keeper.userPlayerId) ?? {
+        x: latestTick.ball.x,
+        y: latestTick.ball.y,
+      };
+      const snapshot = buildSnapshot({
+        frameId,
+        minute,
+        second,
+        tick: nextTickValue,
+        matchStep: "play",
+        phase: latestTick.phase === "second_half" ? "second_half" : "first_half",
+        homeScore: Number(latestTick.homeScore ?? 0),
+        awayScore: Number(latestTick.awayScore ?? 0),
+        possession: keeper.side,
+        homeLineup,
+        awayLineup,
+        ballOwner: keeper,
+        ball: { x: latestTick.ball.x, y: latestTick.ball.y },
+        ballPath: fixedBallPath(latestTick.ball.x, latestTick.ball.y),
+        highlight: createHighlight(
+          EMatchEvent.DRIBBLE,
+          `Tick ${nextTickValue}: ${keeper.shortName} om bong sau pha bat dinh`,
+          keeper.side,
+          keeper.userPlayerId,
+          null,
+          null,
+        ),
+        activeSkill: null,
+        focusId: keeper.userPlayerId,
+        pressId: null,
+        keeperAction: {
+          playerId: keeper.userPlayerId,
+          state: "KEEPER_HOLD",
+          target: keeperPosition,
+          outcome: "hold",
+        },
+        forceAttachBall: true,
+        durationMsOverride: FRAME_DURATION_MS,
+        positionState: previousPositionState,
+      });
+
+      return {
+        snapshot,
+        event: {
+          event: EMatchEvent.DRIBBLE,
+          minute,
+          teamId: keeper.teamId,
+          actorPlayerId: keeper.userPlayerId,
+          secondaryPlayerId: null,
+          payload: {
+            label: snapshot.highlight.label,
+            goalkeeperHold: true,
+            from: { x: latestTick.ball.x, y: latestTick.ball.y },
+            to: { x: snapshot.ball.x, y: snapshot.ball.y },
+          },
+        },
+      };
+    }
+  }
+
   const outOfPlay = resolveOutOfPlayEvent({
     latestTick,
     homeLineup,
@@ -6072,7 +6143,7 @@ function getCornerKickSetupTargets(input: {
     });
   });
 
-  input.defending.forEach((player, index) => {
+  defenders.forEach((player, index) => {
     const role = normalizeRole(player.role);
     if (role === "GK") {
       targets.set(player.userPlayerId, {

@@ -572,6 +572,46 @@
     inset 0 1px 10px rgba(255, 255, 255, 0.24);
 }
 
+.player-node--keeper-dive .player-circle,
+.player-node--keeper-catch .player-circle {
+  transform-origin: center;
+  animation: keeperDiveCenter 0.58s cubic-bezier(0.18, 0.78, 0.2, 1) both;
+}
+
+.player-node--keeper-dive[data-dive-direction='left'] .player-circle,
+.player-node--keeper-catch[data-dive-direction='left'] .player-circle {
+  animation-name: keeperDiveLeft;
+}
+
+.player-node--keeper-dive[data-dive-direction='right'] .player-circle,
+.player-node--keeper-catch[data-dive-direction='right'] .player-circle {
+  animation-name: keeperDiveRight;
+}
+
+.player-node--keeper-catch .player-circle {
+  box-shadow:
+    0 0 24px rgba(186, 255, 40, 0.58),
+    0 0 34px rgba(255, 245, 163, 0.34),
+    0 10px 18px rgba(0, 0, 0, 0.32),
+    inset 0 1px 10px rgba(255, 255, 255, 0.24);
+}
+
+.player-node--keeper-catch .player-circle::after {
+  position: absolute;
+  inset: -6px;
+  content: '';
+  border: 2px solid rgba(255, 245, 163, 0.78);
+  border-radius: inherit;
+  animation: keeperCatchHold 1.05s ease-out both;
+}
+
+.player-node--keeper-hold .player-circle {
+  box-shadow:
+    0 0 18px rgba(186, 255, 40, 0.28),
+    0 8px 14px rgba(0, 0, 0, 0.28),
+    inset 0 1px 8px rgba(255, 255, 255, 0.2);
+}
+
 .player-node--has-ball .player-circle::before,
 .player-node--highlight .player-circle::before {
   position: absolute;
@@ -1267,6 +1307,65 @@
   100% {
     opacity: 0;
     transform: scale(1.35);
+  }
+}
+
+@keyframes keeperDiveLeft {
+  0% {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+  }
+
+  58% {
+    transform: translate(-10px, -2px) rotate(-22deg) scale(1.08);
+  }
+
+  100% {
+    transform: translate(-7px, 0) rotate(-14deg) scale(1.02);
+  }
+}
+
+@keyframes keeperDiveRight {
+  0% {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+  }
+
+  58% {
+    transform: translate(10px, -2px) rotate(22deg) scale(1.08);
+  }
+
+  100% {
+    transform: translate(7px, 0) rotate(14deg) scale(1.02);
+  }
+}
+
+@keyframes keeperDiveCenter {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+
+  58% {
+    transform: translateY(-6px) scale(1.12);
+  }
+
+  100% {
+    transform: translateY(-2px) scale(1.04);
+  }
+}
+
+@keyframes keeperCatchHold {
+  0% {
+    opacity: 0;
+    transform: scale(0.75);
+  }
+
+  32% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+
+  100% {
+    opacity: 0.28;
+    transform: scale(1.18);
   }
 }
 

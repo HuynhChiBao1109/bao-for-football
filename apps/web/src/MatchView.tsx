@@ -247,17 +247,33 @@ const PlayerCircle = memo(function PlayerCircle({
   const style = toVerticalPitchPosition(player);
   const teamClass = player.teamSide === 'away' ? 'player-circle--away' : 'player-circle--home';
   const isGoalkeeper = player.position === 'GK';
+  const keeperAction =
+    player.aiState === 'KEEPER_DIVE'
+      ? 'dive'
+      : player.aiState === 'KEEPER_CATCH'
+        ? 'catch'
+        : player.aiState === 'KEEPER_HOLD'
+          ? 'hold'
+          : null;
+  const diveDirection =
+    Number(player.move?.directionX ?? player.vx ?? 0) < -0.08
+      ? 'left'
+      : Number(player.move?.directionX ?? player.vx ?? 0) > 0.08
+        ? 'right'
+        : 'center';
 
   return (
     <div
       className={[
         'player-node',
         isGoalkeeper ? 'player-node--goalkeeper' : '',
+        keeperAction ? `player-node--keeper-${keeperAction}` : '',
         player.hasBall ? 'player-node--has-ball' : '',
         activeHighlight ? 'player-node--highlight' : '',
         player.activeSkill === EPlayerSkill.DRIBBLE_MAGIC ? 'player-node--magic-dribble' : '',
         player.activeSkill === EPlayerSkill.TANK_TACKLE ? 'player-node--tank-tackle' : '',
       ].join(' ')}
+      data-dive-direction={keeperAction === 'dive' || keeperAction === 'catch' ? diveDirection : undefined}
       style={style}
       title={`${player.name} - ${player.position}`}
     >
