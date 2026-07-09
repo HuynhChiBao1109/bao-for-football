@@ -928,6 +928,181 @@ textarea {
   color: var(--text-muted);
 }
 
+.team-setup-grid--draft {
+  grid-template-columns: minmax(260px, 0.78fr) minmax(0, 1.22fr);
+}
+
+.team-league-list {
+  display: grid;
+  gap: 10px;
+  max-height: 420px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.team-league-card {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  min-height: 66px;
+  border: 1px solid rgba(255, 46, 74, 0.22);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 92% 18%, rgba(255, 46, 74, 0.16), transparent 34%),
+    rgba(8, 8, 11, 0.72);
+  padding: 12px 14px;
+  text-align: left;
+  color: #fff;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.team-league-card:hover,
+.team-league-card[data-active='true'] {
+  border-color: rgba(255, 46, 74, 0.66);
+  box-shadow: 0 18px 38px -28px rgba(255, 46, 74, 0.8);
+  transform: translateY(-1px);
+}
+
+.team-league-card span {
+  overflow: hidden;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.team-league-card small {
+  color: rgba(255, 224, 228, 0.62);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.team-club-list--draft {
+  max-height: 520px;
+}
+
+.team-club-card--draft {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.team-club-card--draft > button:first-child {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+.team-club-card--draft .game-button-secondary {
+  min-height: 38px;
+  padding: 9px 12px;
+  font-size: 12px;
+}
+
+.team-review-backdrop {
+  align-items: start;
+  overflow: auto;
+}
+
+.team-review-modal {
+  width: min(100%, 980px);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  padding: clamp(16px, 3vw, 24px);
+}
+
+.team-review-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.team-review-modal__club {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 14px;
+}
+
+.team-review-modal__club img {
+  width: 62px;
+  height: 62px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 46, 74, 0.28);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  object-fit: cover;
+}
+
+.team-review-modal__club h2 {
+  margin: 4px 0 0;
+  overflow: hidden;
+  max-width: min(62vw, 620px);
+  font-size: clamp(1.8rem, 5vw, 3.4rem);
+  line-height: 0.95;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.team-review-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.team-review-roster {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px;
+}
+
+.team-review-player {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 54px;
+  border: 1px solid rgba(255, 46, 74, 0.18);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 92% 10%, rgba(255, 46, 74, 0.13), transparent 36%),
+    rgba(255, 255, 255, 0.04);
+  padding: 10px 12px;
+}
+
+.team-review-player span {
+  color: #ff8a98;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.team-review-player strong {
+  overflow: hidden;
+  color: #fff;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.team-review-player small {
+  color: rgba(255, 224, 228, 0.66);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .campaign-match-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
@@ -2282,6 +2457,34 @@ body::after {
 
   .redlock-ranking__row small {
     display: none;
+  }
+}
+
+.team-setup-grid.team-setup-grid--draft {
+  grid-template-columns: minmax(260px, 0.78fr) minmax(0, 1.22fr);
+}
+
+@media (max-width: 860px) {
+  .team-setup-grid.team-setup-grid--draft,
+  .team-review-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .team-club-card--draft {
+    grid-template-columns: 1fr;
+  }
+
+  .team-club-card--draft .game-button-secondary {
+    width: 100%;
+  }
+
+  .team-review-modal__head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .team-review-modal__club h2 {
+    max-width: calc(100vw - 132px);
   }
 }
 

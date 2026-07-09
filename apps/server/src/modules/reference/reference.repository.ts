@@ -4,6 +4,7 @@ import { InjectRepository } from "@nestjs/typeorm/dist/common/typeorm.decorators
 import { ClubEntity } from "./entities/club.entity";
 import { LeagueEntity } from "./entities/league.entity";
 import { CountryEntity } from "./entities/country.entity";
+import { PlayerEntity } from "../player/entities/player-admin.entity";
 
 @Injectable()
 export class ReferenceRepository {
@@ -16,10 +17,20 @@ export class ReferenceRepository {
 
     @InjectRepository(CountryEntity)
     private readonly countryRepository: Repository<CountryEntity>,
+
+    @InjectRepository(PlayerEntity)
+    private readonly playerRepository: Repository<PlayerEntity>,
   ) {}
 
   async getListClubByLeague(leagueId: number): Promise<ClubEntity[]> {
     return await this.clubRepository.find({ where: { leagueId } });
+  }
+
+  async getListLeague(): Promise<LeagueEntity[]> {
+    return await this.leagueRepository.find({
+      relations: ["country"],
+      order: { name: "ASC" },
+    });
   }
 
   async getListLeagueByCountry(countryId: number): Promise<LeagueEntity[]> {
@@ -32,5 +43,13 @@ export class ReferenceRepository {
 
   async getClubById(clubId: number): Promise<ClubEntity> {
     return await this.clubRepository.findOne({ where: { id: clubId } });
+  }
+
+  async getPlayersByClub(clubId: number): Promise<PlayerEntity[]> {
+    return await this.playerRepository.find({
+      where: { clubId },
+      relations: ["country", "skills"],
+      order: { id: "ASC" },
+    });
   }
 }

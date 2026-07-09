@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne, OneToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, JoinColumn, ManyToOne, OneToOne, PrimaryGeneratedColumn } from "typeorm";
 import { UserPlayerEntity } from "src/modules/player/entities/player-user.entity";
 import { TeamEntity } from "./team.entity";
 import { AbstractEntity } from "src/database/database.abjact";
@@ -26,5 +26,6 @@ export class TeamFormationEntity extends AbstractEntity {
   userPlayer: UserPlayerEntity;
 
   @ManyToOne(() => TeamEntity, (team) => team.id, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "team_id" })
   team: TeamEntity;
 }

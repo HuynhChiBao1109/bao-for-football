@@ -14,6 +14,18 @@ export class ReferenceController {
     return this.referenceService.getListClubByLeague(leagueId);
   }
 
+  @Get("clubs/:clubId/players")
+  @Public()
+  async getPlayersByClub(@Param("clubId") clubId: number) {
+    return this.referenceService.getPlayersByClub(clubId);
+  }
+
+  @Get("leagues")
+  @Public()
+  async getListLeague() {
+    return this.referenceService.getListLeague();
+  }
+
   @Get("leagues/:countryId")
   @Public()
   async getListLeagueByCountry(@Param("countryId") countryId: number) {

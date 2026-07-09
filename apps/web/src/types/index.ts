@@ -42,6 +42,31 @@ export type Country = {
   flag?: string;
 };
 
+export type ClubPlayerPreview = {
+  id: number;
+  name: string;
+  season?: string;
+  countryId?: number | null;
+  clubId?: number | null;
+  height?: number;
+  bodyType?: string;
+  pass?: number;
+  longPass?: number;
+  vision?: number;
+  shoot?: number;
+  tackle?: number;
+  balance?: number;
+  dribbling?: number;
+  acceleration?: number;
+  speed?: number;
+  stamina?: number;
+  positions?: Array<{
+    position: string;
+    rating?: number;
+    effect?: number;
+  }>;
+};
+
 // ─── Player (user card) ────────────────────────────────────────────────────────
 
 export type PlayerStats = Record<StatKey, number>;

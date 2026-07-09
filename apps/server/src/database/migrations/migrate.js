@@ -392,6 +392,7 @@ async function migrateClubs(connection, leaguesWithCountryId, leagueByName) {
     for (const club of league.clubs) {
       clubsWithRefs.push({
         name: club.name,
+        slug: club.slug,
         img_url: club.img_url,
         leagueId: dbLeague.id,
         countryId: dbLeague.country_id,
