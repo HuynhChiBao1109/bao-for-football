@@ -27,7 +27,7 @@ export function useSession() {
               teamName: String(data.team.teamName ?? ''),
               imgUrl: data.team.imgUrl ? String(data.team.imgUrl) : undefined,
               rankPoint: Number(data.team.rankPoint ?? 0),
-              budget: data.team.budget ? Number(data.team.budget) : undefined,
+              budget: data.team.budget != null ? Number(data.team.budget) : undefined,
             }
           : null,
       } as SessionData;

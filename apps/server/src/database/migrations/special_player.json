@@ -1,0 +1,48 @@
+{
+  "players": [
+    {
+      "name": "Loki",
+      "season": "legend",
+      "sourceType": "gacha_special",
+      "country": "France",
+      "height": 178,
+      "bodyType": "LEAN",
+      "pass": 85,
+      "longPass": 82,
+      "vision": 91,
+      "shoot": 96,
+      "tackle": 42,
+      "balance": 93,
+      "dribbling": 98,
+      "acceleration": 99,
+      "speed": 99,
+      "stamina": 88,
+      "positions": [
+        {
+          "position": "CF",
+          "rating": 1
+        },
+        {
+          "position": "ST",
+          "rating": 0.97
+        },
+        {
+          "position": "LW",
+          "rating": 0.94
+        },
+        {
+          "position": "RW",
+          "rating": 0.94
+        }
+      ],
+      "skills": [1, 2, 4],
+      "gacha": {
+        "bannerCode": "redlock-loki",
+        "bannerName": "Loki RedLock Special",
+        "bannerImageUrl": "https://dummyimage.com/1200x520/120407/ff2e4a.png&text=LOKI+REDLOCK",
+        "expiredAt": "2099-12-31T23:59:59.000Z",
+        "status": 1
+      }
+    }
+  ]
+}

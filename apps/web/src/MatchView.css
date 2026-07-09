@@ -300,11 +300,7 @@
   border-radius: 7px;
   background:
     linear-gradient(180deg, rgba(15, 49, 37, 0.82), rgba(5, 22, 19, 0.9)),
-    repeating-linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.055) 0 1px,
-      transparent 1px 16px
-    );
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.055) 0 1px, transparent 1px 16px);
   box-shadow:
     inset 0 0 18px rgba(0, 0, 0, 0.24),
     0 10px 24px rgba(0, 0, 0, 0.16);
@@ -658,8 +654,7 @@
   .match-ball {
     left: 0;
     top: 0;
-    transform: translate3d(var(--x-pos, 50cqw), var(--y-pos, 50cqh), 0)
-      translate3d(-50%, -50%, 0);
+    transform: translate3d(var(--x-pos, 50cqw), var(--y-pos, 50cqh), 0) translate3d(-50%, -50%, 0);
   }
 }
 
@@ -774,6 +769,40 @@
   filter: blur(1px) drop-shadow(0 0 12px rgba(200, 68, 255, 0.92));
   transform: translateX(-50%);
   animation: magicFootBurst 0.34s ease-in-out infinite alternate;
+}
+
+.player-node--lightning-dribble .player-circle {
+  border-color: rgba(145, 238, 255, 0.98);
+  background: linear-gradient(145deg, #071a25 0%, #24d8ff 54%, #fff06a 100%);
+  box-shadow:
+    0 0 34px rgba(78, 218, 255, 0.72),
+    0 0 48px rgba(255, 238, 92, 0.42),
+    0 12px 20px rgba(0, 0, 0, 0.34),
+    inset 0 1px 14px rgba(255, 255, 255, 0.34);
+  animation: lightningDribbleJitter 0.14s steps(2, end) infinite;
+}
+
+.player-node--lightning-dribble .player-circle::after {
+  position: absolute;
+  left: 50%;
+  bottom: -15px;
+  width: 74px;
+  height: 18px;
+  content: '';
+  border-radius: 999px;
+  background:
+    linear-gradient(
+      100deg,
+      transparent 0 16%,
+      rgba(128, 239, 255, 0.94) 17% 27%,
+      transparent 28% 42%,
+      rgba(255, 240, 96, 0.9) 43% 51%,
+      transparent 52%
+    ),
+    radial-gradient(ellipse at 50% 50%, rgba(88, 218, 255, 0.72), transparent 64%);
+  filter: drop-shadow(0 0 14px rgba(95, 228, 255, 0.95));
+  transform: translateX(-50%);
+  animation: lightningFootBurst 0.18s steps(2, end) infinite alternate;
 }
 
 .player-node--tank-tackle .player-circle {
@@ -1173,6 +1202,58 @@
   transform: translateY(-50%);
 }
 
+.match-ball--lightning {
+  border-color: rgba(180, 246, 255, 0.98);
+  background: radial-gradient(
+    circle at 35% 28%,
+    #ffffff 0 18%,
+    #d8fbff 19% 48%,
+    #06202c 49% 58%,
+    #fff06a 59%
+  );
+  box-shadow:
+    -28px 0 36px rgba(91, 225, 255, 0.74),
+    0 0 34px rgba(255, 239, 92, 0.96),
+    0 0 52px rgba(51, 206, 255, 0.72);
+  animation: lightningBallFlash 0.12s steps(2, end) infinite;
+}
+
+.match-ball--lightning::before,
+.match-ball--lightning::after {
+  position: absolute;
+  content: '';
+  pointer-events: none;
+}
+
+.match-ball--lightning::before {
+  right: 58%;
+  top: 50%;
+  width: 62px;
+  height: 18px;
+  background:
+    linear-gradient(
+      135deg,
+      transparent 0 24%,
+      rgba(140, 238, 255, 0.98) 25% 33%,
+      transparent 34% 48%,
+      rgba(255, 240, 92, 0.92) 49% 58%,
+      transparent 59%
+    ),
+    linear-gradient(90deg, transparent, rgba(78, 220, 255, 0.5), transparent);
+  filter: blur(0.4px) drop-shadow(0 0 12px rgba(91, 225, 255, 0.95));
+  transform: translateY(-50%);
+}
+
+.match-ball--lightning::after {
+  inset: -20px;
+  border: 2px solid rgba(132, 238, 255, 0.66);
+  border-radius: 999px;
+  box-shadow:
+    0 0 30px rgba(82, 218, 255, 0.62),
+    inset 0 0 18px rgba(255, 238, 92, 0.36);
+  animation: thunderRing 0.38s ease-out infinite;
+}
+
 .match-ball--tank {
   box-shadow:
     -20px 0 24px rgba(255, 138, 28, 0.72),
@@ -1240,6 +1321,18 @@
   background:
     radial-gradient(circle at 50% 50%, rgba(255, 154, 45, 0.22), transparent 38%),
     linear-gradient(90deg, transparent, rgba(255, 72, 36, 0.16), transparent);
+}
+
+.skill-overlay[data-skill='4'] {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(80, 224, 255, 0.24), transparent 36%),
+    linear-gradient(
+      110deg,
+      transparent 0 30%,
+      rgba(255, 238, 92, 0.18) 31% 36%,
+      rgba(88, 226, 255, 0.2) 37% 45%,
+      transparent 46%
+    );
 }
 
 .skill-overlay video {
@@ -1678,6 +1771,32 @@
   to {
     opacity: 0.92;
     transform: translateY(-50%) scaleX(1.05);
+  }
+}
+
+@keyframes lightningFootBurst {
+  from {
+    opacity: 0.68;
+    transform: translateX(-50%) skewX(-16deg) scaleX(0.78);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) skewX(16deg) scaleX(1.12);
+  }
+}
+
+@keyframes lightningDribbleJitter {
+  50% {
+    filter: brightness(1.28) saturate(1.24);
+    transform: translate(1px, -1px) scale(1.03);
+  }
+}
+
+@keyframes lightningBallFlash {
+  50% {
+    filter: brightness(1.4) saturate(1.35);
+    transform: translate(-50%, -50%) translate(2px, -1px) scale(1.08);
   }
 }
 
@@ -2366,11 +2485,19 @@
 }
 
 .player-node--magic-dribble .player-circle::after,
+.player-node--lightning-dribble .player-circle::after,
 .player-node--tank-tackle .player-circle::after,
 .player-node--slide-tackle .player-circle::after {
   width: 34px;
   height: 9px;
   bottom: -8px;
+}
+
+.match-ball--lightning {
+  box-shadow:
+    -15px 0 20px rgba(91, 225, 255, 0.62),
+    0 0 18px rgba(255, 239, 92, 0.9),
+    0 0 28px rgba(51, 206, 255, 0.58);
 }
 
 .pitch-debug-grid {

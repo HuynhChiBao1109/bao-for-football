@@ -8,6 +8,13 @@ import { GachaService } from "./gacha.service";
 export class GachaController {
   constructor(private readonly gachaService: GachaService) {}
 
+  @Get("banners")
+  async getActiveBanners() {
+    return {
+      data: await this.gachaService.getActiveBanners(),
+    };
+  }
+
   @Get("progress")
   async getProgress(@CurrentUser("id") userId: number, @Query("bannerCode") bannerCode: string) {
     return {

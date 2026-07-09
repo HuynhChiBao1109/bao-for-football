@@ -44,6 +44,11 @@ const SKILL_META: Record<
     triggerThreshold: 0.38,
     attackRole: ["CB", "LB", "RB", "DM", "CDM", "CM", "LCM", "RCM"],
   },
+  [EPlayerSkill.LIGHTNING_DRIBBLE]: {
+    label: "Rê bóng sấm sét",
+    triggerThreshold: 0.32,
+    attackRole: ["LW", "RW", "ST", "LST", "RST", "CF", "LM", "RM", "CAM", "CM"],
+  },
 };
 
 export function tryActivateSkill(
@@ -64,7 +69,10 @@ export function tryActivateSkill(
       }
     }
 
-    if (phase === "dribble" && skill === EPlayerSkill.DRIBBLE_MAGIC) {
+    if (
+      phase === "dribble" &&
+      (skill === EPlayerSkill.DRIBBLE_MAGIC || skill === EPlayerSkill.LIGHTNING_DRIBBLE)
+    ) {
       if ((meta.attackRole ?? []).includes(role) && random() > meta.triggerThreshold) {
         return skill;
       }
@@ -86,9 +94,7 @@ export function resolveSkillActivation(
 ): SkillActivation {
   if (skill === EPlayerSkill.SHOOT_THUNDER) {
     const keeperPenalty =
-      context.keeperReflex * 0.18 +
-      context.keeperDiving * 0.14 +
-      context.keeperReach * 0.1;
+      context.keeperReflex * 0.18 + context.keeperDiving * 0.14 + context.keeperReach * 0.1;
 
     return {
       skill,
@@ -113,6 +119,20 @@ export function resolveSkillActivation(
     };
   }
 
+  if (skill === EPlayerSkill.LIGHTNING_DRIBBLE) {
+    const burstPower = context.actorDribbling * 0.46 + context.actorSpeed * 0.42;
+    const success = burstPower + context.random() * 42 > context.defenderTackle * 0.82 - 8;
+
+    return {
+      skill,
+      label: SKILL_META[skill].label,
+      attackBonus: 24 + context.actorDribbling * 0.16 + context.actorSpeed * 0.12,
+      defensePenalty: 18 + context.defenderTackle * 0.36,
+      event: EMatchEvent.SKILL_USED,
+      dribbleSuccess: success,
+    };
+  }
+
   if (skill === EPlayerSkill.TANK_TACKLE) {
     const tacklePower = context.defenderTackle * 0.48 + context.defenseScore * 0.08;
 
@@ -122,7 +142,9 @@ export function resolveSkillActivation(
       attackBonus: 0,
       defensePenalty: 24 + tacklePower * 0.18,
       event: EMatchEvent.SKILL_USED,
-      dribbleSuccess: tacklePower + context.random() * 30 > context.actorDribbling * 0.62 + context.actorSpeed * 0.24,
+      dribbleSuccess:
+        tacklePower + context.random() * 30 >
+        context.actorDribbling * 0.62 + context.actorSpeed * 0.24,
     };
   }
 
@@ -174,6 +196,33 @@ export function buildMagicDribbleTrajectory(
     const x = clamp(fromX + (toX - fromX) * progress + curve, 8, 92);
     const y = clamp(fromY + (toY - fromY) * progress, 6, 94);
     points.push({ x, y });
+  }
+
+  return points;
+}
+
+export function buildLightningDribbleTrajectory(
+  fromX: number,
+  fromY: number,
+  toX: number,
+  toY: number,
+  segments: number,
+  random: () => number,
+): TrajectoryPoint[] {
+  const points: TrajectoryPoint[] = [{ x: fromX, y: fromY }];
+  const totalSteps = Math.max(4, segments);
+  const side = random() > 0.5 ? 1 : -1;
+
+  for (let index = 1; index <= totalSteps; index += 1) {
+    const progress = index / totalSteps;
+    const burst = progress < 0.58 ? progress * 1.34 : 1 - (progress - 0.58) * 0.34;
+    const feint = Math.sin(progress * Math.PI * 4.8) * side * (7.8 - progress * 3.8);
+    const snap = Math.sin(progress * Math.PI * 9 + random() * 0.8) * (1 - progress) * 2.2;
+
+    points.push({
+      x: clamp(fromX + (toX - fromX) * burst + feint + snap, 6, 94),
+      y: clamp(fromY + (toY - fromY) * Math.min(1, progress * 1.18), 5, 95),
+    });
   }
 
   return points;

@@ -85,15 +85,31 @@ function isTackleEvent(snapshot: MatchSnapshot | null) {
 }
 
 function isThunderShot(snapshot: MatchSnapshot | null) {
-  return snapshot?.ball?.skillTrajectory === EPlayerSkill.SHOOT_THUNDER || snapshot?.highlight?.skill === EPlayerSkill.SHOOT_THUNDER;
+  return (
+    snapshot?.ball?.skillTrajectory === EPlayerSkill.SHOOT_THUNDER ||
+    snapshot?.highlight?.skill === EPlayerSkill.SHOOT_THUNDER
+  );
 }
 
 function isMagicDribble(snapshot: MatchSnapshot | null) {
-  return snapshot?.ball?.skillTrajectory === EPlayerSkill.DRIBBLE_MAGIC || snapshot?.highlight?.skill === EPlayerSkill.DRIBBLE_MAGIC;
+  return (
+    snapshot?.ball?.skillTrajectory === EPlayerSkill.DRIBBLE_MAGIC ||
+    snapshot?.highlight?.skill === EPlayerSkill.DRIBBLE_MAGIC
+  );
 }
 
 function isTankTackle(snapshot: MatchSnapshot | null) {
-  return snapshot?.ball?.skillTrajectory === EPlayerSkill.TANK_TACKLE || snapshot?.highlight?.skill === EPlayerSkill.TANK_TACKLE;
+  return (
+    snapshot?.ball?.skillTrajectory === EPlayerSkill.TANK_TACKLE ||
+    snapshot?.highlight?.skill === EPlayerSkill.TANK_TACKLE
+  );
+}
+
+function isLightningDribble(snapshot: MatchSnapshot | null) {
+  return (
+    snapshot?.ball?.skillTrajectory === EPlayerSkill.LIGHTNING_DRIBBLE ||
+    snapshot?.highlight?.skill === EPlayerSkill.LIGHTNING_DRIBBLE
+  );
 }
 
 function getEventView(eventCode: number | null | undefined) {
@@ -165,6 +181,7 @@ function skillCode(skill: number) {
   if (skill === EPlayerSkill.SHOOT_THUNDER) return 'TS';
   if (skill === EPlayerSkill.DRIBBLE_MAGIC) return 'MD';
   if (skill === EPlayerSkill.TANK_TACKLE) return 'TT';
+  if (skill === EPlayerSkill.LIGHTNING_DRIBBLE) return 'LD';
   return 'SK';
 }
 
@@ -283,9 +300,14 @@ const PlayerCircle = memo(function PlayerCircle({
         activeHighlight ? 'player-node--highlight' : '',
         slideTackleActive ? 'player-node--slide-tackle' : '',
         player.activeSkill === EPlayerSkill.DRIBBLE_MAGIC ? 'player-node--magic-dribble' : '',
+        player.activeSkill === EPlayerSkill.LIGHTNING_DRIBBLE
+          ? 'player-node--lightning-dribble'
+          : '',
         player.activeSkill === EPlayerSkill.TANK_TACKLE ? 'player-node--tank-tackle' : '',
       ].join(' ')}
-      data-dive-direction={keeperAction === 'dive' || keeperAction === 'catch' ? diveDirection : undefined}
+      data-dive-direction={
+        keeperAction === 'dive' || keeperAction === 'catch' ? diveDirection : undefined
+      }
       style={style}
       title={`${player.name} - ${player.position}`}
     >
@@ -329,6 +351,7 @@ function Ball({ snapshot, mirrorY }: { snapshot: MatchSnapshot; mirrorY: boolean
   const thunderShot = isThunderShot(snapshot);
   const magicDribble = isMagicDribble(snapshot);
   const tankTackle = isTankTackle(snapshot);
+  const lightningDribble = isLightningDribble(snapshot);
 
   return (
     <div
@@ -339,6 +362,7 @@ function Ball({ snapshot, mirrorY }: { snapshot: MatchSnapshot; mirrorY: boolean
         isTackleEvent(snapshot) ? 'match-ball--tackle' : '',
         thunderShot ? 'match-ball--thunder' : '',
         magicDribble ? 'match-ball--magic' : '',
+        lightningDribble ? 'match-ball--lightning' : '',
         tankTackle ? 'match-ball--tank' : '',
       ].join(' ')}
       style={style}
@@ -361,7 +385,13 @@ function SkillOverlay({ snapshot }: { snapshot: MatchSnapshot }) {
 
   return (
     <div className="skill-overlay" data-skill={skill} aria-hidden="true">
-      <video key={`${snapshot.frameId ?? snapshot.tick}-${skill}`} src={animation} autoPlay muted playsInline />
+      <video
+        key={`${snapshot.frameId ?? snapshot.tick}-${skill}`}
+        src={animation}
+        autoPlay
+        muted
+        playsInline
+      />
       <div className="skill-overlay__label">
         <span>Skill activated</span>
         <strong>{skillName(skill)}</strong>

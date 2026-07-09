@@ -6,6 +6,7 @@ import type { GachaBanner, GachaResult } from '../types';
 export type GachaProgress = {
   totalRolls: number;
   rollsSinceSpecial: number;
+  rollsSinceLastSpecial?: number;
 };
 
 export function useGachaBanners() {
@@ -48,6 +49,7 @@ export function useGachaRoll() {
     onSuccess: (_result, variables) => {
       void qc.invalidateQueries({ queryKey: ['gacha-progress', variables.bannerCode] });
       void qc.invalidateQueries({ queryKey: ['playerCards', token] });
+      void qc.invalidateQueries({ queryKey: ['session', token] });
     },
   });
 }

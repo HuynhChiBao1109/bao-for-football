@@ -10,6 +10,10 @@ export class GachaService implements GachaServiceInterface {
     return this.repository.getProgress(userId, bannerCode);
   }
 
+  async getActiveBanners() {
+    return this.repository.getActiveBanners();
+  }
+
   async roll(userId: number, bannerCode: string): Promise<GachaRollResult> {
     if (!userId) {
       throw new BadRequestException("userId is required");
@@ -32,6 +36,7 @@ export class GachaService implements GachaServiceInterface {
       id: 0,
       name: "Unknown",
       imageUrl: "",
+      season: "normal",
     };
 
     const costDeducted = 360000;
@@ -63,7 +68,7 @@ export class GachaService implements GachaServiceInterface {
       userId,
       bannerCode,
       rarity,
-      season: "normal",
+      season: selectedPlayer.season,
       isSpecial,
       isPityTriggered: pityTriggered,
       totalRolls,

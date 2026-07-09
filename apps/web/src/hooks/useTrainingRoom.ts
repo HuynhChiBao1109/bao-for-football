@@ -13,6 +13,7 @@ export type TrainingEventType =
   | 'shooting'
   | 'skill'
   | 'dribble_magic'
+  | 'dribble_lightning'
   | 'tank_tackle'
   | 'free_kick_pass'
   | 'free_kick_through'

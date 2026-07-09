@@ -2,6 +2,7 @@ import { EPlayerSkill, getPlayerSkillSlug } from "src/modules/player/enum/player
 import { ETeamFormation } from "src/modules/team/enums/team-formation.enum";
 import { EMatchEvent } from "./enums";
 import {
+  buildLightningDribbleTrajectory,
   buildMagicDribbleTrajectory,
   buildThunderShotTrajectory,
   getSkillLabel,
@@ -755,9 +756,9 @@ export function generateNextMatchTick(input: {
         ? HALF_TIME_WHISTLE_DURATION_MS
         : isHalfTimeTunnel
           ? HALF_TIME_TUNNEL_DURATION_MS
-        : isSecondHalfStart
-          ? SECOND_HALF_KICKOFF_DURATION_MS
-          : undefined,
+          : isSecondHalfStart
+            ? SECOND_HALF_KICKOFF_DURATION_MS
+            : undefined,
       positionState: lifecyclePositionState,
     });
 
@@ -1506,10 +1507,9 @@ export function generateNextMatchTick(input: {
     const looseActorId = isGoalkeeperParryLooseBall
       ? looseBallContest.receiver.userPlayerId
       : looseBallContest.actorId;
-    const looseLabel =
-      isGoalkeeperParryLooseBall
-        ? `Tick ${nextTickValue}: bong bat ra sau pha can pha, ${looseBallContest.receiver.shortName} va ${looseBallContest.challenger?.shortName ?? "doi thu"} lao vao`
-        : `Tick ${nextTickValue}: ${looseBallContest.receiver.shortName} va ${looseBallContest.challenger?.shortName ?? "doi thu"} lao vao bong loi`;
+    const looseLabel = isGoalkeeperParryLooseBall
+      ? `Tick ${nextTickValue}: bong bat ra sau pha can pha, ${looseBallContest.receiver.shortName} va ${looseBallContest.challenger?.shortName ?? "doi thu"} lao vao`
+      : `Tick ${nextTickValue}: ${looseBallContest.receiver.shortName} va ${looseBallContest.challenger?.shortName ?? "doi thu"} lao vao bong loi`;
     const snapshot = buildSnapshot({
       frameId,
       minute,
@@ -1794,18 +1794,100 @@ export function generateNextMatchTick(input: {
       };
     }
 
-    const skill = getChargedSkill(actor, "dribble");
-    const ballPath =
-      skill === EPlayerSkill.DRIBBLE_MAGIC
-        ? buildMagicDribbleTrajectory(
-            latestTick.ball.x,
-            latestTick.ball.y,
-            tempoDecision.ballTarget.x,
-            tempoDecision.ballTarget.y,
-            FRAMES_PER_ACTION,
-            createDeterministicSkillRandom(actionTick, actor.userPlayerId),
-          )
-        : pathBetween({ x: latestTick.ball.x, y: latestTick.ball.y }, tempoDecision.ballTarget);
+    const dribbleDuel = evaluateDribbleDuelContext({
+      actor,
+      defending,
+      ball: latestTick.ball,
+      target: tempoDecision.ballTarget,
+      possession,
+      previousPositionState,
+      pressDefender: tempoDecision.pressDefender,
+    });
+    const skillRandom = createDeterministicSkillRandom(actionTick, actor.userPlayerId);
+    const skill = resolveDribbleSkill(actor, dribbleDuel);
+    const takeOn = resolveTakeOnOutcome({
+      actor,
+      defender: dribbleDuel.defender,
+      skill,
+      duel: dribbleDuel,
+      random: skillRandom,
+    });
+
+    if (!takeOn.success && takeOn.defender) {
+      const newPossession: Side = possession === "home" ? "away" : "home";
+      const defenderPosition =
+        previousPositionState.players.get(takeOn.defender.userPlayerId) ?? takeOn.defender.anchors;
+      const turnoverTarget = moveToward(
+        latestTick.ball,
+        defenderPosition,
+        PASS_SPEED_UNITS_PER_TICK * 0.72,
+      );
+      consumeSkillCharge(actor, skill);
+      const snapshot = buildSnapshot({
+        frameId,
+        minute,
+        second,
+        tick: nextTickValue,
+        matchStep: "play",
+        phase,
+        homeScore: Number(latestTick.homeScore ?? 0),
+        awayScore: Number(latestTick.awayScore ?? 0),
+        possession: newPossession,
+        homeLineup,
+        awayLineup,
+        ballOwner: takeOn.defender,
+        ball: turnoverTarget,
+        ballPath: buildDribbleBallPath({
+          skill,
+          from: { x: latestTick.ball.x, y: latestTick.ball.y },
+          to: turnoverTarget,
+          random: skillRandom,
+        }),
+        highlight: createHighlight(
+          skill ? EMatchEvent.SKILL_USED : EMatchEvent.TACKLE,
+          `Tick ${nextTickValue}: ${actor.shortName} ${
+            skill ? `dung ${getSkillLabel(skill)} nhung bi chan lai` : "bi chan khi qua nguoi"
+          }`,
+          possession,
+          actor.userPlayerId,
+          takeOn.defender.userPlayerId,
+          skill,
+        ),
+        activeSkill: skill,
+        focusId: actor.userPlayerId,
+        pressId: takeOn.defender.userPlayerId,
+        positionState: previousPositionState,
+      });
+
+      return {
+        snapshot,
+        event: {
+          event: skill ? EMatchEvent.SKILL_USED : EMatchEvent.TACKLE,
+          minute,
+          teamId: actor.teamId,
+          actorPlayerId: actor.userPlayerId,
+          secondaryPlayerId: takeOn.defender.userPlayerId,
+          payload: {
+            label: snapshot.highlight.label,
+            action: "take_on",
+            success: false,
+            from: { x: latestTick.ball.x, y: latestTick.ball.y },
+            to: turnoverTarget,
+            skill,
+            skillLabel: skill ? getSkillLabel(skill) : null,
+            dribbleChance: takeOn.chance,
+            recoveredPossession: newPossession,
+          },
+        },
+      };
+    }
+
+    const ballPath = buildDribbleBallPath({
+      skill,
+      from: { x: latestTick.ball.x, y: latestTick.ball.y },
+      to: tempoDecision.ballTarget,
+      random: skillRandom,
+    });
     consumeSkillCharge(actor, skill);
     const snapshot = buildSnapshot({
       frameId,
@@ -1825,16 +1907,21 @@ export function generateNextMatchTick(input: {
       highlight: createHighlight(
         skill ? EMatchEvent.SKILL_USED : EMatchEvent.DRIBBLE,
         `Tick ${nextTickValue}: ${actor.shortName} ${
-          skill ? `dung ${getSkillLabel(skill)}` : tempoDecision.label
+          skill
+            ? `dung ${getSkillLabel(skill)} ${
+                dribbleDuel.isOneOnMany ? "vuot vong vay" : "qua nguoi"
+              }`
+            : tempoDecision.label
         }`,
         possession,
         actor.userPlayerId,
-        null,
+        dribbleDuel.defender?.userPlayerId ?? null,
         skill,
       ),
       activeSkill: skill,
       focusId: actor.userPlayerId,
-      pressId: tempoDecision.pressDefender?.userPlayerId ?? null,
+      pressId:
+        dribbleDuel.defender?.userPlayerId ?? tempoDecision.pressDefender?.userPlayerId ?? null,
       positionState: previousPositionState,
     });
 
@@ -1845,14 +1932,17 @@ export function generateNextMatchTick(input: {
         minute,
         teamId: actor.teamId,
         actorPlayerId: actor.userPlayerId,
-        secondaryPlayerId: null,
+        secondaryPlayerId: dribbleDuel.defender?.userPlayerId ?? null,
         payload: {
           label: snapshot.highlight.label,
-          action: tempoDecision.kind,
+          action: dribbleDuel.canUseSkill ? "take_on" : tempoDecision.kind,
+          success: true,
           from: { x: latestTick.ball.x, y: latestTick.ball.y },
           to: tempoDecision.ballTarget,
           skill,
           skillLabel: skill ? getSkillLabel(skill) : null,
+          dribbleChance: takeOn.chance,
+          duelType: dribbleDuel.isOneOnMany ? "1-n" : dribbleDuel.canUseSkill ? "1-1" : "carry",
         },
       },
     };
@@ -2514,7 +2604,18 @@ function resolveDebugPossessionTempoAction(input: {
   const releaseRoll =
     ((input.nextTick * 19 + input.actor.userPlayerId * 11 + teamTicks * 7) % 100) / 100;
   const hasShootSkill = input.actor.raw.skills.includes(EPlayerSkill.SHOOT_THUNDER);
+  const hasTakeOnSkill =
+    input.actor.raw.skills.includes(EPlayerSkill.DRIBBLE_MAGIC) ||
+    input.actor.raw.skills.includes(EPlayerSkill.LIGHTNING_DRIBBLE);
   const inShotZone = goalDistance <= getRoleMaxShotDistance(role, hasShootSkill) + 4;
+  const dribbleTrait = getDribbleTrait(input.actor);
+  const takeOnRoleBonus = role === "W" || role === "ST" ? 0.13 : role === "CM" ? 0.08 : 0;
+  const pressureTakeOnWindow = pressure.distance >= 1.4 && pressure.distance <= 7.2;
+  const takeOnBias = clamp(
+    (dribbleTrait - 0.72) * 0.42 + (hasTakeOnSkill ? 0.16 : 0) + takeOnRoleBonus,
+    0,
+    0.38,
+  );
   const mustSettle =
     !restartPass &&
     (teamTicks < MIN_TEAM_POSSESSION_TICKS ||
@@ -2525,21 +2626,32 @@ function resolveDebugPossessionTempoAction(input: {
       clamp((goalDistance - 18) / 42, 0, inShotZone ? 0.06 : 0.18) +
       (role === "CB" || role === "FB" ? 0.08 : 0) +
       releaseRoll * (inShotZone ? 0.06 : 0.14) -
-      (inShotZone ? 0.18 : 0),
+      (inShotZone ? 0.18 : 0) -
+      takeOnBias,
     0,
     1,
   );
   const carryScore = clamp(
     forwardSpace * 0.5 +
       clamp((pressure.distance - 5) / 18, 0, 0.26) +
+      dribbleTrait * 0.18 +
+      (pressureTakeOnWindow ? 0.12 + takeOnBias : 0) +
       (role === "W" || role === "ST" ? 0.12 : role === "CM" ? 0.08 : 0) +
       (latestWasPass ? 0.08 : 0),
     0,
     1,
   );
+  const forceTakeOn =
+    !restartPass &&
+    pressureTakeOnWindow &&
+    forwardSpace >= 0.2 &&
+    ownerTicks >= 1 &&
+    (hasTakeOnSkill || dribbleTrait >= 0.82) &&
+    (role === "W" || role === "ST" || role === "CM");
   const shouldRelease =
     restartPass ||
     (!mustSettle &&
+      !forceTakeOn &&
       (pressure.distance <= 3.8 ||
         ownerTicks >= PASS_CADENCE_TICKS ||
         (!inShotZone && goalDistance <= 22 && pressure.distance <= 7) ||
@@ -2561,7 +2673,21 @@ function resolveDebugPossessionTempoAction(input: {
     null;
   const roll = (input.nextTick + input.actor.userPlayerId + teamTicks + ownerTicks) % 4;
 
-  if (pressure.distance < 6 && forwardSpace < 0.42) {
+  if (forceTakeOn) {
+    return {
+      kind: "carry",
+      label: pressure.distance <= 3.2 ? "doi mat pressing va qua nguoi" : "keo bong tan cong 1v1",
+      ballTarget: carryBallTarget({
+        actor: input.actor,
+        ball: input.ball,
+        possession: input.possession,
+        nextTick: input.nextTick,
+      }),
+      pressDefender,
+    };
+  }
+
+  if (pressure.distance < 6 && forwardSpace < 0.42 && !forceTakeOn) {
     return {
       kind: "reposition",
       label: "che bong doi goc thoat pressing",
@@ -2656,8 +2782,7 @@ function carryBallTarget(input: {
 
   if (role === "FB" || role === "W") {
     const variant = (input.nextTick + input.actor.userPlayerId) % 4;
-    const touchlineOverrun =
-      nearTouchline && (input.nextTick + input.actor.userPlayerId) % 7 === 0;
+    const touchlineOverrun = nearTouchline && (input.nextTick + input.actor.userPlayerId) % 7 === 0;
     const shouldCutInside = nearTouchline || role === "W" || variant <= 1;
     const desiredX = shouldCutInside
       ? touchlineOverrun
@@ -2860,7 +2985,7 @@ function resolveDebugPassingAction(input: {
               ? 0.14 + throughRunScore * 0.16
               : passStyle === "one_two"
                 ? 0.18 + oneTwoValue * 0.18
-              : 0;
+                : 0;
       const offsidePenalty = offside.isOffside ? 2.2 : offside.warning ? 0.24 : 0;
       const legalRunBonus =
         !offside.isOffside && (passStyle === "through" || passStyle === "lob")
@@ -4253,8 +4378,7 @@ function resolveDebugShotAction(
   });
   const isKeeperSave = targetSelection.metadata.isOnTarget;
   const catchRoll =
-    ((input.nextTick * 43 + input.shooter.userPlayerId * 7 + keeper.userPlayerId * 31) % 100) /
-    100;
+    ((input.nextTick * 43 + input.shooter.userPlayerId * 7 + keeper.userPlayerId * 31) % 100) / 100;
   const keeperCatchChance = calculateKeeperCatchChance({
     keeper,
     shooterQuality,
@@ -5199,9 +5323,7 @@ function scoreTargetAgainstKeeper(input: {
     Math.abs(input.keeperPosition.x - input.ball.x) <= 18;
   const nearPostPenalty = keeperCoversNearPost && input.zone === "near post" ? -0.1 : 0;
   const chipBonus =
-    input.shotType === "CHIP_SHOT" || input.zone === "center-high"
-      ? keeperOffLine * 0.2
-      : 0;
+    input.shotType === "CHIP_SHOT" || input.zone === "center-high" ? keeperOffLine * 0.2 : 0;
   const cornerBonus = input.zone.includes("corner") ? openSide * 0.35 : 0;
 
   return openSide + farSideBonus + chipBonus + cornerBonus + centralPenalty + nearPostPenalty;
@@ -5899,6 +6021,184 @@ function evaluateForwardCarrySpace(input: {
   return clamp((nearestAhead - 4) / 22 + roleBonus, 0, 1);
 }
 
+function getDribbleTrait(player: InternalLineupPlayer) {
+  return clamp(
+    (player.raw.stats.dribbling * 0.42 +
+      player.raw.stats.speed * 0.26 +
+      player.raw.stats.acceleration * 0.22 +
+      player.raw.stats.balance * 0.1) /
+      100,
+    0,
+    1.25,
+  );
+}
+
+function evaluateDribbleDuelContext(input: {
+  actor: InternalLineupPlayer;
+  defending: InternalLineupPlayer[];
+  ball: TrajectoryPoint;
+  target: TrajectoryPoint;
+  possession: Side;
+  previousPositionState: PositionState;
+  pressDefender?: InternalLineupPlayer | null;
+}) {
+  const direction = attackDirection(input.possession);
+  const pressDefenderId = input.pressDefender?.userPlayerId ?? null;
+  const candidates = input.defending
+    .filter((player) => player.role !== "GK")
+    .map((defender) => {
+      const position =
+        input.previousPositionState.players.get(defender.userPlayerId) ?? defender.anchors;
+      const distanceToBall = Math.min(
+        distance(position, input.ball),
+        distance(position, input.actor.anchors),
+      );
+      const distanceToLane = distanceToSegment(position, input.ball, input.target);
+      const forwardGap = (position.y - input.ball.y) * direction;
+      const lateralGap = Math.abs(position.x - input.ball.x);
+      const isFacing = forwardGap >= -1.8 && forwardGap <= 16 && lateralGap <= 13;
+      const isOnLane = distanceToLane <= 6.2 && distanceToBall <= 18;
+      const isPressing = defender.userPlayerId === pressDefenderId && distanceToBall <= 11.5;
+
+      return {
+        player: defender,
+        position,
+        distanceToBall,
+        distanceToLane,
+        isFacing,
+        isOnLane,
+        isPressing,
+        score: distanceToBall - (isPressing ? 5 : 0) - (isOnLane ? 3.5 : 0) - (isFacing ? 2.5 : 0),
+      };
+    })
+    .sort((left, right) => left.score - right.score);
+  const nearest = candidates[0] ?? null;
+  const nearbyCount = candidates.filter((item) => item.distanceToBall <= 8.5).length;
+  const laneCount = candidates.filter((item) => item.isOnLane).length;
+  const facingCount = candidates.filter(
+    (item) => item.isFacing && item.distanceToBall <= 14,
+  ).length;
+  const pressCandidate = candidates.find((item) => item.isPressing) ?? null;
+  const duel = pressCandidate ?? nearest;
+  const canUseSkill = Boolean(
+    duel &&
+    (duel.distanceToBall <= 8.5 ||
+      duel.isOnLane ||
+      duel.isFacing ||
+      duel.isPressing ||
+      laneCount > 0 ||
+      facingCount > 0),
+  );
+
+  return {
+    defender: duel?.player ?? null,
+    nearestDistance: nearest?.distanceToBall ?? 30,
+    nearbyCount,
+    laneCount,
+    facingCount,
+    isPressed: Boolean(pressCandidate),
+    isOneOnOne: canUseSkill && nearbyCount <= 1 && laneCount <= 1,
+    isOneOnMany: canUseSkill && (nearbyCount >= 2 || laneCount >= 2 || facingCount >= 2),
+    canUseSkill,
+  };
+}
+
+function resolveDribbleSkill(player: InternalLineupPlayer, context: { canUseSkill: boolean }) {
+  if (!context.canUseSkill) {
+    return null;
+  }
+
+  if (
+    player.raw.skills.includes(EPlayerSkill.LIGHTNING_DRIBBLE) &&
+    isSkillReady(player, EPlayerSkill.LIGHTNING_DRIBBLE)
+  ) {
+    return EPlayerSkill.LIGHTNING_DRIBBLE;
+  }
+
+  return getChargedSkill(player, "dribble");
+}
+
+function buildDribbleBallPath(input: {
+  skill: EPlayerSkill | null;
+  from: TrajectoryPoint;
+  to: TrajectoryPoint;
+  random: () => number;
+}) {
+  if (input.skill === EPlayerSkill.LIGHTNING_DRIBBLE) {
+    return buildLightningDribbleTrajectory(
+      input.from.x,
+      input.from.y,
+      input.to.x,
+      input.to.y,
+      FRAMES_PER_ACTION,
+      input.random,
+    );
+  }
+
+  if (input.skill === EPlayerSkill.DRIBBLE_MAGIC) {
+    return buildMagicDribbleTrajectory(
+      input.from.x,
+      input.from.y,
+      input.to.x,
+      input.to.y,
+      FRAMES_PER_ACTION,
+      input.random,
+    );
+  }
+
+  return pathBetween(input.from, input.to);
+}
+
+function resolveTakeOnOutcome(input: {
+  actor: InternalLineupPlayer;
+  defender: InternalLineupPlayer | null;
+  skill: EPlayerSkill | null;
+  duel: ReturnType<typeof evaluateDribbleDuelContext>;
+  random: () => number;
+}) {
+  if (!input.defender || !input.duel.canUseSkill) {
+    return { success: true, chance: 1, defender: input.defender };
+  }
+
+  const activation = input.skill
+    ? resolveSkillActivation(
+        input.skill,
+        createSkillContext(input.actor, input.defender, input.defender, input.random),
+      )
+    : null;
+  const attackerScore =
+    input.actor.raw.stats.dribbling * 0.44 +
+    input.actor.raw.stats.speed * 0.24 +
+    input.actor.raw.stats.acceleration * 0.2 +
+    input.actor.raw.stats.balance * 0.12 +
+    (activation?.attackBonus ?? 0);
+  const defenderScore =
+    input.defender.raw.stats.tackle * 0.5 +
+    input.defender.raw.stats.speed * 0.22 +
+    input.defender.raw.stats.acceleration * 0.16 +
+    input.defender.raw.stats.balance * 0.12 -
+    (activation?.defensePenalty ?? 0);
+  const crowdPenalty = input.duel.isOneOnMany ? 0.1 : 0;
+  const skillFloor =
+    input.skill === EPlayerSkill.LIGHTNING_DRIBBLE
+      ? 0.58
+      : input.skill === EPlayerSkill.DRIBBLE_MAGIC
+        ? 0.48
+        : 0.28;
+  const chance = clamp(
+    0.48 + (attackerScore - defenderScore) / 150 - crowdPenalty,
+    skillFloor,
+    input.skill === EPlayerSkill.LIGHTNING_DRIBBLE ? 0.92 : input.skill ? 0.84 : 0.76,
+  );
+  const roll = input.random();
+
+  return {
+    success: Boolean(activation?.dribbleSuccess ?? roll < chance),
+    chance,
+    defender: input.defender,
+  };
+}
+
 function distanceToAttackingGoal(possession: Side, point: TrajectoryPoint) {
   const goalY = possession === "home" ? 4 : 96;
   return distance(point, { x: 50, y: goalY });
@@ -6249,8 +6549,9 @@ function resolveCornerDeliveryResult(input: {
   const deliveryPoint = { x: input.latestTick.ball.x, y: input.latestTick.ball.y };
   const keeper = defending.find((player) => normalizeRole(player.role) === "GK") ?? defending[0];
   const intendedReceiver =
-    attacking.find((player) => player.userPlayerId === input.latestTick.highlight.secondaryPlayerId) ??
-    null;
+    attacking.find(
+      (player) => player.userPlayerId === input.latestTick.highlight.secondaryPlayerId,
+    ) ?? null;
   const attacker =
     intendedReceiver ??
     attacking
@@ -6287,7 +6588,9 @@ function resolveCornerDeliveryResult(input: {
       5
     : 0;
   const duelRoll =
-    ((input.nextTick * 29 + attacker.userPlayerId * 17 + (nearestDefender?.player.userPlayerId ?? 3)) %
+    ((input.nextTick * 29 +
+      attacker.userPlayerId * 17 +
+      (nearestDefender?.player.userPlayerId ?? 3)) %
       100) /
     100;
 
@@ -6585,7 +6888,9 @@ function getCornerKickAttackTargets(input: {
     { x: 10, y: -direction * 6 },
   ];
   const runners = input.attacking
-    .filter((player) => player.userPlayerId !== input.takerId && normalizeRole(player.role) !== "GK")
+    .filter(
+      (player) => player.userPlayerId !== input.takerId && normalizeRole(player.role) !== "GK",
+    )
     .sort((left, right) => getCornerAerialRating(right) - getCornerAerialRating(left));
 
   runners.forEach((player, index) => {
@@ -6668,8 +6973,7 @@ function getPenaltyKickSetupTargets(input: {
   ];
   const attackingRank = input.attacking
     .filter(
-      (player) =>
-        player.userPlayerId !== input.takerId && normalizeRole(player.role) !== "GK",
+      (player) => player.userPlayerId !== input.takerId && normalizeRole(player.role) !== "GK",
     )
     .sort((left, right) => {
       const leftRole = normalizeRole(left.role);
@@ -6685,7 +6989,8 @@ function getPenaltyKickSetupTargets(input: {
     .sort((left, right) => {
       const leftRole = normalizeRole(left.role);
       const rightRole = normalizeRole(right.role);
-      const leftScore = left.raw.stats.tackle + (leftRole === "CB" ? 15 : leftRole === "FB" ? 8 : 0);
+      const leftScore =
+        left.raw.stats.tackle + (leftRole === "CB" ? 15 : leftRole === "FB" ? 8 : 0);
       const rightScore =
         right.raw.stats.tackle + (rightRole === "CB" ? 15 : rightRole === "FB" ? 8 : 0);
       return rightScore - leftScore;
@@ -6776,7 +7081,9 @@ function getCornerKickSetupTargets(input: {
     { x: 38, y: goalY - direction * 14 },
   ].map((slot) => ({ x: clamp(slot.x, 8, 92), y: clamp(slot.y, 7, 93) }));
   const attackingRank = input.attacking
-    .filter((player) => player.userPlayerId !== input.takerId && normalizeRole(player.role) !== "GK")
+    .filter(
+      (player) => player.userPlayerId !== input.takerId && normalizeRole(player.role) !== "GK",
+    )
     .map((player) => {
       const role = normalizeRole(player.role);
       const aerial =
@@ -6793,7 +7100,8 @@ function getCornerKickSetupTargets(input: {
     .sort((left, right) => {
       const leftRole = normalizeRole(left.role);
       const rightRole = normalizeRole(right.role);
-      const leftScore = left.raw.stats.tackle + (leftRole === "CB" ? 18 : leftRole === "FB" ? 8 : 0);
+      const leftScore =
+        left.raw.stats.tackle + (leftRole === "CB" ? 18 : leftRole === "FB" ? 8 : 0);
       const rightScore =
         right.raw.stats.tackle + (rightRole === "CB" ? 18 : rightRole === "FB" ? 8 : 0);
       return rightScore - leftScore;
@@ -6822,13 +7130,21 @@ function getCornerKickSetupTargets(input: {
       return;
     }
 
-    const rankIndex = attackingRank.findIndex((item) => item.player.userPlayerId === player.userPlayerId);
-    const slot = rankIndex === 0 && role !== "CB" ? boxSlots[1] : boxSlots[rankIndex % boxSlots.length];
-    const isShortOption = rankIndex === 4 || (role === "W" && isSameFlank(player.anchors.x, input.ball.x));
+    const rankIndex = attackingRank.findIndex(
+      (item) => item.player.userPlayerId === player.userPlayerId,
+    );
+    const slot =
+      rankIndex === 0 && role !== "CB" ? boxSlots[1] : boxSlots[rankIndex % boxSlots.length];
+    const isShortOption =
+      rankIndex === 4 || (role === "W" && isSameFlank(player.anchors.x, input.ball.x));
     targets.set(player.userPlayerId, {
       target: isShortOption ? shortOption : slot,
       intent: isShortOption ? "support" : role === "CB" || role === "ST" ? "attack_space" : "run",
-      aiState: isShortOption ? "PASS_SUPPORT" : role === "CB" || role === "ST" ? "ATTACK_SPACE" : "THIRD_MAN_RUN",
+      aiState: isShortOption
+        ? "PASS_SUPPORT"
+        : role === "CB" || role === "ST"
+          ? "ATTACK_SPACE"
+          : "THIRD_MAN_RUN",
     });
   });
 
@@ -7017,6 +7333,20 @@ function buildBallPath(action: ResolvedAction, random: () => number): Trajectory
       random,
     ).slice(1);
   }
+  if (action.skill === EPlayerSkill.LIGHTNING_DRIBBLE) {
+    const target = action.partner?.anchors ?? {
+      x: clamp(actorPos.x + (random() > 0.5 ? 14 : -14), 8, 92),
+      y: clamp(actorPos.y + (action.possession === "home" ? -15 : 15), 8, 92),
+    };
+    return buildLightningDribbleTrajectory(
+      actorPos.x,
+      actorPos.y,
+      target.x,
+      target.y,
+      FRAMES_PER_ACTION,
+      random,
+    ).slice(1);
+  }
   if (action.type === "pass" && action.partner) {
     return pathBetween(actorPos, action.partner.anchors);
   }
@@ -7089,6 +7419,7 @@ function addSkillCharge(player: InternalLineupPlayer, skill: EPlayerSkill, amoun
 function addTickSkillCharge(lineups: InternalLineupPlayer[]) {
   lineups.forEach((player) => {
     addSkillCharge(player, EPlayerSkill.DRIBBLE_MAGIC, 10);
+    addSkillCharge(player, EPlayerSkill.LIGHTNING_DRIBBLE, 12);
   });
 }
 
@@ -7133,10 +7464,20 @@ function getChargedSkill(
       : null;
   }
 
-  if (phase === "dribble" && isSkillReady(player, EPlayerSkill.DRIBBLE_MAGIC)) {
-    return player.raw.skills.includes(EPlayerSkill.DRIBBLE_MAGIC)
-      ? EPlayerSkill.DRIBBLE_MAGIC
-      : null;
+  if (phase === "dribble") {
+    if (
+      isSkillReady(player, EPlayerSkill.LIGHTNING_DRIBBLE) &&
+      player.raw.skills.includes(EPlayerSkill.LIGHTNING_DRIBBLE)
+    ) {
+      return EPlayerSkill.LIGHTNING_DRIBBLE;
+    }
+
+    if (
+      isSkillReady(player, EPlayerSkill.DRIBBLE_MAGIC) &&
+      player.raw.skills.includes(EPlayerSkill.DRIBBLE_MAGIC)
+    ) {
+      return EPlayerSkill.DRIBBLE_MAGIC;
+    }
   }
 
   if (phase === "tackle" && isSkillReady(player, EPlayerSkill.TANK_TACKLE)) {
@@ -7242,7 +7583,7 @@ function buildSnapshot(input: {
             takerId: input.highlight.actorPlayerId ?? ownerId,
             keeperId: input.highlight.secondaryPlayerId ?? null,
           })
-      : new Map<number, SetPiecePlayerTarget>());
+        : new Map<number, SetPiecePlayerTarget>());
   const instantSetPiece =
     input.instantSetPiece ??
     (input.highlight.event === EMatchEvent.CORNER_KICK ||
@@ -7299,7 +7640,9 @@ function buildSnapshot(input: {
   const allRenderPlayers = [...homePlayers, ...awayPlayers];
   allRenderPlayers.forEach((player) => {
     player.hasBall = controlledOwnerId != null && player.userPlayerId === controlledOwnerId;
-    if (player.hasBall && input.activeSkill) player.activeSkill = input.activeSkill;
+    if (input.activeSkill && player.userPlayerId === input.focusId) {
+      player.activeSkill = input.activeSkill;
+    }
   });
   const ownerRenderPlayer =
     controlledOwnerId == null
@@ -7311,7 +7654,8 @@ function buildSnapshot(input: {
     frameId: input.frameId,
     tick: input.tick,
     durationMs:
-      input.durationMsOverride ?? getSnapshotFrameDuration(input.highlight.event, input.activeSkill),
+      input.durationMsOverride ??
+      getSnapshotFrameDuration(input.highlight.event, input.activeSkill),
     matchStep: input.matchStep,
     minute: input.minute,
     second: input.second,
@@ -7342,6 +7686,8 @@ function buildSnapshot(input: {
 
 function getSnapshotFrameDuration(event: EMatchEvent | null, activeSkill: EPlayerSkill | null) {
   if (activeSkill === EPlayerSkill.SHOOT_THUNDER) return POWER_SHOT_FRAME_DURATION_MS;
+  if (activeSkill === EPlayerSkill.LIGHTNING_DRIBBLE)
+    return Math.round(SKILL_FRAME_DURATION_MS * 0.72);
 
   if (
     event === EMatchEvent.SHOOT ||
@@ -7377,6 +7723,7 @@ function getSnapshotFrameDuration(event: EMatchEvent | null, activeSkill: EPlaye
 
 function getBallVisualSpeed(event: EMatchEvent | null, activeSkill: EPlayerSkill | null) {
   if (activeSkill === EPlayerSkill.SHOOT_THUNDER) return 13;
+  if (activeSkill === EPlayerSkill.LIGHTNING_DRIBBLE) return 12;
   if (
     event === EMatchEvent.PENALTY ||
     event === EMatchEvent.SHOOT ||
@@ -8355,13 +8702,16 @@ function selectLineup(team: SimulationTeamInput, side: Side): InternalLineupPlay
   const pool = [...team.players];
   return formation.map((slot, index) => {
     const savedSlotIndex = pool.findIndex((player) => player.savedSlotId === slot.slotId);
-    const bestIndex = savedSlotIndex >= 0 ? savedSlotIndex : pool.reduce(
-      (best, player, playerIndex) => {
-        const score = playerFitScore(player, slot);
-        return score > best.score ? { index: playerIndex, score } : best;
-      },
-      { index: 0, score: Number.NEGATIVE_INFINITY },
-    ).index;
+    const bestIndex =
+      savedSlotIndex >= 0
+        ? savedSlotIndex
+        : pool.reduce(
+            (best, player, playerIndex) => {
+              const score = playerFitScore(player, slot);
+              return score > best.score ? { index: playerIndex, score } : best;
+            },
+            { index: 0, score: Number.NEGATIVE_INFINITY },
+          ).index;
     const picked = pool.splice(bestIndex, 1)[0] ?? team.players[index];
     const anchors = side === "home" ? { x: slot.x, y: slot.y } : { x: slot.x, y: 100 - slot.y };
     return {

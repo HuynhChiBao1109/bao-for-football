@@ -1,8 +1,10 @@
 import { Injectable } from "@nestjs/common";
-import { Repository } from "typeorm";
+import { In, MoreThan, Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { GachaBannerEntity, GachaLogEntity } from "./entities/gacha.entity";
-import { UserPlayerEntity } from "../player/entities/player-user.entity";
+import { PlayerEntity } from "../player/entities/player-admin.entity";
+import { UserPlayerEntity, UserPlayerSkillEntity } from "../player/entities/player-user.entity";
+import { TeamEntity } from "../team/entities/team.entity";
 
 export interface GachaRollResult {
   userId: number;
@@ -32,10 +34,40 @@ export class GachaRepository {
     private readonly gachaLogRepository: Repository<GachaLogEntity>,
     @InjectRepository(GachaBannerEntity)
     private readonly gachaBannerRepository: Repository<GachaBannerEntity>,
-    // Nếu cần PlayerTemplateEntity, UserPlayerEntity, TeamEntity thì inject thêm ở đây
+    @InjectRepository(PlayerEntity)
+    private readonly playerRepository: Repository<PlayerEntity>,
     @InjectRepository(UserPlayerEntity)
     private readonly userPlayerRepository: Repository<UserPlayerEntity>,
+    @InjectRepository(UserPlayerSkillEntity)
+    private readonly userPlayerSkillRepository: Repository<UserPlayerSkillEntity>,
+    @InjectRepository(TeamEntity)
+    private readonly teamRepository: Repository<TeamEntity>,
   ) {}
+
+  async getActiveBanners() {
+    const banners = await this.gachaBannerRepository.find({
+      where: {
+        status: 1,
+        expiredAt: MoreThan(new Date()),
+      },
+      order: {
+        createdAt: "DESC",
+        id: "DESC",
+      },
+    });
+
+    return banners.map((banner) => ({
+      id: Number(banner.id),
+      bannerCode: banner.bannerCode,
+      bannerName: banner.bannerName,
+      bannerImageUrl: banner.bannerImageUrl,
+      playerId: Number(banner.playerId),
+      expiredAt: banner.expiredAt?.toISOString?.() ?? String(banner.expiredAt),
+      status: Number(banner.status),
+      statusLabel: Number(banner.status) === 1 ? "Active" : "Inactive",
+      createdAt: banner.createdAt?.toISOString?.() ?? String(banner.createdAt),
+    }));
+  }
 
   async getProgress(userId: number, bannerCode: string) {
     const key = `${userId}:${bannerCode}`;
@@ -46,9 +78,11 @@ export class GachaRepository {
       where: { userId: String(userId), bannerCode },
       order: { id: "DESC" },
     });
+    const rollsSinceLastSpecial = Number(latest?.rollsSinceLastSpecial ?? 0);
     return {
       totalRolls,
-      rollsSinceLastSpecial: Number(latest?.rollsSinceLastSpecial ?? 0),
+      rollsSinceLastSpecial,
+      rollsSinceSpecial: rollsSinceLastSpecial,
     };
   }
 
@@ -86,41 +120,97 @@ export class GachaRepository {
 
   async getBannerPlayers(
     bannerCode: string,
-  ): Promise<Array<{ id: number; name: string; imageUrl: string }>> {
-    // Đoạn này cần inject thêm PlayerTemplateRepository nếu dùng thực tế
+  ): Promise<Array<{ id: number; name: string; imageUrl: string; season: string }>> {
     const banners = await this.gachaBannerRepository.find({
-      where: { bannerCode, status: 1 },
+      where: { bannerCode, status: 1, expiredAt: MoreThan(new Date()) },
     });
     if (!banners.length) {
       return [];
     }
-    // Giả lập trả về rỗng, cần bổ sung PlayerTemplateRepository nếu muốn lấy player thực tế
-    return [];
+
+    const playerIds = banners.map((banner) => Number(banner.playerId)).filter(Boolean);
+    if (!playerIds.length) {
+      return [];
+    }
+
+    const imageByPlayerId = new Map(
+      banners.map((banner) => [Number(banner.playerId), banner.bannerImageUrl]),
+    );
+    const players = await this.playerRepository.find({
+      where: { id: In(playerIds) },
+      relations: {
+        club: true,
+      },
+    });
+
+    return players.map((player) => ({
+      id: Number(player.id),
+      name: player.name,
+      season: player.season,
+      imageUrl: imageByPlayerId.get(Number(player.id)) || player.club?.imgUrl || "",
+    }));
   }
 
-  // --- GachaService required methods ---
-
-  /**
-   * Get the team's budget for a user. Placeholder: always returns 360000000.
-   */
   async getTeamBudget(userId: number): Promise<number> {
-    // TODO: Replace with real budget lookup if TeamEntity is available
-    return 360000000;
+    const team = await this.teamRepository.findOne({
+      where: { userId },
+      order: { id: "ASC" },
+    });
+
+    return Number(team?.budget ?? 0);
   }
 
-  /**
-   * Deduct budget from a user's team. Placeholder: always returns true.
-   */
   async deductBudget(userId: number, amount: number): Promise<boolean> {
-    // TODO: Implement real deduction logic if TeamEntity/budget is available
+    const team = await this.teamRepository.findOne({
+      where: { userId },
+      order: { id: "ASC" },
+    });
+    if (!team || Number(team.budget) < amount) {
+      return false;
+    }
+
+    team.budget = Number(team.budget) - amount;
+    await this.teamRepository.save(team);
     return true;
   }
 
-  /**
-   * Add a player to the user's collection. Placeholder: no-op.
-   */
   async addUserPlayer(userId: number, playerId: number): Promise<void> {
-    // TODO: Implement real logic to add a player to user
-    return;
+    const player = await this.playerRepository.findOne({
+      where: { id: playerId },
+      relations: {
+        skills: true,
+      },
+    });
+    if (!player) {
+      return;
+    }
+
+    const userPlayer = await this.userPlayerRepository.save(
+      this.userPlayerRepository.create({
+        userId,
+        playerId,
+        exp: 0,
+        bonusAttack: 0,
+        bonusDefense: 0,
+        bonusAgility: 0,
+        bonusPass: 0,
+        bonusGoalkeeping: 0,
+        positions: player.positions ?? [],
+      }),
+    );
+
+    const skills = player.skills ?? [];
+    if (!skills.length) {
+      return;
+    }
+
+    await this.userPlayerSkillRepository.save(
+      skills.map((skill) =>
+        this.userPlayerSkillRepository.create({
+          userPlayerId: userPlayer.id,
+          skill: skill.skill,
+        }),
+      ),
+    );
   }
 }

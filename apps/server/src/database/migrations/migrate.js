@@ -46,6 +46,8 @@ function createSlug(value, fallback) {
 function getPlayerSkillSlug(skill) {
   if (Number(skill) === 1) return "shoot-thunder";
   if (Number(skill) === 2) return "dribble-magic";
+  if (Number(skill) === 3) return "tank-tackle";
+  if (Number(skill) === 4) return "lightning-dribble";
   return `skill-${String(skill)}`;
 }
 
@@ -108,7 +110,7 @@ function normalizeSkills(value) {
     return [];
   }
 
-  return value.map((item) => toInt(item, null)).filter((item) => item === 1 || item === 2);
+  return value.map((item) => toInt(item, null)).filter((item) => item >= 1 && item <= 4);
 }
 
 function normalizeJsonValue(value) {
@@ -133,6 +135,35 @@ function serializeQueryValue(value) {
   }
 
   return value;
+}
+
+function toDbDateTime(value, fallback = "2099-12-31T23:59:59.000Z") {
+  const date = new Date(value || fallback);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`Invalid datetime value: ${value}`);
+  }
+
+  return date.toISOString().slice(0, 19).replace("T", " ");
+}
+
+function toDateTimeKey(value) {
+  if (value instanceof Date) {
+    const pad = (item) => String(item).padStart(2, "0");
+    return (
+      [value.getFullYear(), pad(value.getMonth() + 1), pad(value.getDate())].join("-") +
+      ` ${pad(value.getHours())}:${pad(value.getMinutes())}:${pad(value.getSeconds())}`
+    );
+  }
+
+  return String(value || "")
+    .trim()
+    .replace("T", " ")
+    .replace(/\.\d+Z?$/, "")
+    .slice(0, 19);
+}
+
+function sameDateTime(left, right) {
+  return toDateTimeKey(left) === toDateTimeKey(right);
 }
 
 function normalizePlayer(item, leagueCountryName) {
@@ -266,6 +297,13 @@ async function getCountryIdMap(connection) {
   return countryIdByName;
 }
 
+async function ensureSkillEnums(connection) {
+  await connection.execute("ALTER TABLE player_skills MODIFY skill ENUM('1','2','3','4') NOT NULL");
+  await connection.execute(
+    "ALTER TABLE user_player_skills MODIFY skill ENUM('1','2','3','4') NOT NULL",
+  );
+}
+
 async function migrateCountries(connection) {
   const rawData = fs.readFileSync(path.resolve(__dirname, "country.json"), "utf8");
   const countries = JSON.parse(rawData).map(normalizeCountry).filter(Boolean);
@@ -286,7 +324,10 @@ async function migrateCountries(connection) {
       continue;
     }
 
-    if ((existing.slug || null) !== country.slug || (existing.img_url || null) !== country.img_url) {
+    if (
+      (existing.slug || null) !== country.slug ||
+      (existing.img_url || null) !== country.img_url
+    ) {
       toUpdate.push([country.slug, country.img_url, existing.id]);
     }
   }
@@ -632,6 +673,339 @@ async function migratePlayerSkills(connection, clubsWithRefs) {
   };
 }
 
+function normalizeSpecialGacha(value, player) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const bannerCode =
+    String(value.bannerCode || value.code || "").trim() ||
+    createSlug(`${player.name}-special`, "special-banner");
+  const bannerName =
+    String(value.bannerName || value.name || "").trim() || `${player.name} Special Banner`;
+  const imageText = encodeURIComponent(`${player.name} REDLOCK`).replace(/%20/g, "+");
+  const bannerImageUrl =
+    String(value.bannerImageUrl || value.imageUrl || value.image || "").trim() ||
+    `https://dummyimage.com/1200x520/120407/ff2e4a.png&text=${imageText}`;
+  const status = toInt(value.status, 1) === 0 ? 0 : 1;
+
+  return {
+    bannerCode,
+    bannerName,
+    bannerImageUrl,
+    expiredAt: toDbDateTime(value.expiredAt || value.timeEnd),
+    status,
+  };
+}
+
+function normalizeSpecialPlayer(item) {
+  const player = normalizePlayer(item, null);
+  if (!player) {
+    return null;
+  }
+
+  return {
+    ...player,
+    clubName: String(item?.club || item?.clubName || "").trim() || null,
+    sourceType: String(item?.sourceType || "gacha_special").trim(),
+    gacha: normalizeSpecialGacha(item?.gacha || item?.banner, player),
+  };
+}
+
+function loadSpecialPlayers() {
+  const filePath = path.resolve(__dirname, "special_player.json");
+  if (!fs.existsSync(filePath)) {
+    return [];
+  }
+
+  const rawData = fs.readFileSync(filePath, "utf8");
+  const parsed = JSON.parse(rawData);
+  const rawPlayers = Array.isArray(parsed)
+    ? parsed
+    : Array.isArray(parsed?.players)
+      ? parsed.players
+      : [];
+
+  return rawPlayers.map(normalizeSpecialPlayer).filter(Boolean);
+}
+
+async function migrateSpecialPlayerSkills(connection, specialPlayers, playerByKey) {
+  const [existingRows] = await connection.execute("SELECT player_id, skill FROM player_skills");
+  const existingByKey = new Set(
+    existingRows.map((row) => `${String(row.player_id)}|${String(row.skill)}`),
+  );
+
+  const skillRows = [];
+  for (const player of specialPlayers) {
+    if (!Array.isArray(player.skills) || player.skills.length === 0) {
+      continue;
+    }
+
+    const dbPlayer = playerByKey.get(`${normalizeKey(player.name)}|${String(player.season)}`);
+    if (!dbPlayer) {
+      continue;
+    }
+
+    for (const skill of player.skills) {
+      const key = `${String(dbPlayer.id)}|${String(skill)}`;
+      if (existingByKey.has(key)) {
+        continue;
+      }
+      existingByKey.add(key);
+      skillRows.push([dbPlayer.id, skill, getPlayerSkillSlug(skill)]);
+    }
+  }
+
+  await insertBatch(connection, "player_skills", "player_id, skill, slug", skillRows);
+
+  return {
+    inserted: skillRows.length,
+  };
+}
+
+async function migrateSpecialGachaBanners(connection, specialPlayers, playerByKey) {
+  const [existingRows] = await connection.execute(
+    "SELECT id, banner_code, banner_name, banner_image_url, player_id, expired_at, status FROM gacha_banners",
+  );
+  const existingByCode = new Map();
+  for (const row of existingRows) {
+    existingByCode.set(normalizeKey(row.banner_code), row);
+  }
+
+  const toInsert = [];
+  const toUpdate = [];
+  for (const player of specialPlayers) {
+    if (!player.gacha) {
+      continue;
+    }
+
+    const dbPlayer = playerByKey.get(`${normalizeKey(player.name)}|${String(player.season)}`);
+    if (!dbPlayer) {
+      continue;
+    }
+
+    const banner = {
+      ...player.gacha,
+      playerId: Number(dbPlayer.id),
+    };
+    const existing = existingByCode.get(normalizeKey(banner.bannerCode));
+
+    if (!existing) {
+      toInsert.push([
+        banner.bannerCode,
+        banner.bannerName,
+        banner.bannerImageUrl,
+        banner.playerId,
+        banner.expiredAt,
+        banner.status,
+      ]);
+      continue;
+    }
+
+    const changed =
+      String(existing.banner_name || "") !== banner.bannerName ||
+      String(existing.banner_image_url || "") !== banner.bannerImageUrl ||
+      Number(existing.player_id) !== Number(banner.playerId) ||
+      !sameDateTime(existing.expired_at, banner.expiredAt) ||
+      Number(existing.status) !== Number(banner.status);
+
+    if (changed) {
+      toUpdate.push([
+        banner.bannerName,
+        banner.bannerImageUrl,
+        banner.playerId,
+        banner.expiredAt,
+        banner.status,
+        existing.id,
+      ]);
+    }
+  }
+
+  await insertBatch(
+    connection,
+    "gacha_banners",
+    "banner_code, banner_name, banner_image_url, player_id, expired_at, status",
+    toInsert,
+  );
+
+  for (const values of toUpdate) {
+    await connection.execute(
+      "UPDATE gacha_banners SET banner_name = ?, banner_image_url = ?, player_id = ?, expired_at = ?, status = ? WHERE id = ?",
+      values,
+    );
+  }
+
+  return {
+    inserted: toInsert.length,
+    updated: toUpdate.length,
+  };
+}
+
+async function migrateSpecialPlayers(connection, countryIdByName) {
+  const specialPlayers = loadSpecialPlayers();
+  if (!specialPlayers.length) {
+    return {
+      inserted: 0,
+      updated: 0,
+      skillInserted: 0,
+      bannerInserted: 0,
+      bannerUpdated: 0,
+    };
+  }
+
+  const [clubRows] = await connection.execute("SELECT id, name FROM clubs");
+  const clubByName = new Map();
+  for (const row of clubRows) {
+    clubByName.set(normalizeKey(row.name), row);
+  }
+
+  const [existingRows] = await connection.execute(
+    "SELECT id, name, slug, season, country_id, club_id, height, body_type, `pass`, long_pass, vision, shoot, tackle, balance, dribbling, acceleration, speed, stamina, positions FROM players",
+  );
+  const existingByKey = new Map();
+  for (const row of existingRows) {
+    existingByKey.set(`${normalizeKey(row.name)}|${String(row.season)}`, row);
+  }
+
+  const toInsert = [];
+  const toUpdate = [];
+
+  for (const player of specialPlayers) {
+    const countryId = player.countryName
+      ? (countryIdByName.get(normalizeKey(player.countryName)) ?? null)
+      : null;
+
+    if (!countryId) {
+      throw new Error(
+        `Cannot resolve country_id for special player '${player.name}' (${player.countryName || "empty country"}).`,
+      );
+    }
+
+    const dbClub = player.clubName ? clubByName.get(normalizeKey(player.clubName)) : null;
+    if (player.clubName && !dbClub) {
+      throw new Error(`Cannot resolve club_id for special player '${player.name}'.`);
+    }
+
+    const record = {
+      name: player.name,
+      slug: player.slug,
+      season: player.season,
+      country_id: countryId,
+      club_id: dbClub?.id ?? null,
+      height: player.height,
+      body_type: player.body_type,
+      pass: player.pass,
+      long_pass: player.long_pass,
+      vision: player.vision,
+      shoot: player.shoot,
+      tackle: player.tackle,
+      balance: player.balance,
+      dribbling: player.dribbling,
+      acceleration: player.acceleration,
+      speed: player.speed,
+      stamina: player.stamina,
+      positions: normalizePositions(player.positions),
+    };
+    const key = `${normalizeKey(record.name)}|${String(record.season)}`;
+    const existing = existingByKey.get(key);
+
+    if (!existing) {
+      toInsert.push([
+        record.name,
+        record.slug,
+        record.season,
+        record.country_id,
+        record.club_id,
+        record.height,
+        record.body_type,
+        record.pass,
+        record.long_pass,
+        record.vision,
+        record.shoot,
+        record.tackle,
+        record.balance,
+        record.dribbling,
+        record.acceleration,
+        record.speed,
+        record.stamina,
+        record.positions,
+      ]);
+      continue;
+    }
+
+    const changed =
+      String(existing.slug || "") !== String(record.slug || "") ||
+      String(existing.country_id) !== String(record.country_id) ||
+      String(existing.club_id || "") !== String(record.club_id || "") ||
+      Number(existing.height) !== Number(record.height) ||
+      String(existing.body_type) !== String(record.body_type) ||
+      Number(existing.pass) !== Number(record.pass) ||
+      Number(existing.long_pass) !== Number(record.long_pass) ||
+      Number(existing.vision) !== Number(record.vision) ||
+      Number(existing.shoot) !== Number(record.shoot) ||
+      Number(existing.tackle) !== Number(record.tackle) ||
+      Number(existing.balance) !== Number(record.balance) ||
+      Number(existing.dribbling) !== Number(record.dribbling) ||
+      Number(existing.acceleration) !== Number(record.acceleration) ||
+      Number(existing.speed) !== Number(record.speed) ||
+      Number(existing.stamina) !== Number(record.stamina) ||
+      JSON.stringify(normalizeJsonValue(existing.positions)) !== JSON.stringify(record.positions);
+
+    if (changed) {
+      toUpdate.push([
+        record.slug,
+        record.country_id,
+        record.club_id,
+        record.height,
+        record.body_type,
+        record.pass,
+        record.long_pass,
+        record.vision,
+        record.shoot,
+        record.tackle,
+        record.balance,
+        record.dribbling,
+        record.acceleration,
+        record.speed,
+        record.stamina,
+        JSON.stringify(record.positions),
+        existing.id,
+      ]);
+    }
+  }
+
+  await insertBatch(
+    connection,
+    "players",
+    "name, slug, season, country_id, club_id, height, body_type, `pass`, long_pass, vision, shoot, tackle, balance, dribbling, acceleration, speed, stamina, positions",
+    toInsert,
+  );
+
+  for (const values of toUpdate) {
+    await connection.execute(
+      "UPDATE players SET slug = ?, country_id = ?, club_id = ?, height = ?, body_type = ?, `pass` = ?, long_pass = ?, vision = ?, shoot = ?, tackle = ?, balance = ?, dribbling = ?, acceleration = ?, speed = ?, stamina = ?, positions = ? WHERE id = ?",
+      values,
+    );
+  }
+
+  const [playerRows] = await connection.execute("SELECT id, name, season FROM players");
+  const playerByKey = new Map();
+  for (const row of playerRows) {
+    playerByKey.set(`${normalizeKey(row.name)}|${String(row.season)}`, row);
+  }
+
+  const skillResult = await migrateSpecialPlayerSkills(connection, specialPlayers, playerByKey);
+  const bannerResult = await migrateSpecialGachaBanners(connection, specialPlayers, playerByKey);
+
+  return {
+    inserted: toInsert.length,
+    updated: toUpdate.length,
+    skillInserted: skillResult.inserted,
+    bannerInserted: bannerResult.inserted,
+    bannerUpdated: bannerResult.updated,
+  };
+}
+
 // Ensure admin user exists (username: admin, password: 123). Returns admin user id.
 async function migrateAdminUser(connection) {
   const [rows] = await connection.execute("SELECT id FROM users WHERE userName = ?", ["admin"]);
@@ -772,6 +1146,7 @@ async function runMigration() {
 
     const countryResult = await migrateCountries(connection);
     const countryIdByName = await getCountryIdMap(connection);
+    await ensureSkillEnums(connection);
 
     const rawLeagueData = fs.readFileSync(path.resolve(__dirname, "league.json"), "utf8");
     const leagues = JSON.parse(rawLeagueData).map(normalizeLeague).filter(Boolean);
@@ -785,6 +1160,7 @@ async function runMigration() {
       countryIdByName,
     );
     const playerSkillResult = await migratePlayerSkills(connection, clubResult.data);
+    const specialPlayerResult = await migrateSpecialPlayers(connection, countryIdByName);
 
     const adminId = await migrateAdminUser(connection);
     const teamResult = await migrateTeams(
@@ -815,6 +1191,9 @@ async function runMigration() {
       `Player migration completed. Inserted: ${playerResult.inserted}, updated: ${playerResult.updated}.`,
     );
     console.log(`Player skill migration completed. Inserted: ${playerSkillResult.inserted}.`);
+    console.log(
+      `Special player migration completed. Players inserted: ${specialPlayerResult.inserted}, updated: ${specialPlayerResult.updated}. Skills inserted: ${specialPlayerResult.skillInserted}. Banners inserted: ${specialPlayerResult.bannerInserted}, updated: ${specialPlayerResult.bannerUpdated}.`,
+    );
     console.log(`Team (BOT) migration completed. Inserted: ${teamResult.inserted}.`);
     console.log(
       `User-player migration for admin completed. Inserted: ${userPlayerResult.inserted}.`,

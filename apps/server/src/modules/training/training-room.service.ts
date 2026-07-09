@@ -1,7 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import { AuthUser } from "../auth/types";
 import { EMatchEvent } from "../match/enums";
-import { MatchRenderPlayer, MatchSnapshot, SimulationEventDraft } from "../match/match-simulation.util";
+import {
+  MatchRenderPlayer,
+  MatchSnapshot,
+  SimulationEventDraft,
+} from "../match/match-simulation.util";
 import { EPlayerSkill, getPlayerSkillSlug } from "../player/enum/player-skill.enum";
 import { PlayerService, UserPlayerCardResponse } from "../player/player.service";
 import {
@@ -24,6 +28,7 @@ const EVENT_LABEL: Record<TrainingEventType | "idle", string> = {
   shooting: "Shoot Drill",
   skill: "Skill Burst",
   dribble_magic: "Magic Dribble",
+  dribble_lightning: "Lightning Dribble",
   tank_tackle: "Tank Tackle",
   free_kick_pass: "Free Kick Pass",
   free_kick_through: "Free Kick Through",
@@ -142,7 +147,10 @@ export class TrainingRoomService {
     };
   }
 
-  private pickActivePlayers(players: UserPlayerCardResponse[], activePlayerIds?: number[]): UserPlayerCardResponse[] {
+  private pickActivePlayers(
+    players: UserPlayerCardResponse[],
+    activePlayerIds?: number[],
+  ): UserPlayerCardResponse[] {
     if (!activePlayerIds?.length) {
       return players;
     }
@@ -195,13 +203,19 @@ export class TrainingRoomService {
     const isPassEvent = ["passing", "pass_normal", "pass_through", "pass_lob"].includes(event);
     const isLob = event === "pass_lob" || event === "free_kick_lob";
     const isThrough = event === "pass_through" || event === "free_kick_through";
-    const isPassLikeFreeKick = event === "free_kick_pass" || event === "free_kick_through" || event === "free_kick_lob";
+    const isPassLikeFreeKick =
+      event === "free_kick_pass" || event === "free_kick_through" || event === "free_kick_lob";
     const isShot = event === "shooting" || event === "skill" || event === "free_kick_shoot";
     const isMagicDribble = event === "dribble_magic";
+    const isLightningDribble = event === "dribble_lightning";
     const isTankTackle = event === "tank_tackle";
     const dribbleTarget = {
-      x: clamp(selected.x + ((((tick + selected.userPlayerId) % 3) - 1) * 5), 6, 94),
+      x: clamp(selected.x + (((tick + selected.userPlayerId) % 3) - 1) * 5, 6, 94),
       y: clamp(selected.y + (selected.y < 50 ? 18 : -18), 7, 93),
+    };
+    const lightningTarget = {
+      x: clamp(selected.x + (((tick + selected.userPlayerId) % 5) - 2) * 5.5, 6, 94),
+      y: clamp(selected.y + (selected.y < 50 ? 24 : -24), 7, 93),
     };
     const partner =
       players
@@ -224,14 +238,16 @@ export class TrainingRoomService {
             }
           : isFreeKick
             ? { x: clamp(selected.x, 18, 82), y: clamp(selected.y, 18, 82) }
-            : isMagicDribble
-              ? dribbleTarget
-              : isTankTackle
-                ? {
-                    x: clamp(selected.x + (partner.x - selected.x) * 0.62, 6, 94),
-                    y: clamp(selected.y + (partner.y - selected.y) * 0.62, 7, 93),
-                  }
-              : { x: selected.x, y: selected.y };
+            : isLightningDribble
+              ? lightningTarget
+              : isMagicDribble
+                ? dribbleTarget
+                : isTankTackle
+                  ? {
+                      x: clamp(selected.x + (partner.x - selected.x) * 0.62, 6, 94),
+                      y: clamp(selected.y + (partner.y - selected.y) * 0.62, 7, 93),
+                    }
+                  : { x: selected.x, y: selected.y };
 
     const passTarget = isThrough
       ? leadTarget(selected, partner, 14)
@@ -243,56 +259,65 @@ export class TrainingRoomService {
       y: clamp(selected.y < 50 ? selected.y + 18 : selected.y - 18, 12, 88),
     };
 
-    const ballTarget =
-      isPassEvent
-        ? passTarget
-        : isPassLikeFreeKick
-          ? (partner.userPlayerId === selected.userPlayerId ? freeKickBase : passTarget)
+    const ballTarget = isPassEvent
+      ? passTarget
+      : isPassLikeFreeKick
+        ? partner.userPlayerId === selected.userPlayerId
+          ? freeKickBase
+          : passTarget
+        : isLightningDribble
+          ? lightningTarget
           : isMagicDribble
             ? dribbleTarget
-          : isTankTackle
-            ? playerTarget
-          : isShot
-            ? { x: 50 + (selected.x < 50 ? 7 : -7), y: 6 }
-            : playerTarget;
+            : isTankTackle
+              ? playerTarget
+              : isShot
+                ? { x: 50 + (selected.x < 50 ? 7 : -7), y: 6 }
+                : playerTarget;
     const ballPath =
       event === "skill"
         ? zigzagPath({ x: selected.x, y: selected.y }, ballTarget, 7)
-        : isMagicDribble
-          ? magicDribblePath({ x: selected.x, y: selected.y }, ballTarget, 8)
-        : isTankTackle
-          ? tankTacklePath({ x: partner.x, y: partner.y }, ballTarget, 7)
-        : isLob
-          ? lobPath({ x: selected.x, y: selected.y }, ballTarget, 9)
-          : pathBetween({ x: selected.x, y: selected.y }, ballTarget, 7);
+        : isLightningDribble
+          ? lightningDribblePath({ x: selected.x, y: selected.y }, ballTarget, 9)
+          : isMagicDribble
+            ? magicDribblePath({ x: selected.x, y: selected.y }, ballTarget, 8)
+            : isTankTackle
+              ? tankTacklePath({ x: partner.x, y: partner.y }, ballTarget, 7)
+              : isLob
+                ? lobPath({ x: selected.x, y: selected.y }, ballTarget, 9)
+                : pathBetween({ x: selected.x, y: selected.y }, ballTarget, 7);
     const ballDistance = distance({ x: selected.x, y: selected.y }, ballTarget);
     const ballSpeed =
       event === "skill"
         ? 44
-        : isMagicDribble
-          ? 32
-        : isTankTackle
-          ? 34
-        : isShot
-          ? 38
-          : isLob
-            ? 18
-          : isPassEvent || isPassLikeFreeKick
-            ? isThrough
-              ? 28
-              : 23
-            : 0;
+        : isLightningDribble
+          ? 42
+          : isMagicDribble
+            ? 32
+            : isTankTackle
+              ? 34
+              : isShot
+                ? 38
+                : isLob
+                  ? 18
+                  : isPassEvent || isPassLikeFreeKick
+                    ? isThrough
+                      ? 28
+                      : 23
+                    : 0;
 
     return {
       playerTarget,
       playerSpeed: round(
         event === "sprint"
           ? playerSpeedBase * 1.45
-          : isMagicDribble
-            ? playerSpeedBase * 1.7
-            : isTankTackle
-              ? playerSpeedBase * 1.55
-              : playerSpeedBase,
+          : isLightningDribble
+            ? playerSpeedBase * 2.05
+            : isMagicDribble
+              ? playerSpeedBase * 1.7
+              : isTankTackle
+                ? playerSpeedBase * 1.55
+                : playerSpeedBase,
       ),
       ball: {
         x: ballTarget.x,
@@ -300,7 +325,8 @@ export class TrainingRoomService {
         targetX: ballTarget.x,
         targetY: ballTarget.y,
         speed: ballSpeed,
-        ownerPlayerId: isPassEvent || isPassLikeFreeKick ? partner.userPlayerId : selected.userPlayerId,
+        ownerPlayerId:
+          isPassEvent || isPassLikeFreeKick ? partner.userPlayerId : selected.userPlayerId,
         path: ballPath,
       } satisfies TrainingBallState,
       distance: round(ballDistance),
@@ -322,9 +348,11 @@ export class TrainingRoomService {
         ? EPlayerSkill.SHOOT_THUNDER
         : input.event === "dribble_magic"
           ? EPlayerSkill.DRIBBLE_MAGIC
-          : input.event === "tank_tackle"
-            ? EPlayerSkill.TANK_TACKLE
-          : null;
+          : input.event === "dribble_lightning"
+            ? EPlayerSkill.LIGHTNING_DRIBBLE
+            : input.event === "tank_tackle"
+              ? EPlayerSkill.TANK_TACKLE
+              : null;
     const ownerPlayerId = input.ball.ownerPlayerId ?? input.selectedPlayer?.userPlayerId ?? null;
 
     return {
@@ -350,7 +378,12 @@ export class TrainingRoomService {
         skillTrajectory: skill,
       },
       homePlayers: input.players.map((player) =>
-        this.toMatchRenderPlayer(player, ownerPlayerId, skill, input.selectedPlayer?.userPlayerId ?? null),
+        this.toMatchRenderPlayer(
+          player,
+          ownerPlayerId,
+          skill,
+          input.selectedPlayer?.userPlayerId ?? null,
+        ),
       ),
       awayPlayers: [],
       highlight: {
@@ -395,7 +428,16 @@ export class TrainingRoomService {
       vy: 0,
       targetX: player.targetX,
       targetY: player.targetY,
-      aiState: player.event === "sprint" || player.event === "dribble_magic" ? "DRIBBLE" : player.event === "tank_tackle" ? "PRESS_BALL" : isTrainingPassEvent(player.event) ? "RECEIVE_PASS" : "HOLD_POSITION",
+      aiState:
+        player.event === "sprint" ||
+        player.event === "dribble_magic" ||
+        player.event === "dribble_lightning"
+          ? "DRIBBLE"
+          : player.event === "tank_tackle"
+            ? "PRESS_BALL"
+            : isTrainingPassEvent(player.event)
+              ? "RECEIVE_PASS"
+              : "HOLD_POSITION",
       stamina: 100,
       activeSkill: selectedPlayerId === player.userPlayerId ? activeSkill : null,
       hasBall: ownerPlayerId === player.userPlayerId,
@@ -404,7 +446,16 @@ export class TrainingRoomService {
         fromY: player.y,
         toX: player.targetX,
         toY: player.targetY,
-        intent: player.event === "sprint" || player.event === "dribble_magic" ? "run" : player.event === "tank_tackle" ? "press" : isTrainingPassEvent(player.event) ? "support" : "anchor",
+        intent:
+          player.event === "sprint" ||
+          player.event === "dribble_magic" ||
+          player.event === "dribble_lightning"
+            ? "run"
+            : player.event === "tank_tackle"
+              ? "press"
+              : isTrainingPassEvent(player.event)
+                ? "support"
+                : "anchor",
         directionX: direction.x,
         directionY: direction.y,
         targetX: player.targetX,
@@ -437,7 +488,14 @@ export class TrainingRoomService {
     if (event.startsWith("free_kick")) return EMatchEvent.FREE_KICK;
     if (isTrainingPassEvent(event)) return EMatchEvent.PASS;
     if (event === "shooting") return EMatchEvent.SHOOT;
-    if (event === "skill" || event === "dribble_magic" || event === "tank_tackle") return EMatchEvent.SKILL_USED;
+    if (
+      event === "skill" ||
+      event === "dribble_magic" ||
+      event === "dribble_lightning" ||
+      event === "tank_tackle"
+    ) {
+      return EMatchEvent.SKILL_USED;
+    }
     if (event === "sprint") return EMatchEvent.DRIBBLE;
     if (event === "warmup") return EMatchEvent.DRIBBLE;
     return null;
@@ -477,6 +535,20 @@ function magicDribblePath(from: TrainingPoint, to: TrainingPoint, steps: number)
   });
 }
 
+function lightningDribblePath(from: TrainingPoint, to: TrainingPoint, steps: number) {
+  return Array.from({ length: steps }, (_, index) => {
+    const progress = (index + 1) / steps;
+    const burst = progress < 0.58 ? progress * 1.34 : 1 - (progress - 0.58) * 0.34;
+    const feint = Math.sin(progress * Math.PI * 4.8) * (7.8 - progress * 3.8);
+    const snap = Math.sin(progress * Math.PI * 9) * (1 - progress) * 2.2;
+
+    return {
+      x: clamp(round(from.x + (to.x - from.x) * burst + feint + snap), 4, 96),
+      y: clamp(round(from.y + (to.y - from.y) * Math.min(1, progress * 1.18)), 4, 96),
+    };
+  });
+}
+
 function tankTacklePath(from: TrainingPoint, to: TrainingPoint, steps: number) {
   return Array.from({ length: steps }, (_, index) => {
     const progress = (index + 1) / steps;
@@ -504,13 +576,21 @@ function distance(a: TrainingPoint, b: TrainingPoint) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
-function partnerScore(player: TrainingPlayerState, selected: TrainingPlayerState, preferForward: boolean) {
+function partnerScore(
+  player: TrainingPlayerState,
+  selected: TrainingPlayerState,
+  preferForward: boolean,
+) {
   const spacing = Math.min(28, distance(player, selected));
   const forward = selected.y < 50 ? player.y - selected.y : selected.y - player.y;
   return spacing + (preferForward ? forward * 1.2 : -Math.abs(forward) * 0.2);
 }
 
-function leadTarget(selected: TrainingPlayerState, receiver: TrainingPlayerState, lead: number): TrainingPoint {
+function leadTarget(
+  selected: TrainingPlayerState,
+  receiver: TrainingPlayerState,
+  lead: number,
+): TrainingPoint {
   const direction = normalizeVector({
     x: receiver.x - selected.x,
     y: receiver.y - selected.y,
