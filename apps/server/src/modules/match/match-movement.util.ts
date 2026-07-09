@@ -68,7 +68,10 @@ export type PlayerAIState =
   | "DIAGONAL_RUN"
   | "THIRD_MAN_RUN"
   | "BACK_POST_RUN"
-  | "DROP_SHORT";
+  | "DROP_SHORT"
+  | "KEEPER_DIVE"
+  | "KEEPER_CATCH"
+  | "KEEPER_HOLD";
 
 export type PlayerRole = "GK" | "CB" | "FB" | "DM" | "CM" | "W" | "ST";
 export type TacticalPhase =

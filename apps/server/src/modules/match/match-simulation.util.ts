@@ -154,6 +154,8 @@ type ShotMetadata = {
   missReason: string | null;
   goalkeeperPosition: TrajectoryPoint;
   goalkeeperReactionDifficulty: number;
+  goalkeeperAction: "none" | "dive" | "parry" | "catch";
+  goalkeeperTarget: TrajectoryPoint | null;
 };
 
 export type PlayerMoveIntent =
@@ -187,6 +189,19 @@ export type PlayerMotion = {
   directionY: number;
   targetX: number;
   targetY: number;
+};
+
+type KeeperReactionAction = {
+  playerId: number;
+  state: Extract<PlayerAIState, "KEEPER_DIVE" | "KEEPER_CATCH" | "KEEPER_HOLD">;
+  target: TrajectoryPoint;
+  outcome: "dive" | "parry" | "catch" | "hold";
+};
+
+type SetPiecePlayerTarget = {
+  target: TrajectoryPoint;
+  intent: PlayerMoveIntent;
+  aiState: PlayerAIState;
 };
 
 export type SimulationRosterPlayer = {
@@ -1402,6 +1417,9 @@ export function generateNextMatchTick(input: {
       activeSkill: shotAction.skill,
       focusId: actor.userPlayerId,
       pressId: keeper.userPlayerId,
+      keeperAction: shotAction.keeperAction,
+      forceAttachBall: shotAction.forceAttachBall,
+      durationMsOverride: shotAction.durationMsOverride,
       positionState: previousPositionState,
     });
 
@@ -1422,6 +1440,8 @@ export function generateNextMatchTick(input: {
           distanceToGoal: shotAction.distanceToGoal,
           isGoal: shotAction.isGoal,
           shotMetadata: shotAction.shotMetadata,
+          goalkeeperAction: shotAction.shotMetadata.goalkeeperAction,
+          goalkeeperTarget: shotAction.shotMetadata.goalkeeperTarget,
           skill: shotAction.skill,
           skillLabel: shotAction.skillLabel,
           homeScore,
@@ -3796,6 +3816,9 @@ function resolveDebugShotAction(
   skill: EPlayerSkill | null;
   skillLabel: string | null;
   shotMetadata: ShotMetadata;
+  keeperAction: KeeperReactionAction | null;
+  forceAttachBall?: boolean;
+  durationMsOverride?: number;
 } | null {
   if (!canReleaseBall) {
     return null;
@@ -3954,6 +3977,13 @@ function resolveDebugShotAction(
     100;
   const effectiveGoalChance = targetSelection.metadata.isOnTarget ? goalChance : 0;
   const isGoal = goalRoll < effectiveGoalChance;
+  const goalKeeperAction = buildKeeperReactionAction({
+    keeper,
+    keeperPosition,
+    shotTarget: targetSelection.metadata.finalTargetAfterError,
+    possession: input.possession,
+    outcome: "dive",
+  });
 
   if (isGoal) {
     return {
@@ -3976,10 +4006,13 @@ function resolveDebugShotAction(
       keeper,
       skill,
       skillLabel: skill ? getSkillLabel(skill) : null,
+      keeperAction: goalKeeperAction,
       shotMetadata: {
         ...targetSelection.metadata,
         expectedGoalValue: effectiveGoalChance,
         difficulty: clamp(targetSelection.metadata.difficulty + qualityEdge * 0.35, 0, 1),
+        goalkeeperAction: "dive",
+        goalkeeperTarget: goalKeeperAction.target,
       },
     };
   }
@@ -3999,11 +4032,39 @@ function resolveDebugShotAction(
     nextTick: input.nextTick,
   });
   const isKeeperSave = targetSelection.metadata.isOnTarget;
-  const target = isKeeperSave ? parryPoint : targetSelection.metadata.finalTargetAfterError;
+  const catchRoll =
+    ((input.nextTick * 43 + input.shooter.userPlayerId * 7 + keeper.userPlayerId * 31) % 100) /
+    100;
+  const keeperCatchChance = calculateKeeperCatchChance({
+    keeper,
+    shooterQuality,
+    keeperQuality,
+    saveDifficulty: targetSelection.metadata.saveDifficulty,
+    shotType,
+    shotSpeed: targetSelection.metadata.shotSpeed,
+    finalTarget: targetSelection.metadata.finalTargetAfterError,
+  });
+  const isCaught = isKeeperSave && catchRoll < keeperCatchChance;
+  const target = isKeeperSave
+    ? isCaught
+      ? savePoint
+      : parryPoint
+    : targetSelection.metadata.finalTargetAfterError;
+  const keeperAction = isKeeperSave
+    ? buildKeeperReactionAction({
+        keeper,
+        keeperPosition,
+        shotTarget: savePoint,
+        possession: input.possession,
+        outcome: isCaught ? "catch" : "parry",
+      })
+    : goalKeeperAction;
 
   return {
     event: isKeeperSave ? EMatchEvent.GOALKEEPER_SAVE : EMatchEvent.SHOOT,
-    label: getShotLabel(shotType, isKeeperSave ? "save" : "miss", distanceToGoal),
+    label: isCaught
+      ? getShotLabel(shotType, "catch", distanceToGoal)
+      : getShotLabel(shotType, isKeeperSave ? "save" : "miss", distanceToGoal),
     target,
     ballPath: buildShotBallPath({
       from: input.ball,
@@ -4021,10 +4082,15 @@ function resolveDebugShotAction(
     keeper,
     skill,
     skillLabel: skill ? getSkillLabel(skill) : null,
+    keeperAction,
+    forceAttachBall: isCaught,
+    durationMsOverride: isCaught ? FRAME_DURATION_MS * 2 : undefined,
     shotMetadata: {
       ...targetSelection.metadata,
       expectedGoalValue: effectiveGoalChance,
       isSaveable: isKeeperSave,
+      goalkeeperAction: isCaught ? "catch" : isKeeperSave ? "parry" : "dive",
+      goalkeeperTarget: keeperAction.target,
     },
   };
 }
@@ -4601,7 +4667,14 @@ function chooseShotTargetPlan(input: {
         candidate.baseScore +
         scoreTargetForShooterPosition(candidate.zone, input.ball) +
         scoreTargetForShotType(candidate.zone, input.shotType) +
-        scoreTargetAgainstKeeper(candidate.point, input.keeperPosition) +
+        scoreTargetAgainstKeeper({
+          zone: candidate.zone,
+          point: candidate.point,
+          ball: input.ball,
+          possession: input.possession,
+          keeperPosition: input.keeperPosition,
+          shotType: input.shotType,
+        }) +
         lane.score * 0.22 +
         input.angleScore * candidate.angleWeight -
         input.pressure.score * candidate.pressurePenalty -
@@ -4671,6 +4744,8 @@ function chooseShotTargetPlan(input: {
       missReason: isOnTarget ? null : getShotMissReason(finalTarget, input.possession),
       goalkeeperPosition: input.keeperPosition,
       goalkeeperReactionDifficulty: saveDifficulty,
+      goalkeeperAction: "none",
+      goalkeeperTarget: null,
     },
   };
 }
@@ -4882,10 +4957,34 @@ function scoreTargetForShotType(zone: ShotTargetZone, shotType: ShotType) {
   return zone.includes("center") || zone === "near post" ? 0.12 : -0.06;
 }
 
-function scoreTargetAgainstKeeper(target: TrajectoryPoint, keeperPosition: TrajectoryPoint) {
-  const openSide = clamp(Math.abs(target.x - keeperPosition.x) / 18, 0, 0.28);
-  const centralSaveBonus = Math.abs(target.x - 50) < 4 ? -0.18 : 0;
-  return openSide + centralSaveBonus;
+function scoreTargetAgainstKeeper(input: {
+  zone: ShotTargetZone;
+  point: TrajectoryPoint;
+  ball: TrajectoryPoint;
+  possession: Side;
+  keeperPosition: TrajectoryPoint;
+  shotType: ShotType;
+}) {
+  const goalY = input.possession === "home" ? 4 : 96;
+  const keeperOffLine = clamp(Math.abs(input.keeperPosition.y - goalY) / 16, 0, 1);
+  const openSide = clamp(Math.abs(input.point.x - input.keeperPosition.x) / 17, 0, 0.34);
+  const centralPenalty = Math.abs(input.point.x - 50) < 4 ? -0.18 : 0;
+  const shotFromLeft = input.ball.x < 50;
+  const targetFarSide =
+    (shotFromLeft && input.point.x > input.keeperPosition.x + 4) ||
+    (!shotFromLeft && input.point.x < input.keeperPosition.x - 4);
+  const farSideBonus = targetFarSide ? 0.11 : 0;
+  const keeperCoversNearPost =
+    Math.sign(input.ball.x - 50) === Math.sign(input.keeperPosition.x - 50) &&
+    Math.abs(input.keeperPosition.x - input.ball.x) <= 18;
+  const nearPostPenalty = keeperCoversNearPost && input.zone === "near post" ? -0.1 : 0;
+  const chipBonus =
+    input.shotType === "CHIP_SHOT" || input.zone === "center-high"
+      ? keeperOffLine * 0.2
+      : 0;
+  const cornerBonus = input.zone.includes("corner") ? openSide * 0.35 : 0;
+
+  return openSide + farSideBonus + chipBonus + cornerBonus + centralPenalty + nearPostPenalty;
 }
 
 function calculateShotAccuracy(input: {
@@ -5046,6 +5145,73 @@ function calculateSaveDifficulty(input: {
   );
 }
 
+function calculateKeeperCatchChance(input: {
+  keeper: InternalLineupPlayer;
+  shooterQuality: number;
+  keeperQuality: number;
+  saveDifficulty: number;
+  shotType: ShotType;
+  shotSpeed: number;
+  finalTarget: TrajectoryPoint;
+}) {
+  const handling =
+    input.keeper.raw.stats.gkKeeping * 0.46 +
+    input.keeper.raw.stats.gkReflex * 0.24 +
+    input.keeper.raw.stats.gkReach * 0.16 +
+    input.keeper.raw.stats.gkDiving * 0.14;
+  const centrality = clamp((10 - Math.abs(input.finalTarget.x - 50)) / 10, 0, 1);
+  const speedPenalty = clamp(input.shotSpeed / (SHOT_SPEED_UNITS_PER_TICK * 1.58), 0, 1) * 0.22;
+  const typePenalty =
+    input.shotType === "POWER_SHOT"
+      ? 0.18
+      : input.shotType === "LOW_DRIVEN_SHOT"
+        ? 0.1
+        : input.shotType === "CHIP_SHOT"
+          ? -0.08
+          : input.shotType === "PLACED_SHOT"
+            ? -0.02
+            : 0.04;
+
+  return clamp(
+    0.22 +
+      centrality * 0.24 +
+      clamp((handling - input.shooterQuality + 12) / 190, -0.08, 0.22) +
+      clamp((input.keeperQuality - 62) / 210, -0.05, 0.12) -
+      input.saveDifficulty * 0.36 -
+      speedPenalty -
+      typePenalty,
+    0.04,
+    0.62,
+  );
+}
+
+function buildKeeperReactionAction(input: {
+  keeper: InternalLineupPlayer;
+  keeperPosition: TrajectoryPoint;
+  shotTarget: TrajectoryPoint;
+  possession: Side;
+  outcome: KeeperReactionAction["outcome"];
+}): KeeperReactionAction {
+  const goalY = input.possession === "home" ? 4 : 96;
+  const direction = attackDirection(input.possession);
+  const targetX = clamp(
+    lerp(input.keeperPosition.x, input.shotTarget.x, input.outcome === "catch" ? 0.82 : 0.68),
+    34,
+    66,
+  );
+  const fieldSideY = goalY - direction * (input.outcome === "catch" ? 5.2 : 4.4);
+
+  return {
+    playerId: input.keeper.userPlayerId,
+    state: input.outcome === "catch" ? "KEEPER_CATCH" : "KEEPER_DIVE",
+    target: {
+      x: targetX,
+      y: clamp(lerp(input.keeperPosition.y, fieldSideY, 0.78), 4, 96),
+    },
+    outcome: input.outcome,
+  };
+}
+
 function calculateExpectedGoalValue(input: {
   isOnTarget: boolean;
   saveDifficulty: number;
@@ -5142,7 +5308,7 @@ function buildShotBallPath(input: {
 
 function getShotLabel(
   shotType: ShotType,
-  outcome: "goal" | "save" | "miss",
+  outcome: "goal" | "save" | "catch" | "miss",
   distanceToGoal: number,
 ) {
   const prefix =
@@ -5164,6 +5330,7 @@ function getShotLabel(
 
   if (outcome === "goal")
     return distanceToGoal > 28 ? `${prefix} tu xa ghi ban` : `${prefix} ghi ban`;
+  if (outcome === "catch") return `${prefix}, thu mon bat gon`;
   if (outcome === "save") return `${prefix}, thu mon cuu thua`;
   return `${prefix} ra ngoai`;
 }
@@ -5825,6 +5992,112 @@ function resolveOutOfPlayRestart(input: {
   };
 }
 
+function getCornerKickSetupTargets(input: {
+  attacking: InternalLineupPlayer[];
+  defending: InternalLineupPlayer[];
+  possession: Side;
+  ball: TrajectoryPoint;
+  takerId: number;
+}) {
+  const targets = new Map<number, SetPiecePlayerTarget>();
+  const direction = attackDirection(input.possession);
+  const goalY = input.possession === "home" ? 4 : 96;
+  const nearCornerLeft = input.ball.x < 50;
+  const shortOption = {
+    x: nearCornerLeft ? 18 : 82,
+    y: clamp(goalY - direction * 9, 7, 93),
+  };
+  const boxSlots = [
+    { x: 44, y: goalY - direction * 10 },
+    { x: 52, y: goalY - direction * 9 },
+    { x: 60, y: goalY - direction * 12 },
+    { x: 48, y: goalY - direction * 16 },
+    { x: 56, y: goalY - direction * 18 },
+    { x: 38, y: goalY - direction * 14 },
+  ].map((slot) => ({ x: clamp(slot.x, 8, 92), y: clamp(slot.y, 7, 93) }));
+  const attackingRank = input.attacking
+    .filter((player) => player.userPlayerId !== input.takerId && normalizeRole(player.role) !== "GK")
+    .map((player) => {
+      const role = normalizeRole(player.role);
+      const aerial =
+        player.raw.stats.balance * 0.34 +
+        player.raw.stats.shoot * 0.28 +
+        player.raw.stats.speed * 0.18 +
+        player.raw.stats.acceleration * 0.12 +
+        (role === "ST" ? 14 : role === "CB" ? 9 : role === "CM" ? 4 : 0);
+      return { player, aerial };
+    })
+    .sort((left, right) => right.aerial - left.aerial);
+  const defenders = input.defending
+    .filter((player) => normalizeRole(player.role) !== "GK")
+    .sort((left, right) => {
+      const leftRole = normalizeRole(left.role);
+      const rightRole = normalizeRole(right.role);
+      const leftScore = left.raw.stats.tackle + (leftRole === "CB" ? 18 : leftRole === "FB" ? 8 : 0);
+      const rightScore =
+        right.raw.stats.tackle + (rightRole === "CB" ? 18 : rightRole === "FB" ? 8 : 0);
+      return rightScore - leftScore;
+    });
+
+  input.attacking.forEach((player) => {
+    const role = normalizeRole(player.role);
+    if (player.userPlayerId === input.takerId) {
+      targets.set(player.userPlayerId, {
+        target: { x: input.ball.x, y: input.ball.y },
+        intent: "anchor",
+        aiState: "HOLD_POSITION",
+      });
+      return;
+    }
+
+    if (role === "GK") {
+      targets.set(player.userPlayerId, {
+        target: {
+          x: clamp(lerp(player.anchors.x, 50, 0.18), 35, 65),
+          y: ownGoalY(player.side) - attackDirection(player.side) * 5,
+        },
+        intent: "hold_depth",
+        aiState: "HOLD_DEPTH",
+      });
+      return;
+    }
+
+    const rankIndex = attackingRank.findIndex((item) => item.player.userPlayerId === player.userPlayerId);
+    const slot = rankIndex === 0 && role !== "CB" ? boxSlots[1] : boxSlots[rankIndex % boxSlots.length];
+    const isShortOption = rankIndex === 4 || (role === "W" && isSameFlank(player.anchors.x, input.ball.x));
+    targets.set(player.userPlayerId, {
+      target: isShortOption ? shortOption : slot,
+      intent: isShortOption ? "support" : role === "CB" || role === "ST" ? "attack_space" : "run",
+      aiState: isShortOption ? "PASS_SUPPORT" : role === "CB" || role === "ST" ? "ATTACK_SPACE" : "THIRD_MAN_RUN",
+    });
+  });
+
+  input.defending.forEach((player, index) => {
+    const role = normalizeRole(player.role);
+    if (role === "GK") {
+      targets.set(player.userPlayerId, {
+        target: { x: 50, y: clamp(goalY - direction * 2.7, 5, 95) },
+        intent: "anchor",
+        aiState: "KEEPER_HOLD",
+      });
+      return;
+    }
+
+    const markerSlot = boxSlots[index % boxSlots.length];
+    const markerOffset = index % 2 === 0 ? -2.2 : 2.2;
+    targets.set(player.userPlayerId, {
+      target: {
+        x: clamp(markerSlot.x + markerOffset, 8, 92),
+        y: clamp(markerSlot.y - direction * 1.6, 6, 94),
+      },
+      intent: role === "CB" || role === "FB" ? "mark" : "cover",
+      aiState: role === "CB" || role === "FB" ? "MARK_MAN" : "COVER_SPACE",
+    });
+  });
+
+  return targets;
+}
+
 function advanceLooseBall(snapshot: MatchSnapshot): TrajectoryPoint {
   const current = { x: snapshot.ball.x, y: snapshot.ball.y };
   const from = {
@@ -5924,6 +6197,11 @@ function getIntentForState(state: PlayerAIState): PlayerMoveIntent {
       return "recover";
     case "RECOVER_DEFENSE":
       return "cover";
+    case "KEEPER_DIVE":
+    case "KEEPER_CATCH":
+      return "chase";
+    case "KEEPER_HOLD":
+      return "anchor";
     case "IDLE":
     case "HOLD_POSITION":
     default:
@@ -6128,6 +6406,9 @@ function buildSnapshot(input: {
   focusId: number;
   pressId: number | null;
   forceLooseBall?: boolean;
+  forceAttachBall?: boolean;
+  durationMsOverride?: number;
+  keeperAction?: KeeperReactionAction | null;
   positionState: PositionState;
 }): MatchSnapshot {
   const prevBall = input.positionState.ball;
@@ -6155,7 +6436,7 @@ function buildSnapshot(input: {
   );
   const ownerId = input.ballOwner.userPlayerId;
   const ballIsControlled = !input.forceLooseBall && shouldAttachBallToOwner(input.highlight.event);
-  const controlledOwnerId = ballIsControlled ? ownerId : null;
+  const controlledOwnerId = input.forceAttachBall ? ownerId : ballIsControlled ? ownerId : null;
   const secondaryPlayer =
     input.highlight.secondaryPlayerId == null
       ? null
@@ -6180,6 +6461,16 @@ function buildSnapshot(input: {
           positionState: input.positionState,
         })
       : new Map<number, TrajectoryPoint>();
+  const setPieceTargets =
+    input.highlight.event === EMatchEvent.CORNER_KICK
+      ? getCornerKickSetupTargets({
+          attacking: input.possession === "home" ? input.homeLineup : input.awayLineup,
+          defending: input.possession === "home" ? input.awayLineup : input.homeLineup,
+          possession: input.possession,
+          ball,
+          takerId: input.highlight.actorPlayerId ?? ownerId,
+        })
+      : new Map<number, SetPiecePlayerTarget>();
   const homePlayers = projectPlayers({
     lineup: input.homeLineup,
     teammateLineup: input.homeLineup,
@@ -6192,6 +6483,8 @@ function buildSnapshot(input: {
     focusId: input.focusId,
     pressId: input.pressId,
     freeKickWallTargets,
+    setPieceTargets,
+    keeperAction: input.keeperAction ?? null,
     matchStep: input.matchStep,
     tick: input.tick,
     previousPossession,
@@ -6211,6 +6504,8 @@ function buildSnapshot(input: {
     focusId: input.focusId,
     pressId: input.pressId,
     freeKickWallTargets,
+    setPieceTargets,
+    keeperAction: input.keeperAction ?? null,
     matchStep: input.matchStep,
     tick: input.tick,
     previousPossession,
@@ -6233,7 +6528,8 @@ function buildSnapshot(input: {
   return {
     frameId: input.frameId,
     tick: input.tick,
-    durationMs: getSnapshotFrameDuration(input.highlight.event, input.activeSkill),
+    durationMs:
+      input.durationMsOverride ?? getSnapshotFrameDuration(input.highlight.event, input.activeSkill),
     matchStep: input.matchStep,
     minute: input.minute,
     second: input.second,
@@ -6332,6 +6628,8 @@ function projectPlayers(input: {
   focusId: number;
   pressId: number | null;
   freeKickWallTargets: Map<number, TrajectoryPoint>;
+  setPieceTargets: Map<number, SetPiecePlayerTarget>;
+  keeperAction: KeeperReactionAction | null;
   matchStep: MatchStep;
   tick: number;
   previousPossession: Side;
@@ -6403,6 +6701,9 @@ function projectPlayers(input: {
     };
     const hasBall = player.userPlayerId === input.ballOwnerId;
     const isIntendedReceiver = input.intendedReceiverId === player.userPlayerId;
+    const keeperAction =
+      input.keeperAction?.playerId === player.userPlayerId ? input.keeperAction : null;
+    const setPieceTarget = input.setPieceTargets.get(player.userPlayerId) ?? null;
     const isPress = input.pressId != null && player.userPlayerId === input.pressId;
     const onAttack = player.side === input.possession;
     const passInFlight =
@@ -6418,6 +6719,14 @@ function projectPlayers(input: {
     } else if (input.matchStep === "half_time" || input.matchStep === "full_time") {
       target = { x: 47 + (index % 4) * 2, y: 50 + Math.floor(index / 4) * 1.5 };
       aiState = "IDLE";
+    } else if (keeperAction) {
+      target = keeperAction.target;
+      intent = keeperAction.outcome === "catch" ? "chase" : "press";
+      aiState = keeperAction.state;
+    } else if (setPieceTarget) {
+      target = setPieceTarget.target;
+      intent = setPieceTarget.intent;
+      aiState = setPieceTarget.aiState;
     } else if (hasBall) {
       const tactical = getTacticalTarget(movementPlayer, gameState);
       target = tactical.targetPosition;
@@ -6477,12 +6786,15 @@ function projectPlayers(input: {
     movementPlayer.velocity = { x: prev.vx, y: prev.vy };
     movementPlayer.targetPosition = target;
     movementPlayer.state = aiState;
-    applySeparation(movementPlayer, teammateMovement);
+    if (!keeperAction && !setPieceTarget) {
+      applySeparation(movementPlayer, teammateMovement);
+    }
     updatePlayerMovement(
       movementPlayer,
       SIM_TICK_SECONDS *
         getMovementDeltaScale({
           isIntendedReceiver,
+          isKeeperAction: Boolean(keeperAction),
           isPress,
           onAttack,
           passInFlight,
@@ -6883,10 +7195,12 @@ function getPressTarget(player: InternalLineupPlayer, ball: TrajectoryPoint): Tr
 
 function getMovementDeltaScale(input: {
   isIntendedReceiver: boolean;
+  isKeeperAction: boolean;
   isPress: boolean;
   onAttack: boolean;
   passInFlight: boolean;
 }) {
+  if (input.isKeeperAction) return 1.7;
   if (input.isIntendedReceiver) return 1.42;
   if (input.passInFlight && !input.onAttack) return input.isPress ? 0.58 : 0.72;
   if (input.isPress) return 0.82;
