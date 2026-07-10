@@ -1,4 +1,9 @@
 import { EPlayerSkill, getPlayerSkillSlug } from "src/modules/player/enum/player-skill.enum";
+import {
+  DEFAULT_PLAYER_AI_PROFILE,
+  type PlayerAiProfile,
+  type PlayerAiTendencies,
+} from "src/modules/player/player-ai.types";
 import { ETeamFormation } from "src/modules/team/enums/team-formation.enum";
 import { EMatchEvent } from "./enums";
 import {
@@ -246,6 +251,7 @@ export type SimulationRosterPlayer = {
   teamId: number;
   name: string;
   slug: string | null;
+  aiProfile: PlayerAiProfile;
   savedSlotId: string | null;
   savedPosition: string | null;
   positions: Array<{ position: string; effect: number }>;
@@ -289,6 +295,7 @@ export type MatchRenderPlayer = {
   name: string;
   shortName: string;
   slug: string | null;
+  aiProfile?: PlayerAiProfile;
   skills?: EPlayerSkill[];
   skillSlugs: string[];
   skillCharges?: Array<{ skill: EPlayerSkill; charge: number }>;
@@ -2533,6 +2540,7 @@ function toInternalLineupPlayer(player: MatchRenderPlayer): InternalLineupPlayer
       teamId: player.teamId,
       name: player.name,
       slug: player.slug,
+      aiProfile: player.aiProfile ?? DEFAULT_PLAYER_AI_PROFILE,
       savedSlotId: null,
       savedPosition: null,
       positions: [{ position: player.displayRole || player.role, effect: 1 }],
@@ -2556,6 +2564,25 @@ function toInternalLineupPlayer(player: MatchRenderPlayer): InternalLineupPlayer
       },
     },
   };
+}
+
+function getPlayerAiTendency(
+  player: InternalLineupPlayer,
+  key: keyof PlayerAiTendencies,
+  fallback: number,
+) {
+  const value = Number(player.raw.aiProfile?.tendencies?.[key] ?? fallback);
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function getClampedPlayerAiTendency(
+  player: InternalLineupPlayer,
+  key: keyof PlayerAiTendencies,
+  fallback: number,
+  min: number,
+  max: number,
+) {
+  return clamp(getPlayerAiTendency(player, key, fallback), min, max);
 }
 
 function resolveDebugPossessionTempoAction(input: {
@@ -2594,6 +2621,10 @@ function resolveDebugPossessionTempoAction(input: {
   });
   const goalDistance = distanceToAttackingGoal(input.possession, input.ball);
   const role = normalizeRole(input.actor.role);
+  const passBias = getClampedPlayerAiTendency(input.actor, "passBias", 1, 0.45, 1.4);
+  const dribbleBias = getClampedPlayerAiTendency(input.actor, "dribbleBias", 1, 0.65, 1.75);
+  const flairBias = getClampedPlayerAiTendency(input.actor, "flairBias", 0, 0, 1);
+  const riskTaking = getClampedPlayerAiTendency(input.actor, "riskTaking", 0.5, 0, 1);
   if (role === "GK") {
     return {
       kind: "pass",
@@ -2616,32 +2647,43 @@ function resolveDebugPossessionTempoAction(input: {
   const takeOnRoleBonus = role === "W" || role === "ST" ? 0.13 : role === "CM" ? 0.08 : 0;
   const pressureTakeOnWindow = pressure.distance >= 1.4 && pressure.distance <= 7.2;
   const takeOnBias = clamp(
-    (dribbleTrait - 0.72) * 0.42 + (hasTakeOnSkill ? 0.16 : 0) + takeOnRoleBonus,
+    (dribbleTrait - 0.72) * 0.42 +
+      (hasTakeOnSkill ? 0.16 : 0) +
+      takeOnRoleBonus +
+      (dribbleBias - 1) * 0.2 +
+      flairBias * 0.12 +
+      (riskTaking - 0.5) * 0.08,
     0,
-    0.38,
+    0.56,
   );
   const mustSettle =
     !restartPass &&
     (teamTicks < MIN_TEAM_POSSESSION_TICKS ||
       (latestWasPass && ownerTicks < MIN_OWNER_POSSESSION_TICKS && pressure.distance > 4.5));
   const passScore = clamp(
-    pressure.score * (inShotZone ? 0.24 : 0.42) +
+    (pressure.score * (inShotZone ? 0.24 : 0.42) +
       clamp((ownerTicks - 1) / PASS_CADENCE_TICKS, 0, 0.32) +
       clamp((goalDistance - 18) / 42, 0, inShotZone ? 0.06 : 0.18) +
       (role === "CB" || role === "FB" ? 0.08 : 0) +
       releaseRoll * (inShotZone ? 0.06 : 0.14) -
       (inShotZone ? 0.18 : 0) -
-      takeOnBias,
+      takeOnBias) *
+      passBias -
+      (dribbleBias - 1) * 0.08 -
+      flairBias * 0.05,
     0,
     1,
   );
   const carryScore = clamp(
-    forwardSpace * 0.5 +
+    (forwardSpace * 0.5 +
       clamp((pressure.distance - 5) / 18, 0, 0.26) +
       dribbleTrait * 0.18 +
       (pressureTakeOnWindow ? 0.12 + takeOnBias : 0) +
       (role === "W" || role === "ST" ? 0.12 : role === "CM" ? 0.08 : 0) +
-      (latestWasPass ? 0.08 : 0),
+      (latestWasPass ? 0.08 : 0)) *
+      dribbleBias +
+      flairBias * 0.07 +
+      (riskTaking - 0.5) * 0.06,
     0,
     1,
   );
@@ -2650,17 +2692,20 @@ function resolveDebugPossessionTempoAction(input: {
     pressureTakeOnWindow &&
     forwardSpace >= 0.2 &&
     ownerTicks >= 1 &&
-    (hasTakeOnSkill || dribbleTrait >= 0.82) &&
+    (hasTakeOnSkill || dribbleTrait >= 0.82 || dribbleBias >= 1.25) &&
     (role === "W" || role === "ST" || role === "CM");
+  const pressureReleaseDistance = passBias < 0.8 && dribbleBias > 1.2 ? 2.8 : 3.8;
+  const passReleaseMargin = 0.12 + clamp((dribbleBias - 1) * 0.08, 0, 0.08);
+  const tightPassReleaseMargin = 0.2 + clamp((dribbleBias - 1) * 0.1, 0, 0.12);
   const shouldRelease =
     restartPass ||
     (!mustSettle &&
       !forceTakeOn &&
-      (pressure.distance <= 3.8 ||
+      (pressure.distance <= pressureReleaseDistance ||
         ownerTicks >= PASS_CADENCE_TICKS ||
         (!inShotZone && goalDistance <= 22 && pressure.distance <= 7) ||
-        (!inShotZone && passScore > carryScore + 0.12) ||
-        (inShotZone && pressure.distance <= 2.8 && passScore > carryScore + 0.2)));
+        (!inShotZone && passScore > carryScore + passReleaseMargin) ||
+        (inShotZone && pressure.distance <= 2.8 && passScore > carryScore + tightPassReleaseMargin)));
 
   if (shouldRelease) {
     return {
@@ -4296,6 +4341,9 @@ function resolveDebugShotAction(
   const attackDirectionValue = attackDirection(input.possession);
   const goalY = input.possession === "home" ? 4 : 96;
   const role = normalizeRole(input.shooter.role);
+  const shootBias = getClampedPlayerAiTendency(input.shooter, "shootBias", 1, 0.65, 1.8);
+  const passBias = getClampedPlayerAiTendency(input.shooter, "passBias", 1, 0.45, 1.4);
+  const riskTaking = getClampedPlayerAiTendency(input.shooter, "riskTaking", 0.5, 0, 1);
   const goalCenter = { x: 50, y: goalY };
   const distanceToGoal = distance(input.ball, goalCenter);
   const keeperPosition = getPlayerPosition(input.previousPositionState, keeper);
@@ -4316,13 +4364,21 @@ function resolveDebugShotAction(
   const composurePenalty = pressure.distance <= 2.5 ? 0.18 : pressure.score * 0.08;
   const pressureUrgency = pressure.distance <= 3.2 && distanceToGoal <= 24 ? 0.08 : 0;
   const roleConfidence = role === "ST" ? 0.16 : role === "W" ? 0.1 : role === "CM" ? 0.05 : 0;
+  const aiShotConfidence = clamp((shootBias - 1) * 0.12 + (riskTaking - 0.5) * 0.06, -0.05, 0.14);
   const closeRangeBonus = distanceToGoal <= 18 ? 0.22 : distanceToGoal <= 26 ? 0.14 : 0;
   const decisionRoll =
     ((input.nextTick * 23 + input.shooter.userPlayerId * 17 + Math.round(input.ball.x * 3)) % 100) /
     100;
   const skillRandom = createDeterministicSkillRandom(input.nextTick, input.shooter.userPlayerId);
-  addSkillCharge(input.shooter, EPlayerSkill.SHOOT_THUNDER, 25);
-  addSkillCharge(input.shooter, EPlayerSkill.KAISER_SHOT, 22);
+  const shootSkillChargeMultiplier = getClampedPlayerAiTendency(
+    input.shooter,
+    "shootSkillChargeMultiplier",
+    1,
+    0.6,
+    2,
+  );
+  addSkillCharge(input.shooter, EPlayerSkill.SHOOT_THUNDER, Math.round(25 * shootSkillChargeMultiplier));
+  addSkillCharge(input.shooter, EPlayerSkill.KAISER_SHOT, Math.round(22 * shootSkillChargeMultiplier));
   const skill = getChargedSkill(input.shooter, "shoot");
   const hasThunderShot = skill === EPlayerSkill.SHOOT_THUNDER;
   const hasKaiserShot = skill === EPlayerSkill.KAISER_SHOT;
@@ -4341,7 +4397,9 @@ function resolveDebugShotAction(
       1,
     ),
   };
-  const maxShotDistance = getRoleMaxShotDistance(role, hasPowerShotSkill);
+  const maxShotDistance =
+    getRoleMaxShotDistance(role, hasPowerShotSkill) +
+    clamp((shootBias - 1) * 6 + (riskTaking - 0.5) * 3, -3, 8);
   const shotType = chooseShotType({
     shooter: input.shooter,
     role,
@@ -4379,6 +4437,7 @@ function resolveDebugShotAction(
       lane.score * 0.22 +
       targetScoreBonus +
       roleConfidence +
+      aiShotConfidence +
       closeRangeBonus -
       centralPenalty -
       closePressureShotPenalty -
@@ -4398,7 +4457,8 @@ function resolveDebugShotAction(
     previousPositionState: input.previousPositionState,
     currentShotQuality: shotQuality,
   });
-  const betterPassAvailable = betterChance.score > shotQuality + 0.2;
+  const betterPassMargin = 0.2 + clamp((shootBias - passBias) * 0.12, -0.08, 0.16);
+  const betterPassAvailable = betterChance.score > shotQuality + betterPassMargin;
   const blockedLane =
     lane.distance < (hasThunderShot ? 3.1 : 4.1) &&
     lane.blockerDistanceToBall < (hasThunderShot ? 13 : 17);
@@ -4408,13 +4468,16 @@ function resolveDebugShotAction(
     distanceToGoal <= maxShotDistance &&
     (input.nextTick % SHOT_CADENCE_TICKS === 0 || distanceToGoal <= 30 || hasThunderShot) &&
     (!blockedLane || hasThunderShot) &&
-    (!betterPassAvailable || emergencyShot || shotQuality >= betterChance.score + 0.08) &&
+    (!betterPassAvailable ||
+      emergencyShot ||
+      shotQuality >= betterChance.score + 0.08 - clamp((shootBias - 1) * 0.08, 0, 0.1)) &&
     (distanceToGoal <= 24 ||
       emergencyShot ||
       (distanceToGoal <= maxShotDistance - 2 && lane.score >= 0.24) ||
-      shotQuality >= (hasThunderShot ? 0.24 : 0.34) ||
-      ((role === "ST" || role === "W") && shotQuality >= 0.26) ||
-      decisionRoll < shotQuality * (hasThunderShot ? 1.05 : 0.84));
+      shotQuality >= (hasThunderShot ? 0.24 : 0.34) - clamp((shootBias - 1) * 0.08, 0, 0.1) ||
+      ((role === "ST" || role === "W") &&
+        shotQuality >= 0.26 - clamp((shootBias - 1) * 0.06, 0, 0.08)) ||
+      decisionRoll < shotQuality * (hasThunderShot ? 1.05 : 0.84) * shootBias);
 
   if (!shouldShoot) {
     return null;
@@ -6252,14 +6315,19 @@ function evaluateForwardCarrySpace(input: {
 }
 
 function getDribbleTrait(player: InternalLineupPlayer) {
-  return clamp(
+  const dribbleBias = getClampedPlayerAiTendency(player, "dribbleBias", 1, 0.65, 1.75);
+  const flairBias = getClampedPlayerAiTendency(player, "flairBias", 0, 0, 1);
+  const base =
     (player.raw.stats.dribbling * 0.42 +
       player.raw.stats.speed * 0.26 +
       player.raw.stats.acceleration * 0.22 +
       player.raw.stats.balance * 0.1) /
-      100,
+    100;
+
+  return clamp(
+    base * dribbleBias + flairBias * 0.08,
     0,
-    1.25,
+    1.35,
   );
 }
 
@@ -6396,12 +6464,16 @@ function resolveTakeOnOutcome(input: {
         createSkillContext(input.actor, input.defender, input.defender, input.random),
       )
     : null;
+  const dribbleBias = getClampedPlayerAiTendency(input.actor, "dribbleBias", 1, 0.65, 1.75);
+  const flairBias = getClampedPlayerAiTendency(input.actor, "flairBias", 0, 0, 1);
   const attackerScore =
     input.actor.raw.stats.dribbling * 0.44 +
     input.actor.raw.stats.speed * 0.24 +
     input.actor.raw.stats.acceleration * 0.2 +
     input.actor.raw.stats.balance * 0.12 +
-    (activation?.attackBonus ?? 0);
+    (activation?.attackBonus ?? 0) +
+    (dribbleBias - 1) * 18 +
+    flairBias * 8;
   const defenderScore =
     input.defender.raw.stats.tackle * 0.5 +
     input.defender.raw.stats.speed * 0.22 +
@@ -6418,7 +6490,11 @@ function resolveTakeOnOutcome(input: {
   const chance = clamp(
     0.48 + (attackerScore - defenderScore) / 150 - crowdPenalty,
     skillFloor,
-    input.skill === EPlayerSkill.LIGHTNING_DRIBBLE ? 0.92 : input.skill ? 0.84 : 0.76,
+    input.skill === EPlayerSkill.LIGHTNING_DRIBBLE
+      ? 0.92
+      : input.skill
+        ? 0.84 + flairBias * 0.04
+        : 0.76 + flairBias * 0.03,
   );
   const roll = input.random();
 
@@ -7782,8 +7858,15 @@ function addSkillCharge(player: InternalLineupPlayer, skill: EPlayerSkill, amoun
 
 function addTickSkillCharge(lineups: InternalLineupPlayer[]) {
   lineups.forEach((player) => {
-    addSkillCharge(player, EPlayerSkill.DRIBBLE_MAGIC, 10);
-    addSkillCharge(player, EPlayerSkill.LIGHTNING_DRIBBLE, 12);
+    const multiplier = getClampedPlayerAiTendency(
+      player,
+      "dribbleSkillChargeMultiplier",
+      1,
+      0.6,
+      2,
+    );
+    addSkillCharge(player, EPlayerSkill.DRIBBLE_MAGIC, Math.round(10 * multiplier));
+    addSkillCharge(player, EPlayerSkill.LIGHTNING_DRIBBLE, Math.round(12 * multiplier));
   });
 }
 
@@ -8201,6 +8284,7 @@ function projectPlayers(input: {
       state: prev?.aiState ?? "HOLD_POSITION",
       stamina: player.stamina,
       hasBall,
+      aiProfile: player.raw.aiProfile,
       receivingPass: input.intendedReceiverId === player.userPlayerId,
       stats: {
         speed: player.raw.stats.speed,
@@ -8385,6 +8469,7 @@ function projectPlayers(input: {
       name: player.name,
       shortName: player.shortName,
       slug: player.slug,
+      aiProfile: player.raw.aiProfile,
       skills: player.raw.skills,
       skillSlugs: player.skillSlugs,
       skillCharges: normalizeSkillCharges(player.raw.skills, player.skillCharges),
@@ -9121,6 +9206,7 @@ function selectLineup(team: SimulationTeamInput, side: Side): InternalLineupPlay
       name: picked.name,
       shortName: shortenName(picked.name),
       slug: picked.slug,
+      aiProfile: picked.aiProfile,
       skills: picked.skills,
       skillSlugs: picked.skillSlugs,
       skillCharges: normalizeSkillCharges(picked.skills, undefined),

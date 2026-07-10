@@ -21,6 +21,7 @@ import { EMatchEvent } from "./enums";
 import { RedisService } from "../redis/redis.service";
 import { getPlayerSkillSlug } from "../player/enum/player-skill.enum";
 import { TeamEntity } from "../team/entities/team.entity";
+import { PlayerAiService } from "../player/player-ai.service";
 
 type MatchStartPayload = {
   matchId: string;
@@ -57,6 +58,7 @@ export class MatchService implements IMatchService {
     private readonly repository: MatchRepository,
     private readonly socketService: SocketService,
     private readonly redisService: RedisService,
+    private readonly playerAiService: PlayerAiService,
   ) {}
 
   async startCampaignMatch(user: AuthUser, campaignMatchId: number): Promise<MatchStartPayload> {
@@ -588,6 +590,7 @@ export class MatchService implements IMatchService {
           teamId,
           name: player.name,
           slug: player.slug,
+          aiProfile: this.playerAiService.getProfileForPlayer(player),
           savedSlotId: formationByUserPlayerId[String(item.id)]?.slotId ?? null,
           savedPosition: formationByUserPlayerId[String(item.id)]?.position ?? null,
           positions: (item.positions ?? []).map((position) => ({

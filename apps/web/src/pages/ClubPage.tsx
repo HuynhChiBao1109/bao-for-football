@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type DragEvent,
   type MouseEvent,
   type PointerEvent,
   type ReactNode,
@@ -61,6 +62,7 @@ type LineupSlot = {
 };
 type TrainingPosition = { x: number; y: number };
 type TrainingEventKey = TrainingEventType;
+type LineupDragState = { playerId: number; fromSlotId: string | null };
 
 const TRAINING_MATCH_EVENT = {
   PASS: 35,
@@ -458,6 +460,7 @@ function LineupPopup({ teamId }: { teamId: string }) {
   const [selectedSlotId, setSelectedSlotId] = useState('gk');
   const [message, setMessage] = useState('');
   const [detailPlayerId, setDetailPlayerId] = useState<number | null>(null);
+  const [dragState, setDragState] = useState<LineupDragState | null>(null);
   const slots = FORMATION_SLOTS[formation] ?? FORMATION_SLOTS['4-3-3'];
 
   useEffect(() => {
@@ -484,6 +487,20 @@ function LineupPopup({ teamId }: { teamId: string }) {
   }, [slots]);
 
   const cardsById = useMemo(() => new Map(cards.map((card) => [card.userPlayerId, card])), [cards]);
+  useEffect(() => {
+    setLineup((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      slots.forEach((slot) => {
+        const card = next[slot.slotId] ? cardsById.get(Number(next[slot.slotId])) : null;
+        if (card && !canPlaceCardInSlot(card, slot)) {
+          next[slot.slotId] = null;
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [cardsById, slots]);
   const usedIds = useMemo(
     () => new Set(Object.values(lineup).filter(Boolean) as number[]),
     [lineup],
@@ -510,15 +527,83 @@ function LineupPopup({ teamId }: { teamId: string }) {
   );
   const starterCount = slots.filter((slot) => lineup[slot.slotId]).length;
 
-  function assignPlayer(playerId: number) {
+  function showLineupMessage(text: string) {
+    setMessage(text);
+  }
+
+  function assignPlayer(playerId: number, targetSlotId = selectedSlotId, fromSlotId?: string | null) {
+    const targetSlot = slots.find((slot) => slot.slotId === targetSlotId);
+    const card = cardsById.get(playerId);
+    if (!targetSlot || !card) return;
+
+    if (!canPlaceCardInSlot(card, targetSlot)) {
+      showLineupMessage(getSlotRejectMessage(card, targetSlot));
+      return;
+    }
+
+    const targetPlayerId = lineup[targetSlotId] ?? null;
+    const sourceSlotId =
+      fromSlotId ??
+      Object.keys(lineup).find((slotId) => lineup[slotId] === playerId) ??
+      null;
+    const sourceSlot = sourceSlotId ? slots.find((slot) => slot.slotId === sourceSlotId) : null;
+    const targetCard = targetPlayerId ? cardsById.get(Number(targetPlayerId)) : null;
+    if (sourceSlot && targetCard && !canPlaceCardInSlot(targetCard, sourceSlot)) {
+      showLineupMessage(getSlotRejectMessage(targetCard, sourceSlot));
+      return;
+    }
+
     setLineup((prev) => {
       const next = { ...prev };
+
       Object.keys(next).forEach((slotId) => {
         if (next[slotId] === playerId) next[slotId] = null;
       });
-      next[selectedSlotId] = playerId;
+      if (sourceSlotId && targetPlayerId && targetPlayerId !== playerId) {
+        next[sourceSlotId] = Number(targetPlayerId);
+      }
+      next[targetSlotId] = playerId;
       return next;
     });
+    setSelectedSlotId(targetSlotId);
+    showLineupMessage('');
+  }
+
+  function startDrag(playerId: number, fromSlotId: string | null, event: DragEvent<HTMLElement>) {
+    setDragState({ playerId, fromSlotId });
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('application/x-lineup-player', String(playerId));
+    if (fromSlotId) {
+      event.dataTransfer.setData('application/x-lineup-slot', fromSlotId);
+    }
+  }
+
+  function getDraggedPlayer(event: DragEvent<HTMLElement>) {
+    const playerId = Number(
+      event.dataTransfer.getData('application/x-lineup-player') || dragState?.playerId || 0,
+    );
+    const fromSlotId =
+      event.dataTransfer.getData('application/x-lineup-slot') || dragState?.fromSlotId || null;
+    return Number.isFinite(playerId) && playerId > 0 ? { playerId, fromSlotId } : null;
+  }
+
+  function handleSlotDragOver(slot: LineupSlot, event: DragEvent<HTMLElement>) {
+    const playerId = dragState?.playerId;
+    const card = playerId ? cardsById.get(playerId) : null;
+    if (!card || canPlaceCardInSlot(card, slot)) {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+    } else {
+      event.dataTransfer.dropEffect = 'none';
+    }
+  }
+
+  function handleSlotDrop(slot: LineupSlot, event: DragEvent<HTMLElement>) {
+    event.preventDefault();
+    const dragged = getDraggedPlayer(event);
+    setDragState(null);
+    if (!dragged) return;
+    assignPlayer(dragged.playerId, slot.slotId, dragged.fromSlotId);
   }
 
   function autoFill() {
@@ -528,19 +613,30 @@ function LineupPopup({ teamId }: { teamId: string }) {
       let bestIndex = 0;
       let bestScore = -1;
       pool.forEach((card, index) => {
+        if (!canPlaceCardInSlot(card, slot)) return;
         const score = playerOverall(card) * positionFit(card, slot.role);
         if (score > bestScore) {
           bestScore = score;
           bestIndex = index;
         }
       });
-      const picked = pool.splice(bestIndex, 1)[0];
+      const picked = bestScore >= 0 ? pool.splice(bestIndex, 1)[0] : null;
       next[slot.slotId] = picked?.userPlayerId ?? null;
     });
     setLineup(next);
+    setMessage('');
   }
 
   async function saveLineup() {
+    const invalidSlot = slots.find((slot) => {
+      const card = lineup[slot.slotId] ? cardsById.get(Number(lineup[slot.slotId])) : null;
+      return card && !canPlaceCardInSlot(card, slot);
+    });
+    if (invalidSlot) {
+      setMessage(`Slot ${invalidSlot.label} has an invalid player.`);
+      return;
+    }
+
     const payload = slots
       .map((slot) => ({
         slotId: slot.slotId,
@@ -598,8 +694,24 @@ function LineupPopup({ teamId }: { teamId: string }) {
                 type="button"
                 className="club-lineup-slot"
                 data-active={selectedSlotId === slot.slotId}
+                data-drop-valid={
+                  dragState
+                    ? Boolean(
+                        cardsById.get(dragState.playerId) &&
+                          canPlaceCardInSlot(cardsById.get(dragState.playerId)!, slot),
+                      )
+                    : undefined
+                }
+                draggable={Boolean(card)}
                 style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
                 onClick={() => setSelectedSlotId(slot.slotId)}
+                onDragStart={(event) => {
+                  if (!card) return;
+                  startDrag(card.userPlayerId, slot.slotId, event);
+                }}
+                onDragEnd={() => setDragState(null)}
+                onDragOver={(event) => handleSlotDragOver(slot, event)}
+                onDrop={(event) => handleSlotDrop(slot, event)}
               >
                 <span>{slot.label}</span>
                 <strong>{card?.name ?? 'Empty'}</strong>
@@ -656,6 +768,11 @@ function LineupPopup({ teamId }: { teamId: string }) {
                 type="button"
                 className="club-roster-row"
                 data-used={usedIds.has(card.userPlayerId)}
+                data-invalid={!canPlaceCardInSlot(card, selectedSlot)}
+                draggable
+                aria-disabled={!canPlaceCardInSlot(card, selectedSlot)}
+                onDragStart={(event) => startDrag(card.userPlayerId, null, event)}
+                onDragEnd={() => setDragState(null)}
                 onClick={() => assignPlayer(card.userPlayerId)}
               >
                 <span>{card.positions?.[0]?.position ?? 'ANY'}</span>
@@ -1341,6 +1458,26 @@ function positionFit(card: UserPlayerCard, role: string) {
 
 function isGoalkeeperCard(card: UserPlayerCard) {
   return card.positions?.some((item) => item.position === 'GK') ?? false;
+}
+
+function isGoalkeeperSlot(slot: LineupSlot) {
+  return roleToPosition(slot.role) === 'GK';
+}
+
+function canPlaceCardInSlot(card: UserPlayerCard, slot: LineupSlot) {
+  const isCardGoalkeeper = isGoalkeeperCard(card);
+  const isSlotGoalkeeper = isGoalkeeperSlot(slot);
+  return isSlotGoalkeeper ? isCardGoalkeeper : !isCardGoalkeeper;
+}
+
+function getSlotRejectMessage(card: UserPlayerCard, slot: LineupSlot) {
+  if (isGoalkeeperSlot(slot)) {
+    return `${card.name} is not a GK. GK slot only accepts goalkeepers.`;
+  }
+  if (isGoalkeeperCard(card)) {
+    return `${card.name} is a GK. Goalkeepers can only be placed in GK slot.`;
+  }
+  return `${card.name} does not fit ${slot.label}.`;
 }
 
 function pickTrainingPlayerIds(cards: UserPlayerCard[], count: number) {

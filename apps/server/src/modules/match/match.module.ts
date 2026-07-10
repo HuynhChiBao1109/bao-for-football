@@ -14,12 +14,14 @@ import { UserPlayerEntity, UserPlayerSkillEntity } from "../player/entities/play
 import { PlayerEntity } from "../player/entities/player-admin.entity";
 import { SocketModule } from "../socket/socket.module";
 import { RedisModule } from "../redis/redis.module";
+import { PlayerModule } from "../player/player.module";
 
 @Module({
   imports: [
     AuthModule,
     SocketModule,
     RedisModule,
+    PlayerModule,
     TypeOrmModule.forFeature([
       TeamEntity,
       TeamFormationEntity,

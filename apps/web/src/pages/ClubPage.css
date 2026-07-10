@@ -656,6 +656,25 @@
   box-shadow: 0 0 26px rgba(255, 211, 103, 0.18);
 }
 
+.club-lineup-slot[draggable='true'] {
+  cursor: grab;
+}
+
+.club-lineup-slot[draggable='true']:active {
+  cursor: grabbing;
+}
+
+.club-lineup-slot[data-drop-valid='true'] {
+  border-color: rgba(103, 255, 184, 0.76);
+  background: linear-gradient(135deg, rgba(103, 255, 184, 0.18), rgba(255, 255, 255, 0.045));
+  box-shadow: 0 0 30px rgba(103, 255, 184, 0.2);
+}
+
+.club-lineup-slot[data-drop-valid='false'] {
+  border-color: rgba(255, 64, 91, 0.72);
+  background: linear-gradient(135deg, rgba(255, 64, 91, 0.16), rgba(255, 255, 255, 0.04));
+}
+
 .club-lineup-slot span {
   color: #78f8ff;
   font-size: 10px;
@@ -1654,6 +1673,24 @@
 .club-roster-row:hover {
   border-color: rgba(255, 80, 103, 0.64);
   transform: translateY(-1px);
+}
+
+.club-roster-row[draggable='true'] {
+  cursor: grab;
+}
+
+.club-roster-row[draggable='true']:active {
+  cursor: grabbing;
+}
+
+.club-roster-row[data-invalid='true'] {
+  border-color: rgba(255, 64, 91, 0.34);
+  opacity: 0.56;
+}
+
+.club-roster-row[data-invalid='true']:hover {
+  border-color: rgba(255, 64, 91, 0.68);
+  opacity: 0.78;
 }
 
 .club-roster-row strong {

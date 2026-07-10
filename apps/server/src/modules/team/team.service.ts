@@ -72,6 +72,14 @@ function normalizeFormation(value: unknown): ETeamFormation {
   return FORMATION_BY_KEY[key] ?? ETeamFormation.F433;
 }
 
+function isGoalkeeperPosition(value: unknown): boolean {
+  return String(value ?? "").trim().toUpperCase() === "GK";
+}
+
+function isGoalkeeperLineupSlot(item: TacticsLineupItem): boolean {
+  return isGoalkeeperPosition(item.position) || String(item.slotId).toLowerCase() === "gk";
+}
+
 @Injectable()
 export class TeamService implements ITeamService {
   constructor(
@@ -144,9 +152,27 @@ export class TeamService implements ITeamService {
       : [];
 
     const uniqueUserPlayerIds = Array.from(new Set(lineup.map((item) => item.userPlayerId)));
+    if (uniqueUserPlayerIds.length !== lineup.length) {
+      throw new BadRequestException("Lineup contains duplicated players");
+    }
+
     const ownedPlayers = await this.repository.getUserPlayersByIds(user.id, uniqueUserPlayerIds);
     if (ownedPlayers.length !== uniqueUserPlayerIds.length) {
       throw new BadRequestException("Lineup contains players you do not own");
+    }
+    const ownedPlayerById = new Map(ownedPlayers.map((player) => [Number(player.id), player]));
+    for (const item of lineup) {
+      const player = ownedPlayerById.get(Number(item.userPlayerId));
+      const isPlayerGoalkeeper = Boolean(
+        player?.positions?.some((position) => isGoalkeeperPosition(position.position)),
+      );
+      const isSlotGoalkeeper = isGoalkeeperLineupSlot(item);
+      if (isSlotGoalkeeper && !isPlayerGoalkeeper) {
+        throw new BadRequestException("Only GK players can be placed in the GK slot");
+      }
+      if (!isSlotGoalkeeper && isPlayerGoalkeeper) {
+        throw new BadRequestException("GK players can only be placed in the GK slot");
+      }
     }
 
     await this.repository.saveTactics(

@@ -1,3 +1,5 @@
+import { type PlayerAiProfile, type PlayerAiTendencies } from "src/modules/player/player-ai.types";
+
 export const SIM_TICK_MS = 1000;
 export const SIM_TICK_SECONDS = SIM_TICK_MS / 1000;
 export const SIM_TICKS_PER_SECOND = 1000 / SIM_TICK_MS;
@@ -94,6 +96,7 @@ export type Player = {
   state: PlayerAIState;
   stamina: number;
   hasBall: boolean;
+  aiProfile?: PlayerAiProfile;
   receivingPass?: boolean;
   markPlayerId?: number | null;
   stats?: {
@@ -699,11 +702,61 @@ function getWingerAttackState(player: Player, context: MovementContext): PlayerA
   return variant === 3 ? "HOLD_WIDTH" : "ATTACK_SPACE";
 }
 
+function getPlayerAiTendency(
+  player: Player,
+  key: keyof PlayerAiTendencies,
+  fallback: number,
+) {
+  const value = Number(player.aiProfile?.tendencies?.[key] ?? fallback);
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function getDefensiveWorkRate(player: Player) {
+  return clamp(getPlayerAiTendency(player, "defensiveWorkRate", 1), 0.05, 1.2);
+}
+
+function getStayForwardBias(player: Player) {
+  return clamp(getPlayerAiTendency(player, "stayForwardBias", 0), 0, 1);
+}
+
+function shouldStayHighOutOfPossession(player: Player, context: MovementContext) {
+  const role = normalizeRole(player.role);
+  if (role !== "ST" && role !== "W") return false;
+  if (dangerLevel(player.side, context.ball.y) >= 0.78) return false;
+  return getStayForwardBias(player) >= 0.45 && getDefensiveWorkRate(player) <= 0.55;
+}
+
+function getStayHighDefensiveDecision(
+  player: Player,
+  context: MovementContext,
+): MovementDecision {
+  const role = normalizeRole(player.role);
+  const stayForward = getStayForwardBias(player);
+  const laneX =
+    role === "W"
+      ? lerp(getWideLaneX(player), context.ball.x, 0.08)
+      : lerp(getCentralLaneX(player), context.ball.x, 0.12);
+  const highY = player.homePosition.y + context.direction * (5 + stayForward * 11);
+  const safetyRecovery = dangerLevel(player.side, context.ball.y) * 5;
+
+  return {
+    state: "ATTACK_SPACE",
+    targetPosition: clampToRoleZone(player, {
+      x: laneX,
+      y: highY - context.direction * safetyRecovery,
+    }),
+  };
+}
+
 function evaluateDefensiveShape(player: Player, context: MovementContext): MovementDecision | null {
   const { role, direction, teammates, opponents, owner } = context;
   if (role === "CB" || role === "FB") {
     const lineDecision = getBackLineCohesionDecision(player, context);
     if (lineDecision) return lineDecision;
+  }
+
+  if (shouldStayHighOutOfPossession(player, context)) {
+    return getStayHighDefensiveDecision(player, context);
   }
 
   const markingDecision = getPriorityMarkingDecision(player, context);
@@ -922,9 +975,15 @@ function getTacticalAnchorZone(
   const shiftX = context.hasPossession
     ? clamp((context.ball.x - 50) * 0.12, -5, 5)
     : getDefensiveUnitShiftX(context.ball);
+  const defensiveWorkRate = getDefensiveWorkRate(player);
+  const stayForwardPush =
+    getStayForwardBias(player) * (role === "ST" || role === "W" ? 8 : role === "CM" ? 3 : 0);
+  const defenseDepthShift =
+    -context.direction * getDefenseDepthShift(role, context.ball, player) * defensiveWorkRate +
+    context.direction * stayForwardPush;
   const depthShift = context.hasPossession
     ? context.direction * getAttackDepthShift(role, context.ball, player)
-    : -context.direction * getDefenseDepthShift(role, context.ball, player);
+    : defenseDepthShift;
   const phaseDepthShift = context.direction * getPhaseDepthShift(role, context);
   const width = getZoneWidth(role);
   const depth = getZoneDepth(role);
@@ -1520,12 +1579,16 @@ function isCounterPresser(player: Player, context: MovementContext) {
     .map((item) => {
       const itemRole = normalizeRole(item.role);
       const homeRisk = itemRole === "CB" ? 11 : itemRole === "FB" ? 5 : itemRole === "DM" ? 3 : 0;
+      const lowWorkPenalty =
+        (1 - getDefensiveWorkRate(item)) * (itemRole === "ST" || itemRole === "W" ? 18 : 8) +
+        getStayForwardBias(item) * 8;
       return {
         id: item.id,
         score:
           distance(item.position, context.ball) +
           distance(item.homePosition, context.ball) * 0.1 +
-          homeRisk,
+          homeRisk +
+          lowWorkPenalty,
       };
     })
     .sort((left, right) => left.score - right.score)
@@ -1550,6 +1613,13 @@ function getCounterPressTarget(player: Player, context: MovementContext) {
 function isCounterPressCover(player: Player, context: MovementContext) {
   const role = normalizeRole(player.role);
   if (role === "GK" || isCounterPresser(player, context)) return false;
+  if (
+    (role === "ST" || role === "W") &&
+    getDefensiveWorkRate(player) <= 0.55 &&
+    getStayForwardBias(player) >= 0.45
+  ) {
+    return false;
+  }
   const gap = distance(player.position, context.ball);
   if (gap > 38) return false;
   if (role === "CB") return dangerLevel(player.side, context.ball.y) <= 0.65;
@@ -1594,9 +1664,12 @@ function isDesignatedPresser(player: Player, teammates: Player[], ball: Vec2) {
             : itemRole === "ST" || itemRole === "W"
               ? 2
               : 0;
+      const lowWorkPenalty =
+        (1 - getDefensiveWorkRate(item)) * (itemRole === "ST" || itemRole === "W" ? 18 : 8) +
+        getStayForwardBias(item) * 8;
       return {
         id: item.id,
-        distance: distance(item.position, ball) + leaveHome * 0.12 + rolePenalty,
+        distance: distance(item.position, ball) + leaveHome * 0.12 + rolePenalty + lowWorkPenalty,
       };
     })
     .sort((left, right) => left.distance - right.distance)
