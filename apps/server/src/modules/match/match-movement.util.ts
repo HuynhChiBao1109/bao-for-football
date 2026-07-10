@@ -533,7 +533,7 @@ function evaluateAttackingShape(player: Player, context: MovementContext): Movem
     const lineDepth = getAttackingBackLineDepth(player.side, ball, backLine);
     const lineCover = getBackLineCoverOffset(player, backLine);
     return {
-      state: "HOLD_LINE",
+      state: "COVER_SPACE",
       targetPosition: applyTeamSpacing(
         player,
         teammates,
@@ -558,13 +558,13 @@ function evaluateAttackingShape(player: Player, context: MovementContext): Movem
     }
 
     return {
-      state: "HOLD_DEPTH",
+      state: "COVER_SPACE",
       targetPosition: applyTeamSpacing(
         player,
         teammates,
         clampToRoleZone(player, {
-          x: lerp(getCentralLaneX(player), ball.x, 0.2),
-          y: ball.y - direction * 10,
+          x: lerp(getCentralLaneX(player), ball.x, 0.28),
+          y: ball.y - direction * 7,
         }),
       ),
     };
@@ -1133,9 +1133,11 @@ function getMaxTacticalAdjustmentPerTick(
     decision.state === "TRACK_RUNNER" ||
     decision.state === "COVER_SPACE" ||
     decision.state === "RECOVER_SHAPE" ||
-    decision.state === "RECOVER_DEFENSE"
+    decision.state === "RECOVER_DEFENSE" ||
+    decision.state === "HOLD_LINE" ||
+    decision.state === "HOLD_DEPTH"
   ) {
-    return lerp(0.8, 3.2, relevance);
+    return lerp(1.15, 3.8, relevance);
   }
   return lerp(0.5, 2.5, relevance);
 }
@@ -1270,10 +1272,10 @@ function getZoneDepth(role: PlayerRole) {
 
 function getAttackDepthShift(role: PlayerRole, ball: Vec2, player: Player) {
   const ballAdvance = attackDirection(player.side) < 0 ? 50 - ball.y : ball.y - 50;
-  const base = clamp(ballAdvance * 0.2, -4, 14);
-  if (role === "CB") return clamp(base * 0.8, -3, 10);
-  if (role === "FB") return clamp(base * 1.05, -3, 13);
-  if (role === "DM") return clamp(base * 0.8, -3, 9);
+  const base = clamp(ballAdvance * 0.23, -4, 16);
+  if (role === "CB") return clamp(base, -3, 14);
+  if (role === "FB") return clamp(base * 1.08, -3, 15);
+  if (role === "DM") return clamp(base * 0.95, -3, 11);
   if (role === "W" || role === "ST") return clamp(base * 1.12, -4, 13);
   return base;
 }
@@ -1289,10 +1291,10 @@ function getDefenseDepthShift(role: PlayerRole, ball: Vec2, player: Player) {
 
 function getPhaseDepthShift(role: PlayerRole, context: MovementContext) {
   if (context.phase === "IN_POSSESSION_ATTACK") {
-    if (role === "CB") return 4.5;
-    if (role === "FB") return 6;
-    if (role === "DM") return 3.5;
-    if (role === "CM") return 4;
+    if (role === "CB") return 6.5;
+    if (role === "FB") return 7.2;
+    if (role === "DM") return 5.2;
+    if (role === "CM") return 4.8;
     return 2;
   }
 
@@ -1615,10 +1617,15 @@ function isEmergencyBallPressure(player: Player, context: MovementContext) {
     context.owner.side !== player.side &&
     distance(context.owner.position, context.ball) <= 3;
 
-  if (role === "CB") return danger >= 0.68 && gap <= 11 && Boolean(ownerCanShoot);
+  if (role === "CB")
+    return (
+      danger >= 0.54 &&
+      gap <= 15 &&
+      (Boolean(ownerCanShoot) || (context.ball.x >= 24 && context.ball.x <= 76))
+    );
   if (role === "FB")
-    return danger >= 0.5 && gap <= 10 && isSameFlank(player.homePosition.x, context.ball.x);
-  if (role === "DM" || role === "CM") return gap <= 9 || (danger >= 0.52 && gap <= 13);
+    return danger >= 0.42 && gap <= 14 && isSameFlank(player.homePosition.x, context.ball.x);
+  if (role === "DM" || role === "CM") return gap <= 12 || (danger >= 0.42 && gap <= 16);
   return gap <= 8;
 }
 
@@ -1713,7 +1720,7 @@ function getBackLineCohesionDecision(
     nearestLineDefender?.id === player.id &&
     (isBallInDefensiveResponsibilityZone(player, ball) ||
       canBackLinePlayerStepOutToCentralDanger(player, context, backLine, lineDepth)) &&
-    distance(player.position, ball) <= (role === "CB" ? 22 : 20);
+    distance(player.position, ball) <= (role === "CB" ? 28 : 24);
 
   if (canStepOut) {
     return {
@@ -1762,11 +1769,11 @@ function canBackLinePlayerStepOutToCentralDanger(
 
   const carrier = context.owner && context.owner.side !== player.side ? context.owner : null;
   const carrierPoint = carrier?.position ?? context.ball;
-  const centralDanger = carrierPoint.x >= 30 && carrierPoint.x <= 70;
+  const centralDanger = carrierPoint.x >= 24 && carrierPoint.x <= 76;
   const betweenLines =
     player.side === "home"
-      ? carrierPoint.y >= lineDepth - 22 && carrierPoint.y <= lineDepth + 10
-      : carrierPoint.y <= lineDepth + 22 && carrierPoint.y >= lineDepth - 10;
+      ? carrierPoint.y >= lineDepth - 26 && carrierPoint.y <= lineDepth + 12
+      : carrierPoint.y <= lineDepth + 26 && carrierPoint.y >= lineDepth - 12;
   const coverBehind = backLine.some((teammate) => {
     if (teammate.id === player.id) return false;
     const teammateRole = normalizeRole(teammate.role);
@@ -1783,7 +1790,9 @@ function canBackLinePlayerStepOutToCentralDanger(
       )
     : 99;
 
-  return centralDanger && betweenLines && coverBehind && noDangerousRunner && pressureDistance >= 4;
+  return (
+    centralDanger && betweenLines && coverBehind && noDangerousRunner && pressureDistance >= 2.5
+  );
 }
 
 function getPriorityMarkingDecision(
@@ -1835,12 +1844,12 @@ function getAttackingBackLineDepth(side: Side, ball: Vec2, backLine: Player[]) {
         ? 74
         : 26;
   const direction = attackDirection(side);
-  const advance = direction < 0 ? 62 - ball.y : ball.y - 38;
+  const advance = direction < 0 ? 66 - ball.y : ball.y - 34;
   const stablePossessionPush =
-    direction < 0 ? clamp(58 - ball.y, 0, 18) : clamp(ball.y - 42, 0, 18);
-  const push = clamp(12 + advance * 0.32 + stablePossessionPush * 0.18, 8, 29);
+    direction < 0 ? clamp(62 - ball.y, 0, 24) : clamp(ball.y - 38, 0, 24);
+  const push = clamp(14 + advance * 0.38 + stablePossessionPush * 0.24, 10, 34);
 
-  return direction < 0 ? clamp(averageHomeY - push, 45, 78) : clamp(averageHomeY + push, 22, 55);
+  return direction < 0 ? clamp(averageHomeY - push, 38, 78) : clamp(averageHomeY + push, 22, 62);
 }
 
 function getDefensiveLineDepth(side: Side, ball: Vec2, backLine: Player[], ballVelocity: Vec2) {

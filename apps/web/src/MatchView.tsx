@@ -70,7 +70,11 @@ function isGoalEvent(snapshot: MatchSnapshot | null) {
 }
 
 function isShotEvent(snapshot: MatchSnapshot | null) {
-  return snapshot?.highlight?.event === MATCH_EVENT.SHOOT;
+  return (
+    snapshot?.highlight?.event === MATCH_EVENT.SHOOT ||
+    snapshot?.highlight?.event === MATCH_EVENT.GOALKEEPER_SAVE ||
+    isGoalEvent(snapshot)
+  );
 }
 
 function isPassEvent(snapshot: MatchSnapshot | null) {
@@ -110,6 +114,14 @@ function isLightningDribble(snapshot: MatchSnapshot | null) {
     snapshot?.ball?.skillTrajectory === EPlayerSkill.LIGHTNING_DRIBBLE ||
     snapshot?.highlight?.skill === EPlayerSkill.LIGHTNING_DRIBBLE
   );
+}
+
+function isKaiserShot(snapshot: MatchSnapshot | null) {
+  return snapshot?.ball?.skillTrajectory === EPlayerSkill.KAISER_SHOT || snapshot?.highlight?.skill === EPlayerSkill.KAISER_SHOT;
+}
+
+function isEagleEye(snapshot: MatchSnapshot | null) {
+  return snapshot?.ball?.skillTrajectory === EPlayerSkill.EAGLE_EYE || snapshot?.highlight?.skill === EPlayerSkill.EAGLE_EYE;
 }
 
 function getEventView(eventCode: number | null | undefined) {
@@ -182,6 +194,8 @@ function skillCode(skill: number) {
   if (skill === EPlayerSkill.DRIBBLE_MAGIC) return 'MD';
   if (skill === EPlayerSkill.TANK_TACKLE) return 'TT';
   if (skill === EPlayerSkill.LIGHTNING_DRIBBLE) return 'LD';
+  if (skill === EPlayerSkill.KAISER_SHOT) return 'KS';
+  if (skill === EPlayerSkill.EAGLE_EYE) return 'EE';
   return 'SK';
 }
 
@@ -304,6 +318,8 @@ const PlayerCircle = memo(function PlayerCircle({
           ? 'player-node--lightning-dribble'
           : '',
         player.activeSkill === EPlayerSkill.TANK_TACKLE ? 'player-node--tank-tackle' : '',
+        player.activeSkill === EPlayerSkill.KAISER_SHOT ? 'player-node--kaiser-shot' : '',
+        player.activeSkill === EPlayerSkill.EAGLE_EYE ? 'player-node--eagle-eye' : '',
       ].join(' ')}
       data-dive-direction={
         keeperAction === 'dive' || keeperAction === 'catch' ? diveDirection : undefined
@@ -352,6 +368,8 @@ function Ball({ snapshot, mirrorY }: { snapshot: MatchSnapshot; mirrorY: boolean
   const magicDribble = isMagicDribble(snapshot);
   const tankTackle = isTankTackle(snapshot);
   const lightningDribble = isLightningDribble(snapshot);
+  const kaiserShot = isKaiserShot(snapshot);
+  const eagleEye = isEagleEye(snapshot);
 
   return (
     <div
@@ -364,6 +382,8 @@ function Ball({ snapshot, mirrorY }: { snapshot: MatchSnapshot; mirrorY: boolean
         magicDribble ? 'match-ball--magic' : '',
         lightningDribble ? 'match-ball--lightning' : '',
         tankTackle ? 'match-ball--tank' : '',
+        kaiserShot ? 'match-ball--kaiser' : '',
+        eagleEye ? 'match-ball--eagle' : '',
       ].join(' ')}
       style={style}
       aria-label="Ball"

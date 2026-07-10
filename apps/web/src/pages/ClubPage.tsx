@@ -697,6 +697,16 @@ const TRAINING_EVENTS: Array<{
   { key: 'free_kick_shoot', label: 'FK Shoot', description: 'Da phat sut thang', tone: 'red' },
 ];
 
+function skillCode(skill: number) {
+  if (skill === EPlayerSkill.SHOOT_THUNDER) return 'TS';
+  if (skill === EPlayerSkill.DRIBBLE_MAGIC) return 'MD';
+  if (skill === EPlayerSkill.TANK_TACKLE) return 'TT';
+  if (skill === EPlayerSkill.LIGHTNING_DRIBBLE) return 'LD';
+  if (skill === EPlayerSkill.KAISER_SHOT) return 'KS';
+  if (skill === EPlayerSkill.EAGLE_EYE) return 'EE';
+  return 'SK';
+}
+
 function TrainingPopup() {
   const { data: trainingRoom, isLoading, error } = useTrainingRoom();
   const triggerTrainingEvent = useTriggerTrainingEvent();
@@ -1177,6 +1187,8 @@ function TrainingPlayerNode({
           ? 'player-node--lightning-dribble'
           : '',
         player.activeSkill === EPlayerSkill.TANK_TACKLE ? 'player-node--tank-tackle' : '',
+        player.activeSkill === EPlayerSkill.KAISER_SHOT ? 'player-node--kaiser-shot' : '',
+        player.activeSkill === EPlayerSkill.EAGLE_EYE ? 'player-node--eagle-eye' : '',
       ].join(' ')}
       data-selected={selected}
       style={toHorizontalPitchPosition(player)}
@@ -1211,15 +1223,7 @@ function TrainingPlayerNode({
       </span>
       {player.activeSkill ? (
         <span className="player-skill-badge" title={skillName(player.activeSkill) ?? 'Skill'}>
-          {player.activeSkill === EPlayerSkill.SHOOT_THUNDER
-            ? 'TS'
-            : player.activeSkill === EPlayerSkill.DRIBBLE_MAGIC
-              ? 'MD'
-              : player.activeSkill === EPlayerSkill.LIGHTNING_DRIBBLE
-                ? 'LD'
-                : player.activeSkill === EPlayerSkill.TANK_TACKLE
-                  ? 'TT'
-                  : 'SK'}
+          {skillCode(player.activeSkill)}
         </span>
       ) : null}
       <span className="player-name">{player.name}</span>
@@ -1240,6 +1244,12 @@ function TrainingBall({ snapshot }: { snapshot: MatchSnapshot }) {
   const tankTackle =
     snapshot.ball.skillTrajectory === EPlayerSkill.TANK_TACKLE ||
     snapshot.highlight?.skill === EPlayerSkill.TANK_TACKLE;
+  const kaiserShot =
+    snapshot.ball.skillTrajectory === EPlayerSkill.KAISER_SHOT ||
+    snapshot.highlight?.skill === EPlayerSkill.KAISER_SHOT;
+  const eagleEye =
+    snapshot.ball.skillTrajectory === EPlayerSkill.EAGLE_EYE ||
+    snapshot.highlight?.skill === EPlayerSkill.EAGLE_EYE;
 
   return (
     <div
@@ -1251,6 +1261,8 @@ function TrainingBall({ snapshot }: { snapshot: MatchSnapshot }) {
         magicDribble ? 'match-ball--magic' : '',
         lightningDribble ? 'match-ball--lightning' : '',
         tankTackle ? 'match-ball--tank' : '',
+        kaiserShot ? 'match-ball--kaiser' : '',
+        eagleEye ? 'match-ball--eagle' : '',
       ].join(' ')}
       style={toHorizontalPitchPosition(snapshot.ball)}
       aria-label="Ball"

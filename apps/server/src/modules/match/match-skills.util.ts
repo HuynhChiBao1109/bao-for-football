@@ -45,9 +45,19 @@ const SKILL_META: Record<
     attackRole: ["CB", "LB", "RB", "DM", "CDM", "CM", "LCM", "RCM"],
   },
   [EPlayerSkill.LIGHTNING_DRIBBLE]: {
-    label: "Rê bóng sấm sét",
+    label: "Lightning Dribble",
     triggerThreshold: 0.32,
     attackRole: ["LW", "RW", "ST", "LST", "RST", "CF", "LM", "RM", "CAM", "CM"],
+  },
+  [EPlayerSkill.KAISER_SHOT]: {
+    label: "Kaiser Shot",
+    triggerThreshold: 0.36,
+    attackRole: ["ST", "CF", "LST", "RST", "CAM", "LW", "RW"],
+  },
+  [EPlayerSkill.EAGLE_EYE]: {
+    label: "Eagle Eye",
+    triggerThreshold: 0.34,
+    attackRole: ["DM", "CDM", "CM", "LCM", "RCM", "CAM", "CB"],
   },
 };
 
@@ -63,7 +73,10 @@ export function tryActivateSkill(
       continue;
     }
 
-    if (phase === "shoot" && skill === EPlayerSkill.SHOOT_THUNDER) {
+    if (
+      phase === "shoot" &&
+      (skill === EPlayerSkill.SHOOT_THUNDER || skill === EPlayerSkill.KAISER_SHOT)
+    ) {
       if ((meta.attackRole ?? []).includes(role) && random() > meta.triggerThreshold) {
         return skill;
       }
@@ -79,6 +92,12 @@ export function tryActivateSkill(
     }
 
     if (phase === "tackle" && skill === EPlayerSkill.TANK_TACKLE) {
+      if ((meta.attackRole ?? []).includes(role) && random() > meta.triggerThreshold) {
+        return skill;
+      }
+    }
+
+    if (phase === "build_up" && skill === EPlayerSkill.EAGLE_EYE) {
       if ((meta.attackRole ?? []).includes(role) && random() > meta.triggerThreshold) {
         return skill;
       }
@@ -145,6 +164,31 @@ export function resolveSkillActivation(
       dribbleSuccess:
         tacklePower + context.random() * 30 >
         context.actorDribbling * 0.62 + context.actorSpeed * 0.24,
+    };
+  }
+
+  if (skill === EPlayerSkill.KAISER_SHOT) {
+    const keeperStability =
+      context.keeperReflex * 0.16 + context.keeperDiving * 0.1 + context.keeperReach * 0.08;
+
+    return {
+      skill,
+      label: SKILL_META[skill].label,
+      attackBonus: 32 + context.actorShoot * 0.2,
+      defensePenalty: keeperStability * 0.62,
+      event: EMatchEvent.SKILL_USED,
+    };
+  }
+
+  if (skill === EPlayerSkill.EAGLE_EYE) {
+    const fieldScan = context.attackScore * 0.18 + context.actorSpeed * 0.08;
+
+    return {
+      skill,
+      label: SKILL_META[skill].label,
+      attackBonus: 24 + fieldScan,
+      defensePenalty: context.defenderTackle * 0.2,
+      event: EMatchEvent.SKILL_USED,
     };
   }
 
@@ -222,6 +266,32 @@ export function buildLightningDribbleTrajectory(
     points.push({
       x: clamp(fromX + (toX - fromX) * burst + feint + snap, 6, 94),
       y: clamp(fromY + (toY - fromY) * Math.min(1, progress * 1.18), 5, 95),
+    });
+  }
+
+  return points;
+}
+
+export function buildEagleEyePassTrajectory(
+  fromX: number,
+  fromY: number,
+  toX: number,
+  toY: number,
+  side: "home" | "away",
+  segments: number,
+): TrajectoryPoint[] {
+  const points: TrajectoryPoint[] = [{ x: fromX, y: fromY }];
+  const totalSteps = Math.max(4, segments);
+  const direction = side === "home" ? -1 : 1;
+  const sideBend = fromX < toX ? 1 : -1;
+
+  for (let index = 1; index <= totalSteps; index += 1) {
+    const progress = index / totalSteps;
+    const arc = Math.sin(progress * Math.PI);
+    const scanBend = Math.sin(progress * Math.PI * 2) * 2.5;
+    points.push({
+      x: clamp(fromX + (toX - fromX) * progress + sideBend * arc * 5 + scanBend, 4, 96),
+      y: clamp(fromY + (toY - fromY) * progress - direction * arc * 7.5, 4, 96),
     });
   }
 

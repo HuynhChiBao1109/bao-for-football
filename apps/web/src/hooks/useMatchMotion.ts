@@ -15,11 +15,6 @@ function easeInOut(alpha: number) {
   return value * value * (3 - 2 * value);
 }
 
-function easeOut(alpha: number) {
-  const value = clamp(alpha, 0, 1);
-  return 1 - Math.pow(1 - value, 3);
-}
-
 function linear(alpha: number) {
   return clamp(alpha, 0, 1);
 }
@@ -56,7 +51,7 @@ function getBallAnimationDuration(snapshot: MatchSnapshot, frameDuration: number
   const event = snapshot.highlight?.event;
   if (snapshot.ball.ownerPlayerId) return frameDuration;
   if (event === 35) return frameDuration;
-  if (snapshot.ball.skillTrajectory || snapshot.highlight?.skill) return Math.max(520, frameDuration * 0.9);
+  if (snapshot.ball.skillTrajectory || snapshot.highlight?.skill) return frameDuration;
   if (event === 7 || event === 36 || event === 38) {
     return frameDuration;
   }
@@ -66,7 +61,7 @@ function getBallAnimationDuration(snapshot: MatchSnapshot, frameDuration: number
 function getBallProgressAlpha(snapshot: MatchSnapshot, alpha: number) {
   const event = snapshot.highlight?.event;
   if (snapshot.ball.ownerPlayerId || event === 35) return linear(alpha);
-  if (snapshot.ball.skillTrajectory || snapshot.highlight?.skill) return easeOut(alpha);
+  if (snapshot.ball.skillTrajectory || snapshot.highlight?.skill) return easeInOut(alpha);
   if (event === 7 || event === 36 || event === 38) return linear(alpha);
   return easeInOut(alpha);
 }
@@ -226,7 +221,7 @@ export function useMatchMotion(
 
     previousRef.current = lastRenderedRef.current ?? nextRef.current;
     nextRef.current = snapshot;
-    durationRef.current = Math.max(160, Math.min(1800, snapshot.durationMs ?? 1000));
+    durationRef.current = Math.max(160, Math.min(2200, snapshot.durationMs ?? 1000));
     ballDurationRef.current = Math.max(
       160,
       Math.min(durationRef.current, getBallAnimationDuration(snapshot, durationRef.current)),

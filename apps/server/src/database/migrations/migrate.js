@@ -6,6 +6,75 @@ const { config } = require("dotenv");
 
 const PLAYER_SEASONS = new Set(["normal", "icon", "legend", "big_match", "CURRENT"]);
 const PLAYER_BODIES = new Set(["normal", "fat", "thin", "NORMAL", "LEAN", "STOCKY"]);
+const PLAYER_SKILLS = {
+  SHOOT_THUNDER: 1,
+  DRIBBLE_MAGIC: 2,
+  TANK_TACKLE: 3,
+  LIGHTNING_DRIBBLE: 4,
+  KAISER_SHOT: 5,
+  EAGLE_EYE: 6,
+};
+const VALID_PLAYER_SKILLS = new Set(Object.values(PLAYER_SKILLS));
+const PLAYER_SKILL_SLUGS = new Map([
+  [PLAYER_SKILLS.SHOOT_THUNDER, "shoot-thunder"],
+  [PLAYER_SKILLS.DRIBBLE_MAGIC, "dribble-magic"],
+  [PLAYER_SKILLS.TANK_TACKLE, "tank-tackle"],
+  [PLAYER_SKILLS.LIGHTNING_DRIBBLE, "lightning-dribble"],
+  [PLAYER_SKILLS.KAISER_SHOT, "kaiser-shot"],
+  [PLAYER_SKILLS.EAGLE_EYE, "eagle-eye"],
+]);
+const CLUB_ROLE_REQUIREMENTS = new Map([
+  ["GK", 1],
+  ["FB", 2],
+  ["CB", 2],
+  ["DM", 1],
+  ["CM", 1],
+  ["AM", 1],
+  ["W", 2],
+  ["ST", 1],
+]);
+const ROLE_SKILL_ALLOWLIST = new Map([
+  ["GK", []],
+  ["CB", [PLAYER_SKILLS.TANK_TACKLE, PLAYER_SKILLS.EAGLE_EYE]],
+  [
+    "FB",
+    [
+      PLAYER_SKILLS.TANK_TACKLE,
+      PLAYER_SKILLS.DRIBBLE_MAGIC,
+      PLAYER_SKILLS.LIGHTNING_DRIBBLE,
+      PLAYER_SKILLS.EAGLE_EYE,
+    ],
+  ],
+  ["DM", [PLAYER_SKILLS.TANK_TACKLE, PLAYER_SKILLS.EAGLE_EYE]],
+  ["CM", [PLAYER_SKILLS.EAGLE_EYE, PLAYER_SKILLS.DRIBBLE_MAGIC]],
+  [
+    "AM",
+    [
+      PLAYER_SKILLS.EAGLE_EYE,
+      PLAYER_SKILLS.DRIBBLE_MAGIC,
+      PLAYER_SKILLS.LIGHTNING_DRIBBLE,
+      PLAYER_SKILLS.SHOOT_THUNDER,
+    ],
+  ],
+  [
+    "W",
+    [
+      PLAYER_SKILLS.LIGHTNING_DRIBBLE,
+      PLAYER_SKILLS.DRIBBLE_MAGIC,
+      PLAYER_SKILLS.SHOOT_THUNDER,
+      PLAYER_SKILLS.KAISER_SHOT,
+    ],
+  ],
+  [
+    "ST",
+    [
+      PLAYER_SKILLS.KAISER_SHOT,
+      PLAYER_SKILLS.SHOOT_THUNDER,
+      PLAYER_SKILLS.LIGHTNING_DRIBBLE,
+      PLAYER_SKILLS.DRIBBLE_MAGIC,
+    ],
+  ],
+]);
 
 function loadEnv() {
   const envCandidates = [
@@ -44,11 +113,8 @@ function createSlug(value, fallback) {
 }
 
 function getPlayerSkillSlug(skill) {
-  if (Number(skill) === 1) return "shoot-thunder";
-  if (Number(skill) === 2) return "dribble-magic";
-  if (Number(skill) === 3) return "tank-tackle";
-  if (Number(skill) === 4) return "lightning-dribble";
-  return `skill-${String(skill)}`;
+  const normalized = Number(skill);
+  return PLAYER_SKILL_SLUGS.get(normalized) ?? `skill-${String(skill)}`;
 }
 
 function normalizeCountry(item) {
@@ -110,7 +176,115 @@ function normalizeSkills(value) {
     return [];
   }
 
-  return value.map((item) => toInt(item, null)).filter((item) => item >= 1 && item <= 4);
+  return [
+    ...new Set(
+      value.map((item) => toInt(item, null)).filter((item) => VALID_PLAYER_SKILLS.has(item)),
+    ),
+  ];
+}
+
+function normalizeRoleName(value) {
+  const role = String(value || "")
+    .trim()
+    .toUpperCase();
+
+  if (!role) return "ANY";
+  if (role === "GK") return "GK";
+  if (role === "CB" || role === "LCB" || role === "RCB") return "CB";
+  if (["LB", "RB", "LWB", "RWB", "WB", "FB"].includes(role)) return "FB";
+  if (["DM", "CDM", "LDM", "RDM"].includes(role)) return "DM";
+  if (["CM", "LCM", "RCM"].includes(role)) return "CM";
+  if (["AM", "CAM", "LAM", "RAM"].includes(role)) return "AM";
+  if (["LW", "RW", "LM", "RM", "W"].includes(role)) return "W";
+  if (["ST", "CF", "LST", "RST"].includes(role)) return "ST";
+  return role;
+}
+
+function getPrimaryRole(player) {
+  const positions = Array.isArray(player?.positions) ? [...player.positions] : [];
+  const primaryPosition = positions
+    .sort((left, right) => Number(right.rating ?? 0) - Number(left.rating ?? 0))
+    .find((item) => item?.position)?.position;
+
+  return normalizeRoleName(primaryPosition || player?.archetype);
+}
+
+function getRoleDefaultSkills(role, roleIndex) {
+  switch (role) {
+    case "GK":
+      return [];
+    case "CB":
+      return roleIndex >= 2
+        ? [PLAYER_SKILLS.TANK_TACKLE, PLAYER_SKILLS.EAGLE_EYE]
+        : [PLAYER_SKILLS.TANK_TACKLE];
+    case "FB":
+      return roleIndex >= 2
+        ? [PLAYER_SKILLS.TANK_TACKLE, PLAYER_SKILLS.LIGHTNING_DRIBBLE]
+        : [PLAYER_SKILLS.TANK_TACKLE];
+    case "DM":
+      return [PLAYER_SKILLS.TANK_TACKLE, PLAYER_SKILLS.EAGLE_EYE];
+    case "CM":
+      return [PLAYER_SKILLS.EAGLE_EYE];
+    case "AM":
+      return [PLAYER_SKILLS.EAGLE_EYE, PLAYER_SKILLS.DRIBBLE_MAGIC];
+    case "W":
+      return roleIndex >= 2
+        ? [PLAYER_SKILLS.LIGHTNING_DRIBBLE, PLAYER_SKILLS.SHOOT_THUNDER]
+        : [PLAYER_SKILLS.LIGHTNING_DRIBBLE, PLAYER_SKILLS.DRIBBLE_MAGIC];
+    case "ST":
+      return [PLAYER_SKILLS.KAISER_SHOT, PLAYER_SKILLS.SHOOT_THUNDER];
+    default:
+      return [];
+  }
+}
+
+function withUniqueSkills(skills) {
+  return [...new Set(skills.filter((skill) => VALID_PLAYER_SKILLS.has(skill)))];
+}
+
+function applyBalancedClubSkills(players) {
+  const seenByRole = new Map();
+
+  return players.map((player) => {
+    const role = getPrimaryRole(player);
+    const roleIndex = (seenByRole.get(role) ?? 0) + 1;
+    seenByRole.set(role, roleIndex);
+
+    const allowed = ROLE_SKILL_ALLOWLIST.get(role) ?? [...VALID_PLAYER_SKILLS];
+    const roleDefault = getRoleDefaultSkills(role, roleIndex);
+    const suitableExisting = normalizeSkills(player.skills).filter((skill) =>
+      allowed.includes(skill),
+    );
+
+    return {
+      ...player,
+      skills: withUniqueSkills([...suitableExisting, ...roleDefault]).slice(0, 2),
+    };
+  });
+}
+
+function validateClubRoster(players, clubName) {
+  if (players.length < 11) {
+    throw new Error(`${clubName} must have at least 11 players. Found ${players.length}.`);
+  }
+
+  const roleCounts = new Map();
+  for (const player of players) {
+    const role = getPrimaryRole(player);
+    roleCounts.set(role, (roleCounts.get(role) ?? 0) + 1);
+  }
+
+  const missing = [];
+  for (const [role, required] of CLUB_ROLE_REQUIREMENTS) {
+    const current = roleCounts.get(role) ?? 0;
+    if (current < required) {
+      missing.push(`${role} ${current}/${required}`);
+    }
+  }
+
+  if (missing.length > 0) {
+    throw new Error(`${clubName} roster is missing required positions: ${missing.join(", ")}.`);
+  }
 }
 
 function normalizeJsonValue(value) {
@@ -206,6 +380,7 @@ function normalizePlayer(item, leagueCountryName) {
     stamina: toInt(item?.stamina, 75),
     positions: normalizePositions(item?.positions),
     skills: normalizeSkills(item?.skills),
+    archetype: String(item?.archetype || "").trim() || null,
   };
 }
 
@@ -228,9 +403,12 @@ function normalizeLeague(item) {
             return null;
           }
 
-          const players = flattenPlayers(club?.players)
-            .map((player) => normalizePlayer(player, countryName))
-            .filter(Boolean);
+          const players = applyBalancedClubSkills(
+            flattenPlayers(club?.players)
+              .map((player) => normalizePlayer(player, countryName))
+              .filter(Boolean),
+          );
+          validateClubRoster(players, clubName);
 
           return {
             name: clubName,
@@ -631,6 +809,14 @@ async function migratePlayers(connection, clubsWithRefs, clubByKey, countryIdByN
   };
 }
 
+async function ensureSkillEnumColumns(connection) {
+  const enumValues = "'1','2','3','4','5','6'";
+  await connection.execute(`ALTER TABLE player_skills MODIFY skill ENUM(${enumValues}) NOT NULL`);
+  await connection.execute(
+    `ALTER TABLE user_player_skills MODIFY skill ENUM(${enumValues}) NOT NULL`,
+  );
+}
+
 async function migratePlayerSkills(connection, clubsWithRefs) {
   const [playerRows] = await connection.execute("SELECT id, name, season FROM players");
   const playerByKey = new Map();
@@ -643,21 +829,23 @@ async function migratePlayerSkills(connection, clubsWithRefs) {
     existingRows.map((row) => `${String(row.player_id)}|${String(row.skill)}`),
   );
 
+  const desiredSkillsByPlayerId = new Map();
   const skillRows = [];
+  const skillSlugUpdates = [];
   for (const club of clubsWithRefs) {
     for (const player of club.players) {
-      if (!Array.isArray(player.skills) || player.skills.length === 0) {
-        continue;
-      }
-
       const dbPlayer = playerByKey.get(`${normalizeKey(player.name)}|${String(player.season)}`);
       if (!dbPlayer) {
         continue;
       }
 
-      for (const skill of player.skills) {
+      const desiredSkills = new Set(normalizeSkills(player.skills));
+      desiredSkillsByPlayerId.set(String(dbPlayer.id), desiredSkills);
+
+      for (const skill of desiredSkills) {
         const key = `${String(dbPlayer.id)}|${String(skill)}`;
         if (existingByKey.has(key)) {
+          skillSlugUpdates.push([getPlayerSkillSlug(skill), dbPlayer.id, skill]);
           continue;
         }
         existingByKey.add(key);
@@ -666,10 +854,31 @@ async function migratePlayerSkills(connection, clubsWithRefs) {
     }
   }
 
+  const staleRows = existingRows.filter((row) => {
+    const desiredSkills = desiredSkillsByPlayerId.get(String(row.player_id));
+    return desiredSkills && !desiredSkills.has(Number(row.skill));
+  });
+
+  for (const row of staleRows) {
+    await connection.execute("DELETE FROM player_skills WHERE player_id = ? AND skill = ?", [
+      row.player_id,
+      row.skill,
+    ]);
+  }
+
+  for (const values of skillSlugUpdates) {
+    await connection.execute(
+      "UPDATE player_skills SET slug = ? WHERE player_id = ? AND skill = ?",
+      values,
+    );
+  }
+
   await insertBatch(connection, "player_skills", "player_id, skill, slug", skillRows);
 
   return {
     inserted: skillRows.length,
+    deleted: staleRows.length,
+    updated: skillSlugUpdates.length,
   };
 }
 
@@ -1092,48 +1301,87 @@ async function migrateUserPlayersForAdmin(connection, clubsWithRefs, clubByKey, 
     toInsert.push([adminId, player.id, 0, 0, 0, 0, 0, 0, positions]);
   }
 
-  if (toInsert.length === 0) return { inserted: 0 };
+  if (toInsert.length > 0) {
+    await insertBatch(
+      connection,
+      "user_players",
+      "user_id, player_id, exp, bonus_attack, bonus_defense, bonus_agility, bonus_pass, bonus_goalkeeping, positions",
+      toInsert,
+    );
+  }
 
-  await insertBatch(
-    connection,
-    "user_players",
-    "user_id, player_id, exp, bonus_attack, bonus_defense, bonus_agility, bonus_pass, bonus_goalkeeping, positions",
-    toInsert,
-  );
-
-  // Retrieve the newly inserted user_player IDs
-  const newPlayerIds = toInsert.map((row) => row[1]);
-  const [newUserPlayers] = await connection.query(
+  const playerIds = allPlayers.map((player) => player.id);
+  const [adminUserPlayers] = await connection.query(
     "SELECT id, player_id FROM user_players WHERE user_id = ? AND player_id IN (?)",
-    [adminId, newPlayerIds],
+    [adminId, playerIds],
   );
 
   // Fetch all relevant player skills in one query
   const [allSkillRows] = await connection.query(
     "SELECT player_id, skill FROM player_skills WHERE player_id IN (?)",
-    [newPlayerIds],
+    [playerIds],
   );
   const skillsByPlayerId = new Map();
   for (const row of allSkillRows) {
     const key = String(row.player_id);
     if (!skillsByPlayerId.has(key)) skillsByPlayerId.set(key, []);
-    skillsByPlayerId.get(key).push(row.skill);
+    skillsByPlayerId.get(key).push(Number(row.skill));
   }
 
-  // Batch insert user_player_skills
+  const userPlayerIds = adminUserPlayers.map((userPlayer) => userPlayer.id);
+  if (userPlayerIds.length === 0) {
+    return { inserted: toInsert.length, skillInserted: 0, skillDeleted: 0 };
+  }
+
+  const [existingSkillRows] = await connection.query(
+    "SELECT user_player_id, skill FROM user_player_skills WHERE user_player_id IN (?)",
+    [userPlayerIds],
+  );
+  const existingSkillsByKey = new Set(
+    existingSkillRows.map((row) => `${String(row.user_player_id)}|${String(row.skill)}`),
+  );
+  const desiredSkillsByUserPlayerId = new Map();
+
+  for (const userPlayer of adminUserPlayers) {
+    desiredSkillsByUserPlayerId.set(
+      String(userPlayer.id),
+      new Set(skillsByPlayerId.get(String(userPlayer.player_id)) || []),
+    );
+  }
+
   const skillsToInsert = [];
-  for (const userPlayer of newUserPlayers) {
-    const skills = skillsByPlayerId.get(String(userPlayer.player_id)) || [];
+  for (const [userPlayerId, skills] of desiredSkillsByUserPlayerId) {
     for (const skill of skills) {
-      skillsToInsert.push([userPlayer.id, skill]);
+      const key = `${userPlayerId}|${String(skill)}`;
+      if (existingSkillsByKey.has(key)) {
+        continue;
+      }
+      existingSkillsByKey.add(key);
+      skillsToInsert.push([Number(userPlayerId), skill]);
     }
+  }
+
+  const staleSkillRows = existingSkillRows.filter((row) => {
+    const desiredSkills = desiredSkillsByUserPlayerId.get(String(row.user_player_id));
+    return desiredSkills && !desiredSkills.has(Number(row.skill));
+  });
+
+  for (const row of staleSkillRows) {
+    await connection.execute(
+      "DELETE FROM user_player_skills WHERE user_player_id = ? AND skill = ?",
+      [row.user_player_id, row.skill],
+    );
   }
 
   if (skillsToInsert.length > 0) {
     await insertBatch(connection, "user_player_skills", "user_player_id, skill", skillsToInsert);
   }
 
-  return { inserted: toInsert.length };
+  return {
+    inserted: toInsert.length,
+    skillInserted: skillsToInsert.length,
+    skillDeleted: staleSkillRows.length,
+  };
 }
 
 async function runMigration() {
@@ -1159,6 +1407,7 @@ async function runMigration() {
       clubResult.clubByKey,
       countryIdByName,
     );
+    await ensureSkillEnumColumns(connection);
     const playerSkillResult = await migratePlayerSkills(connection, clubResult.data);
     const specialPlayerResult = await migrateSpecialPlayers(connection, countryIdByName);
 
@@ -1190,13 +1439,12 @@ async function runMigration() {
     console.log(
       `Player migration completed. Inserted: ${playerResult.inserted}, updated: ${playerResult.updated}.`,
     );
-    console.log(`Player skill migration completed. Inserted: ${playerSkillResult.inserted}.`);
     console.log(
-      `Special player migration completed. Players inserted: ${specialPlayerResult.inserted}, updated: ${specialPlayerResult.updated}. Skills inserted: ${specialPlayerResult.skillInserted}. Banners inserted: ${specialPlayerResult.bannerInserted}, updated: ${specialPlayerResult.bannerUpdated}.`,
+      `Player skill migration completed. Inserted: ${playerSkillResult.inserted}, updated: ${playerSkillResult.updated}, deleted: ${playerSkillResult.deleted}.`,
     );
     console.log(`Team (BOT) migration completed. Inserted: ${teamResult.inserted}.`);
     console.log(
-      `User-player migration for admin completed. Inserted: ${userPlayerResult.inserted}.`,
+      `User-player migration for admin completed. Inserted: ${userPlayerResult.inserted}, skills inserted: ${userPlayerResult.skillInserted}, skills deleted: ${userPlayerResult.skillDeleted}.`,
     );
   } catch (error) {
     await connection.rollback();
