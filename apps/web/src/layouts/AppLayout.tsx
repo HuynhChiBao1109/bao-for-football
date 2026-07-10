@@ -17,12 +17,14 @@ export function AppLayout() {
   const location = useLocation();
   const items = isAdmin ? [{ path: ROUTES.admin, label: 'Admin', icon: 'AD' }] : PLAYER_NAV;
   const isClubScreen = !isAdmin && location.pathname === ROUTES.club;
+  const isMatchScreen = location.pathname.startsWith('/match/live/');
+  const hideAppChrome = isClubScreen || isMatchScreen;
 
   return (
-    <main className={`app-shell redlock-shell${isClubScreen ? ' app-shell--fullscreen' : ''}`}>
+    <main className={`app-shell redlock-shell${hideAppChrome ? ' app-shell--fullscreen' : ''}`}>
       <AnimatedBackground />
       <EventPopups />
-      {isClubScreen ? null : (
+      {hideAppChrome ? null : (
         <header className="redlock-topbar">
           <div className="redlock-brand" aria-label="RedLock">
             REDLOCK
@@ -31,10 +33,10 @@ export function AppLayout() {
           <span className="redlock-badge redlock-badge--dark">Ego Protocol Online</span>
         </header>
       )}
-      <div className={`app-shell__inner${isClubScreen ? ' app-shell__inner--fullscreen' : ''}`}>
+      <div className={`app-shell__inner${hideAppChrome ? ' app-shell__inner--fullscreen' : ''}`}>
         <Outlet />
       </div>
-      {isClubScreen ? null : (
+      {hideAppChrome ? null : (
         <nav className="app-bottom-nav" aria-label="Main navigation">
           {items.map((item) => {
             const active = location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
