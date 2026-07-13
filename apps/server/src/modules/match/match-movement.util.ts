@@ -6,18 +6,18 @@ export const SIM_TICKS_PER_SECOND = 1000 / SIM_TICK_MS;
 const TRANSITION_WINDOW_TICKS = Math.max(4, Math.round(3.5 * SIM_TICKS_PER_SECOND));
 
 export const MOVEMENT = {
-  walkingSpeed: 3.2,
-  jogSpeed: 6.4,
-  sprintSpeed: 9.4,
+  walkingSpeed: 3.9,
+  jogSpeed: 7.6,
+  sprintSpeed: 10.2,
 
   playerWithBallSpeedMultiplier: 0.86,
 
-  acceleration: 7.6,
+  acceleration: 8.4,
   braking: 12,
 
-  turnSmoothing: 0.42,
+  turnSmoothing: 0.44,
 
-  arrivalRadius: 8.5,
+  arrivalRadius: 7.4,
   stopRadius: 0.65,
 
   separationRadius: 6,
