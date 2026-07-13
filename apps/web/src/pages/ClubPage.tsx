@@ -1745,6 +1745,12 @@ function roleToPosition(role: string) {
   return role;
 }
 
+function normalizeLineupCoordinate(value: unknown, fallback: number) {
+  const coordinate = Number(value);
+  if (!Number.isFinite(coordinate)) return fallback;
+  return Math.round(clampNumber(coordinate, 5, 95) * 10) / 10;
+}
+
 function playerOverall(card: UserPlayerCard) {
   const stats = card.totalStats ?? {};
   const values = [
@@ -1904,6 +1910,20 @@ function SparkIcon() {
         strokeLinejoin="round"
       />
       <path d="M18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z" fill="currentColor" />
+    </IconShell>
+  );
+}
+
+function MoveIcon() {
+  return (
+    <IconShell>
+      <path
+        d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </IconShell>
   );
 }

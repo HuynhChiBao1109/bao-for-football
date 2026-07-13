@@ -82,6 +82,58 @@ const FORMATION_SLOTS: Record<string, FieldSlot[]> = {
     { slotId: 'st', role: 'ST', label: 'ST', x: 42, y: 26 },
     { slotId: 'st2', role: 'ST2', label: 'ST', x: 58, y: 26 },
   ],
+  '3-5-2': [
+    { slotId: 'gk', role: 'GK', label: 'GK', x: 50, y: 92 },
+    { slotId: 'lcb', role: 'CB', label: 'CB', x: 28, y: 78 },
+    { slotId: 'cb', role: 'CB', label: 'CB', x: 50, y: 80 },
+    { slotId: 'rcb', role: 'CB', label: 'CB', x: 72, y: 78 },
+    { slotId: 'lm', role: 'LM', label: 'LM', x: 14, y: 56 },
+    { slotId: 'lcm', role: 'LCM', label: 'CM', x: 34, y: 58 },
+    { slotId: 'cm', role: 'CM', label: 'CM', x: 50, y: 53 },
+    { slotId: 'rcm', role: 'RCM', label: 'CM', x: 66, y: 58 },
+    { slotId: 'rm', role: 'RM', label: 'RM', x: 86, y: 56 },
+    { slotId: 'st', role: 'ST', label: 'ST', x: 42, y: 24 },
+    { slotId: 'st2', role: 'ST2', label: 'ST', x: 58, y: 24 },
+  ],
+  '3-4-3': [
+    { slotId: 'gk', role: 'GK', label: 'GK', x: 50, y: 92 },
+    { slotId: 'lcb', role: 'CB', label: 'CB', x: 28, y: 78 },
+    { slotId: 'cb', role: 'CB', label: 'CB', x: 50, y: 80 },
+    { slotId: 'rcb', role: 'CB', label: 'CB', x: 72, y: 78 },
+    { slotId: 'lm', role: 'LM', label: 'LM', x: 17, y: 56 },
+    { slotId: 'lcm', role: 'LCM', label: 'CM', x: 40, y: 58 },
+    { slotId: 'rcm', role: 'RCM', label: 'CM', x: 60, y: 58 },
+    { slotId: 'rm', role: 'RM', label: 'RM', x: 83, y: 56 },
+    { slotId: 'lw', role: 'LW', label: 'LW', x: 20, y: 28 },
+    { slotId: 'st', role: 'ST', label: 'ST', x: 50, y: 22 },
+    { slotId: 'rw', role: 'RW', label: 'RW', x: 80, y: 28 },
+  ],
+  '4-5-1': [
+    { slotId: 'gk', role: 'GK', label: 'GK', x: 50, y: 92 },
+    { slotId: 'lb', role: 'LB', label: 'LB', x: 17, y: 76 },
+    { slotId: 'lcb', role: 'CB', label: 'CB', x: 38, y: 78 },
+    { slotId: 'rcb', role: 'CB', label: 'CB', x: 62, y: 78 },
+    { slotId: 'rb', role: 'RB', label: 'RB', x: 83, y: 76 },
+    { slotId: 'lm', role: 'LM', label: 'LM', x: 15, y: 48 },
+    { slotId: 'lcm', role: 'LCM', label: 'CM', x: 33, y: 57 },
+    { slotId: 'cm', role: 'CM', label: 'CM', x: 50, y: 53 },
+    { slotId: 'rcm', role: 'RCM', label: 'CM', x: 67, y: 57 },
+    { slotId: 'rm', role: 'RM', label: 'RM', x: 85, y: 48 },
+    { slotId: 'st', role: 'ST', label: 'ST', x: 50, y: 23 },
+  ],
+  '5-4-1': [
+    { slotId: 'gk', role: 'GK', label: 'GK', x: 50, y: 92 },
+    { slotId: 'lb', role: 'LB', label: 'LB', x: 10, y: 69 },
+    { slotId: 'lcb', role: 'CB', label: 'CB', x: 30, y: 79 },
+    { slotId: 'cb', role: 'CB', label: 'CB', x: 50, y: 81 },
+    { slotId: 'rcb', role: 'CB', label: 'CB', x: 70, y: 79 },
+    { slotId: 'rb', role: 'RB', label: 'RB', x: 90, y: 69 },
+    { slotId: 'lm', role: 'LM', label: 'LM', x: 17, y: 50 },
+    { slotId: 'lcm', role: 'LCM', label: 'CM', x: 40, y: 57 },
+    { slotId: 'rcm', role: 'RCM', label: 'CM', x: 60, y: 57 },
+    { slotId: 'rm', role: 'RM', label: 'RM', x: 83, y: 50 },
+    { slotId: 'st', role: 'ST', label: 'ST', x: 50, y: 22 },
+  ],
 };
 
 const ROLE_PROFILES: Record<Role, Array<{ key: string; weight: number }>> = {
@@ -279,6 +331,12 @@ function shortName(value: string): string {
   return `${parts[0].slice(0, 1)}. ${parts[parts.length - 1]}`;
 }
 
+function normalizeFieldCoordinate(value: unknown, fallback: number): number {
+  const coordinate = Number(value);
+  if (!Number.isFinite(coordinate)) return fallback;
+  return Math.max(5, Math.min(95, coordinate));
+}
+
 type TacticsEditorProps = {
   pendingCampaignMatchIdOverride?: string;
   isPopup?: boolean;
@@ -302,6 +360,18 @@ export function TacticsPopup({
 
   const formation = loaded?.formation || '4-3-3';
   const slots = FORMATION_SLOTS[formation] ?? FORMATION_SLOTS['4-3-3'];
+  const renderedSlots = useMemo(() => {
+    const savedBySlot = new Map(loaded?.lineup?.map((item) => [item.slotId, item]) ?? []);
+    return slots.map((slot) => {
+      const saved = savedBySlot.get(slot.slotId);
+      return {
+        ...slot,
+        label: saved?.position || slot.label,
+        x: normalizeFieldCoordinate(saved?.x, slot.x),
+        y: normalizeFieldCoordinate(saved?.y, slot.y),
+      };
+    });
+  }, [loaded, slots]);
   const cardsById = useMemo(() => new Map(cards.map((card) => [card.userPlayerId, card])), [cards]);
   const lineupBySlot = useMemo(() => {
     const next: Record<string, number> = {};
@@ -356,7 +426,7 @@ export function TacticsPopup({
                 <div className="pointer-events-none absolute left-1/2 top-4 bottom-4 w-px -translate-x-1/2 bg-white/20" />
                 <div className="pointer-events-none absolute left-1/2 top-1/2 h-20 w-20 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20" />
                 <div className="relative h-[640px] sm:h-[720px]">
-                  {slots.map((slot) => {
+                  {renderedSlots.map((slot) => {
                     const card = lineupBySlot[slot.slotId]
                       ? cardsById.get(lineupBySlot[slot.slotId])
                       : null;
@@ -545,6 +615,8 @@ export function TacticsPage({
           slotId: slot.slotId,
           position: roleToPosition(slot.role),
           userPlayerId: Number(lineup[slot.slotId] || 0),
+          x: slot.x,
+          y: slot.y,
         }))
         .filter((item) => item.userPlayerId > 0),
     [formationSlots, lineup],
