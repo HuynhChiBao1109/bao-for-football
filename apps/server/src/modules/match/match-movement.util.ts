@@ -1,20 +1,21 @@
 import { type PlayerAiProfile, type PlayerAiTendencies } from "src/modules/player/player-ai.types";
 
-export const SIM_TICK_MS = 1000;
+export const SIM_TICK_MS = 500;
 export const SIM_TICK_SECONDS = SIM_TICK_MS / 1000;
 export const SIM_TICKS_PER_SECOND = 1000 / SIM_TICK_MS;
+const TRANSITION_WINDOW_TICKS = Math.max(4, Math.round(3.5 * SIM_TICKS_PER_SECOND));
 
 export const MOVEMENT = {
-  walkingSpeed: 4.2,
-  jogSpeed: 8.25,
-  sprintSpeed: 12.65,
+  walkingSpeed: 3.2,
+  jogSpeed: 6.4,
+  sprintSpeed: 9.4,
 
-  playerWithBallSpeedMultiplier: 0.9,
+  playerWithBallSpeedMultiplier: 0.86,
 
-  acceleration: 14,
-  braking: 16,
+  acceleration: 7.6,
+  braking: 12,
 
-  turnSmoothing: 0.58,
+  turnSmoothing: 0.42,
 
   arrivalRadius: 8.5,
   stopRadius: 0.65,
@@ -299,13 +300,11 @@ function resolveTacticalPhase(
   owner: Player | null,
 ): TacticalPhase {
   const possessionTicks = Math.max(1, Number(gameState.possessionTicks ?? 8));
-  const possessionChanged =
-    gameState.previousPossession != null && gameState.previousPossession !== gameState.possession;
   const hasPossession = gameState.possession === player.side;
   const direction = attackDirection(player.side);
   const ball = gameState.ball.position;
 
-  if (possessionChanged && possessionTicks <= 5) {
+  if (possessionTicks <= TRANSITION_WINDOW_TICKS) {
     return hasPossession ? "TRANSITION_WON_BALL" : "TRANSITION_LOST_BALL";
   }
 
@@ -483,6 +482,11 @@ function evaluateBallRelatedAction(
     if (isCounterPressCover(player, context)) {
       return { state: "COVER_SPACE", targetPosition: getCounterPressCoverTarget(player, context) };
     }
+
+    return {
+      state: context.role === "GK" ? "HOLD_DEPTH" : "RECOVER_DEFENSE",
+      targetPosition: getTransitionRecoveryTarget(player, context),
+    };
   }
 
   if (
@@ -778,6 +782,7 @@ function getBoxInfiltrationBias(player: Player) {
 function shouldStayHighOutOfPossession(player: Player, context: MovementContext) {
   const role = normalizeRole(player.role);
   if (role !== "ST" && role !== "W") return false;
+  if (context.phase === "TRANSITION_LOST_BALL") return false;
   if (dangerLevel(player.side, context.ball.y) >= 0.78) return false;
   return getStayForwardBias(player) >= 0.45 && getDefensiveWorkRate(player) <= 0.55;
 }
@@ -792,11 +797,12 @@ function getStayHighDefensiveDecision(
     role === "W"
       ? lerp(getWideLaneX(player), context.ball.x, 0.08)
       : lerp(getCentralLaneX(player), context.ball.x, 0.12);
-  const highY = player.homePosition.y + context.direction * (5 + stayForward * 11);
-  const safetyRecovery = dangerLevel(player.side, context.ball.y) * 5;
+  const recoveryDepth = 3 + (1 - stayForward) * 7;
+  const highY = player.homePosition.y - context.direction * recoveryDepth;
+  const safetyRecovery = dangerLevel(player.side, context.ball.y) * 6;
 
   return {
-    state: "ATTACK_SPACE",
+    state: "COVER_SPACE",
     targetPosition: clampToRoleZone(player, {
       x: laneX,
       y: highY - context.direction * safetyRecovery,
@@ -969,7 +975,8 @@ function isHighCommitmentState(state: PlayerAIState) {
     state === "OVERLAP" ||
     state === "UNDERLAP" ||
     state === "CUT_INSIDE" ||
-    state === "ATTACK_SPACE"
+    state === "ATTACK_SPACE" ||
+    state === "RECOVER_DEFENSE"
   );
 }
 
@@ -1040,7 +1047,8 @@ function getTacticalAnchorZone(
     : getDefensiveUnitShiftX(context.ball);
   const defensiveWorkRate = getDefensiveWorkRate(player);
   const stayForwardPush =
-    getStayForwardBias(player) * (role === "ST" || role === "W" ? 8 : role === "CM" ? 3 : 0);
+    (context.phase === "TRANSITION_LOST_BALL" ? 0 : getStayForwardBias(player)) *
+    (role === "ST" || role === "W" ? 8 : role === "CM" ? 3 : 0);
   const defenseDepthShift =
     -context.direction * getDefenseDepthShift(role, context.ball, player) * defensiveWorkRate +
     context.direction * stayForwardPush;
@@ -1426,10 +1434,16 @@ function getPhaseDepthShift(role: PlayerRole, context: MovementContext) {
     return 0;
   }
 
-  if (context.phase === "DEFENSIVE_PRESS" || context.phase === "TRANSITION_LOST_BALL") {
+  if (context.phase === "DEFENSIVE_PRESS") {
     if (role === "CB") return 2.5;
     if (role === "FB" || role === "DM" || role === "CM") return 2;
     if (role === "W" || role === "ST") return 1;
+  }
+
+  if (context.phase === "TRANSITION_LOST_BALL") {
+    if (role === "GK" || role === "CB") return 0;
+    if (role === "FB" || role === "DM" || role === "CM") return -1.5;
+    return -2.5;
   }
 
   if (context.phase === "DEFENSIVE_BLOCK") {
@@ -1578,7 +1592,7 @@ function followBallCarrier(ball: Ball, owner: Player) {
 }
 
 function getPlayerMaxSpeed(player: Player) {
-  const statScale = clamp(Number(player.stats?.speed ?? 70) / 100, 0.72, 1.18);
+  const statScale = clamp(Number(player.stats?.speed ?? 70) / 100, 0.78, 1.12);
   const staminaScale = clamp(Number(player.stamina ?? 70) / 100, 0.72, 1.05);
   const stateSpeed =
     player.state === "PRESS_BALL" ||
@@ -1602,7 +1616,7 @@ function getPlayerMaxSpeed(player: Player) {
 }
 
 function getPlayerAcceleration(player: Player) {
-  const statScale = clamp(Number(player.stats?.acceleration ?? 70) / 100, 0.75, 1.25);
+  const statScale = clamp(Number(player.stats?.acceleration ?? 70) / 100, 0.8, 1.12);
   return MOVEMENT.acceleration * statScale;
 }
 
@@ -1697,6 +1711,40 @@ function getCounterPressCoverTarget(player: Player, context: MovementContext) {
   return clampToRoleZone(player, {
     x: context.ball.x + side * 8 + centralPull,
     y: context.ball.y + goalSide * 9,
+  });
+}
+
+function getTransitionRecoveryTarget(player: Player, context: MovementContext) {
+  const role = normalizeRole(player.role);
+  if (role === "GK") {
+    return clampToRoleZone(player, {
+      x: lerp(player.position.x, 50, 0.45),
+      y: ownGoalY(player.side) - context.direction * 3,
+    });
+  }
+
+  const workRate = getDefensiveWorkRate(player);
+  const ownward = -context.direction;
+  const retreatStep =
+    role === "CB" || role === "FB"
+      ? 7
+      : role === "DM" || role === "CM"
+        ? 6
+        : 3.5 + workRate * 3;
+  const screenGap =
+    role === "CB" ? 15 : role === "FB" || role === "DM" ? 12 : role === "CM" ? 10 : 8;
+  const immediateRecoveryY = player.position.y + ownward * retreatStep;
+  const ballGoalSideY = context.ball.y + ownward * screenGap;
+  const shapeRecoveryY = lerp(player.position.y, player.homePosition.y, 0.35 + workRate * 0.3);
+  const desiredY = lerp(ballGoalSideY, shapeRecoveryY, role === "ST" || role === "W" ? 0.62 : 0.45);
+  const recoveryY =
+    ownward > 0
+      ? Math.max(immediateRecoveryY, desiredY)
+      : Math.min(immediateRecoveryY, desiredY);
+
+  return clampToRoleZone(player, {
+    x: lerp(player.position.x, lerp(player.homePosition.x, context.ball.x, 0.28), 0.62),
+    y: recoveryY,
   });
 }
 

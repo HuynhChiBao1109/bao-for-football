@@ -435,6 +435,7 @@ export function TacticsPopup({
                         key={slot.slotId}
                         className="absolute -translate-x-1/2 -translate-y-1/2 rounded-xl p-1 text-center"
                         style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
+                        title={card ? `${card.name} - ${slot.label}` : `${slot.label} - Empty`}
                       >
                         <div className="mx-auto flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-2 border-white/60 bg-black/30 shadow-[0_0_20px_rgba(0,0,0,0.35)]">
                           <img
@@ -450,7 +451,7 @@ export function TacticsPopup({
                         <p className="mt-1 text-[10px] font-bold uppercase text-red-100">
                           {slot.label}
                         </p>
-                        <p className="max-w-[90px] truncate text-xs font-semibold text-white">
+                        <p className="max-w-[96px] truncate text-xs font-semibold text-white">
                           {card ? shortName(card.name) : 'Empty'}
                         </p>
                         {card ? (
@@ -474,9 +475,45 @@ export function TacticsPopup({
                 <p className="game-stat-card__hint">
                   Match will use these saved players in their saved slots.
                 </p>
+                <div className="mt-5 border-t border-white/10 pt-4">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-xs font-black uppercase tracking-wider text-white">
+                      Starting XI
+                    </p>
+                    <span className="text-[10px] font-bold uppercase text-red-200">
+                      Position / Player
+                    </span>
+                  </div>
+                  <div className="grid gap-1.5">
+                    {renderedSlots.map((slot, index) => {
+                      const card = lineupBySlot[slot.slotId]
+                        ? cardsById.get(lineupBySlot[slot.slotId])
+                        : null;
+                      return (
+                        <button
+                          key={`summary-${slot.slotId}`}
+                          type="button"
+                          className="group grid min-h-9 grid-cols-[24px_42px_minmax(0,1fr)] items-center gap-2 border-b border-white/8 px-1 py-1 text-left last:border-b-0 disabled:cursor-default"
+                          disabled={!card}
+                          onClick={() => card && setDetailPlayerId(card.userPlayerId)}
+                        >
+                          <span className="text-[10px] font-bold text-slate-500">
+                            {String(index + 1).padStart(2, '0')}
+                          </span>
+                          <span className="inline-flex h-6 items-center justify-center rounded-[4px] border border-red-400/35 bg-red-500/12 px-1 text-[10px] font-black uppercase text-red-100">
+                            {slot.label}
+                          </span>
+                          <span className="truncate text-xs font-bold text-white transition group-hover:text-red-200">
+                            {card?.name || 'Empty slot'}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
                 <button
                   type="button"
-                  className="game-button-primary mt-4 w-full"
+                  className="game-button-primary mt-5 w-full"
                   disabled={startCampaignMatch.isPending || starterCount < 11}
                   onClick={() => void startMatch()}
                 >

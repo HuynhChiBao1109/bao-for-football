@@ -97,6 +97,68 @@ export class MatchService implements IMatchService {
         const runtimeState = await this.redisService.getJson<MatchRuntimeState>(
           this.getMatchRuntimeKey(existingMatch.id),
         );
+        const runtimeTimeline = (runtimeState?.timeline ?? []).filter(Boolean);
+        const persistedTimeline = ((existingMatch.timeline ?? []) as MatchSnapshot[]).filter(Boolean);
+        const hasStarted = Boolean(
+          runtimeState?.latestSnapshot ||
+            existingMatch.latestSnapshot ||
+            runtimeTimeline.length ||
+            persistedTimeline.length,
+        );
+
+        if (!hasStarted) {
+          this.stopAutoTick(existingMatch.id);
+          await this.waitForAutoTickToSettle(existingMatch.id);
+          const settledRuntimeState = await this.redisService.getJson<MatchRuntimeState>(
+            this.getMatchRuntimeKey(existingMatch.id),
+          );
+          const tickCompletedWhileSettling = Boolean(
+            settledRuntimeState?.latestSnapshot ||
+              settledRuntimeState?.timeline?.filter(Boolean).length,
+          );
+
+          if (tickCompletedWhileSettling) {
+            return {
+              matchId: String(existingMatch.id),
+              homeLineup: settledRuntimeState?.homeLineup ?? existingMatch.homeLineup ?? [],
+              awayLineup: settledRuntimeState?.awayLineup ?? existingMatch.awayLineup ?? [],
+            };
+          }
+
+          const lineups = await this.buildKickoffLineups(homeTeam, awayTeam);
+          await this.repository.update(existingMatch.id, {
+            homeLineup: lineups.homeLineup,
+            awayLineup: lineups.awayLineup,
+            currentMinute: 0,
+            clockSeconds: 0,
+            homeScore: 0,
+            awayScore: 0,
+            latestSnapshot: null,
+            timeline: [],
+          });
+
+          existingMatch.homeLineup = lineups.homeLineup;
+          existingMatch.awayLineup = lineups.awayLineup;
+          existingMatch.currentMinute = 0;
+          existingMatch.clockSeconds = 0;
+          existingMatch.homeScore = 0;
+          existingMatch.awayScore = 0;
+          existingMatch.latestSnapshot = null;
+          existingMatch.timeline = [];
+
+          await this.cacheMatchRuntimeState(existingMatch, {
+            simulationSeed:
+              settledRuntimeState?.simulationSeed ??
+              runtimeState?.simulationSeed ??
+              this.createSimulationSeed(existingMatch.id),
+          });
+
+          return {
+            matchId: String(existingMatch.id),
+            homeLineup: lineups.homeLineup,
+            awayLineup: lineups.awayLineup,
+          };
+        }
 
         if (!runtimeState) {
           await this.cacheMatchRuntimeState(existingMatch, {

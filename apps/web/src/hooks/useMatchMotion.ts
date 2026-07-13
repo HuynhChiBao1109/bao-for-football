@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { EPlayerSkill } from '../enums/skill';
 import type { MatchPitchPlayer, MatchSnapshot } from '../types';
 
 export type RenderedMatchSnapshot = MatchSnapshot & {
@@ -50,10 +51,16 @@ function shouldUseBallTrajectory(snapshot: MatchSnapshot) {
   );
 }
 
+function isShotSkill(snapshot: MatchSnapshot) {
+  const skill = snapshot.ball.skillTrajectory ?? snapshot.highlight?.skill ?? null;
+  return skill === EPlayerSkill.SHOOT_THUNDER || skill === EPlayerSkill.KAISER_SHOT;
+}
+
 function getBallAnimationDuration(snapshot: MatchSnapshot, frameDuration: number) {
   const event = snapshot.highlight?.event;
   if (snapshot.ball.ownerPlayerId) return frameDuration;
   if (event === 35) return frameDuration;
+  if (isShotSkill(snapshot)) return frameDuration * 0.78;
   if (snapshot.ball.skillTrajectory || snapshot.highlight?.skill) return frameDuration;
   if (event === 7 || event === 36 || event === 38) {
     return frameDuration;
@@ -64,6 +71,7 @@ function getBallAnimationDuration(snapshot: MatchSnapshot, frameDuration: number
 function getBallProgressAlpha(snapshot: MatchSnapshot, alpha: number) {
   const event = snapshot.highlight?.event;
   if (snapshot.ball.ownerPlayerId || event === 35) return linear(alpha);
+  if (isShotSkill(snapshot)) return linear(alpha);
   if (snapshot.ball.skillTrajectory || snapshot.highlight?.skill) return easeInOut(alpha);
   if (event === 7 || event === 36 || event === 38) return linear(alpha);
   return easeInOut(alpha);
