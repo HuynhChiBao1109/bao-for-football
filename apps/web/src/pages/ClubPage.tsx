@@ -714,6 +714,37 @@ function LineupPopup({ teamId }: { teamId: string }) {
   function changeFormation(nextFormation: string) {
     const nextSlots = FORMATION_SLOTS[nextFormation];
     if (!nextSlots) return;
+    setLineup((previous) => {
+      const next: Record<string, number | null> = {};
+      const preservedIds = new Set<number>();
+      nextSlots.forEach((slot) => {
+        const playerId = Number(previous[slot.slotId] ?? 0);
+        next[slot.slotId] = playerId > 0 ? playerId : null;
+        if (playerId > 0) preservedIds.add(playerId);
+      });
+
+      const remainingIds = Object.values(previous)
+        .map((playerId) => Number(playerId ?? 0))
+        .filter((playerId) => playerId > 0 && !preservedIds.has(playerId));
+      nextSlots.forEach((slot) => {
+        if (next[slot.slotId]) return;
+        let bestRemainingIndex = -1;
+        let bestFit = Number.NEGATIVE_INFINITY;
+        remainingIds.forEach((playerId, index) => {
+          const card = cardsById.get(playerId);
+          if (!card || !canPlaceCardInSlot(card, slot)) return;
+          const fit = positionFit(card, slot.role);
+          if (fit > bestFit) {
+            bestFit = fit;
+            bestRemainingIndex = index;
+          }
+        });
+        if (bestRemainingIndex >= 0) {
+          next[slot.slotId] = remainingIds.splice(bestRemainingIndex, 1)[0];
+        }
+      });
+      return next;
+    });
     setFormation(nextFormation);
     setSlotOverrides(
       Object.fromEntries(
