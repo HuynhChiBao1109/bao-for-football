@@ -410,6 +410,7 @@ export function useMatchSocket(matchId: string | undefined) {
 
   return useMemo(
     () => ({
+      match: data,
       snapshot,
       events,
       status,
@@ -422,6 +423,7 @@ export function useMatchSocket(matchId: string | undefined) {
     }),
     [
       ackActiveTick,
+      data,
       error,
       events,
       isConnected,

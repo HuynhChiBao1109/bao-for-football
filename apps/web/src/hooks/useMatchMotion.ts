@@ -6,6 +6,9 @@ export type RenderedMatchSnapshot = MatchSnapshot & {
   awayPlayers: MatchPitchPlayer[];
 };
 
+const PASS_EVENT = 35;
+const PASS_RELEASE_SHARE = 0.1;
+
 function lerp(from: number, to: number, alpha: number) {
   return from + (to - from) * alpha;
 }
@@ -116,6 +119,57 @@ function interpolatePathByDistance(points: Array<{ x: number; y: number }>, alph
   return path[path.length - 1];
 }
 
+function findPlayerById(players: MatchPitchPlayer[], playerId: string | null | undefined) {
+  if (!playerId) return null;
+  return players.find((player) => String(player.id) === String(playerId)) ?? null;
+}
+
+function getPassBallPosition(input: {
+  previous: MatchSnapshot | null;
+  next: MatchSnapshot;
+  ballFrom: { x: number; y: number };
+  playerAlpha: number;
+  ballAlpha: number;
+}) {
+  const actorId = input.next.highlight?.actorPlayerId;
+  const previousPlayers = [
+    ...(input.previous?.homePlayers ?? []),
+    ...(input.previous?.awayPlayers ?? []),
+  ];
+  const nextPlayers = [...input.next.homePlayers, ...input.next.awayPlayers];
+  const previousActor = findPlayerById(previousPlayers, actorId);
+  const nextActor = findPlayerById(nextPlayers, actorId);
+
+  if (!previousActor || !nextActor) return null;
+
+  const releaseActorAlpha = Math.min(PASS_RELEASE_SHARE, input.playerAlpha);
+  const releasePosition = {
+    x: input.ballFrom.x + lerp(previousActor.x, nextActor.x, releaseActorAlpha) - previousActor.x,
+    y: input.ballFrom.y + lerp(previousActor.y, nextActor.y, releaseActorAlpha) - previousActor.y,
+  };
+
+  if (input.ballAlpha <= PASS_RELEASE_SHARE) {
+    const actorAlpha = Math.min(input.playerAlpha, input.ballAlpha);
+    return {
+      x: input.ballFrom.x + lerp(previousActor.x, nextActor.x, actorAlpha) - previousActor.x,
+      y: input.ballFrom.y + lerp(previousActor.y, nextActor.y, actorAlpha) - previousActor.y,
+    };
+  }
+
+  const target = { x: input.next.ball.x, y: input.next.ball.y };
+  const targetVector = { x: target.x - releasePosition.x, y: target.y - releasePosition.y };
+  const forwardPath = (input.next.ball.trajectory ?? []).filter((point) => {
+    const fromRelease = { x: point.x - releasePosition.x, y: point.y - releasePosition.y };
+    return fromRelease.x * targetVector.x + fromRelease.y * targetVector.y > 0;
+  });
+  const flightAlpha = (input.ballAlpha - PASS_RELEASE_SHARE) / (1 - PASS_RELEASE_SHARE);
+
+  return interpolatePathByDistance(
+    [releasePosition, ...forwardPath, target],
+    linear(flightAlpha),
+  );
+}
+
 function interpolatePlayers(
   previousPlayers: MatchPitchPlayer[],
   nextPlayers: MatchPitchPlayer[],
@@ -151,6 +205,17 @@ function interpolateSnapshot(
   const previousBall = previous?.ball;
   const ballFromX = previousBall?.x ?? next.ball.fromX ?? next.ball.x;
   const ballFromY = previousBall?.y ?? next.ball.fromY ?? next.ball.y;
+  const easedPlayerAlpha = shouldSnapPlayers(next) ? 1 : linear(playerAlpha);
+  const renderedHomePlayers = interpolatePlayers(
+    previous?.homePlayers ?? [],
+    next.homePlayers,
+    easedPlayerAlpha,
+  );
+  const renderedAwayPlayers = interpolatePlayers(
+    previous?.awayPlayers ?? [],
+    next.awayPlayers,
+    easedPlayerAlpha,
+  );
   const ballPath =
     shouldUseBallTrajectory(next) && next.ball.trajectory?.length
       ? [
@@ -159,14 +224,25 @@ function interpolateSnapshot(
           { x: next.ball.x, y: next.ball.y },
         ]
       : null;
-  const easedPlayerAlpha = shouldSnapPlayers(next) ? 1 : linear(playerAlpha);
   const easedBallAlpha = getBallProgressAlpha(next, ballAlpha);
-  const ballPosition = ballPath
-    ? interpolatePathByDistance(ballPath, easedBallAlpha)
-    : {
-        x: lerp(ballFromX, next.ball.x, easedBallAlpha),
-        y: lerp(ballFromY, next.ball.y, easedBallAlpha),
-      };
+  const passBallPosition =
+    next.highlight?.event === PASS_EVENT && !next.ball.ownerPlayerId
+      ? getPassBallPosition({
+          previous,
+          next,
+          ballFrom: { x: ballFromX, y: ballFromY },
+          playerAlpha: easedPlayerAlpha,
+          ballAlpha: easedBallAlpha,
+        })
+      : null;
+  const ballPosition =
+    passBallPosition ??
+    (ballPath
+      ? interpolatePathByDistance(ballPath, easedBallAlpha)
+      : {
+          x: lerp(ballFromX, next.ball.x, easedBallAlpha),
+          y: lerp(ballFromY, next.ball.y, easedBallAlpha),
+        });
 
   return {
     ...next,
@@ -175,8 +251,8 @@ function interpolateSnapshot(
       x: ballPosition.x,
       y: ballPosition.y,
     },
-    homePlayers: interpolatePlayers(previous?.homePlayers ?? [], next.homePlayers, easedPlayerAlpha),
-    awayPlayers: interpolatePlayers(previous?.awayPlayers ?? [], next.awayPlayers, easedPlayerAlpha),
+    homePlayers: renderedHomePlayers,
+    awayPlayers: renderedAwayPlayers,
   };
 }
 

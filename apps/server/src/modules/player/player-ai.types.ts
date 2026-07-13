@@ -6,6 +6,8 @@ export type PlayerAiTendencies = {
   dribbleBias: number;
   flairBias: number;
   riskTaking: number;
+  offBallRunBias: number;
+  boxInfiltrationBias: number;
   shootSkillChargeMultiplier: number;
   dribbleSkillChargeMultiplier: number;
 };
@@ -27,6 +29,8 @@ export const DEFAULT_PLAYER_AI_PROFILE: PlayerAiProfile = {
     dribbleBias: 1,
     flairBias: 0,
     riskTaking: 0.5,
+    offBallRunBias: 1,
+    boxInfiltrationBias: 0,
     shootSkillChargeMultiplier: 1,
     dribbleSkillChargeMultiplier: 1,
   },

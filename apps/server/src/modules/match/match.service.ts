@@ -82,14 +82,10 @@ export class MatchService implements IMatchService {
       throw new BadRequestException("You do not own this campaign match");
     }
 
-    let campaignLevel = Number(campaignMatch.campain?.level ?? 1);
-    if (Number(campaignMatch.level) > campaignLevel) {
-      campaignLevel = await this.completePreviousCampaignProgress(
-        Number(campaignMatch.campainId),
-        Number(campaignMatch.level),
-        campaignLevel,
-      );
-    }
+    const campaignLevel = await this.completePreviousCampaignProgress(
+      Number(campaignMatch.campainId),
+      Number(campaignMatch.level),
+    );
 
     if (Number(campaignMatch.level) > campaignLevel) {
       throw new BadRequestException("Campaign match level is not unlocked yet");
@@ -97,8 +93,6 @@ export class MatchService implements IMatchService {
 
     const existingMatch = await this.repository.findMatchByCampaignMatchId(campaignMatchId);
     if (existingMatch) {
-      const alreadyCleared = Number(campaignMatch.level) < campaignLevel;
-
       if (existingMatch.status === EMatchStatus.IN_PROGRESS) {
         const runtimeState = await this.redisService.getJson<MatchRuntimeState>(
           this.getMatchRuntimeKey(existingMatch.id),
@@ -118,15 +112,17 @@ export class MatchService implements IMatchService {
       }
 
       if (existingMatch.status === EMatchStatus.FINISHED) {
-        await this.completeCampaignProgress(existingMatch.id);
-        return {
-          matchId: String(existingMatch.id),
-          homeLineup: existingMatch.homeLineup ?? [],
-          awayLineup: existingMatch.awayLineup ?? [],
-        };
-      }
+        const campaignTeamWon = this.didCampaignTeamWin(existingMatch, Number(homeTeam.id));
+        if (!campaignTeamWon) {
+          const retryMatch = await this.resetMatch(existingMatch.id);
+          return {
+            matchId: String(retryMatch.id),
+            homeLineup: retryMatch.homeLineup ?? [],
+            awayLineup: retryMatch.awayLineup ?? [],
+          };
+        }
 
-      if (alreadyCleared) {
+        await this.completeCampaignProgress(existingMatch.id);
         return {
           matchId: String(existingMatch.id),
           homeLineup: existingMatch.homeLineup ?? [],
@@ -403,6 +399,10 @@ export class MatchService implements IMatchService {
       return;
     }
 
+    if (!this.didCampaignTeamWin(match, Number(campaign.teamId))) {
+      return;
+    }
+
     const completedLevel = Number(campaignMatch.level ?? 0);
     const nextLevel = completedLevel + 1;
     const currentLevel = Number(campaign.level ?? 1);
@@ -422,22 +422,36 @@ export class MatchService implements IMatchService {
   private async completePreviousCampaignProgress(
     campaignId: number,
     targetLevel: number,
-    currentLevel: number,
   ) {
     const previousMatches = await this.repository.findCampaignMatchesUpToLevel(
       campaignId,
       targetLevel,
     );
-    let unlockedLevel = currentLevel;
+    let unlockedLevel = 1;
 
     for (const campaignMatch of previousMatches) {
       const match = campaignMatch.match;
       const campaign = campaignMatch.campain;
-      if (!match || !campaign || match.status !== EMatchStatus.FINISHED) {
+      const completedLevel = Number(campaignMatch.level ?? 0);
+
+      if (completedLevel < unlockedLevel) {
         continue;
       }
 
-      const nextLevel = Number(campaignMatch.level ?? 0) + 1;
+      if (completedLevel > unlockedLevel) {
+        break;
+      }
+
+      if (
+        !match ||
+        !campaign ||
+        match.status !== EMatchStatus.FINISHED ||
+        !this.didCampaignTeamWin(match, Number(campaign.teamId))
+      ) {
+        break;
+      }
+
+      const nextLevel = completedLevel + 1;
       if (nextLevel <= unlockedLevel) {
         continue;
       }
@@ -452,6 +466,21 @@ export class MatchService implements IMatchService {
     }
 
     return unlockedLevel;
+  }
+
+  private didCampaignTeamWin(match: MatchEntity, campaignTeamId: number) {
+    const homeScore = Number(match.homeScore ?? 0);
+    const awayScore = Number(match.awayScore ?? 0);
+
+    if (Number(match.homeTeamId) === campaignTeamId) {
+      return homeScore > awayScore;
+    }
+
+    if (Number(match.awayTeamId) === campaignTeamId) {
+      return awayScore > homeScore;
+    }
+
+    return false;
   }
 
   private emitSnapshot(matchIdValue: number | string, snapshot: MatchSnapshot) {
@@ -566,12 +595,29 @@ export class MatchService implements IMatchService {
     });
 
     const formationByUserPlayerId = formations.reduce<
-      Record<string, { order: number; slotId: string | null; position: string | null }>
+      Record<
+        string,
+        {
+          order: number;
+          slotId: string | null;
+          position: string | null;
+          x: number | null;
+          y: number | null;
+        }
+      >
     >((acc, item, index) => {
+      const savedX = Number(item.position?.x);
+      const savedY = Number(item.position?.y);
       acc[String(item.userPlayerId)] = {
         order: index,
         slotId: item.position?.slotId ? String(item.position.slotId) : null,
         position: item.position?.position ? String(item.position.position) : null,
+        x: item.position?.x !== null && item.position?.x !== undefined && Number.isFinite(savedX)
+          ? savedX
+          : null,
+        y: item.position?.y !== null && item.position?.y !== undefined && Number.isFinite(savedY)
+          ? savedY
+          : null,
       };
       return acc;
     }, {});
@@ -593,6 +639,8 @@ export class MatchService implements IMatchService {
           aiProfile: this.playerAiService.getProfileForPlayer(player),
           savedSlotId: formationByUserPlayerId[String(item.id)]?.slotId ?? null,
           savedPosition: formationByUserPlayerId[String(item.id)]?.position ?? null,
+          savedX: formationByUserPlayerId[String(item.id)]?.x ?? null,
+          savedY: formationByUserPlayerId[String(item.id)]?.y ?? null,
           positions: (item.positions ?? []).map((position) => ({
             position: String(position.position),
             effect: Number(position.rating ?? 1),

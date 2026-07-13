@@ -22,6 +22,12 @@ export const MOVEMENT = {
   separationRadius: 6,
   separationStrength: 1.4,
 
+  collisionMinX: 5.8,
+  collisionMinY: 3.65,
+  collisionPadding: 1.015,
+  collisionIterations: 32,
+  collisionVelocityDamping: 0.72,
+
   sameTargetOffset: 4,
 
   passSpeed: 34,
@@ -161,14 +167,9 @@ export function updateSimulation(deltaTime: number, gameState: GameState) {
   applySameTargetOffsets(gameState.homePlayers);
   applySameTargetOffsets(gameState.awayPlayers);
 
-  gameState.homePlayers.forEach((player) => {
-    applySeparation(player, gameState.homePlayers);
-    updatePlayerMovement(player, deltaTime);
-  });
-  gameState.awayPlayers.forEach((player) => {
-    applySeparation(player, gameState.awayPlayers);
-    updatePlayerMovement(player, deltaTime);
-  });
+  allPlayers.forEach((player) => applySeparation(player, allPlayers));
+  allPlayers.forEach((player) => updatePlayerMovement(player, deltaTime));
+  resolvePlayerCollisions(allPlayers);
 
   const owner = allPlayers.find((player) => player.id === gameState.ball.ownerPlayerId);
   if (owner) {
@@ -702,6 +703,53 @@ function getWingerAttackState(player: Player, context: MovementContext): PlayerA
   return variant === 3 ? "HOLD_WIDTH" : "ATTACK_SPACE";
 }
 
+export function resolvePlayerCollisions(players: Player[]) {
+  const minX = MOVEMENT.collisionMinX;
+  const minY = MOVEMENT.collisionMinY;
+
+  for (let iteration = 0; iteration < MOVEMENT.collisionIterations; iteration += 1) {
+    for (let leftIndex = 0; leftIndex < players.length; leftIndex += 1) {
+      for (let rightIndex = leftIndex + 1; rightIndex < players.length; rightIndex += 1) {
+        const left = players[leftIndex];
+        const right = players[rightIndex];
+        let dx = right.position.x - left.position.x;
+        let dy = right.position.y - left.position.y;
+        let normalizedDistance = Math.hypot(dx / minX, dy / minY);
+
+        if (normalizedDistance >= 1) continue;
+
+        if (normalizedDistance < 0.0001) {
+          const seed = (left.id * 31 + right.id * 17) % 360;
+          const angle = (seed * Math.PI) / 180;
+          dx = Math.cos(angle) * 0.01;
+          dy = Math.sin(angle) * 0.01;
+          normalizedDistance = Math.hypot(dx / minX, dy / minY);
+        }
+
+        const expansion = MOVEMENT.collisionPadding / Math.max(normalizedDistance, 0.0001) - 1;
+        const correction = {
+          x: dx * expansion,
+          y: dy * expansion,
+        };
+        const leftShare = left.hasBall ? 0.28 : right.hasBall ? 0.72 : 0.5;
+        const rightShare = 1 - leftShare;
+
+        left.position = clampPoint({
+          x: left.position.x - correction.x * leftShare,
+          y: left.position.y - correction.y * leftShare,
+        });
+        right.position = clampPoint({
+          x: right.position.x + correction.x * rightShare,
+          y: right.position.y + correction.y * rightShare,
+        });
+
+        left.velocity = scale(left.velocity, MOVEMENT.collisionVelocityDamping);
+        right.velocity = scale(right.velocity, MOVEMENT.collisionVelocityDamping);
+      }
+    }
+  }
+}
+
 function getPlayerAiTendency(
   player: Player,
   key: keyof PlayerAiTendencies,
@@ -717,6 +765,14 @@ function getDefensiveWorkRate(player: Player) {
 
 function getStayForwardBias(player: Player) {
   return clamp(getPlayerAiTendency(player, "stayForwardBias", 0), 0, 1);
+}
+
+function getOffBallRunBias(player: Player) {
+  return clamp(getPlayerAiTendency(player, "offBallRunBias", 1), 0.6, 2);
+}
+
+function getBoxInfiltrationBias(player: Player) {
+  return clamp(getPlayerAiTendency(player, "boxInfiltrationBias", 0), 0, 1);
 }
 
 function shouldStayHighOutOfPossession(player: Player, context: MovementContext) {
@@ -812,6 +868,13 @@ function evaluateSpaceOccupation(
   if (!context.hasPossession) return null;
 
   const { role, direction, ball, teammates } = context;
+
+  if (role === "CM" && shouldInfiltrateFromMidfield(player, context)) {
+    return {
+      state: "ATTACK_SPACE",
+      targetPosition: clampToRoleZone(player, getInfiltratingMidfielderSpace(player, context)),
+    };
+  }
 
   if (role === "W") {
     return {
@@ -2034,6 +2097,39 @@ function getMidfieldAttackingSpace(player: Player, context: MovementContext) {
   };
 }
 
+function shouldInfiltrateFromMidfield(player: Player, context: MovementContext) {
+  const infiltrationBias = getBoxInfiltrationBias(player);
+  if (infiltrationBias < 0.5 || context.owner?.id === player.id) return false;
+
+  const ballAdvance = context.direction < 0 ? 50 - context.ball.y : context.ball.y - 50;
+  const runCycle = (context.tick + player.id) % 6;
+  const activeRunTicks = Math.round(2 + infiltrationBias * 3);
+  return (
+    context.phase === "IN_POSSESSION_ATTACK" &&
+    ballAdvance >= 4 &&
+    runCycle < activeRunTicks
+  );
+}
+
+function getInfiltratingMidfielderSpace(player: Player, context: MovementContext) {
+  const { ball, direction, opponents, tick } = context;
+  const centerBacks = opponents.filter((item) => normalizeRole(item.role) === "CB");
+  const defenderGap = getLargestHorizontalGap(centerBacks);
+  const onsideLine = getOffsideLine(player.side, opponents);
+  const offBallRunBias = getOffBallRunBias(player);
+  const infiltrationBias = getBoxInfiltrationBias(player);
+  const curvedRun = Math.sin((tick + player.id * 5) * 0.62) * (2.4 + infiltrationBias * 2);
+  const desiredDepth = 9 + offBallRunBias * 5;
+  const lineSafety = direction < 0 ? onsideLine + 1.8 : onsideLine - 1.8;
+  const forwardTarget = ball.y + direction * desiredDepth;
+  const targetY = direction < 0 ? Math.max(lineSafety, forwardTarget) : Math.min(lineSafety, forwardTarget);
+
+  return {
+    x: clamp(lerp(player.position.x, defenderGap, 0.58) + curvedRun, 28, 72),
+    y: clamp(targetY, 10, 90),
+  };
+}
+
 function getWingerDefensiveSpace(player: Player, context: MovementContext) {
   const { ball, direction } = context;
   const wideX = getWideLaneX(player);
@@ -2350,7 +2446,13 @@ function isFreeCentralOpponent(candidate: Player, opponents: Player[]) {
 
 function clampToRoleZone(player: Player, target: Vec2) {
   const role = normalizeRole(player.role);
-  const yBounds = getRoleYBounds(player.side, role);
+  const baseYBounds = getRoleYBounds(player.side, role);
+  const infiltrationDepth =
+    role === "CM" ? Math.round(getBoxInfiltrationBias(player) * 14) : 0;
+  const yBounds =
+    player.side === "home"
+      ? { min: Math.max(10, baseYBounds.min - infiltrationDepth), max: baseYBounds.max }
+      : { min: baseYBounds.min, max: Math.min(90, baseYBounds.max + infiltrationDepth) };
   const xBounds = getRoleXBounds(player, role);
 
   return {
@@ -2497,7 +2599,9 @@ export function normalizeRole(role: string): PlayerRole {
   if (role === "GK") return "GK";
   if (role.includes("CB")) return "CB";
   if (role === "LB" || role === "RB") return "FB";
-  if (role === "CM" || role === "CDM" || role.includes("DM")) return "DM";
+  if (role === "CDM" || role.includes("DM")) return "DM";
+  if (role === "AM" || role === "CAM") return "CM";
+  if (role === "CM") return "CM";
   if (role.includes("CM")) return "CM";
   if (role === "LM" || role === "RM" || role === "LW" || role === "RW") return "W";
   return "ST";

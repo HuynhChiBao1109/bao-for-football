@@ -13,6 +13,8 @@ type TacticsLineupItem = {
   slotId: string;
   position: string;
   userPlayerId: number;
+  x?: number | null;
+  y?: number | null;
 };
 
 type SaveTacticsInput = {
@@ -44,6 +46,22 @@ const FORMATION_LABEL_BY_VALUE: Record<number, string> = {
   [ETeamFormation.F541]: "5-4-1",
 };
 
+const LINEUP_POSITIONS = new Set([
+  "GK",
+  "LB",
+  "CB",
+  "RB",
+  "CDM",
+  "CM",
+  "AM",
+  "LM",
+  "RM",
+  "LW",
+  "RW",
+  "SS",
+  "ST",
+]);
+
 function parseTeamId(value: string | number): number {
   const raw = String(value ?? "").trim();
   const match = raw.match(/\d+/);
@@ -70,6 +88,14 @@ function normalizeFormation(value: unknown): ETeamFormation {
     return numeric as ETeamFormation;
   }
   return FORMATION_BY_KEY[key] ?? ETeamFormation.F433;
+}
+
+function normalizePitchCoordinate(value: unknown): number | null {
+  const coordinate = Number(value);
+  if (!Number.isFinite(coordinate)) {
+    return null;
+  }
+  return Math.round(Math.max(0, Math.min(100, coordinate)) * 10) / 10;
 }
 
 function isGoalkeeperPosition(value: unknown): boolean {
@@ -145,8 +171,10 @@ export class TeamService implements ITeamService {
       ? input.lineup
           .map((item) => ({
             slotId: String(item?.slotId || "").trim(),
-            position: String(item?.position || "").trim(),
+            position: String(item?.position || "").trim().toUpperCase(),
             userPlayerId: Number(item?.userPlayerId || 0),
+            x: normalizePitchCoordinate(item?.x),
+            y: normalizePitchCoordinate(item?.y),
           }))
           .filter((item) => item.slotId && item.position && item.userPlayerId > 0)
       : [];
@@ -154,6 +182,12 @@ export class TeamService implements ITeamService {
     const uniqueUserPlayerIds = Array.from(new Set(lineup.map((item) => item.userPlayerId)));
     if (uniqueUserPlayerIds.length !== lineup.length) {
       throw new BadRequestException("Lineup contains duplicated players");
+    }
+    if (new Set(lineup.map((item) => item.slotId)).size !== lineup.length) {
+      throw new BadRequestException("Lineup contains duplicated slots");
+    }
+    if (lineup.some((item) => !LINEUP_POSITIONS.has(item.position))) {
+      throw new BadRequestException("Lineup contains an invalid position");
     }
 
     const ownedPlayers = await this.repository.getUserPlayersByIds(user.id, uniqueUserPlayerIds);
@@ -163,6 +197,10 @@ export class TeamService implements ITeamService {
     const ownedPlayerById = new Map(ownedPlayers.map((player) => [Number(player.id), player]));
     for (const item of lineup) {
       const player = ownedPlayerById.get(Number(item.userPlayerId));
+      const isGoalkeeperSlotId = item.slotId.toLowerCase() === "gk";
+      if (isGoalkeeperSlotId !== isGoalkeeperPosition(item.position)) {
+        throw new BadRequestException("The GK slot must keep the GK position");
+      }
       const isPlayerGoalkeeper = Boolean(
         player?.positions?.some((position) => isGoalkeeperPosition(position.position)),
       );
@@ -211,6 +249,8 @@ export class TeamService implements ITeamService {
         slotId: String(item.position?.slotId ?? ""),
         position: String(item.position?.position ?? ""),
         userPlayerId: Number(item.userPlayerId),
+        x: Number.isFinite(Number(item.position?.x)) ? Number(item.position.x) : undefined,
+        y: Number.isFinite(Number(item.position?.y)) ? Number(item.position.y) : undefined,
       })),
     };
   }

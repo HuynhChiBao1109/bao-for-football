@@ -9,6 +9,36 @@ function normalizeRatio(value: unknown, fallback = 0): number {
   return Math.round(num <= 1 ? num * 100 : num);
 }
 
+type RawTacticsLineupItem = {
+  slotId?: string;
+  position?: string;
+  userPlayerId?: number;
+  x?: number;
+  y?: number;
+};
+
+function normalizeCoordinate(value: unknown): number | undefined {
+  const coordinate = Number(value);
+  if (!Number.isFinite(coordinate)) return undefined;
+  return Math.max(0, Math.min(100, Math.round(coordinate * 10) / 10));
+}
+
+function normalizeLineup(value: unknown): NonNullable<Tactics['lineup']> {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (item: RawTacticsLineupItem) =>
+        item?.slotId && item?.position && Number(item?.userPlayerId || 0) > 0,
+    )
+    .map((item: RawTacticsLineupItem) => ({
+      slotId: String(item.slotId),
+      position: String(item.position),
+      userPlayerId: Number(item.userPlayerId),
+      x: normalizeCoordinate(item.x),
+      y: normalizeCoordinate(item.y),
+    }));
+}
+
 export function useTactics(tacticsTeamId: string | undefined) {
   const { token } = useAuth();
 
@@ -24,18 +54,7 @@ export function useTactics(tacticsTeamId: string | undefined) {
           shotRatio: normalizeRatio(data.shotRatio),
           pressure: normalizeRatio(data.pressure),
           mode: data.mode ?? 'casual',
-          lineup: Array.isArray(data.lineup)
-            ? data.lineup
-                .filter(
-                  (item: { slotId?: string; position?: string; userPlayerId?: number }) =>
-                    item?.slotId && item?.position && Number(item?.userPlayerId || 0) > 0,
-                )
-                .map((item: { slotId: string; position: string; userPlayerId: number }) => ({
-                  slotId: String(item.slotId),
-                  position: String(item.position),
-                  userPlayerId: Number(item.userPlayerId),
-                }))
-            : [],
+          lineup: normalizeLineup(data.lineup),
           gameplay: {
             passSpeedScale: Number(data.gameplay?.passSpeedScale ?? 1.05),
             interceptionRadius: Number(data.gameplay?.interceptionRadius ?? 1.02),
@@ -71,10 +90,12 @@ export function useSaveTactics() {
           mode: body.mode,
           lineup: Array.isArray(body.lineup)
             ? body.lineup.map((item) => ({
-                slotId: item.slotId,
-                position: item.position,
-                userPlayerId: Number(item.userPlayerId),
-              }))
+              slotId: item.slotId,
+              position: item.position,
+              userPlayerId: Number(item.userPlayerId),
+              x: normalizeCoordinate(item.x),
+              y: normalizeCoordinate(item.y),
+            }))
             : [],
           gameplay: body.gameplay,
         },
@@ -86,18 +107,7 @@ export function useSaveTactics() {
         shotRatio: normalizeRatio(data.shotRatio),
         pressure: normalizeRatio(data.pressure),
         mode: data.mode ?? 'casual',
-        lineup: Array.isArray(data.lineup)
-          ? data.lineup
-              .filter(
-                (item: { slotId?: string; position?: string; userPlayerId?: number }) =>
-                  item?.slotId && item?.position && Number(item?.userPlayerId || 0) > 0,
-              )
-              .map((item: { slotId: string; position: string; userPlayerId: number }) => ({
-                slotId: String(item.slotId),
-                position: String(item.position),
-                userPlayerId: Number(item.userPlayerId),
-              }))
-          : [],
+        lineup: normalizeLineup(data.lineup),
         gameplay: {
           passSpeedScale: Number(data.gameplay?.passSpeedScale ?? 1.05),
           interceptionRadius: Number(data.gameplay?.interceptionRadius ?? 1.02),

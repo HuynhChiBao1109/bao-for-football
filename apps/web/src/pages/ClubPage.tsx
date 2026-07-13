@@ -13,10 +13,15 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { Banner } from '../components/feedback';
 import { MatchMode } from '../enums/match';
-import { useCampainMatches, useCreateCompainNormal } from '../hooks/useAiCampaign';
+import {
+  getCampaignMatchAccess,
+  useCampainMatches,
+  useCreateCompainNormal,
+} from '../hooks/useAiCampaign';
 import { useAuth } from '../hooks/useAuth';
 import { usePlayerCards } from '../hooks/usePlayerCards';
 import { useSession } from '../hooks/useSession';
+import { useDailyLoginStatus } from '../hooks/useDailyLogin';
 import { useSaveTactics, useTactics } from '../hooks/useTactics';
 import {
   useTrainingRoom,
@@ -32,6 +37,7 @@ import { ROUTES } from '../routes';
 import { GachaPage } from './GachaPage';
 import { PlayerDetailPopup } from './PlayerDetailPage';
 import { TacticsPopup } from './TacticsPage';
+import { DailyLoginPopup } from '../components/daily-login/DailyLoginPopup';
 import type {
   CampaignMatch,
   MatchPitchPlayer,
@@ -42,7 +48,15 @@ import type {
 import '../MatchView.css';
 import './ClubPage.css';
 
-type ClubModal = 'campaign' | 'lineup' | 'gacha' | 'pvp' | 'shop' | 'training' | null;
+type ClubModal =
+  | 'campaign'
+  | 'lineup'
+  | 'gacha'
+  | 'pvp'
+  | 'shop'
+  | 'training'
+  | 'daily-login'
+  | null;
 
 type HubAction = {
   label: string;
@@ -60,6 +74,7 @@ type LineupSlot = {
   x: number;
   y: number;
 };
+type LineupSlotOverride = Pick<LineupSlot, 'role' | 'x' | 'y'>;
 type TrainingPosition = { x: number; y: number };
 type TrainingEventKey = TrainingEventType;
 type LineupDragState = { playerId: number; fromSlotId: string | null };
@@ -117,7 +132,74 @@ const FORMATION_SLOTS: Record<string, LineupSlot[]> = {
     { slotId: 'st', role: 'ST', label: 'ST', x: 42, y: 26 },
     { slotId: 'st2', role: 'ST', label: 'ST', x: 58, y: 26 },
   ],
+  '3-5-2': [
+    { slotId: 'gk', role: 'GK', label: 'GK', x: 50, y: 92 },
+    { slotId: 'lcb', role: 'CB', label: 'CB', x: 28, y: 78 },
+    { slotId: 'cb', role: 'CB', label: 'CB', x: 50, y: 80 },
+    { slotId: 'rcb', role: 'CB', label: 'CB', x: 72, y: 78 },
+    { slotId: 'lm', role: 'LM', label: 'LM', x: 14, y: 56 },
+    { slotId: 'lcm', role: 'CM', label: 'CM', x: 34, y: 58 },
+    { slotId: 'cm', role: 'CM', label: 'CM', x: 50, y: 53 },
+    { slotId: 'rcm', role: 'CM', label: 'CM', x: 66, y: 58 },
+    { slotId: 'rm', role: 'RM', label: 'RM', x: 86, y: 56 },
+    { slotId: 'st', role: 'ST', label: 'ST', x: 42, y: 24 },
+    { slotId: 'st2', role: 'ST', label: 'ST', x: 58, y: 24 },
+  ],
+  '3-4-3': [
+    { slotId: 'gk', role: 'GK', label: 'GK', x: 50, y: 92 },
+    { slotId: 'lcb', role: 'CB', label: 'CB', x: 28, y: 78 },
+    { slotId: 'cb', role: 'CB', label: 'CB', x: 50, y: 80 },
+    { slotId: 'rcb', role: 'CB', label: 'CB', x: 72, y: 78 },
+    { slotId: 'lm', role: 'LM', label: 'LM', x: 17, y: 56 },
+    { slotId: 'lcm', role: 'CM', label: 'CM', x: 40, y: 58 },
+    { slotId: 'rcm', role: 'CM', label: 'CM', x: 60, y: 58 },
+    { slotId: 'rm', role: 'RM', label: 'RM', x: 83, y: 56 },
+    { slotId: 'lw', role: 'LW', label: 'LW', x: 20, y: 28 },
+    { slotId: 'st', role: 'ST', label: 'ST', x: 50, y: 22 },
+    { slotId: 'rw', role: 'RW', label: 'RW', x: 80, y: 28 },
+  ],
+  '4-5-1': [
+    { slotId: 'gk', role: 'GK', label: 'GK', x: 50, y: 92 },
+    { slotId: 'lb', role: 'LB', label: 'LB', x: 17, y: 76 },
+    { slotId: 'lcb', role: 'CB', label: 'CB', x: 38, y: 78 },
+    { slotId: 'rcb', role: 'CB', label: 'CB', x: 62, y: 78 },
+    { slotId: 'rb', role: 'RB', label: 'RB', x: 83, y: 76 },
+    { slotId: 'lm', role: 'LM', label: 'LM', x: 15, y: 48 },
+    { slotId: 'lcm', role: 'CM', label: 'CM', x: 33, y: 57 },
+    { slotId: 'cm', role: 'CM', label: 'CM', x: 50, y: 53 },
+    { slotId: 'rcm', role: 'CM', label: 'CM', x: 67, y: 57 },
+    { slotId: 'rm', role: 'RM', label: 'RM', x: 85, y: 48 },
+    { slotId: 'st', role: 'ST', label: 'ST', x: 50, y: 23 },
+  ],
+  '5-4-1': [
+    { slotId: 'gk', role: 'GK', label: 'GK', x: 50, y: 92 },
+    { slotId: 'lb', role: 'LB', label: 'LB', x: 10, y: 69 },
+    { slotId: 'lcb', role: 'CB', label: 'CB', x: 30, y: 79 },
+    { slotId: 'cb', role: 'CB', label: 'CB', x: 50, y: 81 },
+    { slotId: 'rcb', role: 'CB', label: 'CB', x: 70, y: 79 },
+    { slotId: 'rb', role: 'RB', label: 'RB', x: 90, y: 69 },
+    { slotId: 'lm', role: 'LM', label: 'LM', x: 17, y: 50 },
+    { slotId: 'lcm', role: 'CM', label: 'CM', x: 40, y: 57 },
+    { slotId: 'rcm', role: 'CM', label: 'CM', x: 60, y: 57 },
+    { slotId: 'rm', role: 'RM', label: 'RM', x: 83, y: 50 },
+    { slotId: 'st', role: 'ST', label: 'ST', x: 50, y: 22 },
+  ],
 };
+
+const LINEUP_POSITION_OPTIONS = [
+  'LB',
+  'CB',
+  'RB',
+  'CDM',
+  'CM',
+  'AM',
+  'LM',
+  'RM',
+  'LW',
+  'RW',
+  'SS',
+  'ST',
+] as const;
 
 export function ClubPage() {
   const { data: sessionData, isLoading } = useSession();
@@ -127,6 +209,18 @@ export function ClubPage() {
 
   const team = sessionData?.team ?? null;
   const userName = sessionData?.user?.userName || 'Player';
+  const dailyLogin = useDailyLoginStatus(Boolean(team));
+  const dailyLoginAutoOpened = useRef(false);
+
+  useEffect(() => {
+    dailyLoginAutoOpened.current = false;
+  }, [sessionData?.user?.id]);
+
+  useEffect(() => {
+    if (!team || !dailyLogin.data?.canClaim || dailyLoginAutoOpened.current) return;
+    dailyLoginAutoOpened.current = true;
+    setActiveModal((current) => current ?? 'daily-login');
+  }, [dailyLogin.data?.canClaim, team]);
 
   function handleLogout() {
     setSession(null);
@@ -151,6 +245,14 @@ export function ClubPage() {
   }
 
   const hubActions: HubAction[] = [
+    {
+      label: 'Điểm danh',
+      eyebrow: '7 Day Streak',
+      description: dailyLogin.data?.canClaim ? 'Quà hôm nay đã sẵn sàng.' : 'Xem tiến độ đăng nhập.',
+      icon: <GiftIcon />,
+      modal: 'daily-login',
+      tone: 'gold',
+    },
     {
       label: 'Đội hình',
       eyebrow: 'Squad XI',
@@ -287,6 +389,12 @@ export function ClubPage() {
         >
           {activeModal === 'campaign' ? (
             <CampaignPopup teamId={Number(team.id)} />
+          ) : activeModal === 'daily-login' ? (
+            <DailyLoginPopup
+              status={dailyLogin.data}
+              isLoading={dailyLogin.isLoading}
+              error={dailyLogin.error}
+            />
           ) : activeModal === 'lineup' ? (
             <LineupPopup teamId={`team-${team.id}`} />
           ) : activeModal === 'gacha' ? (
@@ -307,6 +415,7 @@ export function ClubPage() {
 }
 
 function getClubModalTitle(modal: Exclude<ClubModal, null>) {
+  if (modal === 'daily-login') return 'Điểm danh 7 ngày';
   if (modal === 'campaign') return 'Campaign';
   if (modal === 'lineup') return 'Đội hình';
   if (modal === 'gacha') return 'Gacha';
@@ -316,6 +425,7 @@ function getClubModalTitle(modal: Exclude<ClubModal, null>) {
 }
 
 function getClubModalTone(modal: Exclude<ClubModal, null>) {
+  if (modal === 'daily-login') return 'gold';
   if (modal === 'campaign' || modal === 'lineup') return 'red';
   if (modal === 'gacha' || modal === 'shop') return 'gold';
   return 'cyan';
@@ -393,6 +503,14 @@ function CampaignPopup({ teamId }: { teamId: number }) {
     () => matches.reduce((sum, item) => sum + Number(item.matchReward ?? 0), 0),
     [matches],
   );
+  const campaignLevel = useMemo(
+    () =>
+      matches.reduce(
+        (max, item) => Math.max(max, Number(item.campainLevel ?? item.campain?.level ?? 1)),
+        1,
+      ),
+    [matches],
+  );
 
   return (
     <div className="club-popup club-popup--campaign">
@@ -411,6 +529,7 @@ function CampaignPopup({ teamId }: { teamId: number }) {
             <CampaignPopupCard
               key={String(match.id)}
               match={match}
+              campaignLevel={campaignLevel}
               onStart={async () => {
                 setSelectedCampaignMatchId(String(match.id));
               }}
@@ -430,22 +549,41 @@ function CampaignPopup({ teamId }: { teamId: number }) {
 
 function CampaignPopupCard({
   match,
+  campaignLevel,
   isStarting,
   onStart,
 }: {
   match: CampaignMatch;
+  campaignLevel: number;
   isStarting?: boolean;
   onStart: () => Promise<void>;
 }) {
   const clubName = match.competitor?.name || `BOT #${String(match.competitorId ?? '-')}`;
+  const level = Number(match.level ?? 0);
+  const { isCleared, isLocked, mustRetry } = getCampaignMatchAccess(match, campaignLevel);
 
   return (
-    <article className="club-campaign-card">
-      <span>Match {Number(match.level ?? 0)}</span>
+    <article className="club-campaign-card" data-locked={isLocked} data-cleared={isCleared}>
+      <span>
+        Match {level} / {isCleared ? 'Cleared' : isLocked ? 'Locked' : mustRetry ? 'Retry' : 'Open'}
+      </span>
       <strong>{clubName}</strong>
       <p>{Number(match.matchReward ?? 0).toLocaleString()} reward</p>
-      <button type="button" disabled={isStarting} onClick={() => void onStart()}>
-        {isStarting ? 'Starting...' : 'Start Match'}
+      <button
+        type="button"
+        disabled={isStarting || isLocked || isCleared}
+        title={isLocked ? `Win match ${level - 1} to unlock` : undefined}
+        onClick={() => void onStart()}
+      >
+        {isCleared
+          ? 'Completed'
+          : isLocked
+            ? 'Locked'
+            : isStarting
+              ? 'Starting...'
+              : mustRetry
+                ? 'Retry Match'
+                : 'Start Match'}
       </button>
     </article>
   );
@@ -455,36 +593,78 @@ function LineupPopup({ teamId }: { teamId: string }) {
   const { data: loaded } = useTactics(teamId);
   const { data: cards = [] } = usePlayerCards();
   const saveTactics = useSaveTactics();
+  const pitchRef = useRef<HTMLDivElement | null>(null);
   const [formation, setFormation] = useState('4-3-3');
   const [lineup, setLineup] = useState<Record<string, number | null>>({});
+  const [slotOverrides, setSlotOverrides] = useState<Record<string, LineupSlotOverride>>({});
   const [selectedSlotId, setSelectedSlotId] = useState('gk');
   const [message, setMessage] = useState('');
   const [detailPlayerId, setDetailPlayerId] = useState<number | null>(null);
   const [dragState, setDragState] = useState<LineupDragState | null>(null);
-  const slots = FORMATION_SLOTS[formation] ?? FORMATION_SLOTS['4-3-3'];
+  const [movingSlotId, setMovingSlotId] = useState<string | null>(null);
+  const formationSlots = FORMATION_SLOTS[formation] ?? FORMATION_SLOTS['4-3-3'];
+  const slots = useMemo(
+    () =>
+      formationSlots.map((slot) => {
+        const override = slotOverrides[slot.slotId];
+        return override
+          ? { ...slot, ...override, label: override.role }
+          : slot;
+      }),
+    [formationSlots, slotOverrides],
+  );
 
   useEffect(() => {
     if (!loaded) return;
-    setFormation(loaded.formation || '4-3-3');
+    const nextFormation = FORMATION_SLOTS[loaded.formation]
+      ? loaded.formation
+      : '4-3-3';
+    const nextFormationSlots = FORMATION_SLOTS[nextFormation];
+    const loadedBySlot = new Map(loaded.lineup?.map((item) => [item.slotId, item]) ?? []);
     const next: Record<string, number | null> = {};
     loaded.lineup?.forEach((item) => {
       next[item.slotId] = Number(item.userPlayerId);
     });
+    setFormation(nextFormation);
     setLineup(next);
+    setSlotOverrides(
+      Object.fromEntries(
+        nextFormationSlots.map((slot) => {
+          const saved = loadedBySlot.get(slot.slotId);
+          const savedRole = String(saved?.position || '').toUpperCase();
+          const role =
+            slot.slotId === 'gk'
+              ? 'GK'
+              : LINEUP_POSITION_OPTIONS.includes(
+                    savedRole as (typeof LINEUP_POSITION_OPTIONS)[number],
+                  )
+                ? savedRole
+                : slot.role;
+          return [
+            slot.slotId,
+            {
+              role,
+              x: normalizeLineupCoordinate(saved?.x, slot.x),
+              y: normalizeLineupCoordinate(saved?.y, slot.y),
+            },
+          ];
+        }),
+      ),
+    );
   }, [loaded]);
 
   useEffect(() => {
     setLineup((prev) => {
       const next: Record<string, number | null> = {};
-      slots.forEach((slot) => {
+      formationSlots.forEach((slot) => {
         next[slot.slotId] = prev[slot.slotId] ?? null;
       });
       return next;
     });
     setSelectedSlotId((prev) =>
-      slots.some((slot) => slot.slotId === prev) ? prev : slots[0].slotId,
+      formationSlots.some((slot) => slot.slotId === prev) ? prev : formationSlots[0].slotId,
     );
-  }, [slots]);
+  }, [formationSlots]);
 
   const cardsById = useMemo(() => new Map(cards.map((card) => [card.userPlayerId, card])), [cards]);
   useEffect(() => {
@@ -529,6 +709,76 @@ function LineupPopup({ teamId }: { teamId: string }) {
 
   function showLineupMessage(text: string) {
     setMessage(text);
+  }
+
+  function changeFormation(nextFormation: string) {
+    const nextSlots = FORMATION_SLOTS[nextFormation];
+    if (!nextSlots) return;
+    setFormation(nextFormation);
+    setSlotOverrides(
+      Object.fromEntries(
+        nextSlots.map((slot) => [
+          slot.slotId,
+          { role: slot.role, x: slot.x, y: slot.y },
+        ]),
+      ),
+    );
+    setMessage('');
+  }
+
+  function updateSlotOverride(slotId: string, update: Partial<LineupSlotOverride>) {
+    const current = slots.find((slot) => slot.slotId === slotId);
+    if (!current) return;
+    setSlotOverrides((previous) => ({
+      ...previous,
+      [slotId]: {
+        role: update.role ?? current.role,
+        x: normalizeLineupCoordinate(update.x, current.x),
+        y: normalizeLineupCoordinate(update.y, current.y),
+      },
+    }));
+  }
+
+  function resetSlotPlacement(slotId: string) {
+    const baseSlot = formationSlots.find((slot) => slot.slotId === slotId);
+    if (!baseSlot) return;
+    updateSlotOverride(slotId, {
+      role: baseSlot.role,
+      x: baseSlot.x,
+      y: baseSlot.y,
+    });
+  }
+
+  function moveSlotFromPointer(slotId: string, clientX: number, clientY: number) {
+    const rect = pitchRef.current?.getBoundingClientRect();
+    if (!rect?.width || !rect.height) return;
+    updateSlotOverride(slotId, {
+      x: ((clientX - rect.left) / rect.width) * 100,
+      y: ((clientY - rect.top) / rect.height) * 100,
+    });
+  }
+
+  function handleMovePointerDown(slotId: string, event: PointerEvent<HTMLButtonElement>) {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setSelectedSlotId(slotId);
+    setMovingSlotId(slotId);
+    event.currentTarget.setPointerCapture(event.pointerId);
+    moveSlotFromPointer(slotId, event.clientX, event.clientY);
+  }
+
+  function handleMovePointerMove(slotId: string, event: PointerEvent<HTMLButtonElement>) {
+    if (movingSlotId !== slotId) return;
+    event.preventDefault();
+    moveSlotFromPointer(slotId, event.clientX, event.clientY);
+  }
+
+  function finishMovingSlot(event: PointerEvent<HTMLButtonElement>) {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    setMovingSlotId(null);
   }
 
   function assignPlayer(playerId: number, targetSlotId = selectedSlotId, fromSlotId?: string | null) {
@@ -642,6 +892,8 @@ function LineupPopup({ teamId }: { teamId: string }) {
         slotId: slot.slotId,
         position: roleToPosition(slot.role),
         userPlayerId: Number(lineup[slot.slotId] ?? 0),
+        x: slot.x,
+        y: slot.y,
       }))
       .filter((item) => item.userPlayerId > 0);
 
@@ -663,7 +915,7 @@ function LineupPopup({ teamId }: { teamId: string }) {
               key={item}
               type="button"
               data-active={formation === item}
-              onClick={() => setFormation(item)}
+              onClick={() => changeFormation(item)}
             >
               {item}
             </button>
@@ -685,15 +937,80 @@ function LineupPopup({ teamId }: { teamId: string }) {
       {message ? <p className="club-lineup-message">{message}</p> : null}
       {saveTactics.error ? <Banner text={saveTactics.error.message} tone="error" /> : null}
 
+      <section className="club-lineup-inspector" aria-label="Selected lineup position">
+        <div className="club-lineup-inspector__identity">
+          <span>Selected slot</span>
+          <strong>
+            {lineup[selectedSlot.slotId]
+              ? cardsById.get(Number(lineup[selectedSlot.slotId]))?.name ?? 'Starter'
+              : 'Empty slot'}
+          </strong>
+          <small>{selectedSlot.slotId.toUpperCase()}</small>
+        </div>
+        <label>
+          <span>Position</span>
+          <select
+            value={selectedSlot.role}
+            disabled={selectedSlot.slotId === 'gk'}
+            onChange={(event) =>
+              updateSlotOverride(selectedSlot.slotId, { role: event.target.value })
+            }
+          >
+            {selectedSlot.slotId === 'gk' ? <option value="GK">GK</option> : null}
+            {selectedSlot.slotId !== 'gk'
+              ? LINEUP_POSITION_OPTIONS.map((position) => (
+                  <option key={position} value={position}>
+                    {position}
+                  </option>
+                ))
+              : null}
+          </select>
+        </label>
+        <label>
+          <span>X</span>
+          <input
+            type="number"
+            min="5"
+            max="95"
+            step="0.5"
+            value={selectedSlot.x}
+            onChange={(event) =>
+              updateSlotOverride(selectedSlot.slotId, { x: Number(event.target.value) })
+            }
+          />
+        </label>
+        <label>
+          <span>Y</span>
+          <input
+            type="number"
+            min="5"
+            max="95"
+            step="0.5"
+            value={selectedSlot.y}
+            onChange={(event) =>
+              updateSlotOverride(selectedSlot.slotId, { y: Number(event.target.value) })
+            }
+          />
+        </label>
+        <button
+          type="button"
+          className="club-lineup-inspector__reset"
+          title="Reset selected position"
+          onClick={() => resetSlotPlacement(selectedSlot.slotId)}
+        >
+          Reset
+        </button>
+      </section>
+
       <div className="club-lineup-grid">
         <div className="club-lineup-board">
-          <div className="club-lineup-pitch">
+          <div ref={pitchRef} className="club-lineup-pitch">
             {startingLineup.map(({ slot, card }) => (
-              <button
+              <div
                 key={slot.slotId}
-                type="button"
                 className="club-lineup-slot"
                 data-active={selectedSlotId === slot.slotId}
+                data-moving={movingSlotId === slot.slotId}
                 data-drop-valid={
                   dragState
                     ? Boolean(
@@ -702,38 +1019,38 @@ function LineupPopup({ teamId }: { teamId: string }) {
                       )
                     : undefined
                 }
-                draggable={Boolean(card)}
                 style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
                 onClick={() => setSelectedSlotId(slot.slotId)}
-                onDragStart={(event) => {
-                  if (!card) return;
-                  startDrag(card.userPlayerId, slot.slotId, event);
-                }}
-                onDragEnd={() => setDragState(null)}
                 onDragOver={(event) => handleSlotDragOver(slot, event)}
                 onDrop={(event) => handleSlotDrop(slot, event)}
               >
+                <button
+                  type="button"
+                  className="club-lineup-slot__move"
+                  title={`Move ${slot.label} position`}
+                  aria-label={`Move ${slot.label} position`}
+                  onPointerDown={(event) => handleMovePointerDown(slot.slotId, event)}
+                  onPointerMove={(event) => handleMovePointerMove(slot.slotId, event)}
+                  onPointerUp={finishMovingSlot}
+                  onPointerCancel={finishMovingSlot}
+                >
+                  <MoveIcon />
+                </button>
                 <span>{slot.label}</span>
                 <strong>{card?.name ?? 'Empty'}</strong>
                 {card ? (
-                  <small
-                    role="button"
-                    tabIndex={0}
+                  <button
+                    type="button"
+                    className="club-lineup-slot__detail"
                     onClick={(event) => {
-                      event.stopPropagation();
-                      setDetailPlayerId(card.userPlayerId);
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key !== 'Enter' && event.key !== ' ') return;
-                      event.preventDefault();
                       event.stopPropagation();
                       setDetailPlayerId(card.userPlayerId);
                     }}
                   >
                     Detail
-                  </small>
+                  </button>
                 ) : null}
-              </button>
+              </div>
             ))}
           </div>
 
@@ -1587,6 +1904,16 @@ function SparkIcon() {
         strokeLinejoin="round"
       />
       <path d="M18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z" fill="currentColor" />
+    </IconShell>
+  );
+}
+
+function GiftIcon() {
+  return (
+    <IconShell>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 10h16v10H4zM2.5 7h19v3h-19zM12 7v13M7.5 7C5 7 4 5.8 4 4.5S5 2 6.5 2C9 2 12 7 12 7M16.5 7C19 7 20 5.8 20 4.5S19 2 17.5 2C15 2 12 7 12 7" />
+      </svg>
     </IconShell>
   );
 }

@@ -23,6 +23,7 @@ import {
   PlayerAIState,
   TacticalPhase,
   predictBallIntercept,
+  resolvePlayerCollisions,
   SIM_TICK_MS,
   SIM_TICK_SECONDS,
   SIM_TICKS_PER_SECOND,
@@ -43,7 +44,7 @@ const SKILL_SHOT_FRAME_DURATION_MS = 1180;
 const SKILL_PASS_FRAME_DURATION_MS = 1060;
 const SKILL_DRIBBLE_FRAME_DURATION_MS = 1040;
 const SKILL_TACKLE_FRAME_DURATION_MS = 1080;
-const PASS_FRAME_DURATION_MS = FRAME_DURATION_MS;
+const PASS_FRAME_DURATION_MS = 720;
 const SHOT_FRAME_DURATION_MS = 860;
 const TACKLE_FRAME_DURATION_MS = 760;
 const DEAD_BALL_FRAME_DURATION_MS = 620;
@@ -254,6 +255,8 @@ export type SimulationRosterPlayer = {
   aiProfile: PlayerAiProfile;
   savedSlotId: string | null;
   savedPosition: string | null;
+  savedX: number | null;
+  savedY: number | null;
   positions: Array<{ position: string; effect: number }>;
   skills: EPlayerSkill[];
   skillSlugs: string[];
@@ -468,6 +471,58 @@ const FORMATION_LAYOUTS: Record<number, FormationSlot[]> = {
     { slotId: "rm", role: "RM", label: "RM", x: 82, y: 56 },
     { slotId: "st", role: "LST", label: "ST", x: 42, y: 25 },
     { slotId: "st2", role: "RST", label: "ST", x: 58, y: 25 },
+  ],
+  [ETeamFormation.F352]: [
+    { slotId: "gk", role: "GK", label: "GK", x: 50, y: 92 },
+    { slotId: "lcb", role: "CB", label: "CB", x: 28, y: 78 },
+    { slotId: "cb", role: "CB", label: "CB", x: 50, y: 80 },
+    { slotId: "rcb", role: "CB", label: "CB", x: 72, y: 78 },
+    { slotId: "lm", role: "LM", label: "LM", x: 14, y: 56 },
+    { slotId: "lcm", role: "LCM", label: "CM", x: 34, y: 58 },
+    { slotId: "cm", role: "CM", label: "CM", x: 50, y: 53 },
+    { slotId: "rcm", role: "RCM", label: "CM", x: 66, y: 58 },
+    { slotId: "rm", role: "RM", label: "RM", x: 86, y: 56 },
+    { slotId: "st", role: "LST", label: "ST", x: 42, y: 24 },
+    { slotId: "st2", role: "RST", label: "ST", x: 58, y: 24 },
+  ],
+  [ETeamFormation.F343]: [
+    { slotId: "gk", role: "GK", label: "GK", x: 50, y: 92 },
+    { slotId: "lcb", role: "CB", label: "CB", x: 28, y: 78 },
+    { slotId: "cb", role: "CB", label: "CB", x: 50, y: 80 },
+    { slotId: "rcb", role: "CB", label: "CB", x: 72, y: 78 },
+    { slotId: "lm", role: "LM", label: "LM", x: 17, y: 56 },
+    { slotId: "lcm", role: "LCM", label: "CM", x: 40, y: 58 },
+    { slotId: "rcm", role: "RCM", label: "CM", x: 60, y: 58 },
+    { slotId: "rm", role: "RM", label: "RM", x: 83, y: 56 },
+    { slotId: "lw", role: "LW", label: "LW", x: 20, y: 28 },
+    { slotId: "st", role: "ST", label: "ST", x: 50, y: 22 },
+    { slotId: "rw", role: "RW", label: "RW", x: 80, y: 28 },
+  ],
+  [ETeamFormation.F451]: [
+    { slotId: "gk", role: "GK", label: "GK", x: 50, y: 92 },
+    { slotId: "lb", role: "LB", label: "LB", x: 17, y: 76 },
+    { slotId: "lcb", role: "CB", label: "CB", x: 38, y: 78 },
+    { slotId: "rcb", role: "CB", label: "CB", x: 62, y: 78 },
+    { slotId: "rb", role: "RB", label: "RB", x: 83, y: 76 },
+    { slotId: "lm", role: "LM", label: "LM", x: 15, y: 48 },
+    { slotId: "lcm", role: "LCM", label: "CM", x: 33, y: 57 },
+    { slotId: "cm", role: "CM", label: "CM", x: 50, y: 53 },
+    { slotId: "rcm", role: "RCM", label: "CM", x: 67, y: 57 },
+    { slotId: "rm", role: "RM", label: "RM", x: 85, y: 48 },
+    { slotId: "st", role: "ST", label: "ST", x: 50, y: 23 },
+  ],
+  [ETeamFormation.F541]: [
+    { slotId: "gk", role: "GK", label: "GK", x: 50, y: 92 },
+    { slotId: "lb", role: "LB", label: "LB", x: 10, y: 69 },
+    { slotId: "lcb", role: "CB", label: "CB", x: 30, y: 79 },
+    { slotId: "cb", role: "CB", label: "CB", x: 50, y: 81 },
+    { slotId: "rcb", role: "CB", label: "CB", x: 70, y: 79 },
+    { slotId: "rb", role: "RB", label: "RB", x: 90, y: 69 },
+    { slotId: "lm", role: "LM", label: "LM", x: 17, y: 50 },
+    { slotId: "lcm", role: "LCM", label: "CM", x: 40, y: 57 },
+    { slotId: "rcm", role: "RCM", label: "CM", x: 60, y: 57 },
+    { slotId: "rm", role: "RM", label: "RM", x: 83, y: 50 },
+    { slotId: "st", role: "ST", label: "ST", x: 50, y: 22 },
   ],
 };
 
@@ -2543,6 +2598,8 @@ function toInternalLineupPlayer(player: MatchRenderPlayer): InternalLineupPlayer
       aiProfile: player.aiProfile ?? DEFAULT_PLAYER_AI_PROFILE,
       savedSlotId: null,
       savedPosition: null,
+      savedX: null,
+      savedY: null,
       positions: [{ position: player.displayRole || player.role, effect: 1 }],
       skills,
       skillSlugs: player.skillSlugs,
@@ -3018,6 +3075,25 @@ function resolveDebugPassingAction(input: {
         previousPositionState: input.previousPositionState,
       });
       const role = normalizeRole(player.role);
+      const offBallRunBias = getClampedPlayerAiTendency(
+        player,
+        "offBallRunBias",
+        1,
+        0.6,
+        2,
+      );
+      const infiltrationBias = getClampedPlayerAiTendency(
+        player,
+        "boxInfiltrationBias",
+        0,
+        0,
+        1,
+      );
+      const infiltratingReceiverBonus = clamp(
+        (offBallRunBias - 1) * 0.18 + infiltrationBias * 0.22,
+        0,
+        0.38,
+      );
       const roleWeight =
         role === "ST"
           ? 0.1
@@ -3082,6 +3158,7 @@ function resolveDebugPassingAction(input: {
           legalRunBonus +
           pressureEscapeBonus +
           trapBreakBonus +
+          infiltratingReceiverBonus +
           roleWeight +
           laneRotation * 0.01 -
           pressurePenalty -
@@ -3866,7 +3943,15 @@ function getThroughPassTarget(input: {
   previousPositionState: PositionState;
 }): TrajectoryPoint | null {
   const role = normalizeRole(input.receiver.role);
-  if (role !== "ST" && role !== "W" && role !== "CM") return null;
+  const infiltrationBias = getClampedPlayerAiTendency(
+    input.receiver,
+    "boxInfiltrationBias",
+    0,
+    0,
+    1,
+  );
+  const isInfiltratingMidfielder = role === "CM" && infiltrationBias >= 0.5;
+  if (role !== "ST" && role !== "W" && !isInfiltratingMidfielder) return null;
 
   const direction = attackDirection(input.possession);
   const offside = evaluateOffside({
@@ -3882,7 +3967,7 @@ function getThroughPassTarget(input: {
   const lineGap = Math.abs(input.receiverPreviousPosition.y - offside.lineY);
   const forwardFromBall = (input.receiverPreviousPosition.y - input.ball.y) * direction;
   const canBreakLine =
-    (role === "ST" || role === "W") &&
+    (role === "ST" || role === "W" || isInfiltratingMidfielder) &&
     forwardFromBall > -8 &&
     lineGap <= 18 &&
     distance(input.ball, input.receiverPreviousPosition) <= 38;
@@ -3895,7 +3980,7 @@ function getThroughPassTarget(input: {
         (input.receiverPreviousPosition.x <= 13 || input.receiverPreviousPosition.x >= 87 ? -3 : 4)
       : (((input.tick + input.receiver.userPlayerId) % 3) - 1) * 3;
   const lineSafety = direction < 0 ? offside.lineY + 1.2 : offside.lineY - 1.2;
-  const breakDepth = role === "ST" ? 9.5 : 8;
+  const breakDepth = role === "ST" ? 9.5 : isInfiltratingMidfielder ? 10.5 : 8;
   const desiredY = clamp(Math.min(94, Math.max(6, lineSafety + direction * breakDepth)), 6, 94);
   const desired = {
     x: clamp(
@@ -3915,7 +4000,15 @@ function getThroughPassTarget(input: {
     ),
     y: desiredY,
   };
-  const receiverReach = getReceiverReachForTick(input.receiver) * 1.45;
+  const offBallRunBias = getClampedPlayerAiTendency(
+    input.receiver,
+    "offBallRunBias",
+    1,
+    0.6,
+    2,
+  );
+  const receiverReach =
+    getReceiverReachForTick(input.receiver) * (1.38 + (offBallRunBias - 1) * 0.22);
 
   return moveToward(input.receiverPreviousPosition, desired, receiverReach);
 }
@@ -3930,7 +4023,15 @@ function evaluateThroughRun(input: {
   previousPositionState: PositionState;
 }) {
   const role = normalizeRole(input.receiver.role);
-  if (role !== "ST" && role !== "W") return 0;
+  const infiltrationBias = getClampedPlayerAiTendency(
+    input.receiver,
+    "boxInfiltrationBias",
+    0,
+    0,
+    1,
+  );
+  const isInfiltratingMidfielder = role === "CM" && infiltrationBias >= 0.5;
+  if (role !== "ST" && role !== "W" && !isInfiltratingMidfielder) return 0;
 
   const direction = attackDirection(input.possession);
   const offside = evaluateOffside({
@@ -3950,7 +4051,7 @@ function evaluateThroughRun(input: {
       clamp(ballProgress / 22, 0, 1) * 0.32 +
       clamp((18 - lineGap) / 18, 0, 1) * 0.28,
     0,
-    1,
+    isInfiltratingMidfielder ? 1.18 : 1,
   );
 }
 
@@ -7659,6 +7760,46 @@ function getBallCarryPosition(player: MatchRenderPlayer): TrajectoryPoint {
   };
 }
 
+function resolveSnapshotPlayerCollisions(players: MatchRenderPlayer[]) {
+  const bodies: MovementPlayer[] = players.map((player) => ({
+    id: player.userPlayerId,
+    teamId: player.teamId,
+    side: player.side,
+    role: player.role,
+    position: { x: player.x, y: player.y },
+    velocity: { x: Number(player.vx ?? 0), y: Number(player.vy ?? 0) },
+    targetPosition: {
+      x: Number(player.targetX ?? player.x),
+      y: Number(player.targetY ?? player.y),
+    },
+    homePosition: {
+      x: Number(player.homeX ?? player.x),
+      y: Number(player.homeY ?? player.y),
+    },
+    state: player.aiState ?? "HOLD_POSITION",
+    stamina: player.stamina,
+    hasBall: player.hasBall,
+    aiProfile: player.aiProfile,
+  }));
+
+  resolvePlayerCollisions(bodies);
+  const bodyById = new Map(bodies.map((body) => [body.id, body]));
+
+  players.forEach((player) => {
+    const body = bodyById.get(player.userPlayerId);
+    if (!body) return;
+
+    player.x = Number(body.position.x.toFixed(4));
+    player.y = Number(body.position.y.toFixed(4));
+    player.vx = Number(body.velocity.x.toFixed(4));
+    player.vy = Number(body.velocity.y.toFixed(4));
+    if (player.move) {
+      player.move.toX = player.x;
+      player.move.toY = player.y;
+    }
+  });
+}
+
 function getIntentForState(state: PlayerAIState): PlayerMoveIntent {
   switch (state) {
     case "PRESS_BALL":
@@ -8108,6 +8249,7 @@ function buildSnapshot(input: {
       player.activeSkill = input.activeSkill;
     }
   });
+  resolveSnapshotPlayerCollisions(allRenderPlayers);
   const ownerRenderPlayer =
     controlledOwnerId == null
       ? null
@@ -8435,7 +8577,7 @@ function projectPlayers(input: {
       movementPlayer.position = setPieceTarget.target;
       movementPlayer.velocity = { x: 0, y: 0 };
     } else if (!keeperAction && !setPieceTarget) {
-      applySeparation(movementPlayer, teammateMovement);
+      applySeparation(movementPlayer, [...teammateMovement, ...opponentMovement]);
     }
     if (!forceLifecycleTarget && !(setPieceTarget && input.instantSetPiece)) {
       const isBallPressure = isPress || aiState === "PRESS_BALL";
@@ -8888,6 +9030,7 @@ function normalizeRole(role: string): "GK" | "CB" | "FB" | "DM" | "CM" | "W" | "
   if (role === "LB" || role === "RB") return "FB";
   if (role === "CDM" || role === "DM" || role.includes("DM")) return "DM";
   if (role === "LW" || role === "RW" || role === "LM" || role === "RM") return "W";
+  if (role === "AM" || role === "CAM") return "CM";
   if (role.includes("CM") || role === "CM") return "CM";
   return "ST";
 }
@@ -9195,14 +9338,23 @@ function selectLineup(team: SimulationTeamInput, side: Side): InternalLineupPlay
             { index: 0, score: Number.NEGATIVE_INFINITY },
           ).index;
     const picked = pool.splice(bestIndex, 1)[0] ?? team.players[index];
-    const anchors = side === "home" ? { x: slot.x, y: slot.y } : { x: slot.x, y: 100 - slot.y };
+    const savedX = picked.savedX !== null && Number.isFinite(Number(picked.savedX))
+      ? clamp(Number(picked.savedX), 4, 96)
+      : slot.x;
+    const savedY = picked.savedY !== null && Number.isFinite(Number(picked.savedY))
+      ? clamp(Number(picked.savedY), 4, 96)
+      : slot.y;
+    const savedRole = String(picked.savedPosition || "").trim().toUpperCase();
+    const anchors = side === "home"
+      ? { x: savedX, y: savedY }
+      : { x: savedX, y: 100 - savedY };
     return {
       userPlayerId: picked.userPlayerId,
       playerId: picked.playerId,
       teamId: team.id,
       side,
-      role: slot.role,
-      displayRole: slot.label,
+      role: savedRole || slot.role,
+      displayRole: savedRole || slot.label,
       name: picked.name,
       shortName: shortenName(picked.name),
       slug: picked.slug,

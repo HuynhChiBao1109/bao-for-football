@@ -61,6 +61,23 @@ export function resolveCampaignCompetitorName(match: CampaignMatch) {
   return match.competitor?.name || `BOT #${String(match.competitorId ?? '-')}`;
 }
 
+export function getCampaignMatchAccess(match: CampaignMatch, campaignLevel: number) {
+  const level = Number(match.level ?? 0);
+  const finished = match.match?.status === 'finished';
+  const homeScore = Number(match.match?.homeScore ?? 0);
+  const awayScore = Number(match.match?.awayScore ?? 0);
+  const isCleared = finished && homeScore > awayScore;
+  const mustRetry = finished && !isCleared;
+  const isLocked = level > campaignLevel;
+
+  return {
+    isCleared,
+    isLocked,
+    isUnlocked: !isLocked,
+    mustRetry,
+  };
+}
+
 export function useCreateCompainNormal() {
   const { token } = useAuth();
   const qc = useQueryClient();

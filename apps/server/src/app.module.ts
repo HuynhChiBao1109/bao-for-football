@@ -19,6 +19,7 @@ import { ReferenceModule } from "./modules/reference/reference.module";
 import { SocketModule } from "./modules/socket/socket.module";
 import { RedisModule } from "./modules/redis/redis.module";
 import { TrainingRoomModule } from "./modules/training/training-room.module";
+import { DailyLoginModule } from "./modules/daily-login/daily-login.module";
 
 const escapeIdentifier = (value: string) => value.replace(/`/g, "``");
 
@@ -149,6 +150,7 @@ const dropTablesNotInEntities = async (dataSource: DataSource) => {
     SocketModule,
     RedisModule,
     TrainingRoomModule,
+    DailyLoginModule,
   ],
   controllers: [AppController],
 })

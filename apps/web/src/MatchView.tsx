@@ -19,6 +19,7 @@ const MATCH_EVENT = {
   FIRST_HALF_END: 3,
   SECOND_HALF_START: 4,
   MATCH_END: 6,
+  GOAL: 7,
   FREE_KICK: 8,
   PASS: 35,
   SHOOT: 36,
@@ -66,7 +67,17 @@ function formatStatus(status: string | undefined, snapshot: MatchSnapshot | null
 }
 
 function isGoalEvent(snapshot: MatchSnapshot | null) {
-  return snapshot?.highlight?.event === 7;
+  return snapshot?.highlight?.event === MATCH_EVENT.GOAL;
+}
+
+function hasBallReachedGoal(snapshot: MatchSnapshot) {
+  if (!isGoalEvent(snapshot)) return false;
+
+  const scoringSide = snapshot.highlight?.teamSide ?? snapshot.possession;
+  const ballInsideGoalMouth = snapshot.ball.x >= 39.5 && snapshot.ball.x <= 60.5;
+  const crossedGoalLine = scoringSide === 'home' ? snapshot.ball.y <= 5.6 : snapshot.ball.y >= 94.4;
+
+  return ballInsideGoalMouth && crossedGoalLine;
 }
 
 function isShotEvent(snapshot: MatchSnapshot | null) {
@@ -433,6 +444,74 @@ function GoalOverlay({ show, label }: { show: boolean; label: string }) {
   );
 }
 
+function MatchResultOverlay({
+  snapshot,
+  reward,
+  isRetrying,
+  retryError,
+  onRetry,
+  onContinue,
+}: {
+  snapshot: MatchSnapshot;
+  reward: number;
+  isRetrying: boolean;
+  retryError?: string;
+  onRetry: () => void;
+  onContinue: () => void;
+}) {
+  const won = snapshot.homeScore > snapshot.awayScore;
+  const draw = snapshot.homeScore === snapshot.awayScore;
+
+  return (
+    <div className="match-result-overlay" data-result={won ? 'win' : 'retry'} role="dialog" aria-modal="true">
+      <section className="match-result-panel">
+        <span className="match-result-panel__eyebrow">Campaign result</span>
+        <strong className="match-result-panel__title">{won ? 'YOU WIN' : 'RETRY'}</strong>
+        <div className="match-result-panel__score" aria-label="Final score">
+          <span>{snapshot.homeScore}</span>
+          <i>:</i>
+          <span>{snapshot.awayScore}</span>
+        </div>
+        <p className="match-result-panel__message">
+          {won
+            ? 'Stage cleared. The next campaign match is now unlocked.'
+            : draw
+              ? 'The match ended level. Win this stage to advance.'
+              : 'This stage remains locked. Rebuild and fight again.'}
+        </p>
+        {won ? (
+          <div className="match-result-panel__reward">
+            <span>Reward earned</span>
+            <strong>+{reward.toLocaleString()}</strong>
+          </div>
+        ) : null}
+        {retryError ? <p className="match-result-panel__error">{retryError}</p> : null}
+        <div className="match-result-panel__actions">
+          {won ? (
+            <button type="button" className="match-result-button match-result-button--primary" onClick={onContinue}>
+              Continue Campaign
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="match-result-button match-result-button--primary"
+                disabled={isRetrying}
+                onClick={onRetry}
+              >
+                {isRetrying ? 'Resetting...' : 'Retry Match'}
+              </button>
+              <button type="button" className="match-result-button" onClick={onContinue}>
+                Back to Campaign
+              </button>
+            </>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function EventFeed({ events }: { events: LiveMatchEvent[] }) {
   return (
     <aside className="match-events" aria-label="Match events">
@@ -504,7 +583,7 @@ function MatchPitch({ snapshot }: { snapshot: MatchSnapshot }) {
           <SkillOverlay snapshot={snapshot} />
           <GoalOverlay
             key={`${snapshot.frameId ?? snapshot.tick ?? 'goal'}-${snapshot.homeScore}-${snapshot.awayScore}`}
-            show={isGoalEvent(snapshot)}
+            show={hasBallReachedGoal(snapshot)}
             label={snapshot.highlight?.label ?? ''}
           />
         </div>
@@ -528,6 +607,7 @@ export function MatchView() {
   const [isAutoTicking, setIsAutoTicking] = useState(false);
   const handledMatchEndRef = useRef(false);
   const {
+    match,
     snapshot,
     events,
     status,
@@ -546,6 +626,24 @@ export function MatchView() {
     onTickComplete: ackActiveTick,
   });
   const isMatchEnded = renderedSnapshot?.highlight?.event === MATCH_EVENT.MATCH_END;
+  const matchReward = Number(match?.campainMatch?.matchReward ?? 0);
+
+  const returnToCampaign = () => {
+    void queryClient.invalidateQueries({ queryKey: ['campainMatches'] });
+    void queryClient.invalidateQueries({ queryKey: ['session'] });
+    navigate(ROUTES.club);
+  };
+
+  const retryCampaignMatch = () => {
+    resetMatch.mutate(undefined, {
+      onSuccess: (resetMatchState) => {
+        setIsAutoTicking(false);
+        handledMatchEndRef.current = false;
+        resetLiveState(resetMatchState);
+        void queryClient.invalidateQueries({ queryKey: ['match'] });
+      },
+    });
+  };
 
   useEffect(() => {
     if (!isMatchEnded || handledMatchEndRef.current) {
@@ -671,6 +769,16 @@ export function MatchView() {
           )}
           <EventFeed events={events} />
         </div>
+        {isMatchEnded && renderedSnapshot ? (
+          <MatchResultOverlay
+            snapshot={renderedSnapshot}
+            reward={matchReward}
+            isRetrying={resetMatch.isPending}
+            retryError={resetMatch.error?.message}
+            onRetry={retryCampaignMatch}
+            onContinue={returnToCampaign}
+          />
+        ) : null}
       </section>
     </main>
   );

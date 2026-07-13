@@ -656,6 +656,19 @@
   box-shadow: 0 0 26px rgba(255, 211, 103, 0.18);
 }
 
+.club-campaign-card[data-locked='true'] {
+  border-style: dashed;
+  filter: grayscale(0.72);
+  opacity: 0.48;
+}
+
+.club-campaign-card[data-cleared='true'] {
+  border-color: rgba(255, 211, 103, 0.42);
+  background:
+    radial-gradient(circle at 50% 0, rgba(255, 211, 103, 0.1), transparent 52%),
+    rgba(8, 8, 11, 0.82);
+}
+
 .club-lineup-slot[draggable='true'] {
   cursor: grab;
 }
@@ -1213,7 +1226,7 @@
   bottom: max(38px, calc(env(safe-area-inset-bottom) + 34px));
   z-index: 5;
   display: grid;
-  grid-template-columns: repeat(5, minmax(132px, 1fr));
+  grid-template-columns: repeat(6, minmax(124px, 1fr));
   gap: 10px;
   width: min(1120px, calc(100vw - 48px));
   transform: translateX(-50%);
@@ -1306,7 +1319,7 @@
   bottom: max(38px, calc(env(safe-area-inset-bottom) + 34px));
   z-index: 5;
   display: grid;
-  grid-template-columns: repeat(5, minmax(132px, 1fr));
+  grid-template-columns: repeat(6, minmax(124px, 1fr));
   gap: 10px;
   width: min(1120px, calc(100vw - 48px));
   transform: translateX(-50%);
@@ -1415,7 +1428,7 @@
   bottom: max(38px, calc(env(safe-area-inset-bottom) + 34px));
   z-index: 5;
   display: grid;
-  grid-template-columns: repeat(5, minmax(132px, 1fr));
+  grid-template-columns: repeat(6, minmax(124px, 1fr));
   gap: 10px;
   width: min(1120px, calc(100vw - 48px));
   transform: translateX(-50%);

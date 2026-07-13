@@ -55,7 +55,13 @@ export class TeamRepository {
   async saveTactics(
     teamId: number,
     data: Pick<TeamEntity, "formation" | "passRatio" | "shotRatio" | "pressure">,
-    lineup: Array<{ slotId: string; position: string; userPlayerId: number }>,
+    lineup: Array<{
+      slotId: string;
+      position: string;
+      userPlayerId: number;
+      x?: number | null;
+      y?: number | null;
+    }>,
   ): Promise<void> {
     await this.repository.manager.transaction(async (manager) => {
       await manager.update(TeamEntity, { id: teamId }, data);
@@ -72,6 +78,8 @@ export class TeamRepository {
           position: {
             slotId: item.slotId,
             position: item.position,
+            x: item.x,
+            y: item.y,
           },
         }),
       );

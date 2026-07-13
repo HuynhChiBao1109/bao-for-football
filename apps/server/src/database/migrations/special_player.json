@@ -35,7 +35,7 @@
           "rating": 0.94
         }
       ],
-      "skills": [1, 2, 4],
+      "skills": [1, 4],
       "gacha": {
         "bannerCode": "redlock-loki",
         "bannerName": "Loki RedLock Special",
@@ -43,6 +43,35 @@
         "expiredAt": "2099-12-31T23:59:59.000Z",
         "status": 1
       }
+    },
+    {
+      "name": "Isagi Yoichi",
+      "season": "legend",
+      "sourceType": "daily_login",
+      "country": "Japan",
+      "height": 175,
+      "bodyType": "LEAN",
+      "pass": 88,
+      "longPass": 84,
+      "vision": 99,
+      "shoot": 93,
+      "tackle": 62,
+      "balance": 90,
+      "dribbling": 91,
+      "acceleration": 88,
+      "speed": 87,
+      "stamina": 92,
+      "positions": [
+        {
+          "position": "AM",
+          "rating": 1
+        },
+        {
+          "position": "SS",
+          "rating": 0.98
+        }
+      ],
+      "skills": [5, 6]
     }
   ]
 }

@@ -167,6 +167,8 @@ export type Tactics = {
     slotId: string;
     position: string;
     userPlayerId: number;
+    x?: number;
+    y?: number;
   }>;
   gameplay: TacticsGameplay;
 };
@@ -200,6 +202,14 @@ export type CampaignMatch = {
     imgUrl?: string;
     type?: number | string;
   };
+  match?: {
+    id: number | string;
+    status: string;
+    homeTeamId?: number | string;
+    awayTeamId?: number | string;
+    homeScore?: number | null;
+    awayScore?: number | null;
+  } | null;
 };
 
 export type PlayerMoveIntent =
@@ -394,6 +404,16 @@ export type MatchState = {
   awayLineup?: Array<Record<string, unknown>> | null;
   matchEvents?: MatchEventRecord[];
   matchPlayerStats?: MatchPlayerStats[];
+  campainMatch?: {
+    id: number | string;
+    level: number;
+    matchReward: number | string;
+    campain?: {
+      id: number | string;
+      level: number;
+      teamId?: number | string;
+    };
+  };
 };
 
 export type MatchStartResponse = {

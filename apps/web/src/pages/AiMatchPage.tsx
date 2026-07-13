@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useCampainMatches, useCreateCompainNormal } from '../hooks/useAiCampaign';
+import {
+  getCampaignMatchAccess,
+  useCampainMatches,
+  useCreateCompainNormal,
+} from '../hooks/useAiCampaign';
 import { Banner } from '../components/feedback';
 import { StatusBadge } from '../components/redlock/RedLockUI';
 import { useSession } from '../hooks/useSession';
@@ -165,9 +169,7 @@ function CampaignMatchCard({
   const reward = Number(match.matchReward ?? 0);
   const clubName = match.competitor?.name || `BOT #${String(match.competitorId ?? '-')}`;
   const level = Number(match.level ?? 0);
-  const isCleared = level < campaignLevel;
-  const isUnlocked = level <= campaignLevel;
-  const isLocked = !isUnlocked;
+  const { isCleared, isLocked, mustRetry } = getCampaignMatchAccess(match, campaignLevel);
 
   return (
     <article className="campaign-match-card" data-locked={isLocked} data-cleared={isCleared}>
@@ -176,7 +178,7 @@ function CampaignMatchCard({
       </p>
       <div className="mt-2">
         <StatusBadge tone={isLocked ? 'muted' : isCleared ? 'warning' : 'red'}>
-          {isCleared ? 'Cleared' : isLocked ? 'Locked' : 'Unlocked'}
+          {isCleared ? 'Cleared' : isLocked ? 'Locked' : mustRetry ? 'Retry Required' : 'Unlocked'}
         </StatusBadge>
       </div>
       <p className="campaign-match-card__club" title={clubName}>
@@ -189,10 +191,16 @@ function CampaignMatchCard({
       <button
         type="button"
         className="game-button-primary mt-3 w-full"
-        disabled={isStarting || isLocked}
-        title={isLocked ? `Mo khoa sau khi hoan thanh level ${level - 1}` : undefined}
+        disabled={isStarting || isLocked || isCleared}
+        title={
+          isLocked
+            ? `Mo khoa sau khi chien thang level ${level - 1}`
+            : isCleared
+              ? 'Match completed'
+              : undefined
+        }
         onClick={() => {
-          if (isLocked) {
+          if (isLocked || isCleared) {
             return;
           }
           void onStart();
@@ -201,10 +209,12 @@ function CampaignMatchCard({
         {isLocked
           ? 'Locked'
           : isCleared
-            ? 'Replay Match'
+            ? 'Completed'
             : isStarting
               ? 'Starting...'
-              : 'Start Match'}
+              : mustRetry
+                ? 'Retry Match'
+                : 'Start Match'}
       </button>
     </article>
   );

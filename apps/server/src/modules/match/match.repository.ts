@@ -140,17 +140,18 @@ export class MatchRepository {
     reward: number;
   }): Promise<void> {
     await this.campainMatchRepository.manager.transaction(async (manager) => {
-      if (data.reward > 0) {
-        await manager.query(
-          "UPDATE teams SET budget = budget + ? WHERE id = ? AND EXISTS (SELECT 1 FROM campains WHERE id = ? AND level < ?)",
-          [data.reward, data.teamId, data.campaignId, data.nextLevel],
-        );
-      }
+      const progressResult = await manager.query(
+        "UPDATE campains SET level = GREATEST(level, ?) WHERE id = ? AND level < ?",
+        [data.nextLevel, data.campaignId, data.nextLevel],
+      );
+      const progressUpdated = Number(progressResult?.affectedRows ?? 0) > 0;
 
-      await manager.query("UPDATE campains SET level = GREATEST(level, ?) WHERE id = ?", [
-        data.nextLevel,
-        data.campaignId,
-      ]);
+      if (progressUpdated && data.reward > 0) {
+        await manager.query("UPDATE teams SET budget = budget + ? WHERE id = ?", [
+          data.reward,
+          data.teamId,
+        ]);
+      }
     });
   }
 

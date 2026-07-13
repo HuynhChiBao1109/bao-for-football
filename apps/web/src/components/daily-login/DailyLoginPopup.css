@@ -1,0 +1,331 @@
+.daily-login {
+  display: grid;
+  gap: 18px;
+  min-height: 0;
+  max-height: calc(100svh - 108px);
+  overflow-y: auto;
+  padding: clamp(16px, 2.4vw, 28px);
+  color: #fff;
+}
+
+.daily-login__loading {
+  min-height: 320px;
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 800;
+}
+
+.daily-login__hero {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+  border-bottom: 1px solid rgba(255, 57, 83, 0.3);
+  padding: 2px 2px 18px;
+}
+
+.daily-login__hero > div {
+  min-width: 0;
+}
+
+.daily-login__hero span {
+  color: #ff6679;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.daily-login__hero h3 {
+  margin: 4px 0 2px;
+  font-family: 'Bebas Neue', 'Barlow', sans-serif;
+  font-size: clamp(2rem, 5vw, 3.8rem);
+  font-weight: 900;
+  line-height: 0.98;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.daily-login__hero p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.daily-login__hero > strong {
+  flex: 0 0 auto;
+  color: #ff2e4a;
+  font-family: 'Bebas Neue', 'Barlow', sans-serif;
+  font-size: clamp(3.4rem, 8vw, 6rem);
+  line-height: 0.75;
+  text-shadow: 0 0 28px rgba(255, 46, 74, 0.38);
+}
+
+.daily-login__hero > strong small {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.35em;
+}
+
+.daily-login__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(92px, 1fr));
+  gap: 10px;
+}
+
+.daily-login-reward {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 166px;
+  align-content: space-between;
+  gap: 7px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 7px;
+  padding: 11px;
+  background:
+    linear-gradient(155deg, rgba(255, 255, 255, 0.055), transparent 50%),
+    rgba(7, 8, 12, 0.88);
+}
+
+.daily-login-reward::after {
+  content: '';
+  position: absolute;
+  inset: auto -20% -42% 20%;
+  height: 75%;
+  border: 1px solid rgba(255, 46, 74, 0.18);
+  transform: skewY(-18deg);
+  pointer-events: none;
+}
+
+.daily-login-reward[data-state='claimable'] {
+  border-color: rgba(255, 53, 80, 0.88);
+  box-shadow:
+    inset 0 0 22px rgba(255, 46, 74, 0.11),
+    0 0 24px rgba(255, 46, 74, 0.2);
+  animation: dailyRewardPulse 2.4s ease-in-out infinite;
+}
+
+.daily-login-reward[data-state='claimed'] {
+  border-color: rgba(88, 222, 255, 0.32);
+  opacity: 0.64;
+}
+
+.daily-login-reward[data-state='locked'] {
+  filter: saturate(0.42);
+  opacity: 0.52;
+}
+
+.daily-login-reward > header {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.daily-login-reward > header b {
+  display: grid;
+  width: 19px;
+  height: 19px;
+  place-items: center;
+  border-radius: 50%;
+  background: #75e6ff;
+  color: #061016;
+  font-size: 12px;
+}
+
+.daily-login-reward__player,
+.daily-login-reward__credits {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 54px;
+  height: 54px;
+  place-items: center;
+  justify-self: center;
+  border: 1px solid rgba(255, 64, 89, 0.5);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 46, 74, 0.2), rgba(5, 5, 8, 0.94) 68%);
+  box-shadow: 0 0 22px rgba(255, 46, 74, 0.18);
+}
+
+.daily-login-reward__player span {
+  font-family: 'Bebas Neue', 'Barlow', sans-serif;
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.daily-login-reward__player small {
+  position: absolute;
+  right: -4px;
+  bottom: -2px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 3px;
+  padding: 2px 4px;
+  background: #13151b;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.daily-login-reward__credits {
+  border-color: rgba(255, 194, 94, 0.56);
+  background: radial-gradient(circle, rgba(255, 173, 51, 0.23), rgba(10, 8, 5, 0.96) 68%);
+  color: #ffd28e;
+  font-family: 'Bebas Neue', 'Barlow', sans-serif;
+  font-size: 1.8rem;
+}
+
+.daily-login-reward > strong,
+.daily-login-reward > small {
+  position: relative;
+  z-index: 1;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.daily-login-reward > strong {
+  font-size: 12px;
+  line-height: 1.15;
+}
+
+.daily-login-reward > small {
+  color: rgba(255, 255, 255, 0.46);
+  font-size: 8px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.daily-login__message {
+  border-left: 3px solid #ff3652;
+  padding: 10px 12px;
+  background: rgba(255, 46, 74, 0.09);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.daily-login__message--error {
+  border-left-color: #ff765f;
+  color: #ffc4ba;
+}
+
+.daily-login__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.daily-login__footer > span {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.daily-login__footer button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 1px solid rgba(255, 103, 122, 0.58);
+  border-radius: 6px;
+  padding: 0 18px;
+  background: linear-gradient(135deg, #f31335, #790013 72%, #170207);
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  box-shadow: 0 10px 28px rgba(255, 22, 55, 0.2);
+  cursor: pointer;
+}
+
+.daily-login__footer button svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.daily-login__footer button:disabled {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: #16171c;
+  color: rgba(255, 255, 255, 0.42);
+  box-shadow: none;
+  cursor: default;
+}
+
+@keyframes dailyRewardPulse {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@media (max-width: 920px) {
+  .daily-login__grid {
+    grid-template-columns: repeat(4, minmax(92px, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .daily-login {
+    gap: 14px;
+    padding: 14px;
+  }
+
+  .daily-login__hero {
+    align-items: center;
+  }
+
+  .daily-login__hero h3 {
+    font-size: 2rem;
+  }
+
+  .daily-login__hero > strong {
+    font-size: 3.2rem;
+  }
+
+  .daily-login__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .daily-login-reward {
+    min-height: 142px;
+  }
+
+  .daily-login-reward:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .daily-login__footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .daily-login__footer button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .daily-login-reward[data-state='claimable'] {
+    animation: none;
+  }
+}
