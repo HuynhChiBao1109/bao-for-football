@@ -265,6 +265,12 @@ function normalizePlayer(item, leagueCountryName) {
     );
   }
 
+  const positions = normalizePositions(item?.positions);
+  const isGoalkeeper =
+    positions.some((position) => normalizeRoleName(position.position) === "GK") ||
+    normalizeRoleName(item?.archetype) === "GK";
+  const goalkeeperFallback = isGoalkeeper ? 75 : 24;
+
   return {
     name,
     season,
@@ -282,7 +288,11 @@ function normalizePlayer(item, leagueCountryName) {
     acceleration: toInt(item?.acceleration, 75),
     speed: toInt(item?.speed, 75),
     stamina: toInt(item?.stamina, 75),
-    positions: normalizePositions(item?.positions),
+    gk_keeping: toInt(item?.gkKeeping, goalkeeperFallback),
+    gk_reflex: toInt(item?.gkReflex, goalkeeperFallback),
+    gk_diving: toInt(item?.gkDiving, goalkeeperFallback),
+    gk_reach: toInt(item?.gkReach, goalkeeperFallback),
+    positions,
     skills: normalizeSkills(item?.skills),
     archetype: String(item?.archetype || "").trim() || null,
   };
@@ -581,7 +591,7 @@ async function migrateClubs(connection, leaguesWithCountryId, leagueByName) {
 
 async function migratePlayers(connection, clubsWithRefs, clubByKey, countryIdByName) {
   const [existingRows] = await connection.execute(
-    "SELECT id, name, slug, season, country_id, club_id, height, body_type, `pass`, long_pass, vision, shoot, tackle, balance, dribbling, acceleration, speed, stamina, positions FROM players",
+    "SELECT id, name, slug, season, country_id, club_id, height, body_type, `pass`, long_pass, vision, shoot, tackle, balance, dribbling, acceleration, speed, stamina, gk_keeping, gk_reflex, gk_diving, gk_reach, positions FROM players",
   );
 
   const existingByKey = new Map();
@@ -624,6 +634,10 @@ async function migratePlayers(connection, clubsWithRefs, clubByKey, countryIdByN
         acceleration: player.acceleration,
         speed: player.speed,
         stamina: player.stamina,
+        gk_keeping: player.gk_keeping,
+        gk_reflex: player.gk_reflex,
+        gk_diving: player.gk_diving,
+        gk_reach: player.gk_reach,
         positions: normalizePositions(player.positions),
       };
 
@@ -649,6 +663,10 @@ async function migratePlayers(connection, clubsWithRefs, clubByKey, countryIdByN
           record.acceleration,
           record.speed,
           record.stamina,
+          record.gk_keeping,
+          record.gk_reflex,
+          record.gk_diving,
+          record.gk_reach,
           record.positions,
         ]);
         continue;
@@ -670,6 +688,10 @@ async function migratePlayers(connection, clubsWithRefs, clubByKey, countryIdByN
         Number(existing.acceleration) !== Number(record.acceleration) ||
         Number(existing.speed) !== Number(record.speed) ||
         Number(existing.stamina) !== Number(record.stamina) ||
+        Number(existing.gk_keeping) !== Number(record.gk_keeping) ||
+        Number(existing.gk_reflex) !== Number(record.gk_reflex) ||
+        Number(existing.gk_diving) !== Number(record.gk_diving) ||
+        Number(existing.gk_reach) !== Number(record.gk_reach) ||
         JSON.stringify(normalizeJsonValue(existing.positions)) !== JSON.stringify(record.positions);
 
       if (changed) {
@@ -689,6 +711,10 @@ async function migratePlayers(connection, clubsWithRefs, clubByKey, countryIdByN
           record.acceleration,
           record.speed,
           record.stamina,
+          record.gk_keeping,
+          record.gk_reflex,
+          record.gk_diving,
+          record.gk_reach,
           JSON.stringify(record.positions),
           existing.id,
         ]);
@@ -699,13 +725,13 @@ async function migratePlayers(connection, clubsWithRefs, clubByKey, countryIdByN
   await insertBatch(
     connection,
     "players",
-    "name, slug, season, country_id, club_id, height, body_type, `pass`, long_pass, vision, shoot, tackle, balance, dribbling, acceleration, speed, stamina, positions",
+    "name, slug, season, country_id, club_id, height, body_type, `pass`, long_pass, vision, shoot, tackle, balance, dribbling, acceleration, speed, stamina, gk_keeping, gk_reflex, gk_diving, gk_reach, positions",
     toInsert,
   );
 
   for (const values of toUpdate) {
     await connection.execute(
-      "UPDATE players SET slug = ?, country_id = ?, club_id = ?, height = ?, body_type = ?, `pass` = ?, long_pass = ?, vision = ?, shoot = ?, tackle = ?, balance = ?, dribbling = ?, acceleration = ?, speed = ?, stamina = ?, positions = ? WHERE id = ?",
+      "UPDATE players SET slug = ?, country_id = ?, club_id = ?, height = ?, body_type = ?, `pass` = ?, long_pass = ?, vision = ?, shoot = ?, tackle = ?, balance = ?, dribbling = ?, acceleration = ?, speed = ?, stamina = ?, gk_keeping = ?, gk_reflex = ?, gk_diving = ?, gk_reach = ?, positions = ? WHERE id = ?",
       values,
     );
   }
@@ -1040,7 +1066,7 @@ async function migrateSpecialPlayers(connection, countryIdByName) {
   }
 
   const [existingRows] = await connection.execute(
-    "SELECT id, name, slug, season, country_id, club_id, height, body_type, `pass`, long_pass, vision, shoot, tackle, balance, dribbling, acceleration, speed, stamina, positions FROM players",
+    "SELECT id, name, slug, season, country_id, club_id, height, body_type, `pass`, long_pass, vision, shoot, tackle, balance, dribbling, acceleration, speed, stamina, gk_keeping, gk_reflex, gk_diving, gk_reach, positions FROM players",
   );
   const existingByKey = new Map();
   for (const row of existingRows) {
@@ -1084,6 +1110,10 @@ async function migrateSpecialPlayers(connection, countryIdByName) {
       acceleration: player.acceleration,
       speed: player.speed,
       stamina: player.stamina,
+      gk_keeping: player.gk_keeping,
+      gk_reflex: player.gk_reflex,
+      gk_diving: player.gk_diving,
+      gk_reach: player.gk_reach,
       positions: normalizePositions(player.positions),
     };
     const key = `${normalizeKey(record.name)}|${String(record.season)}`;
@@ -1108,6 +1138,10 @@ async function migrateSpecialPlayers(connection, countryIdByName) {
         record.acceleration,
         record.speed,
         record.stamina,
+        record.gk_keeping,
+        record.gk_reflex,
+        record.gk_diving,
+        record.gk_reach,
         record.positions,
       ]);
       continue;
@@ -1129,6 +1163,10 @@ async function migrateSpecialPlayers(connection, countryIdByName) {
       Number(existing.acceleration) !== Number(record.acceleration) ||
       Number(existing.speed) !== Number(record.speed) ||
       Number(existing.stamina) !== Number(record.stamina) ||
+      Number(existing.gk_keeping) !== Number(record.gk_keeping) ||
+      Number(existing.gk_reflex) !== Number(record.gk_reflex) ||
+      Number(existing.gk_diving) !== Number(record.gk_diving) ||
+      Number(existing.gk_reach) !== Number(record.gk_reach) ||
       JSON.stringify(normalizeJsonValue(existing.positions)) !== JSON.stringify(record.positions);
 
     if (changed) {
@@ -1148,6 +1186,10 @@ async function migrateSpecialPlayers(connection, countryIdByName) {
         record.acceleration,
         record.speed,
         record.stamina,
+        record.gk_keeping,
+        record.gk_reflex,
+        record.gk_diving,
+        record.gk_reach,
         JSON.stringify(record.positions),
         existing.id,
       ]);
@@ -1157,13 +1199,13 @@ async function migrateSpecialPlayers(connection, countryIdByName) {
   await insertBatch(
     connection,
     "players",
-    "name, slug, season, country_id, club_id, height, body_type, `pass`, long_pass, vision, shoot, tackle, balance, dribbling, acceleration, speed, stamina, positions",
+    "name, slug, season, country_id, club_id, height, body_type, `pass`, long_pass, vision, shoot, tackle, balance, dribbling, acceleration, speed, stamina, gk_keeping, gk_reflex, gk_diving, gk_reach, positions",
     toInsert,
   );
 
   for (const values of toUpdate) {
     await connection.execute(
-      "UPDATE players SET slug = ?, country_id = ?, club_id = ?, height = ?, body_type = ?, `pass` = ?, long_pass = ?, vision = ?, shoot = ?, tackle = ?, balance = ?, dribbling = ?, acceleration = ?, speed = ?, stamina = ?, positions = ? WHERE id = ?",
+      "UPDATE players SET slug = ?, country_id = ?, club_id = ?, height = ?, body_type = ?, `pass` = ?, long_pass = ?, vision = ?, shoot = ?, tackle = ?, balance = ?, dribbling = ?, acceleration = ?, speed = ?, stamina = ?, gk_keeping = ?, gk_reflex = ?, gk_diving = ?, gk_reach = ?, positions = ? WHERE id = ?",
       values,
     );
   }

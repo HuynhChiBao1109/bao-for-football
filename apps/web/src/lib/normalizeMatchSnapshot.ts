@@ -119,6 +119,7 @@ export function normalizeSnapshot(
         ? String(snapshot.highlight.secondaryPlayerId)
         : null,
       skill: snapshot?.highlight?.skill ?? null,
+      kickoffWhistle: Boolean(snapshot?.highlight?.kickoffWhistle),
     },
     homePlayers: (homePlayers as unknown as RawPlayer[]).map((player, index) =>
       toPitchPlayer(player, ballOwnerId, 'home', index),

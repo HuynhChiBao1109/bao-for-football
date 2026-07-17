@@ -9,6 +9,9 @@ export type RenderedMatchSnapshot = MatchSnapshot & {
 
 const PASS_EVENT = 35;
 const PASS_RELEASE_SHARE = 0.1;
+const PASS_FLIGHT_DURATION_SHARE = 1;
+const SHOT_FLIGHT_DURATION_SHARE = 0.98;
+const SKILL_SHOT_FLIGHT_DURATION_SHARE = 0.96;
 
 function lerp(from: number, to: number, alpha: number) {
   return from + (to - from) * alpha;
@@ -21,6 +24,12 @@ function easeInOut(alpha: number) {
 
 function linear(alpha: number) {
   return clamp(alpha, 0, 1);
+}
+
+function passRollProgress(alpha: number) {
+  const value = clamp(alpha, 0, 1);
+  const progress = 1 - Math.pow(1 - value, 1.3);
+  return progress >= 0.995 ? 1 : progress;
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -59,21 +68,24 @@ function isShotSkill(snapshot: MatchSnapshot) {
 function getBallAnimationDuration(snapshot: MatchSnapshot, frameDuration: number) {
   const event = snapshot.highlight?.event;
   if (snapshot.ball.ownerPlayerId) return frameDuration;
-  if (event === 35) return frameDuration;
-  if (isShotSkill(snapshot)) return frameDuration * 0.78;
+  if (event === PASS_EVENT || snapshot.highlight?.skill === EPlayerSkill.EAGLE_EYE) {
+    return frameDuration * PASS_FLIGHT_DURATION_SHARE;
+  }
+  if (isShotSkill(snapshot)) return frameDuration * SKILL_SHOT_FLIGHT_DURATION_SHARE;
   if (snapshot.ball.skillTrajectory || snapshot.highlight?.skill) return frameDuration;
   if (event === 7 || event === 36 || event === 38) {
-    return frameDuration;
+    return frameDuration * SHOT_FLIGHT_DURATION_SHARE;
   }
   return frameDuration;
 }
 
 function getBallProgressAlpha(snapshot: MatchSnapshot, alpha: number) {
   const event = snapshot.highlight?.event;
-  if (snapshot.ball.ownerPlayerId || event === 35) return linear(alpha);
-  if (isShotSkill(snapshot)) return linear(alpha);
+  if (snapshot.ball.ownerPlayerId) return linear(alpha);
+  if (event === PASS_EVENT) return linear(alpha);
+  if (isShotSkill(snapshot)) return easeInOut(alpha);
   if (snapshot.ball.skillTrajectory || snapshot.highlight?.skill) return easeInOut(alpha);
-  if (event === 7 || event === 36 || event === 38) return linear(alpha);
+  if (event === 7 || event === 36 || event === 38) return easeInOut(alpha);
   return easeInOut(alpha);
 }
 
@@ -95,8 +107,29 @@ function normalizeBallPath(points: Array<{ x: number; y: number }>) {
   return path;
 }
 
+function smoothBallPath(points: Array<{ x: number; y: number }>) {
+  let path = normalizeBallPath(points);
+  if (path.length <= 2) return path;
+
+  for (let iteration = 0; iteration < 2; iteration += 1) {
+    const smoothed = [path[0]];
+    for (let index = 0; index < path.length - 1; index += 1) {
+      const from = path[index];
+      const to = path[index + 1];
+      smoothed.push(
+        { x: lerp(from.x, to.x, 0.25), y: lerp(from.y, to.y, 0.25) },
+        { x: lerp(from.x, to.x, 0.75), y: lerp(from.y, to.y, 0.75) },
+      );
+    }
+    smoothed.push(path[path.length - 1]);
+    path = smoothed;
+  }
+
+  return path;
+}
+
 function interpolatePathByDistance(points: Array<{ x: number; y: number }>, alpha: number) {
-  const path = normalizeBallPath(points);
+  const path = smoothBallPath(points);
   if (path.length <= 1) {
     return path[0] ?? { x: 50, y: 50 };
   }
@@ -171,10 +204,11 @@ function getPassBallPosition(input: {
     return fromRelease.x * targetVector.x + fromRelease.y * targetVector.y > 0;
   });
   const flightAlpha = (input.ballAlpha - PASS_RELEASE_SHARE) / (1 - PASS_RELEASE_SHARE);
+  const curvedPath = input.next.highlight?.skill === EPlayerSkill.EAGLE_EYE ? forwardPath : [];
 
   return interpolatePathByDistance(
-    [releasePosition, ...forwardPath, target],
-    linear(flightAlpha),
+    [releasePosition, ...curvedPath, target],
+    passRollProgress(flightAlpha),
   );
 }
 
@@ -274,8 +308,8 @@ export function useMatchMotion(
   const nextRef = useRef<MatchSnapshot | null>(snapshot);
   const onTickCompleteRef = useRef(options.onTickComplete);
   const startRef = useRef(0);
-  const durationRef = useRef(550);
-  const ballDurationRef = useRef(550);
+  const durationRef = useRef(360);
+  const ballDurationRef = useRef(360);
   const frameRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -305,9 +339,9 @@ export function useMatchMotion(
 
     previousRef.current = lastRenderedRef.current ?? nextRef.current;
     nextRef.current = snapshot;
-    durationRef.current = Math.max(160, Math.min(2200, snapshot.durationMs ?? 1000));
+    durationRef.current = Math.max(140, Math.min(5000, snapshot.durationMs ?? 360));
     ballDurationRef.current = Math.max(
-      160,
+      120,
       Math.min(durationRef.current, getBallAnimationDuration(snapshot, durationRef.current)),
     );
     startRef.current = performance.now();

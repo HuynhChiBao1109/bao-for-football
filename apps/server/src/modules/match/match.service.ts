@@ -98,12 +98,14 @@ export class MatchService implements IMatchService {
           this.getMatchRuntimeKey(existingMatch.id),
         );
         const runtimeTimeline = (runtimeState?.timeline ?? []).filter(Boolean);
-        const persistedTimeline = ((existingMatch.timeline ?? []) as MatchSnapshot[]).filter(Boolean);
+        const persistedTimeline = ((existingMatch.timeline ?? []) as MatchSnapshot[]).filter(
+          Boolean,
+        );
         const hasStarted = Boolean(
           runtimeState?.latestSnapshot ||
-            existingMatch.latestSnapshot ||
-            runtimeTimeline.length ||
-            persistedTimeline.length,
+          existingMatch.latestSnapshot ||
+          runtimeTimeline.length ||
+          persistedTimeline.length,
         );
 
         if (!hasStarted) {
@@ -114,7 +116,7 @@ export class MatchService implements IMatchService {
           );
           const tickCompletedWhileSettling = Boolean(
             settledRuntimeState?.latestSnapshot ||
-              settledRuntimeState?.timeline?.filter(Boolean).length,
+            settledRuntimeState?.timeline?.filter(Boolean).length,
           );
 
           if (tickCompletedWhileSettling) {
@@ -317,15 +319,32 @@ export class MatchService implements IMatchService {
       return { matchId: String(matchId), autoTicking: true };
     }
 
+    const scheduleTick = (delayMs: number) => {
+      const timer = setTimeout(() => {
+        void runTick();
+      }, delayMs);
+      this.autoTickTimers.set(matchId, timer);
+    };
+
     const runTick = async () => {
       if (this.autoTickInFlight.has(matchId)) {
+        if (this.autoTickTimers.has(matchId)) {
+          scheduleTick(AUTO_TICK_INTERVAL_MS);
+        }
         return;
       }
 
       this.autoTickInFlight.add(matchId);
+      let shouldContinue = true;
+      let nextDelayMs = AUTO_TICK_INTERVAL_MS;
       try {
         const nextTick = await this.getNextTick(matchId, { emitSocket: false });
         const isFinished = nextTick.snapshot.highlight?.event === EMatchEvent.MATCH_END;
+        const snapshotDuration = Number(nextTick.snapshot.durationMs);
+        nextDelayMs =
+          Number.isFinite(snapshotDuration) && snapshotDuration > 0
+            ? Math.max(120, Math.min(10_000, snapshotDuration))
+            : AUTO_TICK_INTERVAL_MS;
 
         if (!this.autoTickTimers.has(matchId)) {
           return;
@@ -334,21 +353,22 @@ export class MatchService implements IMatchService {
         this.emitTickResult(matchId, nextTick.snapshot, isFinished);
 
         if (isFinished) {
+          shouldContinue = false;
           this.stopAutoTick(matchId);
         }
       } catch (error) {
+        shouldContinue = false;
         this.stopAutoTick(matchId);
         console.error(`Auto tick stopped for match ${matchId}`, error);
       } finally {
         this.autoTickInFlight.delete(matchId);
+        if (shouldContinue && this.autoTickTimers.has(matchId)) {
+          scheduleTick(nextDelayMs);
+        }
       }
     };
 
-    const timer = setInterval(() => {
-      void runTick();
-    }, AUTO_TICK_INTERVAL_MS);
-    this.autoTickTimers.set(matchId, timer);
-    void runTick();
+    scheduleTick(0);
 
     return { matchId: String(matchId), autoTicking: true };
   }
@@ -356,7 +376,7 @@ export class MatchService implements IMatchService {
   stopAutoTick(matchId: number) {
     const timer = this.autoTickTimers.get(matchId);
     if (timer) {
-      clearInterval(timer);
+      clearTimeout(timer);
       this.autoTickTimers.delete(matchId);
     }
 
@@ -481,10 +501,7 @@ export class MatchService implements IMatchService {
     });
   }
 
-  private async completePreviousCampaignProgress(
-    campaignId: number,
-    targetLevel: number,
-  ) {
+  private async completePreviousCampaignProgress(campaignId: number, targetLevel: number) {
     const previousMatches = await this.repository.findCampaignMatchesUpToLevel(
       campaignId,
       targetLevel,
@@ -674,12 +691,14 @@ export class MatchService implements IMatchService {
         order: index,
         slotId: item.position?.slotId ? String(item.position.slotId) : null,
         position: item.position?.position ? String(item.position.position) : null,
-        x: item.position?.x !== null && item.position?.x !== undefined && Number.isFinite(savedX)
-          ? savedX
-          : null,
-        y: item.position?.y !== null && item.position?.y !== undefined && Number.isFinite(savedY)
-          ? savedY
-          : null,
+        x:
+          item.position?.x !== null && item.position?.x !== undefined && Number.isFinite(savedX)
+            ? savedX
+            : null,
+        y:
+          item.position?.y !== null && item.position?.y !== undefined && Number.isFinite(savedY)
+            ? savedY
+            : null,
       };
       return acc;
     }, {});

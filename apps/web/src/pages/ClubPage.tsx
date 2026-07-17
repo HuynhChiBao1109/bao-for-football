@@ -29,7 +29,7 @@ import {
   type TrainingEventType,
 } from '../hooks/useTrainingRoom';
 import { useMatchMotion } from '../hooks/useMatchMotion';
-import { EPlayerSkill, skillAnimation, skillName } from '../enums/skill';
+import { EPlayerSkill, skillName } from '../enums/skill';
 import { queryClient } from '../lib/queryClient';
 import { normalizeSnapshot } from '../lib/normalizeMatchSnapshot';
 import { DEFAULT_CLUB_IMAGE } from '../lib/referenceImage';
@@ -1541,6 +1541,7 @@ function TrainingMatchStage({
   const highlightedPlayerId = snapshot?.highlight?.actorPlayerId
     ? Number(snapshot.highlight.actorPlayerId)
     : null;
+  const activeSkill = snapshot?.highlight?.skill ?? snapshot?.ball.skillTrajectory ?? undefined;
 
   return (
     <section className="club-training-stage" aria-label="Training match view">
@@ -1563,6 +1564,7 @@ function TrainingMatchStage({
         ref={pitchRef}
         className="match-pitch club-training-match-pitch"
         data-event={activeEvent}
+        data-active-skill={activeSkill}
         data-dragging={Boolean(draggingPlayerId)}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -1737,21 +1739,15 @@ function TrainingBall({ snapshot }: { snapshot: MatchSnapshot }) {
 
 function TrainingSkillOverlay({ snapshot }: { snapshot: MatchSnapshot }) {
   const skill = snapshot.highlight?.skill ?? snapshot.ball.skillTrajectory ?? null;
-  const animation = skillAnimation(skill);
 
-  if (!skill || !animation || snapshot.highlight?.event !== TRAINING_MATCH_EVENT.SKILL_USED) {
+  if (!skill || snapshot.highlight?.event !== TRAINING_MATCH_EVENT.SKILL_USED) {
     return null;
   }
 
   return (
     <div className="skill-overlay" data-skill={skill} aria-hidden="true">
-      <video
-        key={`${snapshot.frameId ?? snapshot.tick}-${skill}`}
-        src={animation}
-        autoPlay
-        muted
-        playsInline
-      />
+      <span className="skill-overlay__wash" />
+      <span className="skill-overlay__pulse" />
       <div className="skill-overlay__label">
         <span>Skill activated</span>
         <strong>{skillName(skill)}</strong>

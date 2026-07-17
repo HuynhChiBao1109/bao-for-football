@@ -37,17 +37,17 @@ export const TICKS_PER_SECOND = SIM_TICKS_PER_SECOND;
 export const TICKS_PER_MINUTE = 60 * TICKS_PER_SECOND;
 export const MATCH_DURATION_TICKS = MATCH_CLOCK_SECONDS * TICKS_PER_SECOND;
 export const DEBUG_TICK_STEP = 1;
-export const FRAME_DURATION_MS = 500;
-export const AUTO_TICK_INTERVAL_MS = 500;
-const SKILL_FRAME_DURATION_MS = 620;
-const SKILL_SHOT_FRAME_DURATION_MS = 600;
-const SKILL_PASS_FRAME_DURATION_MS = 620;
-const SKILL_DRIBBLE_FRAME_DURATION_MS = 620;
-const SKILL_TACKLE_FRAME_DURATION_MS = 600;
-const PASS_FRAME_DURATION_MS = 500;
-const SHOT_FRAME_DURATION_MS = 520;
+export const FRAME_DURATION_MS = 360;
+export const AUTO_TICK_INTERVAL_MS = 360;
+const SKILL_FRAME_DURATION_MS = 420;
+const SKILL_SHOT_FRAME_DURATION_MS = 560;
+const SKILL_PASS_FRAME_DURATION_MS = 470;
+const SKILL_DRIBBLE_FRAME_DURATION_MS = 400;
+const SKILL_TACKLE_FRAME_DURATION_MS = 390;
+const PASS_FRAME_DURATION_MS = 430;
+const SHOT_FRAME_DURATION_MS = 440;
 const TACKLE_FRAME_DURATION_MS = 500;
-const DEAD_BALL_FRAME_DURATION_MS = 500;
+const DEAD_BALL_FRAME_DURATION_MS = 420;
 const KEEPER_HOLD_FRAME_DURATION_MS = Math.round(FRAME_DURATION_MS * 0.75);
 const CORNER_SETUP_DELAY_MS = 700;
 const CORNER_DELIVERY_FRAME_DURATION_MS = 620;
@@ -59,6 +59,8 @@ const PENALTY_KICK_FRAME_DURATION_MS = 650;
 const HALF_TIME_WHISTLE_DURATION_MS = 500;
 const HALF_TIME_TUNNEL_DURATION_MS = 800;
 const SECOND_HALF_KICKOFF_DURATION_MS = 650;
+const GOAL_CELEBRATION_DURATION_MS = 5_000;
+const KICKOFF_WHISTLE_DURATION_MS = 2_000;
 const MIN_OWNER_POSSESSION_TICKS = Math.max(2, Math.round(1.8 * TICKS_PER_SECOND));
 const MIN_TEAM_POSSESSION_TICKS = Math.max(1, Math.round(0.8 * TICKS_PER_SECOND));
 const PASS_CADENCE_TICKS = Math.max(5, Math.round(5 * TICKS_PER_SECOND));
@@ -89,6 +91,9 @@ const PLAYER_SPEED_UNITS_PER_TICK: Record<PlayerMoveIntent, number> = {
 };
 const PASS_SPEED_UNITS_PER_TICK = MOVEMENT.passSpeed * SIM_TICK_SECONDS * 0.68;
 const SHOT_SPEED_UNITS_PER_TICK = MOVEMENT.shotSpeed * SIM_TICK_SECONDS * 1.04;
+const PLAYER_MOVEMENT_TEMPO_MULTIPLIER = 1.2;
+const LOOSE_BALL_CHASE_MULTIPLIER = 1.55;
+const PASS_RECEIVE_WINDOW_SECONDS = PASS_FRAME_DURATION_MS / 1000;
 export const FRAMES_PER_ACTION = 7;
 export const ACTIONS_PER_HALF = 14;
 
@@ -96,13 +101,15 @@ type Side = "home" | "away";
 type MatchStep =
   | "first_half_start"
   | "play"
+  | "goal_celebration"
   | "goal_reset"
   | "half_time"
   | "second_half_start"
   | "full_time";
 type PlayActionType = "pass" | "shoot" | "block" | "goal" | "save";
 type PossessionTempoKind = "pass" | "hold" | "carry" | "reposition";
-type PassStyle = "short" | "one_two" | "through" | "lob" | "switch";
+type PassStyle = "short" | "lead" | "one_two" | "through" | "lob" | "switch";
+type PassTargetIntent = "feet" | "lead" | "through";
 type RunTimingState =
   | "STAY_ONSIDE"
   | "CHECK_BACK_ONSIDE"
@@ -152,6 +159,7 @@ type ShotType =
   | "FAR_POST_SHOT"
   | "FIRST_TIME_SHOT"
   | "DESPERATE_SHOT";
+type ShotTrajectoryStyle = "straight" | "curve" | "chip";
 type ShotTargetZone =
   | "top-left corner"
   | "top-right corner"
@@ -355,6 +363,7 @@ export type MatchSnapshot = {
     secondaryPlayerId: number | null;
     skill: EPlayerSkill | null;
     skillSlug: string | null;
+    kickoffWhistle?: boolean;
   };
 };
 
@@ -749,8 +758,10 @@ export function generateNextMatchTick(input: {
       activeSkill: null,
       focusId: homeKickoff.userPlayerId,
       pressId: null,
+      durationMsOverride: KICKOFF_WHISTLE_DURATION_MS,
       positionState: previousPositionState,
     });
+    snapshot.highlight.kickoffWhistle = true;
 
     return {
       snapshot,
@@ -769,7 +780,11 @@ export function generateNextMatchTick(input: {
   const actionTick = nextTickValue + Math.abs(Math.floor(input.simulationSeed ?? 0) % 997);
   const second = getNextMatchClockSecond(latestTick);
   const minute = getDisplayMatchMinute(second);
-  const lifecycleAction = resolveMatchLifecycleAction(latestTick, nextTickValue, second);
+  const lifecycleAction =
+    latestTick.highlight?.event === EMatchEvent.GOAL ||
+    latestTick.highlight?.event === EMatchEvent.GOAL_RESET
+      ? null
+      : resolveMatchLifecycleAction(latestTick, nextTickValue, second);
   if (lifecycleAction) {
     const isHalfTimeWhistle = lifecycleAction.event === EMatchEvent.FIRST_HALF_END;
     const isHalfTimeTunnel = lifecycleAction.event === EMatchEvent.HALF_TIME_TUNNEL;
@@ -831,6 +846,10 @@ export function generateNextMatchTick(input: {
             : undefined,
       positionState: lifecyclePositionState,
     });
+    if (isSecondHalfStart) {
+      snapshot.durationMs = KICKOFF_WHISTLE_DURATION_MS;
+      snapshot.highlight.kickoffWhistle = true;
+    }
 
     return {
       snapshot,
@@ -846,39 +865,42 @@ export function generateNextMatchTick(input: {
   }
 
   if (latestTick.highlight?.event === EMatchEvent.GOAL) {
-    const losingSide: Side = latestTick.highlight.teamSide === "home" ? "away" : "home";
-    const kickoffLineup = losingSide === "home" ? homeLineup : awayLineup;
-    resetLineupsToOwnHalf(homeLineup, awayLineup);
-    const { kickoff: kickoffPlayer } = selectKickoffPair(kickoffLineup, losingSide);
-    const kickoffSpot = getKickoffSpot(losingSide);
-    const resetPositionState = createInitialPositionState(homeLineup, awayLineup, losingSide);
+    const scoringSide = latestTick.highlight.teamSide ?? latestTick.possession ?? "home";
+    const scoringLineup = scoringSide === "home" ? homeLineup : awayLineup;
+    const scorer =
+      scoringLineup.find((player) => player.userPlayerId === latestTick.highlight?.actorPlayerId) ??
+      scoringLineup.find((player) => player.role !== "GK") ??
+      scoringLineup[0];
+    const celebrationBall = { x: latestTick.ball.x, y: latestTick.ball.y };
     const snapshot = buildSnapshot({
       frameId,
       minute,
       second,
       tick: nextTickValue,
-      matchStep: "goal_reset",
+      matchStep: "goal_celebration",
       phase: latestTick.phase === "second_half" ? "second_half" : "first_half",
       homeScore: Number(latestTick.homeScore ?? 0),
       awayScore: Number(latestTick.awayScore ?? 0),
-      possession: losingSide,
+      possession: scoringSide,
       homeLineup,
       awayLineup,
-      ballOwner: kickoffPlayer,
-      ball: kickoffSpot,
-      ballPath: fixedBallPath(kickoffSpot.x, kickoffSpot.y),
+      ballOwner: scorer,
+      ball: celebrationBall,
+      ballPath: fixedBallPath(celebrationBall.x, celebrationBall.y),
       highlight: createHighlight(
         EMatchEvent.GOAL_RESET,
-        `Tick ${nextTickValue}: ${losingSide === "home" ? "Home" : "Away"} ve phan san nha sau ban thua`,
-        losingSide,
-        kickoffPlayer.userPlayerId,
+        `Tick ${nextTickValue}: ${scorer.shortName} an mung ban thang`,
+        scoringSide,
+        scorer.userPlayerId,
         null,
         null,
       ),
       activeSkill: null,
-      focusId: kickoffPlayer.userPlayerId,
+      focusId: scorer.userPlayerId,
       pressId: null,
-      positionState: resetPositionState,
+      forceLooseBall: true,
+      durationMsOverride: GOAL_CELEBRATION_DURATION_MS,
+      positionState: previousPositionState,
     });
 
     return {
@@ -886,22 +908,30 @@ export function generateNextMatchTick(input: {
       event: {
         event: EMatchEvent.GOAL_RESET,
         minute,
-        teamId: kickoffPlayer.teamId,
-        actorPlayerId: kickoffPlayer.userPlayerId,
+        teamId: scorer.teamId,
+        actorPlayerId: scorer.userPlayerId,
         secondaryPlayerId: null,
         payload: {
           label: snapshot.highlight.label,
           clockFrozen: true,
-          resetAfterGoal: true,
-          kickoffSide: losingSide,
-          ball: kickoffSpot,
+          goalCelebration: true,
+          celebrationDurationMs: GOAL_CELEBRATION_DURATION_MS,
+          scoringSide,
+          ball: celebrationBall,
         },
       },
     };
   }
 
   if (latestTick.highlight?.event === EMatchEvent.GOAL_RESET) {
-    const losingSide = latestTick.possession ?? "home";
+    const celebrationSide = latestTick.highlight.teamSide ?? latestTick.possession ?? "home";
+    const losingSide: Side =
+      latestTick.matchStep === "goal_celebration"
+        ? celebrationSide === "home"
+          ? "away"
+          : "home"
+        : (latestTick.possession ?? "home");
+    resetLineupsToOwnHalf(homeLineup, awayLineup);
     const kickoffLineup = losingSide === "home" ? homeLineup : awayLineup;
     const { kickoff: kickoffPlayer, partner: kickoffPartner } =
       losingSide === "home"
@@ -936,8 +966,10 @@ export function generateNextMatchTick(input: {
       activeSkill: null,
       focusId: kickoffPartner.userPlayerId,
       pressId: null,
+      durationMsOverride: KICKOFF_WHISTLE_DURATION_MS,
       positionState: kickoffPositionState,
     });
+    snapshot.highlight.kickoffWhistle = true;
 
     return {
       snapshot,
@@ -950,6 +982,8 @@ export function generateNextMatchTick(input: {
         payload: {
           label: snapshot.highlight.label,
           kickoffAfterGoal: true,
+          kickoffWhistle: true,
+          whistleDurationMs: KICKOFF_WHISTLE_DURATION_MS,
           clockFrozen: true,
           from: kickoffSpot,
           to: ball,
@@ -1276,7 +1310,7 @@ export function generateNextMatchTick(input: {
           ? CORNER_DELIVERY_FRAME_DURATION_MS
           : restart.deadBallEvent === EMatchEvent.THROW_IN
             ? THROW_IN_FRAME_DURATION_MS
-          : undefined,
+            : undefined,
       setPieceTargetsOverride:
         restart.deadBallEvent === EMatchEvent.CORNER_KICK
           ? getCornerKickAttackTargets({
@@ -1298,7 +1332,7 @@ export function generateNextMatchTick(input: {
                 receiverId: restart.receiver.userPlayerId,
                 target: restart.target,
               })
-          : undefined,
+            : undefined,
       positionState: previousPositionState,
     });
 
@@ -1789,16 +1823,17 @@ export function generateNextMatchTick(input: {
       random: createDeterministicSkillRandom(actionTick + 3, actor.userPlayerId),
     });
     const magicEvadeRoll =
-      ((actionTick * 13 + actor.userPlayerId * 5 + (tempoDecision.pressDefender?.userPlayerId ?? 0)) %
+      ((actionTick * 13 +
+        actor.userPlayerId * 5 +
+        (tempoDecision.pressDefender?.userPlayerId ?? 0)) %
         100) /
       100;
-    const magicEvadesPressure =
-      Boolean(
-        dribbleSkill &&
-          takeOn.success &&
-          ((dribbleSkill === EPlayerSkill.DRIBBLE_MAGIC && magicEvadeRoll < 0.72) ||
-            (dribbleSkill === EPlayerSkill.LIGHTNING_DRIBBLE && magicEvadeRoll < 0.84)),
-      );
+    const magicEvadesPressure = Boolean(
+      dribbleSkill &&
+      takeOn.success &&
+      ((dribbleSkill === EPlayerSkill.DRIBBLE_MAGIC && magicEvadeRoll < 0.72) ||
+        (dribbleSkill === EPlayerSkill.LIGHTNING_DRIBBLE && magicEvadeRoll < 0.84)),
+    );
     const tackleDecision =
       tempoDecision.pressDefender != null && !magicEvadesPressure
         ? resolveDebugDefensiveAction({
@@ -1896,7 +1931,8 @@ export function generateNextMatchTick(input: {
         activeSkill: tackleDecision.skill ?? null,
         focusId: tempoDecision.pressDefender.userPlayerId,
         pressId: actor.userPlayerId,
-        forceLooseBall: tackleDecision.isDeflection,
+        forceLooseBall:
+          tackleDecision.isDeflection || tackleDecision.event === EMatchEvent.SLIDE_TACKLE,
         positionState: previousPositionState,
       });
 
@@ -3014,15 +3050,17 @@ function resolveDebugPassingAction(input: {
       const previous =
         input.previousPositionState.players.get(player.userPlayerId) ?? player.anchors;
       const distanceToBall = distance(previous, input.ball);
-      const ballTarget = getDebugPassTarget({
+      const passTarget = getDebugPassTarget({
         receiver: player,
         receiverPreviousPosition: previous,
         ball: input.ball,
         tick: input.tick,
         possession: input.possession,
+        preferProgressive: input.preferProgressive,
         defending: input.defending,
         previousPositionState: input.previousPositionState,
       });
+      const ballTarget = passTarget.target;
       const lane = evaluatePassLane({
         from: input.ball,
         to: ballTarget,
@@ -3093,6 +3131,7 @@ function resolveDebugPassingAction(input: {
         possession: input.possession,
         laneScore: lane.score,
         oneTwoValue,
+        targetIntent: passTarget.intent,
         defending: input.defending,
         previousPositionState: input.previousPositionState,
       });
@@ -3124,20 +3163,8 @@ function resolveDebugPassingAction(input: {
         previousPositionState: input.previousPositionState,
       });
       const role = normalizeRole(player.role);
-      const offBallRunBias = getClampedPlayerAiTendency(
-        player,
-        "offBallRunBias",
-        1,
-        0.6,
-        2,
-      );
-      const infiltrationBias = getClampedPlayerAiTendency(
-        player,
-        "boxInfiltrationBias",
-        0,
-        0,
-        1,
-      );
+      const offBallRunBias = getClampedPlayerAiTendency(player, "offBallRunBias", 1, 0.6, 2);
+      const infiltrationBias = getClampedPlayerAiTendency(player, "boxInfiltrationBias", 0, 0, 1);
       const infiltratingReceiverBonus = clamp(
         (offBallRunBias - 1) * 0.18 + infiltrationBias * 0.22,
         0,
@@ -3162,9 +3189,11 @@ function resolveDebugPassingAction(input: {
             ? 0.11
             : passStyle === "through"
               ? 0.14 + throughRunScore * 0.16
-              : passStyle === "one_two"
-                ? 0.18 + oneTwoValue * 0.18
-                : 0;
+              : passStyle === "lead"
+                ? 0.08
+                : passStyle === "one_two"
+                  ? 0.18 + oneTwoValue * 0.18
+                  : 0;
       const offsidePenalty = offside.isOffside ? 2.2 : offside.warning ? 0.24 : 0;
       const legalRunBonus =
         !offside.isOffside && (passStyle === "through" || passStyle === "lob")
@@ -3186,8 +3215,7 @@ function resolveDebugPassingAction(input: {
         passStyle === "through" && !offside.isOffside && offside.warning
           ? throughRunScore * 0.24
           : 0;
-      const forwardProgress =
-        (ballTarget.y - input.ball.y) * attackDirection(input.possession);
+      const forwardProgress = (ballTarget.y - input.ball.y) * attackDirection(input.possession);
       const progressiveTransitionBonus = input.preferProgressive
         ? clamp((forwardProgress + 2) / 24, 0, 1) * 0.3
         : 0;
@@ -3258,9 +3286,10 @@ function resolveDebugPassingAction(input: {
         ball: input.ball,
         tick: input.tick,
         possession: input.possession,
+        preferProgressive: false,
         defending: input.defending,
         previousPositionState: input.previousPositionState,
-      }),
+      }).target,
       lane: evaluatePassLane({
         from: input.ball,
         to: candidates[0].anchors,
@@ -3403,11 +3432,11 @@ function resolvePassStyle(input: {
   possession: Side;
   laneScore: number;
   oneTwoValue: number;
+  targetIntent: PassTargetIntent;
   defending: InternalLineupPlayer[];
   previousPositionState: PositionState;
 }): PassStyle {
   const direction = attackDirection(input.possession);
-  const receiverRole = normalizeRole(input.receiver.role);
   const forwardProgress = (input.to.y - input.from.y) * direction;
   const anchorDistance = distance(input.actor.anchors, input.receiver.anchors);
   const offside = evaluateOffside({
@@ -3418,7 +3447,6 @@ function resolvePassStyle(input: {
     possession: input.possession,
     previousPositionState: input.previousPositionState,
   });
-  const canAttackSpace = !offside.isOffside && !offside.warning;
   const switchFlank =
     Math.abs(input.actor.anchors.x - input.receiver.anchors.x) >= 34 &&
     anchorDistance >= 24 &&
@@ -3426,18 +3454,17 @@ function resolvePassStyle(input: {
 
   if (switchFlank) return "switch";
   if (input.oneTwoValue >= 0.54 && input.laneScore >= 0.45) return "one_two";
-  if (canAttackSpace && (receiverRole === "W" || receiverRole === "ST") && forwardProgress >= 6) {
-    return "through";
+  if (input.targetIntent === "through" && !offside.isOffside) {
+    return input.laneScore < 0.48 || anchorDistance >= 28 ? "lob" : "through";
   }
-  if ((receiverRole === "W" || receiverRole === "ST") && forwardProgress >= 7) {
-    return input.laneScore < 0.48 || anchorDistance >= 20 ? "lob" : "through";
-  }
-  if (forwardProgress >= 6) return "through";
+  if (input.targetIntent === "lead" && forwardProgress > -3) return "lead";
   return "short";
 }
 
 function getPassStyleLabel(style: PassStyle) {
   switch (style) {
+    case "lead":
+      return "chuyen don buoc";
     case "one_two":
       return "bat tuong";
     case "lob":
@@ -3847,11 +3874,29 @@ function getDebugPassTarget(input: {
   ball: TrajectoryPoint;
   tick: number;
   possession: Side;
+  preferProgressive: boolean;
   defending: InternalLineupPlayer[];
   previousPositionState: PositionState;
-}): TrajectoryPoint {
+}): { target: TrajectoryPoint; intent: PassTargetIntent } {
   const direction = attackDirection(input.possession);
   const role = normalizeRole(input.receiver.role);
+  const receiverState = input.previousPositionState.players.get(input.receiver.userPlayerId);
+  const receiverVelocity = {
+    x: Number(receiverState?.vx ?? 0),
+    y: Number(receiverState?.vy ?? 0),
+  };
+  const receiverSpeed = Math.hypot(receiverVelocity.x, receiverVelocity.y);
+  const forwardRunSpeed = receiverVelocity.y * direction;
+  const passDistance = distance(input.ball, input.receiverPreviousPosition);
+  const nearestMarkerDistance =
+    input.defending
+      .filter((player) => normalizeRole(player.role) !== "GK")
+      .map((defender) => {
+        const position =
+          input.previousPositionState.players.get(defender.userPlayerId) ?? defender.anchors;
+        return distance(position, input.receiverPreviousPosition);
+      })
+      .sort((left, right) => left - right)[0] ?? 99;
   const offside = evaluateOffside({
     receiver: input.receiver,
     receiverPosition: input.receiverPreviousPosition,
@@ -3860,6 +3905,12 @@ function getDebugPassTarget(input: {
     possession: input.possession,
     previousPositionState: input.previousPositionState,
   });
+  const isForwardRunner =
+    forwardRunSpeed >= 0.65 ||
+    receiverState?.aiState === "ATTACK_SPACE" ||
+    receiverState?.aiState === "RUN_ON_SHOULDER" ||
+    receiverState?.aiState === "CURVED_RUN" ||
+    receiverState?.aiState === "DIAGONAL_RUN";
   const throughPoint = getThroughPassTarget({
     receiver: input.receiver,
     receiverPreviousPosition: input.receiverPreviousPosition,
@@ -3869,14 +3920,20 @@ function getDebugPassTarget(input: {
     defending: input.defending,
     previousPositionState: input.previousPositionState,
   });
+  const canPlayThrough =
+    Boolean(throughPoint) &&
+    input.preferProgressive &&
+    !offside.isOffside &&
+    !offside.warning &&
+    (role === "ST" || role === "W") &&
+    isForwardRunner &&
+    nearestMarkerDistance >= 4.5 &&
+    passDistance >= 10;
 
-  if (throughPoint && !offside.isOffside) {
-    return throughPoint;
+  if (throughPoint && canPlayThrough) {
+    return { target: throughPoint, intent: "through" };
   }
 
-  const wideLaneX = getWideLaneX(input.receiver);
-  const halfSpaceX = wideLaneX < 50 ? 30 : 70;
-  const passDistance = distance(input.ball, input.receiverPreviousPosition);
   const footPass = shouldPlayIntoFeet({
     receiver: input.receiver,
     receiverPosition: input.receiverPreviousPosition,
@@ -3884,9 +3941,47 @@ function getDebugPassTarget(input: {
     defending: input.defending,
     previousPositionState: input.previousPositionState,
   });
+  const shouldLeadReceiver =
+    !offside.isOffside &&
+    !offside.warning &&
+    nearestMarkerDistance > 4.5 &&
+    (isForwardRunner ||
+      (passDistance >= 28 && Math.abs(input.ball.x - input.receiverPreviousPosition.x) >= 22));
 
-  if (footPass) {
-    const settleBias = passDistance <= 18 ? 0.08 : 0.14;
+  if (shouldLeadReceiver && (!footPass || passDistance >= 28)) {
+    const isLongPass = passDistance >= 28;
+    const velocityDirection =
+      receiverSpeed > 0.25
+        ? {
+            x: receiverVelocity.x / receiverSpeed,
+            y: receiverVelocity.y / receiverSpeed,
+          }
+        : { x: 0, y: direction };
+    const leadDistance = clamp(
+      receiverSpeed * PASS_RECEIVE_WINDOW_SECONDS * 0.58 + (isLongPass ? 1.4 : 0.7),
+      0.8,
+      isLongPass ? 4.6 : 3.2,
+    );
+    const target = {
+      x: clamp(input.receiverPreviousPosition.x + velocityDirection.x * leadDistance, 6, 94),
+      y: clamp(input.receiverPreviousPosition.y + velocityDirection.y * leadDistance, 6, 94),
+    };
+    const targetOffside = evaluateOffside({
+      receiver: input.receiver,
+      receiverPosition: target,
+      ball: input.ball,
+      defending: input.defending,
+      possession: input.possession,
+      previousPositionState: input.previousPositionState,
+    });
+
+    if (!targetOffside.isOffside) {
+      return { target, intent: "lead" };
+    }
+  }
+
+  if (footPass || passDistance <= 24 || nearestMarkerDistance <= 5) {
+    const settleBias = nearestMarkerDistance <= 5 ? 0.45 : 0;
     const pressureRelease = getReceiverPressureRelease({
       receiver: input.receiver,
       receiverPosition: input.receiverPreviousPosition,
@@ -3898,9 +3993,11 @@ function getDebugPassTarget(input: {
       y: clamp(input.receiverPreviousPosition.y + pressureRelease.y * settleBias, 5, 95),
     };
 
-    return receivePoint;
+    return { target: receivePoint, intent: "feet" };
   }
 
+  const wideLaneX = getWideLaneX(input.receiver);
+  const halfSpaceX = wideLaneX < 50 ? 30 : 70;
   const nearTouchline =
     input.receiverPreviousPosition.x <= 13 || input.receiverPreviousPosition.x >= 87;
   const widthPull =
@@ -3943,7 +4040,7 @@ function getDebugPassTarget(input: {
     getReceiverReachForTick(input.receiver),
   );
 
-  return receivePoint;
+  return { target: receivePoint, intent: "lead" };
 }
 
 function shouldPlayIntoFeet(input: {
@@ -4066,13 +4163,7 @@ function getThroughPassTarget(input: {
     ),
     y: desiredY,
   };
-  const offBallRunBias = getClampedPlayerAiTendency(
-    input.receiver,
-    "offBallRunBias",
-    1,
-    0.6,
-    2,
-  );
+  const offBallRunBias = getClampedPlayerAiTendency(input.receiver, "offBallRunBias", 1, 0.6, 2);
   const receiverReach =
     getReceiverReachForTick(input.receiver) * (1.38 + (offBallRunBias - 1) * 0.22);
 
@@ -4304,14 +4395,14 @@ function isInOpponentHalf(position: TrajectoryPoint, attackingSide: Side) {
 function getReceiverReachForTick(receiver: InternalLineupPlayer) {
   const role = normalizeRole(receiver.role);
   const athletic = clamp(
-    (receiver.raw.stats.speed + receiver.raw.stats.acceleration) / 160,
-    0.85,
-    1.35,
+    (receiver.raw.stats.speed + receiver.raw.stats.acceleration) / 200,
+    0.72,
+    1.1,
   );
-  const roleReach =
-    role === "W" || role === "ST" ? 6.4 : role === "CM" ? 5.8 : role === "FB" ? 5.5 : 4.8;
+  const roleSpeed =
+    role === "W" || role === "ST" ? 10.2 : role === "CM" ? 9 : role === "FB" ? 8.8 : 7.6;
 
-  return roleReach * athletic;
+  return roleSpeed * athletic * PASS_RECEIVE_WINDOW_SECONDS * PLAYER_MOVEMENT_TEMPO_MULTIPLIER;
 }
 
 function resolveDebugDefensiveAction(input: {
@@ -4375,8 +4466,8 @@ function resolveDebugDefensiveAction(input: {
   );
 
   if (
-    (input.nextTick % TACKLE_CADENCE_TICKS === 0 || challengeDistance <= 8.5) &&
-    challengeDistance <= 16
+    (input.nextTick % TACKLE_CADENCE_TICKS === 0 || challengeDistance <= 6.5) &&
+    challengeDistance <= 9
   ) {
     const isClean = timingRoll < successChance;
     const deflectionWindow = clamp(0.24 + challengeDistancePenalty * 0.55, 0.18, 0.54);
@@ -4412,7 +4503,7 @@ function resolveDebugDefensiveAction(input: {
       event: skill === EPlayerSkill.TANK_TACKLE ? EMatchEvent.SKILL_USED : EMatchEvent.SLIDE_TACKLE,
       label:
         skill === EPlayerSkill.TANK_TACKLE ? `dung ${getSkillLabel(skill)} cuop bong` : "xoac bong",
-      target: moveToward(input.ball, target, PASS_SPEED_UNITS_PER_TICK * 0.8),
+      target: moveToward(input.ball, target, 3.2),
       skill,
       skillLabel: skill ? getSkillLabel(skill) : null,
     };
@@ -4545,8 +4636,16 @@ function resolveDebugShotAction(
     0.6,
     2,
   );
-  addSkillCharge(input.shooter, EPlayerSkill.SHOOT_THUNDER, Math.round(25 * shootSkillChargeMultiplier));
-  addSkillCharge(input.shooter, EPlayerSkill.KAISER_SHOT, Math.round(22 * shootSkillChargeMultiplier));
+  addSkillCharge(
+    input.shooter,
+    EPlayerSkill.SHOOT_THUNDER,
+    Math.round(25 * shootSkillChargeMultiplier),
+  );
+  addSkillCharge(
+    input.shooter,
+    EPlayerSkill.KAISER_SHOT,
+    Math.round(22 * shootSkillChargeMultiplier),
+  );
   const skill = getChargedSkill(input.shooter, "shoot");
   const hasThunderShot = skill === EPlayerSkill.SHOOT_THUNDER;
   const hasKaiserShot = skill === EPlayerSkill.KAISER_SHOT;
@@ -4676,7 +4775,7 @@ function resolveDebugShotAction(
       ? 0.16 + clamp((activation?.attackBonus ?? 0) / 260, 0, 0.08)
       : skill === EPlayerSkill.KAISER_SHOT
         ? 0.14 + clamp((activation?.attackBonus ?? 0) / 280, 0, 0.08)
-      : 0;
+        : 0;
   const qualityEdge = clamp(
     (shooterQuality + (activation?.attackBonus ?? 0) - keeperQuality + 20) / 140,
     0,
@@ -4705,11 +4804,11 @@ function resolveDebugShotAction(
           : distanceToGoal > 28
             ? 0.38
             : 0.68
-      : distanceToGoal > 30
-        ? 0.08
-        : distanceToGoal > 24
-          ? 0.18 + unmarkedGoalBonus * 0.35
-          : 0.46 + unmarkedGoalBonus * 0.45,
+        : distanceToGoal > 30
+          ? 0.08
+          : distanceToGoal > 24
+            ? 0.18 + unmarkedGoalBonus * 0.35
+            : 0.46 + unmarkedGoalBonus * 0.45,
   );
   const goalRoll =
     ((input.nextTick * 31 + input.shooter.userPlayerId * 29 + keeper.userPlayerId * 13) % 100) /
@@ -4787,8 +4886,7 @@ function resolveDebugShotAction(
   });
   const isKeeperSave = targetSelection.metadata.isOnTarget;
   const catchRoll =
-    ((input.nextTick * 43 + input.shooter.userPlayerId * 7 + keeper.userPlayerId * 31) % 100) /
-    100;
+    ((input.nextTick * 43 + input.shooter.userPlayerId * 7 + keeper.userPlayerId * 31) % 100) / 100;
   const keeperCatchChance =
     calculateKeeperCatchChance({
       keeper,
@@ -5131,6 +5229,11 @@ function resolveFreeKickAction(input: {
 
   if (shouldShoot) {
     const goalTarget = chooseShotTarget(input.ball, input.possession, input.nextTick);
+    const shouldCurveFreeKick =
+      wall.wallPlayerIds.length >= 3 &&
+      distanceToGoal <= 26 &&
+      Math.abs(goalTarget.x - input.ball.x) >= 4;
+    const freeKickShotType: ShotType = shouldCurveFreeKick ? "PLACED_SHOT" : "POWER_SHOT";
     const goalChance = clamp(
       0.04 + shotScore * 0.26 - wall.wallPlayerIds.length * 0.025,
       0.02,
@@ -5145,10 +5248,25 @@ function resolveFreeKickAction(input: {
 
     return {
       event: isGoal ? EMatchEvent.GOAL : EMatchEvent.GOALKEEPER_SAVE,
-      label: isGoal ? "sut phat ghi ban" : "sut phat qua hang rao",
+      label: isGoal
+        ? shouldCurveFreeKick
+          ? "sut phat xoay ghi ban"
+          : "sut phat cang ghi ban"
+        : shouldCurveFreeKick
+          ? "sut phat xoay qua hang rao"
+          : "sut phat cang qua hang rao",
       decision: "shoot",
       target,
-      ballPath: buildCurvedShotPath(input.ball, target, input.possession, isGoal ? "goal" : "save"),
+      ballPath: buildShotBallPath({
+        from: input.ball,
+        aimTarget: goalTarget,
+        endTarget: target,
+        possession: input.possession,
+        outcome: isGoal ? "goal" : "save",
+        shotType: freeKickShotType,
+        skill: null,
+        random: createDeterministicSkillRandom(input.nextTick, input.taker.userPlayerId),
+      }),
       nextOwner: isGoal ? input.taker : keeper,
       nextPossession: isGoal ? input.possession : input.possession === "home" ? "away" : "home",
       secondaryPlayerId: keeper.userPlayerId,
@@ -5179,6 +5297,7 @@ function resolveFreeKickAction(input: {
     ball: input.ball,
     tick: input.nextTick,
     possession: input.possession,
+    preferProgressive: false,
     defending: input.defending,
     previousPositionState: input.previousPositionState,
   });
@@ -5187,8 +5306,8 @@ function resolveFreeKickAction(input: {
     event: EMatchEvent.PASS,
     label: "da phat phoi hop",
     decision: "pass",
-    target: passTarget,
-    ballPath: pathBetween(input.ball, passTarget),
+    target: passTarget.target,
+    ballPath: pathBetween(input.ball, passTarget.target),
     nextOwner: receiver,
     nextPossession: input.possession,
     secondaryPlayerId: receiver.userPlayerId,
@@ -5774,13 +5893,13 @@ function calculateShotAccuracy(input: {
           ? -0.12
           : input.shotType === "KAISER_SHOT"
             ? -0.08
-          : input.shotType === "FIRST_TIME_SHOT"
-            ? -0.16
-            : input.shotType === "DESPERATE_SHOT"
-              ? -0.22
-              : input.shotType === "CHIP_SHOT"
-                ? -0.1
-                : 0;
+            : input.shotType === "FIRST_TIME_SHOT"
+              ? -0.16
+              : input.shotType === "DESPERATE_SHOT"
+                ? -0.22
+                : input.shotType === "CHIP_SHOT"
+                  ? -0.1
+                  : 0;
 
   return clamp(
     0.54 +
@@ -5817,13 +5936,13 @@ function applyShotError(input: {
           ? 1.22
           : input.shotType === "KAISER_SHOT"
             ? 0.92
-          : input.shotType === "FIRST_TIME_SHOT"
-            ? 1.35
-            : input.shotType === "DESPERATE_SHOT"
-              ? 1.55
-              : input.shotType === "CHIP_SHOT"
-                ? 1.18
-                : 1;
+            : input.shotType === "FIRST_TIME_SHOT"
+              ? 1.35
+              : input.shotType === "DESPERATE_SHOT"
+                ? 1.55
+                : input.shotType === "CHIP_SHOT"
+                  ? 1.18
+                  : 1;
   const errorRadius =
     (0.8 +
       input.distanceToGoal * 0.045 +
@@ -5857,19 +5976,19 @@ function calculateShotSpeed(shotType: ShotType, distanceToGoal: number) {
       ? 1.28
       : shotType === "KAISER_SHOT"
         ? 1.34
-      : shotType === "LOW_DRIVEN_SHOT"
-        ? 1.22
-        : shotType === "NEAR_POST_SHOT"
-          ? 1.12
-          : shotType === "FAR_POST_SHOT"
-            ? 1.06
-            : shotType === "FIRST_TIME_SHOT"
-              ? 1.14
-              : shotType === "CHIP_SHOT"
-                ? 0.72
-                : shotType === "DESPERATE_SHOT"
-                  ? 1.05
-                  : 0.96;
+        : shotType === "LOW_DRIVEN_SHOT"
+          ? 1.22
+          : shotType === "NEAR_POST_SHOT"
+            ? 1.12
+            : shotType === "FAR_POST_SHOT"
+              ? 1.06
+              : shotType === "FIRST_TIME_SHOT"
+                ? 1.14
+                : shotType === "CHIP_SHOT"
+                  ? 0.72
+                  : shotType === "DESPERATE_SHOT"
+                    ? 1.05
+                    : 0.96;
   const rangeBoost = clamp(distanceToGoal / 34, 0, 0.16);
   return Number((SHOT_SPEED_UNITS_PER_TICK * (base + rangeBoost)).toFixed(2));
 }
@@ -5900,13 +6019,13 @@ function calculateSaveDifficulty(input: {
         ? 0.12
         : input.shotType === "KAISER_SHOT"
           ? 0.2
-        : input.shotType === "CHIP_SHOT"
-          ? Math.abs(input.keeperPosition.y - (input.possession === "home" ? 4 : 96)) > 12
-            ? 0.18
-            : -0.18
-          : input.shotType === "PLACED_SHOT"
-            ? 0.08
-            : 0;
+          : input.shotType === "CHIP_SHOT"
+            ? Math.abs(input.keeperPosition.y - (input.possession === "home" ? 4 : 96)) > 12
+              ? 0.18
+              : -0.18
+            : input.shotType === "PLACED_SHOT"
+              ? 0.08
+              : 0;
 
   return clamp(
     0.18 +
@@ -5942,13 +6061,13 @@ function calculateKeeperCatchChance(input: {
       ? 0.18
       : input.shotType === "KAISER_SHOT"
         ? 0.24
-      : input.shotType === "LOW_DRIVEN_SHOT"
-        ? 0.1
-        : input.shotType === "CHIP_SHOT"
-          ? -0.08
-          : input.shotType === "PLACED_SHOT"
-            ? -0.02
-            : 0.04;
+        : input.shotType === "LOW_DRIVEN_SHOT"
+          ? 0.1
+          : input.shotType === "CHIP_SHOT"
+            ? -0.08
+            : input.shotType === "PLACED_SHOT"
+              ? -0.02
+              : 0.04;
 
   return clamp(
     0.22 +
@@ -6008,11 +6127,11 @@ function calculateExpectedGoalValue(input: {
         ? 0.04
         : input.shotType === "KAISER_SHOT"
           ? 0.08
-        : input.shotType === "CHIP_SHOT"
-          ? 0.03
-          : input.shotType === "DESPERATE_SHOT"
-            ? -0.08
-            : 0;
+          : input.shotType === "CHIP_SHOT"
+            ? 0.03
+            : input.shotType === "DESPERATE_SHOT"
+              ? -0.08
+              : 0;
   return clamp(
     0.04 +
       input.saveDifficulty * 0.36 +
@@ -6050,44 +6169,31 @@ function buildShotBallPath(input: {
   random: () => number;
 }): TrajectoryPoint[] {
   const direction = attackDirection(input.possession);
-  const curveSide = input.from.x <= 50 ? -1 : 1;
   const isThunder = input.skill === EPlayerSkill.SHOOT_THUNDER;
   const isKaiser = input.skill === EPlayerSkill.KAISER_SHOT || input.shotType === "KAISER_SHOT";
-  const curveStrength =
-    input.shotType === "PLACED_SHOT" || input.shotType === "FAR_POST_SHOT"
-      ? 4.8
-      : isKaiser
-        ? 0.75
-      : input.shotType === "POWER_SHOT" || isThunder
-        ? 2.2
-        : input.shotType === "CHIP_SHOT"
-          ? 7.2
-          : 3.4;
-  const lift =
-    input.shotType === "CHIP_SHOT"
-      ? 9
-      : input.shotType === "LOW_DRIVEN_SHOT"
-        ? 0.8
-        : input.outcome === "save"
-          ? 2.4
-          : 1.8;
+  const trajectory = resolveShotTrajectory({
+    from: input.from,
+    aimTarget: input.aimTarget,
+    shotType: input.shotType,
+    isThunder,
+    isKaiser,
+  });
 
   const points = Array.from({ length: FRAMES_PER_ACTION }, (_, index) => {
     const t = (index + 1) / FRAMES_PER_ACTION;
     const arc = Math.sin(Math.PI * t);
     const target = input.outcome === "save" && t > 0.72 ? input.endTarget : input.aimTarget;
-    const thunderShake = isThunder ? Math.sin(t * Math.PI * 7 + input.random()) * (1 - t) * 3.6 : 0;
-    const kaiserPulse = isKaiser ? Math.sin(t * Math.PI * 12) * (1 - t) * 0.85 : 0;
     return {
       x: clamp(
-        lerp(input.from.x, target.x, t) +
-          curveSide * arc * curveStrength +
-          thunderShake +
-          kaiserPulse,
+        lerp(input.from.x, target.x, t) + trajectory.curveSide * arc * trajectory.curveStrength,
         3.2,
         96.8,
       ),
-      y: clamp(lerp(input.from.y, target.y, t) - direction * arc * lift, 3.2, 96.8),
+      y: clamp(
+        lerp(input.from.y, target.y, t) - direction * arc * trajectory.longitudinalArc,
+        3.2,
+        96.8,
+      ),
     };
   });
 
@@ -6102,6 +6208,65 @@ function buildShotBallPath(input: {
   return points;
 }
 
+function resolveShotTrajectory(input: {
+  from: TrajectoryPoint;
+  aimTarget: TrajectoryPoint;
+  shotType: ShotType;
+  isThunder: boolean;
+  isKaiser: boolean;
+}): {
+  style: ShotTrajectoryStyle;
+  curveSide: number;
+  curveStrength: number;
+  longitudinalArc: number;
+} {
+  const shotDistance = distance(input.from, input.aimTarget);
+  const lateralTravel = Math.abs(input.aimTarget.x - input.from.x);
+  const shooterWidth = Math.abs(input.from.x - 50);
+
+  if (input.shotType === "CHIP_SHOT") {
+    return {
+      style: "chip",
+      curveSide: 0,
+      curveStrength: 0,
+      longitudinalArc: clamp(shotDistance * 0.2, 3.8, 7.2),
+    };
+  }
+
+  const shouldCurve =
+    !input.isThunder &&
+    !input.isKaiser &&
+    (input.shotType === "FAR_POST_SHOT" ||
+      (input.shotType === "PLACED_SHOT" &&
+        shotDistance >= 10 &&
+        (lateralTravel >= 4 || shooterWidth >= 10)));
+
+  if (!shouldCurve) {
+    return {
+      style: "straight",
+      curveSide: 0,
+      curveStrength: 0,
+      longitudinalArc: 0,
+    };
+  }
+
+  const lateralDirection = Math.sign(input.aimTarget.x - input.from.x);
+  const curveSide = lateralDirection === 0 ? (input.from.x <= 50 ? 1 : -1) : -lateralDirection;
+  const baseCurve = input.shotType === "FAR_POST_SHOT" ? 2.2 : 1.4;
+  const maximumCurve = input.shotType === "FAR_POST_SHOT" ? 4.8 : 3.8;
+
+  return {
+    style: "curve",
+    curveSide,
+    curveStrength: clamp(
+      baseCurve + lateralTravel * 0.08 + shooterWidth * 0.035 + shotDistance * 0.018,
+      baseCurve,
+      maximumCurve,
+    ),
+    longitudinalArc: 0,
+  };
+}
+
 function getShotLabel(
   shotType: ShotType,
   outcome: "goal" | "save" | "catch" | "miss",
@@ -6112,19 +6277,19 @@ function getShotLabel(
       ? "sut cang"
       : shotType === "KAISER_SHOT"
         ? "cu sut Kaiser"
-      : shotType === "PLACED_SHOT"
-        ? "sut dat long"
-        : shotType === "LOW_DRIVEN_SHOT"
-          ? "sut sam"
-          : shotType === "CHIP_SHOT"
-            ? "lob bong"
-            : shotType === "NEAR_POST_SHOT"
-              ? "sut goc gan"
-              : shotType === "FAR_POST_SHOT"
-                ? "sut cheo goc xa"
-                : shotType === "FIRST_TIME_SHOT"
-                  ? "dut diem mot cham"
-                  : "sut voi";
+        : shotType === "PLACED_SHOT"
+          ? "sut dat long"
+          : shotType === "LOW_DRIVEN_SHOT"
+            ? "sut sam"
+            : shotType === "CHIP_SHOT"
+              ? "lob bong"
+              : shotType === "NEAR_POST_SHOT"
+                ? "sut goc gan"
+                : shotType === "FAR_POST_SHOT"
+                  ? "sut cheo goc xa"
+                  : shotType === "FIRST_TIME_SHOT"
+                    ? "dut diem mot cham"
+                    : "sut voi";
 
   if (outcome === "goal")
     return distanceToGoal > 28 ? `${prefix} tu xa ghi ban` : `${prefix} ghi ban`;
@@ -6179,27 +6344,6 @@ function evaluateShotAngle(ball: TrajectoryPoint, possession: Side) {
   const distanceY = Math.max(1, Math.abs(ball.y - goalY));
   const lateral = Math.abs(ball.x - 50);
   return clamp(1 - lateral / (distanceY * 0.9 + 18), 0, 1);
-}
-
-function buildCurvedShotPath(
-  from: TrajectoryPoint,
-  to: TrajectoryPoint,
-  possession: Side,
-  outcome: "goal" | "save" | "miss",
-): TrajectoryPoint[] {
-  const direction = attackDirection(possession);
-  const curveSide = from.x <= 50 ? -1 : 1;
-  const curveStrength = outcome === "save" ? 5.2 : outcome === "goal" ? 4.4 : 6.4;
-  const lift = outcome === "save" ? 3.6 : 2.4;
-
-  return Array.from({ length: FRAMES_PER_ACTION }, (_, index) => {
-    const t = (index + 1) / FRAMES_PER_ACTION;
-    const arc = Math.sin(Math.PI * t);
-    return {
-      x: clamp(lerp(from.x, to.x, t) + curveSide * arc * curveStrength, -4, 104),
-      y: clamp(lerp(from.y, to.y, t) - direction * arc * lift, -4, 104),
-    };
-  });
 }
 
 function getNextMatchClockSecond(latestTick: MatchSnapshot) {
@@ -6522,11 +6666,7 @@ function getDribbleTrait(player: InternalLineupPlayer) {
       player.raw.stats.balance * 0.1) /
     100;
 
-  return clamp(
-    base * dribbleBias + flairBias * 0.08,
-    0,
-    1.35,
-  );
+  return clamp(base * dribbleBias + flairBias * 0.08, 0, 1.35);
 }
 
 function evaluateDribbleDuelContext(input: {
@@ -6725,6 +6865,8 @@ function resolveLooseBallContest(input: {
     | EMatchEvent.CORNER_KICK
     | EMatchEvent.GOAL_KICK
     | EMatchEvent.GOALKEEPER_SAVE
+    | EMatchEvent.BLOCK
+    | EMatchEvent.SKILL_USED
     | EMatchEvent.TACKLE
     | EMatchEvent.SLIDE_TACKLE;
   receiver: InternalLineupPlayer;
@@ -6743,6 +6885,8 @@ function resolveLooseBallContest(input: {
     event !== EMatchEvent.CORNER_KICK &&
     event !== EMatchEvent.GOAL_KICK &&
     event !== EMatchEvent.GOALKEEPER_SAVE &&
+    event !== EMatchEvent.BLOCK &&
+    event !== EMatchEvent.SKILL_USED &&
     event !== EMatchEvent.TACKLE &&
     event !== EMatchEvent.SLIDE_TACKLE
   ) {
@@ -6752,9 +6896,13 @@ function resolveLooseBallContest(input: {
 
   const allPlayers = [...input.homeLineup, ...input.awayLineup];
   const receiverId = input.latestTick.highlight?.secondaryPlayerId;
-  const isTackleLooseBall = event === EMatchEvent.TACKLE || event === EMatchEvent.SLIDE_TACKLE;
+  const isImpactLooseBall =
+    event === EMatchEvent.TACKLE ||
+    event === EMatchEvent.SLIDE_TACKLE ||
+    event === EMatchEvent.BLOCK ||
+    event === EMatchEvent.SKILL_USED;
   const receiver =
-    (event === EMatchEvent.GOALKEEPER_SAVE || isTackleLooseBall
+    (event === EMatchEvent.GOALKEEPER_SAVE || isImpactLooseBall
       ? allPlayers
           .map((player) => {
             const position =
@@ -6861,6 +7009,8 @@ function getOutOfPlayProbeBall(snapshot: MatchSnapshot): TrajectoryPoint {
   const event = snapshot.highlight?.event ?? null;
   const canRollOut =
     event === EMatchEvent.GOALKEEPER_SAVE ||
+    event === EMatchEvent.BLOCK ||
+    event === EMatchEvent.SKILL_USED ||
     event === EMatchEvent.TACKLE ||
     event === EMatchEvent.SLIDE_TACKLE ||
     event === EMatchEvent.SHOOT;
@@ -6896,7 +7046,10 @@ function resolveOutOfPlayEvent(input: {
         null)
       : null;
   const lastTouchSide =
-    keeperTouchSide ?? input.latestTick.highlight?.teamSide ?? input.latestTick.possession ?? "home";
+    keeperTouchSide ??
+    input.latestTick.highlight?.teamSide ??
+    input.latestTick.possession ??
+    "home";
 
   if (ball.y <= 4.2 || ball.y >= 95.8) {
     const defendingGoalSide: Side = ball.y <= 4.2 ? "away" : "home";
@@ -7732,11 +7885,17 @@ function getThrowInSetupTargets(input: {
     { x: touchlineX + inward * 27, y: throwY + direction * 10 },
   ].map((slot) => ({ x: clamp(slot.x, 7, 93), y: clamp(slot.y, 7, 93) }));
   const nearbyAttackers = input.attacking
-    .filter((player) => player.userPlayerId !== input.takerId && normalizeRole(player.role) !== "GK")
-    .sort((left, right) => distance(left.anchors, input.ball) - distance(right.anchors, input.ball));
+    .filter(
+      (player) => player.userPlayerId !== input.takerId && normalizeRole(player.role) !== "GK",
+    )
+    .sort(
+      (left, right) => distance(left.anchors, input.ball) - distance(right.anchors, input.ball),
+    );
   const nearbyDefenders = input.defending
     .filter((player) => normalizeRole(player.role) !== "GK")
-    .sort((left, right) => distance(left.anchors, input.ball) - distance(right.anchors, input.ball));
+    .sort(
+      (left, right) => distance(left.anchors, input.ball) - distance(right.anchors, input.ball),
+    );
 
   input.attacking.forEach((player) => {
     const role = normalizeRole(player.role);
@@ -7833,6 +7992,7 @@ function shouldAttachBallToOwner(event: EMatchEvent | null) {
     EMatchEvent.CORNER_KICK,
     EMatchEvent.GOAL_KICK,
     EMatchEvent.PENALTY,
+    EMatchEvent.BLOCK,
     EMatchEvent.SHOOT,
     EMatchEvent.GOALKEEPER_SAVE,
     EMatchEvent.GOAL,
@@ -8275,16 +8435,16 @@ function buildSnapshot(input: {
             ball,
             takerId: input.highlight.actorPlayerId ?? ownerId,
           })
-      : input.highlight.event === EMatchEvent.PENALTY
-        ? getPenaltyKickSetupTargets({
-            attacking: input.possession === "home" ? input.homeLineup : input.awayLineup,
-            defending: input.possession === "home" ? input.awayLineup : input.homeLineup,
-            possession: input.possession,
-            spot: ball,
-            takerId: input.highlight.actorPlayerId ?? ownerId,
-            keeperId: input.highlight.secondaryPlayerId ?? null,
-          })
-        : new Map<number, SetPiecePlayerTarget>());
+        : input.highlight.event === EMatchEvent.PENALTY
+          ? getPenaltyKickSetupTargets({
+              attacking: input.possession === "home" ? input.homeLineup : input.awayLineup,
+              defending: input.possession === "home" ? input.awayLineup : input.homeLineup,
+              possession: input.possession,
+              spot: ball,
+              takerId: input.highlight.actorPlayerId ?? ownerId,
+              keeperId: input.highlight.secondaryPlayerId ?? null,
+            })
+          : new Map<number, SetPiecePlayerTarget>());
   const instantSetPiece =
     input.instantSetPiece ??
     (input.highlight.event === EMatchEvent.CORNER_KICK ||
@@ -8536,6 +8696,17 @@ function projectPlayers(input: {
 
   const teammateMovement = input.teammateLineup.map(createMovementPlayer);
   const opponentMovement = input.opponentLineup.map(createMovementPlayer);
+  const ballOrigin = {
+    x: clamp(input.ball.x - input.ballVelocity.x * SIM_TICK_SECONDS, 0, 100),
+    y: clamp(input.ball.y - input.ballVelocity.y * SIM_TICK_SECONDS, 0, 100),
+  };
+  const hasLooseBall =
+    input.ballOwnerId == null &&
+    (input.forceLooseBall ||
+      input.highlightEvent === EMatchEvent.BLOCK ||
+      input.highlightEvent === EMatchEvent.SKILL_USED ||
+      input.highlightEvent === EMatchEvent.TACKLE ||
+      input.highlightEvent === EMatchEvent.SLIDE_TACKLE);
   const gameState = {
     tick: input.tick,
     deltaTime: SIM_TICK_SECONDS,
@@ -8549,9 +8720,9 @@ function projectPlayers(input: {
       velocity: input.ballVelocity,
       ownerPlayerId: input.ballOwnerId,
       intendedReceiverId: input.intendedReceiverId,
-      targetPosition: input.ball,
+      targetPosition: input.intendedReceiverId != null ? input.ball : null,
       isLoose:
-        input.forceLooseBall ||
+        hasLooseBall ||
         (input.intendedReceiverId != null && input.intendedReceiverId !== input.ballOwnerId),
     },
   };
@@ -8588,6 +8759,27 @@ function projectPlayers(input: {
       target = { x: player.x, y: player.y };
       intent = "anchor";
       aiState = "HOLD_POSITION";
+    } else if (input.matchStep === "goal_celebration") {
+      const role = normalizeRole(player.role);
+      if (onAttack && role !== "GK") {
+        const direction = attackDirection(player.side);
+        const celebrationX = input.ball.x <= 50 ? 10 : 90;
+        const celebrationY = player.side === "home" ? 8 : 92;
+        const isScorer = player.userPlayerId === input.focusId;
+        const groupOffset = (index % 5) - 2;
+        target = isScorer
+          ? { x: celebrationX, y: celebrationY }
+          : {
+              x: clamp(celebrationX + groupOffset * 3.2, 6, 94),
+              y: clamp(celebrationY - direction * (4 + Math.floor(index / 5) * 2.4), 6, 94),
+            };
+        intent = "run";
+        aiState = isScorer ? "ATTACK_SPACE" : "SUPPORT_ATTACK";
+      } else {
+        target = { x: prev.x, y: prev.y };
+        intent = "anchor";
+        aiState = role === "GK" ? "HOLD_DEPTH" : "HOLD_POSITION";
+      }
     } else if (input.matchStep === "half_time") {
       if (input.highlightEvent === EMatchEvent.HALF_TIME_TUNNEL) {
         target = getTunnelTargetForPlayer(player, index);
@@ -8615,7 +8807,15 @@ function projectPlayers(input: {
       intent = "run";
       aiState = tactical.state;
     } else if (isIntendedReceiver) {
-      target = predictBallIntercept(movementPlayer, gameState.ball);
+      target = predictBallIntercept(
+        movementPlayer,
+        {
+          ...gameState.ball,
+          position: ballOrigin,
+          targetPosition: input.ball,
+        },
+        PLAYER_MOVEMENT_TEMPO_MULTIPLIER,
+      );
       intent = "run";
       aiState = "RECEIVE_PASS";
     } else if (input.freeKickWallTargets.has(player.userPlayerId)) {
@@ -8690,12 +8890,16 @@ function projectPlayers(input: {
     }
     if (!forceLifecycleTarget && !(setPieceTarget && input.instantSetPiece)) {
       const isBallPressure = isPress || aiState === "PRESS_BALL";
+      const isLooseBallChase = hasLooseBall && aiState === "PRESS_BALL";
       updatePlayerMovement(
         movementPlayer,
         SIM_TICK_SECONDS *
+          PLAYER_MOVEMENT_TEMPO_MULTIPLIER *
+          (input.matchStep === "goal_celebration" && onAttack ? 2.8 : 1) *
           getMovementDeltaScale({
             isIntendedReceiver,
             isKeeperAction: Boolean(keeperAction),
+            isLooseBallChase,
             isPress: isBallPressure,
             onAttack,
             passInFlight,
@@ -9099,11 +9303,13 @@ function getPressTarget(player: InternalLineupPlayer, ball: TrajectoryPoint): Tr
 function getMovementDeltaScale(input: {
   isIntendedReceiver: boolean;
   isKeeperAction: boolean;
+  isLooseBallChase: boolean;
   isPress: boolean;
   onAttack: boolean;
   passInFlight: boolean;
 }) {
   if (input.isKeeperAction) return 1.15;
+  if (input.isLooseBallChase) return LOOSE_BALL_CHASE_MULTIPLIER;
   if (input.isIntendedReceiver) return 1.08;
   if (input.passInFlight && !input.onAttack) return input.isPress ? 0.58 : 0.72;
   if (input.isPress) return 0.78;
@@ -9404,16 +9610,18 @@ function selectLineup(team: SimulationTeamInput, side: Side): InternalLineupPlay
             { index: 0, score: Number.NEGATIVE_INFINITY },
           ).index;
     const picked = pool.splice(bestIndex, 1)[0] ?? team.players[index];
-    const savedX = picked.savedX !== null && Number.isFinite(Number(picked.savedX))
-      ? clamp(Number(picked.savedX), 4, 96)
-      : slot.x;
-    const savedY = picked.savedY !== null && Number.isFinite(Number(picked.savedY))
-      ? clamp(Number(picked.savedY), 4, 96)
-      : slot.y;
-    const savedRole = String(picked.savedPosition || "").trim().toUpperCase();
-    const anchors = side === "home"
-      ? { x: savedX, y: savedY }
-      : { x: savedX, y: 100 - savedY };
+    const savedX =
+      picked.savedX !== null && Number.isFinite(Number(picked.savedX))
+        ? clamp(Number(picked.savedX), 4, 96)
+        : slot.x;
+    const savedY =
+      picked.savedY !== null && Number.isFinite(Number(picked.savedY))
+        ? clamp(Number(picked.savedY), 4, 96)
+        : slot.y;
+    const savedRole = String(picked.savedPosition || "")
+      .trim()
+      .toUpperCase();
+    const anchors = side === "home" ? { x: savedX, y: savedY } : { x: savedX, y: 100 - savedY };
     return {
       userPlayerId: picked.userPlayerId,
       playerId: picked.playerId,

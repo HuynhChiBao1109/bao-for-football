@@ -358,7 +358,7 @@ export class TrainingRoomService {
     return {
       frameId: input.tick,
       tick: input.tick,
-      durationMs: 1000,
+      durationMs: 420,
       matchStep: "play",
       minute: 0,
       second: input.tick,

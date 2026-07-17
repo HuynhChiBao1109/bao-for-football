@@ -27,6 +27,10 @@
             "acceleration": 59,
             "speed": 59,
             "stamina": 66,
+            "gkKeeping": 84,
+            "gkReflex": 86,
+            "gkDiving": 83,
+            "gkReach": 85,
             "positions": [
               {
                 "position": "GK",
@@ -371,6 +375,10 @@
             "acceleration": 59,
             "speed": 54,
             "stamina": 67,
+            "gkKeeping": 82,
+            "gkReflex": 85,
+            "gkDiving": 84,
+            "gkReach": 86,
             "positions": [
               {
                 "position": "GK",
@@ -715,6 +723,10 @@
             "acceleration": 57,
             "speed": 57,
             "stamina": 68,
+            "gkKeeping": 86,
+            "gkReflex": 82,
+            "gkDiving": 85,
+            "gkReach": 88,
             "positions": [
               {
                 "position": "GK",
@@ -1059,6 +1071,10 @@
             "acceleration": 56,
             "speed": 56,
             "stamina": 69,
+            "gkKeeping": 83,
+            "gkReflex": 87,
+            "gkDiving": 86,
+            "gkReach": 84,
             "positions": [
               {
                 "position": "GK",
@@ -1403,6 +1419,10 @@
             "acceleration": 57,
             "speed": 57,
             "stamina": 70,
+            "gkKeeping": 85,
+            "gkReflex": 83,
+            "gkDiving": 82,
+            "gkReach": 87,
             "positions": [
               {
                 "position": "GK",
@@ -1747,6 +1767,10 @@
             "acceleration": 57,
             "speed": 57,
             "stamina": 66,
+            "gkKeeping": 81,
+            "gkReflex": 84,
+            "gkDiving": 85,
+            "gkReach": 86,
             "positions": [
               {
                 "position": "GK",

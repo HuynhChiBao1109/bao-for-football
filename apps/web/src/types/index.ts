@@ -325,6 +325,7 @@ export type MatchSnapshot = {
   matchStep?:
     | 'first_half_start'
     | 'play'
+    | 'goal_celebration'
     | 'goal_reset'
     | 'half_time'
     | 'second_half_start'
@@ -354,6 +355,7 @@ export type MatchSnapshot = {
     actorPlayerId?: string | null;
     secondaryPlayerId?: string | null;
     skill?: number | null;
+    kickoffWhistle?: boolean;
   };
   homePlayers: MatchPitchPlayer[];
   awayPlayers: MatchPitchPlayer[];

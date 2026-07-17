@@ -10,7 +10,7 @@ import {
   useStopAutoMatchTick,
 } from './hooks/useMatch';
 import { useMatchSocket, type LiveMatchEvent } from './hooks/useMatchSocket';
-import { EPlayerSkill, skillAnimation, skillName } from './enums/skill';
+import { EPlayerSkill, skillName } from './enums/skill';
 import { ROUTES } from './routes';
 import type { MatchPitchPlayer, MatchSnapshot } from './types';
 
@@ -70,7 +70,12 @@ function isGoalEvent(snapshot: MatchSnapshot | null) {
   return snapshot?.highlight?.event === MATCH_EVENT.GOAL;
 }
 
+function isGoalCelebration(snapshot: MatchSnapshot | null) {
+  return snapshot?.matchStep === 'goal_celebration';
+}
+
 function hasBallReachedGoal(snapshot: MatchSnapshot) {
+  if (isGoalCelebration(snapshot)) return true;
   if (!isGoalEvent(snapshot)) return false;
 
   const scoringSide = snapshot.highlight?.teamSide ?? snapshot.possession;
@@ -78,6 +83,86 @@ function hasBallReachedGoal(snapshot: MatchSnapshot) {
   const crossedGoalLine = scoringSide === 'home' ? snapshot.ball.y <= 5.6 : snapshot.ball.y >= 94.4;
 
   return ballInsideGoalMouth && crossedGoalLine;
+}
+
+let matchWhistleAudioContext: AudioContext | null = null;
+
+function getMatchWhistleAudioContext() {
+  if (typeof window === 'undefined') return;
+  const AudioContextClass =
+    window.AudioContext ??
+    (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!AudioContextClass) return null;
+
+  if (!matchWhistleAudioContext || matchWhistleAudioContext.state === 'closed') {
+    matchWhistleAudioContext = new AudioContextClass();
+  }
+
+  return matchWhistleAudioContext;
+}
+
+function unlockMatchWhistleAudio() {
+  const context = getMatchWhistleAudioContext();
+  if (!context || context.state === 'running') return;
+  void context.resume().catch(() => undefined);
+}
+
+function playKickoffWhistle() {
+  const context = getMatchWhistleAudioContext();
+  if (!context) return;
+
+  void context
+    .resume()
+    .then(() => {
+      const startedAt = context.currentTime;
+      const master = context.createGain();
+      const upperGain = context.createGain();
+      const primary = context.createOscillator();
+      const upper = context.createOscillator();
+      const vibrato = context.createOscillator();
+      const vibratoDepth = context.createGain();
+
+      primary.type = 'sine';
+      primary.frequency.setValueAtTime(1880, startedAt);
+      upper.type = 'sine';
+      upper.frequency.setValueAtTime(2630, startedAt);
+      upperGain.gain.setValueAtTime(0.18, startedAt);
+      vibrato.type = 'sine';
+      vibrato.frequency.setValueAtTime(18, startedAt);
+      vibratoDepth.gain.setValueAtTime(55, startedAt);
+
+      master.gain.setValueAtTime(0.0001, startedAt);
+      master.gain.exponentialRampToValueAtTime(0.1, startedAt + 0.035);
+      master.gain.setValueAtTime(0.085, startedAt + 1.72);
+      master.gain.exponentialRampToValueAtTime(0.0001, startedAt + 2);
+
+      vibrato.connect(vibratoDepth);
+      vibratoDepth.connect(primary.frequency);
+      primary.connect(master);
+      upper.connect(upperGain);
+      upperGain.connect(master);
+      master.connect(context.destination);
+
+      primary.start(startedAt);
+      upper.start(startedAt);
+      vibrato.start(startedAt);
+      primary.stop(startedAt + 2.02);
+      upper.stop(startedAt + 2.02);
+      vibrato.stop(startedAt + 2.02);
+    })
+    .catch(() => undefined);
+}
+
+function useKickoffWhistle(snapshot: MatchSnapshot | null) {
+  const playedFrameRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!snapshot?.highlight?.kickoffWhistle) return;
+    const frameKey = String(snapshot.frameId ?? snapshot.tick ?? 'kickoff');
+    if (playedFrameRef.current === frameKey) return;
+    playedFrameRef.current = frameKey;
+    playKickoffWhistle();
+  }, [snapshot?.frameId, snapshot?.highlight?.kickoffWhistle, snapshot?.tick]);
 }
 
 function isShotEvent(snapshot: MatchSnapshot | null) {
@@ -128,11 +213,17 @@ function isLightningDribble(snapshot: MatchSnapshot | null) {
 }
 
 function isKaiserShot(snapshot: MatchSnapshot | null) {
-  return snapshot?.ball?.skillTrajectory === EPlayerSkill.KAISER_SHOT || snapshot?.highlight?.skill === EPlayerSkill.KAISER_SHOT;
+  return (
+    snapshot?.ball?.skillTrajectory === EPlayerSkill.KAISER_SHOT ||
+    snapshot?.highlight?.skill === EPlayerSkill.KAISER_SHOT
+  );
 }
 
 function isEagleEye(snapshot: MatchSnapshot | null) {
-  return snapshot?.ball?.skillTrajectory === EPlayerSkill.EAGLE_EYE || snapshot?.highlight?.skill === EPlayerSkill.EAGLE_EYE;
+  return (
+    snapshot?.ball?.skillTrajectory === EPlayerSkill.EAGLE_EYE ||
+    snapshot?.highlight?.skill === EPlayerSkill.EAGLE_EYE
+  );
 }
 
 function getEventView(eventCode: number | null | undefined) {
@@ -172,7 +263,7 @@ function getEventView(eventCode: number | null | undefined) {
     case MATCH_EVENT.OFFSIDE:
       return { title: 'Offside', className: 'match-event--defense' };
     case MATCH_EVENT.GOAL_RESET:
-      return { title: 'Reset', className: 'match-event--start' };
+      return { title: 'Celebration', className: 'match-event--goal' };
     case MATCH_EVENT.FOUL:
       return { title: 'Foul', className: 'match-event--defense' };
     case MATCH_EVENT.THROW_IN:
@@ -289,11 +380,13 @@ function PitchDebugGrid() {
 const PlayerCircle = memo(function PlayerCircle({
   player,
   activeHighlight,
+  celebrating,
   slideTackleActive,
   mirrorY,
 }: {
   player: MatchPitchPlayer;
   activeHighlight: boolean;
+  celebrating: boolean;
   slideTackleActive: boolean;
   mirrorY: boolean;
 }) {
@@ -323,6 +416,7 @@ const PlayerCircle = memo(function PlayerCircle({
         keeperAction ? `player-node--keeper-${keeperAction}` : '',
         player.hasBall ? 'player-node--has-ball' : '',
         activeHighlight ? 'player-node--highlight' : '',
+        celebrating ? 'player-node--celebrating' : '',
         slideTackleActive ? 'player-node--slide-tackle' : '',
         player.activeSkill === EPlayerSkill.DRIBBLE_MAGIC ? 'player-node--magic-dribble' : '',
         player.activeSkill === EPlayerSkill.LIGHTNING_DRIBBLE
@@ -408,21 +502,15 @@ function Ball({ snapshot, mirrorY }: { snapshot: MatchSnapshot; mirrorY: boolean
 
 function SkillOverlay({ snapshot }: { snapshot: MatchSnapshot }) {
   const skill = snapshot.highlight?.skill ?? snapshot.ball.skillTrajectory ?? null;
-  const animation = skillAnimation(skill);
 
-  if (!skill || !animation) {
+  if (!skill) {
     return null;
   }
 
   return (
     <div className="skill-overlay" data-skill={skill} aria-hidden="true">
-      <video
-        key={`${snapshot.frameId ?? snapshot.tick}-${skill}`}
-        src={animation}
-        autoPlay
-        muted
-        playsInline
-      />
+      <span className="skill-overlay__wash" />
+      <span className="skill-overlay__pulse" />
       <div className="skill-overlay__label">
         <span>Skill activated</span>
         <strong>{skillName(skill)}</strong>
@@ -431,15 +519,46 @@ function SkillOverlay({ snapshot }: { snapshot: MatchSnapshot }) {
   );
 }
 
-function GoalOverlay({ show, label }: { show: boolean; label: string }) {
+function GoalOverlay({
+  show,
+  celebrating,
+  label,
+}: {
+  show: boolean;
+  celebrating: boolean;
+  label: string;
+}) {
   if (!show) {
     return null;
   }
 
   return (
-    <div className="goal-overlay" role="status" aria-live="polite">
+    <div
+      className={`goal-overlay ${celebrating ? 'goal-overlay--celebration' : ''}`}
+      role="status"
+      aria-live="polite"
+    >
+      {celebrating ? (
+        <span className="goal-confetti" aria-hidden="true">
+          {Array.from({ length: 12 }, (_, index) => (
+            <i key={index} />
+          ))}
+        </span>
+      ) : null}
       <strong>GOAL!</strong>
       <span>{label}</span>
+    </div>
+  );
+}
+
+function KickoffWhistleOverlay({ show }: { show: boolean }) {
+  if (!show) return null;
+
+  return (
+    <div className="kickoff-whistle" role="status" aria-live="polite">
+      <i aria-hidden="true" />
+      <strong>WHISTLE</strong>
+      <span>KICK OFF</span>
     </div>
   );
 }
@@ -463,7 +582,12 @@ function MatchResultOverlay({
   const draw = snapshot.homeScore === snapshot.awayScore;
 
   return (
-    <div className="match-result-overlay" data-result={won ? 'win' : 'retry'} role="dialog" aria-modal="true">
+    <div
+      className="match-result-overlay"
+      data-result={won ? 'win' : 'retry'}
+      role="dialog"
+      aria-modal="true"
+    >
       <section className="match-result-panel">
         <span className="match-result-panel__eyebrow">Campaign result</span>
         <strong className="match-result-panel__title">{won ? 'YOU WIN' : 'RETRY'}</strong>
@@ -488,7 +612,11 @@ function MatchResultOverlay({
         {retryError ? <p className="match-result-panel__error">{retryError}</p> : null}
         <div className="match-result-panel__actions">
           {won ? (
-            <button type="button" className="match-result-button match-result-button--primary" onClick={onContinue}>
+            <button
+              type="button"
+              className="match-result-button match-result-button--primary"
+              onClick={onContinue}
+            >
               Continue Campaign
             </button>
           ) : (
@@ -558,6 +686,9 @@ function MatchPitch({ snapshot }: { snapshot: MatchSnapshot }) {
     snapshot.highlight?.event === MATCH_EVENT.SECOND_HALF_START;
   const slideTackleActorId =
     snapshot.highlight?.event === MATCH_EVENT.SLIDE_TACKLE ? highlightedPlayerId : null;
+  const activeSkill = snapshot.highlight?.skill ?? snapshot.ball.skillTrajectory ?? undefined;
+  const goalCelebration = isGoalCelebration(snapshot);
+  const celebratingSide = goalCelebration ? snapshot.highlight?.teamSide : null;
 
   return (
     <section className="match-pitch-shell" aria-label="Top down football pitch">
@@ -567,7 +698,7 @@ function MatchPitch({ snapshot }: { snapshot: MatchSnapshot }) {
           <span className="technical-area__coach technical-area__coach--one" />
           <span className="technical-area__coach technical-area__coach--two" />
         </div>
-        <div className="match-pitch">
+        <div className="match-pitch" data-active-skill={activeSkill}>
           <PitchLines />
           <PitchDebugGrid />
           {allPlayers.map((player) => (
@@ -575,6 +706,7 @@ function MatchPitch({ snapshot }: { snapshot: MatchSnapshot }) {
               key={`${player.teamSide}-${player.id}`}
               player={player}
               activeHighlight={Boolean(highlightedPlayerId && player.id === highlightedPlayerId)}
+              celebrating={Boolean(celebratingSide && player.teamSide === celebratingSide)}
               slideTackleActive={Boolean(slideTackleActorId && player.id === slideTackleActorId)}
               mirrorY={mirrorY}
             />
@@ -584,8 +716,10 @@ function MatchPitch({ snapshot }: { snapshot: MatchSnapshot }) {
           <GoalOverlay
             key={`${snapshot.frameId ?? snapshot.tick ?? 'goal'}-${snapshot.homeScore}-${snapshot.awayScore}`}
             show={hasBallReachedGoal(snapshot)}
+            celebrating={goalCelebration}
             label={snapshot.highlight?.label ?? ''}
           />
+          <KickoffWhistleOverlay show={Boolean(snapshot.highlight?.kickoffWhistle)} />
         </div>
         <div className="technical-area technical-area--away" aria-label="Away technical area">
           <span className="technical-area__bench" />
@@ -618,6 +752,7 @@ export function MatchView() {
     ackActiveTick,
     resetLiveState,
   } = useMatchSocket(matchId);
+  useKickoffWhistle(snapshot);
   const getNextTick = useGetNextMatchTick(matchId);
   const startAutoTick = useStartAutoMatchTick(matchId);
   const stopAutoTick = useStopAutoMatchTick(matchId);
@@ -698,6 +833,7 @@ export function MatchView() {
               className="match-debug-controls__button"
               disabled={!matchId || getNextTick.isPending}
               onClick={() => {
+                unlockMatchWhistleAudio();
                 getNextTick.mutate();
               }}
             >
@@ -708,6 +844,7 @@ export function MatchView() {
               className="match-debug-controls__button"
               disabled={!matchId || isAutoTicking || isMatchEnded || startAutoTick.isPending}
               onClick={() => {
+                unlockMatchWhistleAudio();
                 startAutoTick.mutate(undefined, {
                   onSuccess: () => setIsAutoTicking(true),
                 });

@@ -666,8 +666,7 @@
   }
 
   .player-node {
-    transform: translate3d(var(--x-pos, 50cqw), var(--y-pos, 50cqh), 0)
-      translate3d(-50%, -50%, 0);
+    transform: translate3d(var(--x-pos, 50cqw), var(--y-pos, 50cqh), 0) translate3d(-50%, -50%, 0);
   }
 
   .match-ball {
@@ -907,7 +906,7 @@
     0 0 16px rgba(85, 211, 255, 0.38),
     0 10px 18px rgba(0, 0, 0, 0.34),
     inset 0 1px 12px rgba(255, 255, 255, 0.24);
-  animation: slideTackleBody 0.62s cubic-bezier(0.2, 0.72, 0.24, 1) both;
+  animation: slideTackleBody 0.5s cubic-bezier(0.2, 0.72, 0.24, 1) both;
 }
 
 .player-node--slide-tackle::before {
@@ -923,7 +922,7 @@
     radial-gradient(ellipse at 50% 50%, rgba(172, 239, 255, 0.5), transparent 66%),
     linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
   filter: blur(1px) drop-shadow(0 0 8px rgba(118, 226, 255, 0.42));
-  animation: slideTackleSkid 0.62s ease-out both;
+  animation: slideTackleSkid 0.5s ease-out both;
 }
 
 .player-node--slide-tackle::after {
@@ -934,7 +933,7 @@
   border: 1px solid rgba(145, 235, 255, 0.72);
   border-radius: 999px;
   pointer-events: none;
-  animation: slideTackleImpact 0.62s ease-out both;
+  animation: slideTackleImpact 0.5s ease-out both;
 }
 
 .player-name {
@@ -1415,7 +1414,12 @@
   width: 74px;
   height: 8px;
   border-radius: 999px;
-  background: linear-gradient(90deg, transparent, rgba(255, 57, 75, 0.88), rgba(255, 235, 92, 0.94));
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 57, 75, 0.88),
+    rgba(255, 235, 92, 0.94)
+  );
   filter: drop-shadow(0 0 12px rgba(255, 61, 74, 0.92));
   transform: translateY(-50%);
 }
@@ -1478,49 +1482,124 @@
 }
 
 .skill-overlay {
+  --skill-color: 126, 238, 255;
+  --skill-accent: 255, 241, 105;
   position: absolute;
   inset: 0;
-  z-index: 9;
+  z-index: 3;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 50% 50%, rgba(118, 225, 255, 0.18), transparent 40%),
-    linear-gradient(90deg, transparent, rgba(255, 246, 117, 0.1), transparent);
   mix-blend-mode: screen;
   pointer-events: none;
-  animation: skillOverlayFade 0.72s ease-out both;
+  animation: skillOverlayFade 0.9s ease-out both;
+}
+
+.match-pitch[data-active-skill] {
+  animation: skillPitchCharge 0.7s ease-in-out infinite alternate;
+}
+
+.match-pitch[data-active-skill] .match-pitch__lines {
+  animation: skillPitchLines 0.48s ease-in-out infinite alternate;
+}
+
+.skill-overlay__wash,
+.skill-overlay__pulse {
+  position: absolute;
+  inset: 0;
+  content: '';
+  pointer-events: none;
+}
+
+.skill-overlay__wash {
+  background:
+    repeating-linear-gradient(
+      115deg,
+      transparent 0 12%,
+      rgba(var(--skill-color), 0.13) 13%,
+      transparent 15% 25%
+    ),
+    radial-gradient(circle at 50% 50%, rgba(var(--skill-accent), 0.22), transparent 48%);
+  transform: scale(1.2);
+  animation: skillFieldSweep 0.8s linear infinite;
+}
+
+.skill-overlay__pulse {
+  inset: 7%;
+  border: 2px solid rgba(var(--skill-color), 0.48);
+  border-radius: 50%;
+  box-shadow:
+    0 0 34px rgba(var(--skill-color), 0.36),
+    inset 0 0 42px rgba(var(--skill-accent), 0.18);
+  animation: skillFieldPulse 0.72s ease-out infinite;
+}
+
+.skill-overlay[data-skill='1'] {
+  --skill-color: 82, 216, 255;
+  --skill-accent: 255, 239, 92;
 }
 
 .skill-overlay[data-skill='2'] {
-  background:
-    radial-gradient(circle at 50% 50%, rgba(203, 76, 255, 0.2), transparent 38%),
-    linear-gradient(90deg, transparent, rgba(132, 62, 255, 0.16), transparent);
+  --skill-color: 205, 80, 255;
+  --skill-accent: 117, 76, 255;
+}
+
+.skill-overlay[data-skill='2'] .skill-overlay__wash {
+  background: conic-gradient(
+    from 0deg at 50% 50%,
+    transparent,
+    rgba(var(--skill-color), 0.24),
+    transparent 32%,
+    rgba(var(--skill-accent), 0.18),
+    transparent 68%
+  );
+  animation: skillMagicSpin 1.4s linear infinite;
 }
 
 .skill-overlay[data-skill='3'] {
-  background:
-    radial-gradient(circle at 50% 50%, rgba(255, 154, 45, 0.22), transparent 38%),
-    linear-gradient(90deg, transparent, rgba(255, 72, 36, 0.16), transparent);
+  --skill-color: 255, 143, 38;
+  --skill-accent: 255, 65, 35;
+}
+
+.skill-overlay[data-skill='3'] .skill-overlay__pulse {
+  border-radius: 18%;
+  animation: skillTankImpact 0.5s cubic-bezier(0.16, 0.78, 0.2, 1) infinite;
 }
 
 .skill-overlay[data-skill='4'] {
-  background:
-    radial-gradient(circle at 50% 50%, rgba(255, 231, 93, 0.18), transparent 34%),
-    linear-gradient(90deg, transparent, rgba(255, 54, 72, 0.18), rgba(255, 231, 93, 0.14), transparent);
+  --skill-color: 92, 224, 255;
+  --skill-accent: 255, 236, 73;
+}
+
+.skill-overlay[data-skill='4'] .skill-overlay__wash {
+  animation-duration: 0.3s;
 }
 
 .skill-overlay[data-skill='5'] {
-  background:
-    radial-gradient(circle at 50% 50%, rgba(112, 255, 214, 0.16), transparent 36%),
-    repeating-linear-gradient(90deg, transparent 0 9%, rgba(116, 204, 255, 0.12) 10% 11%, transparent 12% 20%),
-    linear-gradient(90deg, transparent, rgba(113, 255, 214, 0.12), transparent);
+  --skill-color: 255, 48, 73;
+  --skill-accent: 255, 226, 82;
 }
 
-.skill-overlay video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0.4;
-  filter: saturate(1.45) contrast(1.18);
+.skill-overlay[data-skill='5'] .skill-overlay__wash {
+  background:
+    linear-gradient(78deg, transparent 45%, rgba(var(--skill-color), 0.34) 49%, transparent 53%),
+    linear-gradient(102deg, transparent 45%, rgba(var(--skill-accent), 0.28) 49%, transparent 53%);
+  animation: skillKaiserFocus 0.58s ease-in-out infinite alternate;
+}
+
+.skill-overlay[data-skill='6'] {
+  --skill-color: 112, 255, 214;
+  --skill-accent: 116, 204, 255;
+}
+
+.skill-overlay[data-skill='6'] .skill-overlay__wash {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 9%,
+      rgba(var(--skill-color), 0.13) 10% 11%,
+      transparent 12% 20%
+    ),
+    linear-gradient(90deg, transparent, rgba(var(--skill-accent), 0.2), transparent);
+  animation: skillEagleScan 0.9s ease-in-out infinite alternate;
 }
 
 .skill-overlay__label {
@@ -1583,6 +1662,149 @@
   margin-top: 8px;
   color: #ffffff;
   font-weight: 800;
+}
+
+.goal-overlay--celebration {
+  overflow: hidden;
+  animation: goalCelebration 5s ease both;
+}
+
+.goal-confetti {
+  position: absolute;
+  inset: 0;
+  margin: 0 !important;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.goal-confetti i {
+  position: absolute;
+  top: -12%;
+  left: 8%;
+  width: 8px;
+  height: 20px;
+  border-radius: 2px;
+  background: #ffe66d;
+  animation: goalConfettiFall 2.4s ease-in infinite;
+}
+
+.goal-confetti i:nth-child(2) {
+  left: 16%;
+  animation-delay: -1.1s;
+  background: #78f8ff;
+}
+.goal-confetti i:nth-child(3) {
+  left: 24%;
+  animation-delay: -0.45s;
+  background: #ff4660;
+}
+.goal-confetti i:nth-child(4) {
+  left: 32%;
+  animation-delay: -1.7s;
+  background: #ffffff;
+}
+.goal-confetti i:nth-child(5) {
+  left: 40%;
+  animation-delay: -0.8s;
+  background: #b9f8d0;
+}
+.goal-confetti i:nth-child(6) {
+  left: 48%;
+  animation-delay: -2s;
+  background: #ffd367;
+}
+.goal-confetti i:nth-child(7) {
+  left: 56%;
+  animation-delay: -0.25s;
+  background: #78f8ff;
+}
+.goal-confetti i:nth-child(8) {
+  left: 64%;
+  animation-delay: -1.4s;
+  background: #ff4660;
+}
+.goal-confetti i:nth-child(9) {
+  left: 72%;
+  animation-delay: -0.65s;
+  background: #ffffff;
+}
+.goal-confetti i:nth-child(10) {
+  left: 80%;
+  animation-delay: -1.85s;
+  background: #b9f8d0;
+}
+.goal-confetti i:nth-child(11) {
+  left: 88%;
+  animation-delay: -0.95s;
+  background: #ffd367;
+}
+.goal-confetti i:nth-child(12) {
+  left: 94%;
+  animation-delay: -1.25s;
+  background: #78f8ff;
+}
+
+.player-node--celebrating .player-circle {
+  animation: playerCelebrate 0.68s ease-in-out infinite alternate;
+  box-shadow:
+    0 0 24px rgba(255, 230, 109, 0.64),
+    0 10px 18px rgba(0, 0, 0, 0.3),
+    inset 0 1px 10px rgba(255, 255, 255, 0.28);
+}
+
+.kickoff-whistle {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  color: #fff5a3;
+  background: radial-gradient(circle, rgba(120, 248, 255, 0.2), transparent 52%);
+  pointer-events: none;
+  animation: kickoffWhistleFlash 2s ease-out both;
+}
+
+.kickoff-whistle::before,
+.kickoff-whistle::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 86px;
+  aspect-ratio: 1;
+  content: '';
+  border: 2px solid rgba(120, 248, 255, 0.72);
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  animation: kickoffWhistleRing 1s ease-out infinite;
+}
+
+.kickoff-whistle::after {
+  animation-delay: 0.42s;
+}
+
+.kickoff-whistle i {
+  width: 52px;
+  height: 22px;
+  border: 3px solid #fff5a3;
+  border-radius: 14px 5px 5px 14px;
+  box-shadow: 0 0 24px rgba(255, 245, 163, 0.72);
+  transform: rotate(-12deg);
+}
+
+.kickoff-whistle strong {
+  margin-top: 18px;
+  font-size: clamp(1.5rem, 4vw, 2.8rem);
+  letter-spacing: 0.16em;
+  text-shadow: 0 0 20px rgba(120, 248, 255, 0.7);
+}
+
+.kickoff-whistle span {
+  margin-top: 4px;
+  color: #fff;
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.28em;
 }
 
 .match-countdown {
@@ -1919,6 +2141,72 @@
   }
 }
 
+@keyframes goalCelebration {
+  0% {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  8%,
+  84% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes goalConfettiFall {
+  0% {
+    transform: translateY(-10%) rotate(0deg);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(125cqh) rotate(520deg);
+    opacity: 0.2;
+  }
+}
+
+@keyframes playerCelebrate {
+  from {
+    transform: translateY(0) scale(1);
+  }
+  to {
+    transform: translateY(-7px) scale(1.08);
+  }
+}
+
+@keyframes kickoffWhistleFlash {
+  0% {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+  12%,
+  76% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes kickoffWhistleRing {
+  from {
+    opacity: 0.82;
+    transform: translate(-50%, -50%) scale(0.42);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(2.3);
+  }
+}
+
 @keyframes slideTackleSkid {
   0% {
     opacity: 0;
@@ -2095,16 +2383,113 @@
     opacity: 0;
   }
 
-  12% {
+  35% {
     opacity: 1;
   }
 
-  72% {
-    opacity: 0.82;
+  100% {
+    opacity: 0.92;
+  }
+}
+
+@keyframes skillPitchCharge {
+  from {
+    border-color: rgba(236, 253, 245, 0.28);
+    filter: brightness(1);
+  }
+
+  to {
+    border-color: rgba(154, 240, 255, 0.64);
+    filter: brightness(1.08) saturate(1.12);
+  }
+}
+
+@keyframes skillPitchLines {
+  from {
+    opacity: 0.78;
+    filter: drop-shadow(0 0 0 transparent);
+  }
+
+  to {
+    opacity: 1;
+    filter: drop-shadow(0 0 7px rgba(146, 239, 255, 0.7));
+  }
+}
+
+@keyframes skillFieldSweep {
+  from {
+    background-position:
+      -35cqw 0,
+      center;
+  }
+
+  to {
+    background-position:
+      35cqw 0,
+      center;
+  }
+}
+
+@keyframes skillFieldPulse {
+  0% {
+    opacity: 0.85;
+    transform: scale(0.68);
   }
 
   100% {
     opacity: 0;
+    transform: scale(1.18);
+  }
+}
+
+@keyframes skillMagicSpin {
+  from {
+    transform: scale(1.25) rotate(0deg);
+  }
+
+  to {
+    transform: scale(1.25) rotate(360deg);
+  }
+}
+
+@keyframes skillTankImpact {
+  0% {
+    opacity: 0.92;
+    transform: scale(0.5);
+  }
+
+  70%,
+  100% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}
+
+@keyframes skillKaiserFocus {
+  from {
+    opacity: 0.48;
+    transform: scaleX(0.72);
+  }
+
+  to {
+    opacity: 1;
+    transform: scaleX(1.08);
+  }
+}
+
+@keyframes skillEagleScan {
+  from {
+    background-position:
+      0 -20cqh,
+      center;
+    opacity: 0.48;
+  }
+
+  to {
+    background-position:
+      0 20cqh,
+      center;
+    opacity: 0.95;
   }
 }
 
