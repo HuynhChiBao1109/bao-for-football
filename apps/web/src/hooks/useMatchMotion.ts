@@ -10,6 +10,9 @@ export type RenderedMatchSnapshot = MatchSnapshot & {
 const PASS_EVENT = 35;
 const PASS_RELEASE_SHARE = 0.1;
 const FULL_MATCH_DISPLAY_SECONDS = 90 * 60;
+const FRAME_JITTER_BUFFER_MAX_MS = 120;
+const FRAME_DURATION_MIN_MS = 140;
+const FRAME_DURATION_MAX_MS = 5000;
 
 function lerp(from: number, to: number, alpha: number) {
   return from + (to - from) * alpha;
@@ -256,6 +259,7 @@ function interpolateSnapshot(
   next: MatchSnapshot,
   playerAlpha: number,
   ballAlpha: number,
+  presentationDurationMs: number,
 ): RenderedMatchSnapshot {
   const previousBall = previous?.ball;
   const ballFromX = previousBall?.x ?? next.ball.fromX ?? next.ball.x;
@@ -304,6 +308,7 @@ function interpolateSnapshot(
 
   return {
     ...next,
+    durationMs: presentationDurationMs,
     minute: shouldInterpolateClock
       ? Math.min(90, Math.floor(Number(displaySecond ?? 0) / 60))
       : next.minute,
@@ -334,6 +339,8 @@ export function useMatchMotion(
   const startRef = useRef(0);
   const durationRef = useRef(400);
   const ballDurationRef = useRef(400);
+  const playerMotionDurationRef = useRef(400);
+  const promotionLeadRef = useRef(0);
   const frameRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -363,16 +370,29 @@ export function useMatchMotion(
 
     const previous = lastRenderedRef.current ?? nextRef.current;
     const shouldSnapToTimeline = isTimelineDiscontinuity(previous, snapshot);
+    const requestedDuration = Number(snapshot.durationMs ?? 400);
+    const baseDuration = clamp(
+      Number.isFinite(requestedDuration) ? requestedDuration : 400,
+      FRAME_DURATION_MIN_MS,
+      FRAME_DURATION_MAX_MS,
+    );
+    const instantFrame = shouldSnapToTimeline || requestedDuration <= 0;
+    const jitterBuffer = instantFrame
+      ? 0
+      : clamp(baseDuration * 0.3, 48, FRAME_JITTER_BUFFER_MAX_MS);
     previousRef.current = shouldSnapToTimeline ? snapshot : previous;
     nextRef.current = snapshot;
-    durationRef.current = shouldSnapToTimeline
+    durationRef.current = instantFrame ? 16 : baseDuration + jitterBuffer;
+    playerMotionDurationRef.current = instantFrame ? 0 : durationRef.current;
+    promotionLeadRef.current = jitterBuffer;
+    ballDurationRef.current = instantFrame
       ? 16
-      : Math.max(140, Math.min(5000, snapshot.durationMs ?? 400));
-    ballDurationRef.current = Math.max(
-      120,
-      Math.min(durationRef.current, getBallAnimationDuration(snapshot, durationRef.current)),
-    );
+      : Math.max(
+          120,
+          Math.min(durationRef.current, getBallAnimationDuration(snapshot, durationRef.current)),
+        );
     startRef.current = performance.now();
+    let didAcknowledgeTick = false;
 
     const animate = (now: number) => {
       const next = nextRef.current;
@@ -383,15 +403,30 @@ export function useMatchMotion(
       const elapsed = now - startRef.current;
       const playerProgress = Math.min(1, elapsed / durationRef.current);
       const ballProgress = Math.min(1, elapsed / ballDurationRef.current);
-      const frame = interpolateSnapshot(previousRef.current, next, playerProgress, ballProgress);
+      const frame = interpolateSnapshot(
+        previousRef.current,
+        next,
+        playerProgress,
+        ballProgress,
+        playerMotionDurationRef.current,
+      );
       lastRenderedRef.current = frame;
       setRendered(frame);
+
+      const promotionTime = Math.max(0, durationRef.current - promotionLeadRef.current);
+      if (!didAcknowledgeTick && elapsed >= promotionTime) {
+        didAcknowledgeTick = true;
+        onTickCompleteRef.current?.(next);
+      }
 
       if (playerProgress < 1) {
         frameRef.current = requestAnimationFrame(animate);
       } else {
         frameRef.current = null;
-        onTickCompleteRef.current?.(next);
+        if (!didAcknowledgeTick) {
+          didAcknowledgeTick = true;
+          onTickCompleteRef.current?.(next);
+        }
       }
     };
 

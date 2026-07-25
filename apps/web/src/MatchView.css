@@ -614,7 +614,7 @@
 }
 
 .pitch-goal--home {
-  bottom: 0.55%;
+  bottom: max(1.1%, 6px);
 }
 
 .pitch-goal--home::before {
@@ -627,7 +627,7 @@
 }
 
 .pitch-goal--away {
-  top: 0.55%;
+  top: max(1.1%, 6px);
 }
 
 .pitch-goal--away::before {
@@ -3022,7 +3022,7 @@
 }
 
 .match-pitch {
-  width: min(100%, 730px, calc((100svh - 158px) * 0.625));
+  width: min(100%, 730px, calc((100svh - 224px) * 0.625));
   max-width: 730px;
   max-height: 100%;
   border-color: rgba(236, 253, 245, 0.28);
@@ -3218,7 +3218,7 @@
   }
 
   .match-pitch {
-    width: min(100%, 510px, calc((100svh - 178px) * 0.625));
+    width: min(100%, 510px, calc((100svh - 224px) * 0.625));
   }
 
   .match-events__list {
@@ -3284,7 +3284,7 @@
 
   .match-pitch-shell {
     grid-row: 2;
-    min-height: 0;
+    min-height: min(834px, calc(100svh - 206px), calc((100vw - 96px) * 1.6 + 20px));
     padding-top: 4px;
   }
 
@@ -3313,7 +3313,7 @@
   }
 
   .match-pitch-shell {
-    min-height: 0;
+    min-height: min(558px, calc(100svh - 236px), calc((100vw - 72px) * 1.6 + 16px));
     padding: 4px 4px 10px;
   }
 

@@ -334,6 +334,7 @@ export class MatchService implements IMatchService {
         return;
       }
 
+      const tickStartedAt = Date.now();
       this.autoTickInFlight.add(matchId);
       let shouldContinue = true;
       let nextDelayMs = AUTO_TICK_INTERVAL_MS;
@@ -363,7 +364,8 @@ export class MatchService implements IMatchService {
       } finally {
         this.autoTickInFlight.delete(matchId);
         if (shouldContinue && this.autoTickTimers.has(matchId)) {
-          scheduleTick(nextDelayMs);
+          const tickProcessingMs = Date.now() - tickStartedAt;
+          scheduleTick(Math.max(0, nextDelayMs - tickProcessingMs));
         }
       }
     };
