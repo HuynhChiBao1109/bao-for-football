@@ -332,6 +332,7 @@ export type MatchSnapshot = {
     | 'full_time';
   minute: number;
   second?: number;
+  displaySecond?: number;
   clockLabel: string;
   phase?: string;
   homeScore: number;

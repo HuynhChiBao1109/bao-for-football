@@ -9,9 +9,7 @@ export type RenderedMatchSnapshot = MatchSnapshot & {
 
 const PASS_EVENT = 35;
 const PASS_RELEASE_SHARE = 0.1;
-const PASS_FLIGHT_DURATION_SHARE = 1;
-const SHOT_FLIGHT_DURATION_SHARE = 0.98;
-const SKILL_SHOT_FLIGHT_DURATION_SHARE = 0.96;
+const FULL_MATCH_DISPLAY_SECONDS = 90 * 60;
 
 function lerp(from: number, to: number, alpha: number) {
   return from + (to - from) * alpha;
@@ -68,15 +66,64 @@ function isShotSkill(snapshot: MatchSnapshot) {
 function getBallAnimationDuration(snapshot: MatchSnapshot, frameDuration: number) {
   const event = snapshot.highlight?.event;
   if (snapshot.ball.ownerPlayerId) return frameDuration;
+
+  const from = {
+    x: Number(snapshot.ball.fromX ?? snapshot.ball.x),
+    y: Number(snapshot.ball.fromY ?? snapshot.ball.y),
+  };
+  const travelDistance = distance(from, snapshot.ball);
+
   if (event === PASS_EVENT || snapshot.highlight?.skill === EPlayerSkill.EAGLE_EYE) {
-    return frameDuration * PASS_FLIGHT_DURATION_SHARE;
+    return clamp(180 + travelDistance * 4, 220, frameDuration * 0.96);
   }
-  if (isShotSkill(snapshot)) return frameDuration * SKILL_SHOT_FLIGHT_DURATION_SHARE;
+  if (isShotSkill(snapshot)) {
+    return clamp(105 + travelDistance * 1.9, 145, frameDuration * 0.62);
+  }
   if (snapshot.ball.skillTrajectory || snapshot.highlight?.skill) return frameDuration;
   if (event === 7 || event === 36 || event === 38) {
-    return frameDuration * SHOT_FLIGHT_DURATION_SHARE;
+    return clamp(115 + travelDistance * 2.2, 155, frameDuration * 0.72);
   }
   return frameDuration;
+}
+
+function parseClockLabel(clockLabel: string | undefined) {
+  const match = /^(\d{1,3}):(\d{2})$/.exec(clockLabel ?? '');
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function getDisplaySecond(snapshot: MatchSnapshot | null) {
+  if (!snapshot) return 0;
+  const value = Number(snapshot.displaySecond);
+  if (Number.isFinite(value)) return clamp(value, 0, FULL_MATCH_DISPLAY_SECONDS);
+  return clamp(
+    parseClockLabel(snapshot.clockLabel) ?? Number(snapshot.minute ?? 0) * 60,
+    0,
+    FULL_MATCH_DISPLAY_SECONDS,
+  );
+}
+
+function hasStandardMatchClock(snapshot: MatchSnapshot | null) {
+  if (!snapshot) return false;
+  return (
+    Number.isFinite(Number(snapshot.displaySecond)) || parseClockLabel(snapshot.clockLabel) !== null
+  );
+}
+
+function formatClockLabel(displaySecond: number) {
+  const value = clamp(Math.floor(displaySecond), 0, FULL_MATCH_DISPLAY_SECONDS);
+  const minute = Math.floor(value / 60);
+  const second = value % 60;
+  return `${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}`;
+}
+
+function frameIdOf(snapshot: MatchSnapshot | null) {
+  return Number(snapshot?.frameId ?? snapshot?.tick ?? -1);
+}
+
+function isTimelineDiscontinuity(previous: MatchSnapshot | null, next: MatchSnapshot) {
+  if (!previous) return false;
+  return frameIdOf(next) <= frameIdOf(previous);
 }
 
 function getBallProgressAlpha(snapshot: MatchSnapshot, alpha: number) {
@@ -285,9 +332,30 @@ function interpolateSnapshot(
           x: lerp(ballFromX, next.ball.x, easedBallAlpha),
           y: lerp(ballFromY, next.ball.y, easedBallAlpha),
         });
+  const previousDisplaySecond = getDisplaySecond(previous);
+  const nextDisplaySecond = getDisplaySecond(next);
+  const shouldInterpolateClock =
+    hasStandardMatchClock(next) && (!previous || hasStandardMatchClock(previous));
+  const displaySecond = shouldInterpolateClock
+    ? lerp(previousDisplaySecond, nextDisplaySecond, easedPlayerAlpha)
+    : next.displaySecond;
+  const previousSimulationSecond = Number(previous?.second);
+  const nextSimulationSecond = Number(next.second);
+  const simulationSecond =
+    Number.isFinite(previousSimulationSecond) && Number.isFinite(nextSimulationSecond)
+      ? lerp(previousSimulationSecond, nextSimulationSecond, easedPlayerAlpha)
+      : next.second;
 
   return {
     ...next,
+    minute: shouldInterpolateClock
+      ? Math.min(90, Math.floor(Number(displaySecond ?? 0) / 60))
+      : next.minute,
+    second: simulationSecond,
+    displaySecond,
+    clockLabel: shouldInterpolateClock
+      ? formatClockLabel(Number(displaySecond ?? 0))
+      : next.clockLabel,
     ball: {
       ...next.ball,
       x: ballPosition.x,
@@ -308,8 +376,8 @@ export function useMatchMotion(
   const nextRef = useRef<MatchSnapshot | null>(snapshot);
   const onTickCompleteRef = useRef(options.onTickComplete);
   const startRef = useRef(0);
-  const durationRef = useRef(360);
-  const ballDurationRef = useRef(360);
+  const durationRef = useRef(400);
+  const ballDurationRef = useRef(400);
   const frameRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -337,9 +405,13 @@ export function useMatchMotion(
       };
     }
 
-    previousRef.current = lastRenderedRef.current ?? nextRef.current;
+    const previous = lastRenderedRef.current ?? nextRef.current;
+    const shouldSnapToTimeline = isTimelineDiscontinuity(previous, snapshot);
+    previousRef.current = shouldSnapToTimeline ? snapshot : previous;
     nextRef.current = snapshot;
-    durationRef.current = Math.max(140, Math.min(5000, snapshot.durationMs ?? 360));
+    durationRef.current = shouldSnapToTimeline
+      ? 16
+      : Math.max(140, Math.min(5000, snapshot.durationMs ?? 400));
     ballDurationRef.current = Math.max(
       120,
       Math.min(durationRef.current, getBallAnimationDuration(snapshot, durationRef.current)),

@@ -10,6 +10,12 @@ function clampPercent(value: unknown, fallback: number) {
   return Math.min(100, Math.max(0, numeric));
 }
 
+function parseClockLabel(value: unknown) {
+  const match = /^(\d{1,3}):(\d{2})$/.exec(String(value ?? ''));
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
 function toPitchPlayer(
   raw: RawPlayer,
   ballOwnerId: string | null,
@@ -83,15 +89,20 @@ export function normalizeSnapshot(
   const awayPlayers = Array.isArray(snapshot?.awayPlayers) ? snapshot.awayPlayers : [];
   const minute = Number(snapshot?.minute ?? 0);
   const second = Number(snapshot?.second ?? 0);
+  const rawDisplaySecond = Number(snapshot?.displaySecond);
+  const displaySecond = Number.isFinite(rawDisplaySecond)
+    ? rawDisplaySecond
+    : (parseClockLabel(snapshot?.clockLabel) ?? undefined);
 
   return {
     ...snapshot,
     frameId: Number(snapshot?.frameId ?? 0),
     tick: Number(snapshot?.tick ?? 0),
-    durationMs: Number(snapshot?.durationMs ?? 550),
+    durationMs: Number(snapshot?.durationMs ?? 400),
     matchStep: snapshot?.matchStep ?? 'play',
     minute,
     second,
+    displaySecond,
     clockLabel: snapshot?.clockLabel ?? `${minute}:${String(second).padStart(2, '0')}`,
     phase: snapshot?.phase ?? snapshot?.matchStep ?? 'play',
     homeScore: Number(snapshot?.homeScore ?? 0),

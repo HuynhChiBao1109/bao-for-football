@@ -1,46 +1,46 @@
 import { type PlayerAiProfile, type PlayerAiTendencies } from "src/modules/player/player-ai.types";
 
-export const SIM_TICK_MS = 500;
+export const SIM_TICK_MS = 400;
 export const SIM_TICK_SECONDS = SIM_TICK_MS / 1000;
 export const SIM_TICKS_PER_SECOND = 1000 / SIM_TICK_MS;
-const TRANSITION_WINDOW_TICKS = Math.max(4, Math.round(3.5 * SIM_TICKS_PER_SECOND));
+const TRANSITION_WINDOW_TICKS = Math.max(4, Math.round(2.2 * SIM_TICKS_PER_SECOND));
 
 export const MOVEMENT = {
-  walkingSpeed: 3.9,
-  jogSpeed: 7.6,
-  sprintSpeed: 10.2,
+  walkingSpeed: 4.2,
+  jogSpeed: 8.4,
+  sprintSpeed: 11.2,
 
-  playerWithBallSpeedMultiplier: 0.86,
+  playerWithBallSpeedMultiplier: 0.88,
 
-  acceleration: 8.4,
-  braking: 12,
+  acceleration: 10.8,
+  braking: 14,
 
-  turnSmoothing: 0.44,
+  turnSmoothing: 0.52,
 
-  arrivalRadius: 7.4,
-  stopRadius: 0.65,
+  arrivalRadius: 6.2,
+  stopRadius: 0.5,
 
-  separationRadius: 6,
-  separationStrength: 1.4,
+  separationRadius: 5.4,
+  separationStrength: 1.15,
 
-  collisionMinX: 5.8,
-  collisionMinY: 3.65,
-  collisionPadding: 1.015,
-  collisionIterations: 32,
+  collisionMinX: 5.4,
+  collisionMinY: 3.35,
+  collisionPadding: 1.01,
+  collisionIterations: 20,
   collisionVelocityDamping: 0.72,
 
   sameTargetOffset: 4,
 
   passSpeed: 34,
-  shotSpeed: 78,
+  shotSpeed: 92,
 
   ballFriction: 7,
 
   ballControlRadius: 2.0,
 
-  tacticalDeadZoneRadius: 4.2,
-  supportDeadZoneRadius: 2.8,
-  pressDeadZoneRadius: 1.1,
+  tacticalDeadZoneRadius: 3,
+  supportDeadZoneRadius: 1.7,
+  pressDeadZoneRadius: 0.75,
 };
 
 export type Vec2 = { x: number; y: number };
@@ -378,7 +378,7 @@ function evaluateBallCarrierIntent(player: Player, context: MovementContext): Mo
     const wideX = getWideLaneX(player);
     const halfSpaceX = wideX < 50 ? 32 : 68;
     const insideChannelX = wideX < 50 ? 40 : 60;
-    const variant = (tick + player.id) % 5;
+    const variant = getTacticalVariant(tick, player.id, 5, 1.4);
 
     if (isNearTouchline(player.position.x) || nearbyPressure >= 2) {
       return {
@@ -739,7 +739,7 @@ function getFullbackSupportTarget(
     };
   }
 
-  if (wingerWide || ((tick + player.id) % 4 === 1 && !wingerInside)) {
+  if (wingerWide || (getTacticalVariant(tick, player.id, 4, 1.8) === 1 && !wingerInside)) {
     return {
       state: "UNDERLAP",
       targetPosition: {
@@ -761,7 +761,7 @@ function getFullbackSupportTarget(
 function getWingerAttackState(player: Player, context: MovementContext): PlayerAIState {
   const sameFlank = isSameFlank(player.homePosition.x, context.ball.x);
   const finalThird = isInFinalThird(player.side, context.ball.y);
-  const variant = (context.tick + player.id) % 6;
+  const variant = getTacticalVariant(context.tick, player.id, 6, 1.6);
   if (!sameFlank) {
     if (finalThird) return variant <= 2 ? "BACK_POST_RUN" : "ATTACK_SPACE";
     return variant === 0 ? "DIAGONAL_RUN" : "HOLD_WIDTH";
@@ -770,6 +770,13 @@ function getWingerAttackState(player: Player, context: MovementContext): PlayerA
   if (variant === 0) return "DROP_SHORT";
   if (variant <= 2) return "CUT_INSIDE";
   return variant === 3 ? "HOLD_WIDTH" : "ATTACK_SPACE";
+}
+
+function getTacticalVariant(tick: number, playerId: number, variants: number, holdSeconds: number) {
+  const ticksPerIntent = Math.max(1, Math.round(holdSeconds * SIM_TICKS_PER_SECOND));
+  const stagger = Math.abs(playerId * 7) % ticksPerIntent;
+  const intentEpoch = Math.floor((Math.max(0, tick) + stagger) / ticksPerIntent);
+  return Math.abs(intentEpoch + playerId * 17) % Math.max(1, variants);
 }
 
 export function resolvePlayerCollisions(players: Player[]) {
@@ -904,7 +911,7 @@ function evaluateDefensiveShape(player: Player, context: MovementContext): Movem
 
   if (role === "ST") {
     return {
-      state: context.phase === "DEFENSIVE_PRESS" ? "PRESS_BALL" : "COVER_SPACE",
+      state: "COVER_SPACE",
       targetPosition: clampToRoleZone(player, getStrikerDefensiveScreen(player, context)),
     };
   }
@@ -985,9 +992,17 @@ function stabilizeMovementDecision(
   decision: MovementDecision,
 ): MovementDecision {
   if (isHighCommitmentState(decision.state)) {
+    const tracksMovingBall =
+      decision.state === "PRESS_BALL" ||
+      decision.state === "RECEIVE_PASS" ||
+      decision.state === "DRIBBLE";
+    const committedTarget =
+      player.state === decision.state
+        ? lerpVec(player.targetPosition, decision.targetPosition, tracksMovingBall ? 0.78 : 0.52)
+        : decision.targetPosition;
     return {
       ...decision,
-      targetPosition: applyTargetDeadZone(player, decision.targetPosition, decision.state),
+      targetPosition: applyTargetDeadZone(player, committedTarget, decision.state),
     };
   }
 
@@ -1328,9 +1343,10 @@ function getMicroAdjustmentTarget(
   const shapeTarget = getShapePreservingTarget(player, context, zone);
   const spacingVector = getSpacingAdjustmentVector(player, context.teammates, context.opponents);
   const laneVector = getPassingLaneAdjustmentVector(player, context);
+  const simulationTime = context.tick * SIM_TICK_SECONDS;
   const pulse = {
-    x: Math.sin((context.tick + player.id * 5) * 0.37) * 0.35,
-    y: Math.cos((context.tick + player.id * 3) * 0.31) * 0.35,
+    x: Math.sin(simulationTime * 1.05 + player.id * 0.61) * 0.3,
+    y: Math.cos(simulationTime * 0.92 + player.id * 0.43) * 0.3,
   };
   const desired = add(
     add(scale(sub(shapeTarget, player.position), 0.22), spacingVector),
@@ -2286,7 +2302,7 @@ function getMidfieldAttackingSpace(player: Player, context: MovementContext) {
     };
   }
 
-  const thirdManPulse = (tick + player.id) % 5 <= 1;
+  const thirdManPulse = getTacticalVariant(tick, player.id, 5, 1.4) <= 1;
   const finalThirdDepth =
     role === "DM" || !thirdManPulse
       ? ball.y - direction * (nearestOpponentGap <= 8 ? 9 : 7)
@@ -2303,7 +2319,7 @@ function shouldInfiltrateFromMidfield(player: Player, context: MovementContext) 
   if (context.owner?.id === player.id) return false;
 
   const ballAdvance = context.direction < 0 ? 50 - context.ball.y : context.ball.y - 50;
-  const runCycle = (context.tick + player.id) % 8;
+  const runCycle = getTacticalVariant(context.tick, player.id, 8, 0.75);
   const activeRunTicks = Math.round(1 + infiltrationBias * 4);
   return context.phase === "IN_POSSESSION_ATTACK" && ballAdvance >= 4 && runCycle < activeRunTicks;
 }
@@ -2315,7 +2331,8 @@ function getInfiltratingMidfielderSpace(player: Player, context: MovementContext
   const onsideLine = getOffsideLine(player.side, opponents);
   const offBallRunBias = getOffBallRunBias(player);
   const infiltrationBias = getBoxInfiltrationBias(player);
-  const curvedRun = Math.sin((tick + player.id * 5) * 0.62) * (2.4 + infiltrationBias * 2);
+  const curvedRun =
+    Math.sin(tick * SIM_TICK_SECONDS * 1.15 + player.id * 0.73) * (2.4 + infiltrationBias * 2);
   const desiredDepth = 9 + offBallRunBias * 5;
   const lineSafety = direction < 0 ? onsideLine + 1.8 : onsideLine - 1.8;
   const forwardTarget = ball.y + direction * desiredDepth;
@@ -2352,7 +2369,7 @@ function getWingerAttackingSpace(player: Player, context: MovementContext) {
   const insideChannelX = wideX < 50 ? 38 : 62;
   const finalThird = isInFinalThird(player.side, ball.y);
   const ownerRole = owner ? normalizeRole(owner.role) : null;
-  const variant = (tick + player.id) % 6;
+  const variant = getTacticalVariant(tick, player.id, 6, 1.4);
 
   if (!sameFlank && finalThird) {
     return {
@@ -2376,7 +2393,7 @@ function getWingerAttackingSpace(player: Player, context: MovementContext) {
 
 function getStrikerDefensiveScreen(player: Player, context: MovementContext) {
   const { ball, direction, tick } = context;
-  const microShift = Math.sin((tick + player.id * 7) * 0.7) * 2.2;
+  const microShift = Math.sin(tick * SIM_TICK_SECONDS * 1.1 + player.id * 0.67) * 2.2;
 
   return {
     x: clamp(lerp(player.homePosition.x, ball.x, 0.22) + microShift, 32, 68),
@@ -2389,8 +2406,8 @@ function getStrikerAttackingSpace(player: Player, context: MovementContext) {
   const centerBacks = opponents.filter((item) => normalizeRole(item.role) === "CB");
   const defenderGap = getLargestHorizontalGap(centerBacks);
   const onsideLine = getOffsideLine(player.side, opponents);
-  const microShift = Math.sin((tick + player.id * 11) * 0.85) * 2.4;
-  const variant = (tick + player.id) % 5;
+  const microShift = Math.sin(tick * SIM_TICK_SECONDS * 1.25 + player.id * 0.83) * 2.4;
+  const variant = getTacticalVariant(tick, player.id, 5, 1.4);
   if (variant === 0) {
     return {
       x: clamp(lerp(player.homePosition.x, ball.x, 0.28) + microShift, 32, 68),

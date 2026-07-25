@@ -124,6 +124,7 @@ function buildLineupSnapshot(match: MatchState | undefined): MatchSnapshot | nul
     matchStep: 'first_half_start',
     minute: Number(match?.currentMinute ?? 0),
     second: Number(match?.clockSeconds ?? 0),
+    displaySecond: 0,
     clockLabel: '00:00',
     phase: 'first_half',
     homeScore: Number(match?.homeScore ?? 0),

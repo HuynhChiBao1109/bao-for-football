@@ -30,43 +30,43 @@ import {
   updatePlayerMovement,
 } from "./match-movement.util";
 
-export const MATCH_REAL_DURATION_MS = 180_000;
-export const MATCH_CLOCK_SECONDS = 180;
+export const MATCH_REAL_DURATION_MS = 360_000;
+export const MATCH_CLOCK_SECONDS = MATCH_REAL_DURATION_MS / 1000;
 export const MATCH_TICK_MS = SIM_TICK_MS;
 export const TICKS_PER_SECOND = SIM_TICKS_PER_SECOND;
 export const TICKS_PER_MINUTE = 60 * TICKS_PER_SECOND;
 export const MATCH_DURATION_TICKS = MATCH_CLOCK_SECONDS * TICKS_PER_SECOND;
 export const DEBUG_TICK_STEP = 1;
-export const FRAME_DURATION_MS = 360;
-export const AUTO_TICK_INTERVAL_MS = 360;
-const SKILL_FRAME_DURATION_MS = 420;
-const SKILL_SHOT_FRAME_DURATION_MS = 560;
-const SKILL_PASS_FRAME_DURATION_MS = 470;
-const SKILL_DRIBBLE_FRAME_DURATION_MS = 400;
-const SKILL_TACKLE_FRAME_DURATION_MS = 390;
-const PASS_FRAME_DURATION_MS = 430;
-const SHOT_FRAME_DURATION_MS = 440;
-const TACKLE_FRAME_DURATION_MS = 500;
-const DEAD_BALL_FRAME_DURATION_MS = 420;
+export const FRAME_DURATION_MS = MATCH_TICK_MS;
+export const AUTO_TICK_INTERVAL_MS = MATCH_TICK_MS;
+const SKILL_FRAME_DURATION_MS = 440;
+const SKILL_SHOT_FRAME_DURATION_MS = 440;
+const SKILL_PASS_FRAME_DURATION_MS = 420;
+const SKILL_DRIBBLE_FRAME_DURATION_MS = 420;
+const SKILL_TACKLE_FRAME_DURATION_MS = 420;
+const PASS_FRAME_DURATION_MS = FRAME_DURATION_MS;
+const SHOT_FRAME_DURATION_MS = FRAME_DURATION_MS;
+const TACKLE_FRAME_DURATION_MS = 420;
+const DEAD_BALL_FRAME_DURATION_MS = 450;
 const KEEPER_HOLD_FRAME_DURATION_MS = Math.round(FRAME_DURATION_MS * 0.75);
-const CORNER_SETUP_DELAY_MS = 700;
-const CORNER_DELIVERY_FRAME_DURATION_MS = 620;
-const CORNER_FINISH_FRAME_DURATION_MS = 580;
-const THROW_IN_SETUP_DELAY_MS = 550;
-const THROW_IN_FRAME_DURATION_MS = 560;
-const PENALTY_SETUP_DELAY_MS = 700;
-const PENALTY_KICK_FRAME_DURATION_MS = 650;
-const HALF_TIME_WHISTLE_DURATION_MS = 500;
-const HALF_TIME_TUNNEL_DURATION_MS = 800;
-const SECOND_HALF_KICKOFF_DURATION_MS = 650;
-const GOAL_CELEBRATION_DURATION_MS = 5_000;
-const KICKOFF_WHISTLE_DURATION_MS = 2_000;
-const MIN_OWNER_POSSESSION_TICKS = Math.max(2, Math.round(1.8 * TICKS_PER_SECOND));
-const MIN_TEAM_POSSESSION_TICKS = Math.max(1, Math.round(0.8 * TICKS_PER_SECOND));
-const PASS_CADENCE_TICKS = Math.max(5, Math.round(5 * TICKS_PER_SECOND));
-const TACKLE_CADENCE_TICKS = Math.max(2, Math.round(1.4 * TICKS_PER_SECOND));
-const SHOT_CADENCE_TICKS = Math.max(1, Math.round(1.4 * TICKS_PER_SECOND));
-const TRANSITION_PHASE_TICKS = Math.max(4, Math.round(3.5 * TICKS_PER_SECOND));
+const CORNER_SETUP_DELAY_MS = 560;
+const CORNER_DELIVERY_FRAME_DURATION_MS = 500;
+const CORNER_FINISH_FRAME_DURATION_MS = 460;
+const THROW_IN_SETUP_DELAY_MS = 420;
+const THROW_IN_FRAME_DURATION_MS = 440;
+const PENALTY_SETUP_DELAY_MS = 600;
+const PENALTY_KICK_FRAME_DURATION_MS = 520;
+const HALF_TIME_WHISTLE_DURATION_MS = 420;
+const HALF_TIME_TUNNEL_DURATION_MS = 700;
+const SECOND_HALF_KICKOFF_DURATION_MS = 520;
+const GOAL_CELEBRATION_DURATION_MS = 3_000;
+const KICKOFF_WHISTLE_DURATION_MS = 1_000;
+const MIN_OWNER_POSSESSION_TICKS = Math.max(2, Math.round(0.8 * TICKS_PER_SECOND));
+const MIN_TEAM_POSSESSION_TICKS = Math.max(1, Math.round(0.4 * TICKS_PER_SECOND));
+const PASS_CADENCE_TICKS = Math.max(4, Math.round(2.2 * TICKS_PER_SECOND));
+const TACKLE_CADENCE_TICKS = Math.max(2, Math.round(0.9 * TICKS_PER_SECOND));
+const SHOT_CADENCE_TICKS = Math.max(1, Math.round(0.8 * TICKS_PER_SECOND));
+const TRANSITION_PHASE_TICKS = Math.max(4, Math.round(2.2 * TICKS_PER_SECOND));
 const BALL_CONTROL_DISTANCE = 2.4;
 const PLAYER_SPEED_UNITS_PER_TICK: Record<PlayerMoveIntent, number> = {
   anchor: 1.25,
@@ -89,10 +89,10 @@ const PLAYER_SPEED_UNITS_PER_TICK: Record<PlayerMoveIntent, number> = {
   cut_inside: 4.7,
   press: 4.75,
 };
-const PASS_SPEED_UNITS_PER_TICK = MOVEMENT.passSpeed * SIM_TICK_SECONDS * 0.68;
-const SHOT_SPEED_UNITS_PER_TICK = MOVEMENT.shotSpeed * SIM_TICK_SECONDS * 1.04;
-const PLAYER_MOVEMENT_TEMPO_MULTIPLIER = 1.2;
-const LOOSE_BALL_CHASE_MULTIPLIER = 1.55;
+const PASS_SPEED_UNITS_PER_TICK = MOVEMENT.passSpeed * SIM_TICK_SECONDS * 0.78;
+const SHOT_SPEED_UNITS_PER_TICK = MOVEMENT.shotSpeed * SIM_TICK_SECONDS * 1.18;
+const PLAYER_MOVEMENT_TEMPO_MULTIPLIER = 1.3;
+const LOOSE_BALL_CHASE_MULTIPLIER = 1.5;
 const PASS_RECEIVE_WINDOW_SECONDS = PASS_FRAME_DURATION_MS / 1000;
 export const FRAMES_PER_ACTION = 7;
 export const ACTIONS_PER_HALF = 14;
@@ -334,6 +334,7 @@ export type MatchSnapshot = {
   matchStep: MatchStep;
   minute: number;
   second: number;
+  displaySecond?: number;
   clockLabel: string;
   phase: "first_half" | "half_time" | "second_half" | "full_time";
   homeScore: number;
@@ -2949,6 +2950,18 @@ function settleBallNearOwner(
   };
 }
 
+function getActionIntentVariant(
+  tick: number,
+  playerId: number,
+  variants: number,
+  holdSeconds: number,
+) {
+  const ticksPerIntent = Math.max(1, Math.round(holdSeconds * TICKS_PER_SECOND));
+  const stagger = Math.abs(playerId * 11) % ticksPerIntent;
+  const intentEpoch = Math.floor((Math.max(0, tick) + stagger) / ticksPerIntent);
+  return Math.abs(intentEpoch + playerId * 13) % Math.max(1, variants);
+}
+
 function carryBallTarget(input: {
   actor: InternalLineupPlayer;
   ball: TrajectoryPoint;
@@ -2961,11 +2974,14 @@ function carryBallTarget(input: {
   const halfSpaceX = wideLaneX < 50 ? 30 : 70;
   const nearTouchline = input.ball.x <= 12 || input.ball.x >= 88;
   const finalThird = isFinalThird(input.possession, input.ball.y);
-  const wobble = ((input.nextTick % 5) - 2) * 0.7;
+  const wobble =
+    (getActionIntentVariant(input.nextTick, input.actor.userPlayerId, 5, 1.2) - 2) * 0.5;
 
   if (role === "FB" || role === "W") {
-    const variant = (input.nextTick + input.actor.userPlayerId) % 4;
-    const touchlineOverrun = nearTouchline && (input.nextTick + input.actor.userPlayerId) % 7 === 0;
+    const variant = getActionIntentVariant(input.nextTick, input.actor.userPlayerId, 4, 1.6);
+    const touchlineOverrun =
+      nearTouchline &&
+      getActionIntentVariant(input.nextTick, input.actor.userPlayerId, 7, 2.2) === 0;
     const shouldCutInside = nearTouchline || role === "W" || variant <= 1;
     const desiredX = shouldCutInside
       ? touchlineOverrun
@@ -2999,7 +3015,8 @@ function repositionBallTarget(input: {
   nextTick: number;
 }): TrajectoryPoint {
   const direction = attackDirection(input.possession);
-  const sideStep = input.nextTick % 2 === 0 ? -3 : 3;
+  const sideStep =
+    getActionIntentVariant(input.nextTick, input.actor.userPlayerId, 2, 1.4) === 0 ? -3 : 3;
   const desired = {
     x: clamp(lerp(input.ball.x, input.actor.anchors.x, 0.24) + sideStep, 7, 93),
     y: clamp(lerp(input.ball.y, input.actor.anchors.y + direction * 4, 0.2), 7, 93),
@@ -4447,7 +4464,6 @@ function resolveDebugDefensiveAction(input: {
       100) /
     100;
   const skillRandom = createDeterministicSkillRandom(input.nextTick, input.defender.userPlayerId);
-  addSkillCharge(input.defender, EPlayerSkill.TANK_TACKLE, 25);
   const skill = getChargedSkill(input.defender, "tackle");
   const activation = skill
     ? resolveSkillActivation(
@@ -4469,6 +4485,7 @@ function resolveDebugDefensiveAction(input: {
     (input.nextTick % TACKLE_CADENCE_TICKS === 0 || challengeDistance <= 6.5) &&
     challengeDistance <= 9
   ) {
+    addSkillCharge(input.defender, EPlayerSkill.TANK_TACKLE, 25);
     const isClean = timingRoll < successChance;
     const deflectionWindow = clamp(0.24 + challengeDistancePenalty * 0.55, 0.18, 0.54);
     const target = {
@@ -4510,10 +4527,11 @@ function resolveDebugDefensiveAction(input: {
   }
 
   if (
-    input.nextTick % Math.max(6, Math.round(TACKLE_CADENCE_TICKS * 0.7)) === 0 &&
+    input.nextTick % Math.max(3, Math.round(TACKLE_CADENCE_TICKS * 0.7)) === 0 &&
     Math.min(distanceToLane, distanceToBall) <= 11 &&
     timingRoll < successChance + 0.08
   ) {
+    addSkillCharge(input.defender, EPlayerSkill.TANK_TACKLE, 25);
     const target = {
       x: clamp(lerp(input.ballTarget.x, defenderPosition.x, 0.55), 6, 94),
       y: clamp(lerp(input.ballTarget.y, defenderPosition.y, 0.55), 6, 94),
@@ -4636,16 +4654,6 @@ function resolveDebugShotAction(
     0.6,
     2,
   );
-  addSkillCharge(
-    input.shooter,
-    EPlayerSkill.SHOOT_THUNDER,
-    Math.round(25 * shootSkillChargeMultiplier),
-  );
-  addSkillCharge(
-    input.shooter,
-    EPlayerSkill.KAISER_SHOT,
-    Math.round(22 * shootSkillChargeMultiplier),
-  );
   const skill = getChargedSkill(input.shooter, "shoot");
   const hasThunderShot = skill === EPlayerSkill.SHOOT_THUNDER;
   const hasKaiserShot = skill === EPlayerSkill.KAISER_SHOT;
@@ -4749,6 +4757,17 @@ function resolveDebugShotAction(
   if (!shouldShoot) {
     return null;
   }
+
+  addSkillCharge(
+    input.shooter,
+    EPlayerSkill.SHOOT_THUNDER,
+    Math.round(25 * shootSkillChargeMultiplier),
+  );
+  addSkillCharge(
+    input.shooter,
+    EPlayerSkill.KAISER_SHOT,
+    Math.round(22 * shootSkillChargeMultiplier),
+  );
 
   const shooterQuality =
     input.shooter.raw.stats.shoot * 0.5 +
@@ -6364,11 +6383,15 @@ function shouldFreezeMatchClock(event: EMatchEvent | null) {
 }
 
 function getDisplayMatchMinute(clockSecond: number) {
-  return Math.min(90, Math.floor((clockSecond / MATCH_CLOCK_SECONDS) * 90));
+  return Math.min(90, Math.floor(getDisplayMatchClockSecond(clockSecond) / 60));
+}
+
+function getDisplayMatchClockSecond(clockSecond: number) {
+  return Math.min(90 * 60, (clockSecond / MATCH_CLOCK_SECONDS) * 90 * 60);
 }
 
 function getDisplayMatchClock(clockSecond: number) {
-  const totalGameSeconds = Math.min(90 * 60, (clockSecond / MATCH_CLOCK_SECONDS) * 90 * 60);
+  const totalGameSeconds = getDisplayMatchClockSecond(clockSecond);
   const minute = Math.floor(totalGameSeconds / 60);
   const second = Math.floor(totalGameSeconds % 60);
   return `${String(minute).padStart(2, "0")}:${String(second).padStart(2, "0")}`;
@@ -8263,8 +8286,16 @@ function addTickSkillCharge(lineups: InternalLineupPlayer[]) {
       0.6,
       2,
     );
-    addSkillCharge(player, EPlayerSkill.DRIBBLE_MAGIC, Math.round(10 * multiplier));
-    addSkillCharge(player, EPlayerSkill.LIGHTNING_DRIBBLE, Math.round(12 * multiplier));
+    addSkillCharge(
+      player,
+      EPlayerSkill.DRIBBLE_MAGIC,
+      Math.round(20 * SIM_TICK_SECONDS * multiplier),
+    );
+    addSkillCharge(
+      player,
+      EPlayerSkill.LIGHTNING_DRIBBLE,
+      Math.round(24 * SIM_TICK_SECONDS * multiplier),
+    );
   });
 }
 
@@ -8522,6 +8553,7 @@ function buildSnapshot(input: {
     matchStep: input.matchStep,
     minute: getDisplayMatchMinute(input.second),
     second: input.second,
+    displaySecond: getDisplayMatchClockSecond(input.second),
     clockLabel: getDisplayMatchClock(input.second),
     phase: input.phase,
     homeScore: input.homeScore,
@@ -8994,7 +9026,8 @@ function getOffsideAwareTarget(input: {
     6,
     94,
   );
-  const lateralMicro = Math.sin((input.tick + input.player.userPlayerId * 5) * 0.55) * 3.2;
+  const lateralMicro =
+    Math.sin(input.tick * SIM_TICK_SECONDS * 1.15 + input.player.userPlayerId * 0.73) * 2.6;
   const passReady =
     input.isIntendedReceiver &&
     !currentOffside.isOffside &&
