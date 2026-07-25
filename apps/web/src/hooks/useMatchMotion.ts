@@ -38,14 +38,6 @@ function distance(left: { x: number; y: number }, right: { x: number; y: number 
   return Math.hypot(left.x - right.x, left.y - right.y);
 }
 
-function playerKey(player: MatchPitchPlayer) {
-  return `${player.teamSide ?? 'team'}:${player.id}`;
-}
-
-function indexPlayers(players: MatchPitchPlayer[]) {
-  return new Map(players.map((player) => [playerKey(player), player]));
-}
-
 function shouldUseBallTrajectory(snapshot: MatchSnapshot) {
   const event = snapshot.highlight?.event;
   return (
@@ -259,32 +251,6 @@ function getPassBallPosition(input: {
   );
 }
 
-function interpolatePlayers(
-  previousPlayers: MatchPitchPlayer[],
-  nextPlayers: MatchPitchPlayer[],
-  alpha: number,
-) {
-  const previousById = indexPlayers(previousPlayers);
-
-  return nextPlayers.map((nextPlayer) => {
-    const previousPlayer = previousById.get(playerKey(nextPlayer));
-    if (!previousPlayer) {
-      const move = nextPlayer.move;
-      return {
-        ...nextPlayer,
-        x: lerp(move?.fromX ?? nextPlayer.x, nextPlayer.x, alpha),
-        y: lerp(move?.fromY ?? nextPlayer.y, nextPlayer.y, alpha),
-      };
-    }
-
-    return {
-      ...nextPlayer,
-      x: lerp(previousPlayer.x, nextPlayer.x, alpha),
-      y: lerp(previousPlayer.y, nextPlayer.y, alpha),
-    };
-  });
-}
-
 function interpolateSnapshot(
   previous: MatchSnapshot | null,
   next: MatchSnapshot,
@@ -295,16 +261,6 @@ function interpolateSnapshot(
   const ballFromX = previousBall?.x ?? next.ball.fromX ?? next.ball.x;
   const ballFromY = previousBall?.y ?? next.ball.fromY ?? next.ball.y;
   const easedPlayerAlpha = shouldSnapPlayers(next) ? 1 : linear(playerAlpha);
-  const renderedHomePlayers = interpolatePlayers(
-    previous?.homePlayers ?? [],
-    next.homePlayers,
-    easedPlayerAlpha,
-  );
-  const renderedAwayPlayers = interpolatePlayers(
-    previous?.awayPlayers ?? [],
-    next.awayPlayers,
-    easedPlayerAlpha,
-  );
   const ballPath =
     shouldUseBallTrajectory(next) && next.ball.trajectory?.length
       ? [
@@ -361,8 +317,8 @@ function interpolateSnapshot(
       x: ballPosition.x,
       y: ballPosition.y,
     },
-    homePlayers: renderedHomePlayers,
-    awayPlayers: renderedAwayPlayers,
+    homePlayers: next.homePlayers,
+    awayPlayers: next.awayPlayers,
   };
 }
 

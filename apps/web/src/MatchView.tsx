@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { memo, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import './MatchView.css';
@@ -339,7 +339,7 @@ function Scoreboard({
   );
 }
 
-function PitchLines() {
+const PitchLines = memo(function PitchLines() {
   return (
     <div className="match-pitch__lines" aria-hidden="true">
       <div className="pitch-line pitch-line--outer" />
@@ -356,9 +356,9 @@ function PitchLines() {
       <div className="pitch-goal pitch-goal--away" />
     </div>
   );
-}
+});
 
-function PitchDebugGrid() {
+const PitchDebugGrid = memo(function PitchDebugGrid() {
   const marks = [0, 25, 50, 75, 100];
 
   return (
@@ -375,7 +375,7 @@ function PitchDebugGrid() {
       ))}
     </div>
   );
-}
+});
 
 const PlayerCircle = memo(function PlayerCircle({
   player,
@@ -383,14 +383,19 @@ const PlayerCircle = memo(function PlayerCircle({
   celebrating,
   slideTackleActive,
   mirrorY,
+  motionDurationMs,
 }: {
   player: MatchPitchPlayer;
   activeHighlight: boolean;
   celebrating: boolean;
   slideTackleActive: boolean;
   mirrorY: boolean;
+  motionDurationMs: number;
 }) {
-  const style = toVerticalPitchPosition(player, mirrorY);
+  const style = {
+    ...toVerticalPitchPosition(player, mirrorY),
+    '--player-motion-duration': `${motionDurationMs}ms`,
+  } as CSSProperties;
   const teamClass = player.teamSide === 'away' ? 'player-circle--away' : 'player-circle--home';
   const isGoalkeeper = player.position === 'GK';
   const keeperAction =
@@ -467,6 +472,40 @@ const PlayerCircle = memo(function PlayerCircle({
   );
 });
 
+const PlayerLayer = memo(function PlayerLayer({
+  homePlayers,
+  awayPlayers,
+  highlightedPlayerId,
+  celebratingSide,
+  slideTackleActorId,
+  mirrorY,
+  motionDurationMs,
+}: {
+  homePlayers: MatchPitchPlayer[];
+  awayPlayers: MatchPitchPlayer[];
+  highlightedPlayerId?: string | null;
+  celebratingSide?: 'home' | 'away' | null;
+  slideTackleActorId?: string | null;
+  mirrorY: boolean;
+  motionDurationMs: number;
+}) {
+  return (
+    <>
+      {[...homePlayers, ...awayPlayers].map((player) => (
+        <PlayerCircle
+          key={`${player.teamSide}-${player.id}`}
+          player={player}
+          activeHighlight={Boolean(highlightedPlayerId && player.id === highlightedPlayerId)}
+          celebrating={Boolean(celebratingSide && player.teamSide === celebratingSide)}
+          slideTackleActive={Boolean(slideTackleActorId && player.id === slideTackleActorId)}
+          mirrorY={mirrorY}
+          motionDurationMs={motionDurationMs}
+        />
+      ))}
+    </>
+  );
+});
+
 function Ball({ snapshot, mirrorY }: { snapshot: MatchSnapshot; mirrorY: boolean }) {
   const style = toVerticalPitchPosition(snapshot.ball, mirrorY);
   const thunderShot = isThunderShot(snapshot);
@@ -500,9 +539,7 @@ function Ball({ snapshot, mirrorY }: { snapshot: MatchSnapshot; mirrorY: boolean
   );
 }
 
-function SkillOverlay({ snapshot }: { snapshot: MatchSnapshot }) {
-  const skill = snapshot.highlight?.skill ?? snapshot.ball.skillTrajectory ?? null;
-
+const SkillOverlay = memo(function SkillOverlay({ skill }: { skill?: number | null }) {
   if (!skill) {
     return null;
   }
@@ -517,9 +554,9 @@ function SkillOverlay({ snapshot }: { snapshot: MatchSnapshot }) {
       </div>
     </div>
   );
-}
+});
 
-function GoalOverlay({
+const GoalOverlay = memo(function GoalOverlay({
   show,
   celebrating,
   label,
@@ -549,9 +586,9 @@ function GoalOverlay({
       <span>{label}</span>
     </div>
   );
-}
+});
 
-function KickoffWhistleOverlay({ show }: { show: boolean }) {
+const KickoffWhistleOverlay = memo(function KickoffWhistleOverlay({ show }: { show: boolean }) {
   if (!show) return null;
 
   return (
@@ -561,7 +598,7 @@ function KickoffWhistleOverlay({ show }: { show: boolean }) {
       <span>KICK OFF</span>
     </div>
   );
-}
+});
 
 function MatchResultOverlay({
   snapshot,
@@ -674,10 +711,6 @@ function EventFeed({ events }: { events: LiveMatchEvent[] }) {
 }
 
 function MatchPitch({ snapshot }: { snapshot: MatchSnapshot }) {
-  const allPlayers = useMemo(
-    () => [...snapshot.homePlayers, ...snapshot.awayPlayers],
-    [snapshot.homePlayers, snapshot.awayPlayers],
-  );
   const highlightedPlayerId = snapshot.highlight?.actorPlayerId;
   const mirrorY = snapshot.phase === 'second_half';
   const tunnelActive =
@@ -689,6 +722,12 @@ function MatchPitch({ snapshot }: { snapshot: MatchSnapshot }) {
   const activeSkill = snapshot.highlight?.skill ?? snapshot.ball.skillTrajectory ?? undefined;
   const goalCelebration = isGoalCelebration(snapshot);
   const celebratingSide = goalCelebration ? snapshot.highlight?.teamSide : null;
+  const snapPlayerPositions =
+    snapshot.highlight?.event === MATCH_EVENT.CORNER_KICK ||
+    snapshot.highlight?.event === MATCH_EVENT.PENALTY;
+  const playerMotionDurationMs = snapPlayerPositions
+    ? 0
+    : Math.max(0, Math.min(5000, Number(snapshot.durationMs ?? 400)));
 
   return (
     <section className="match-pitch-shell" aria-label="Top down football pitch">
@@ -701,18 +740,17 @@ function MatchPitch({ snapshot }: { snapshot: MatchSnapshot }) {
         <div className="match-pitch" data-active-skill={activeSkill}>
           <PitchLines />
           <PitchDebugGrid />
-          {allPlayers.map((player) => (
-            <PlayerCircle
-              key={`${player.teamSide}-${player.id}`}
-              player={player}
-              activeHighlight={Boolean(highlightedPlayerId && player.id === highlightedPlayerId)}
-              celebrating={Boolean(celebratingSide && player.teamSide === celebratingSide)}
-              slideTackleActive={Boolean(slideTackleActorId && player.id === slideTackleActorId)}
-              mirrorY={mirrorY}
-            />
-          ))}
+          <PlayerLayer
+            homePlayers={snapshot.homePlayers}
+            awayPlayers={snapshot.awayPlayers}
+            highlightedPlayerId={highlightedPlayerId}
+            celebratingSide={celebratingSide}
+            slideTackleActorId={slideTackleActorId}
+            mirrorY={mirrorY}
+            motionDurationMs={playerMotionDurationMs}
+          />
           <Ball snapshot={snapshot} mirrorY={mirrorY} />
-          <SkillOverlay snapshot={snapshot} />
+          <SkillOverlay skill={activeSkill} />
           <GoalOverlay
             key={`${snapshot.frameId ?? snapshot.tick ?? 'goal'}-${snapshot.homeScore}-${snapshot.awayScore}`}
             show={hasBallReachedGoal(snapshot)}
@@ -787,8 +825,9 @@ export function MatchView() {
 
     handledMatchEndRef.current = true;
     if (isAutoTicking) {
-      setIsAutoTicking(false);
-      stopAutoTick.mutate();
+      stopAutoTick.mutate(undefined, {
+        onSettled: () => setIsAutoTicking(false),
+      });
     }
     void queryClient.invalidateQueries({ queryKey: ['campainMatches'] });
     void queryClient.invalidateQueries({ queryKey: ['session'] });

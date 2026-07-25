@@ -650,6 +650,10 @@
 
 .player-node {
   transform: translate3d(-50%, -50%, 0);
+  transition:
+    transform var(--player-motion-duration, 400ms) linear,
+    left var(--player-motion-duration, 400ms) linear,
+    top var(--player-motion-duration, 400ms) linear;
 }
 
 .match-ball {
