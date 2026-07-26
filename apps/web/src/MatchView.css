@@ -1,15 +1,16 @@
 .match-view {
-  position: relative;
+  position: fixed;
+  inset: 0;
+  z-index: 120;
   display: grid;
   place-items: center;
-  overflow: hidden;
-  min-height: calc(100vh - 72px);
-  padding: 18px;
+  overflow: auto;
+  min-height: 0;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   color: #eef7f2;
-  background:
-    radial-gradient(circle at 22% 18%, rgba(255, 53, 82, 0.22), transparent 28%),
-    radial-gradient(circle at 90% 0%, rgba(255, 174, 63, 0.1), transparent 30%),
-    linear-gradient(135deg, #06070b 0%, #151820 48%, #06070b 100%);
+  background: rgba(2, 8, 18, 0.72);
+  backdrop-filter: blur(12px);
 }
 
 .match-view__backdrop {
@@ -23,7 +24,7 @@
     42px 42px,
     42px 42px,
     auto;
-  opacity: 0.8;
+  opacity: 0.42;
   pointer-events: none;
 }
 
@@ -33,9 +34,10 @@
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
   gap: 12px;
-  width: min(1560px, calc(100vw - 28px));
-  max-height: calc(100vh - 96px);
-  min-height: min(820px, calc(100vh - 96px));
+  width: min(1360px, calc(100vw - 32px));
+  height: calc(100svh - 32px);
+  max-height: calc(100svh - 32px);
+  min-height: 0;
   overflow: hidden;
   border: 1px solid rgba(255, 53, 82, 0.34);
   border-radius: 18px;
@@ -2941,13 +2943,14 @@
 
 /* Centered vertical match layout */
 .match-view {
-  min-height: 100svh;
+  min-height: 0;
 }
 
 .match-modal {
-  width: min(1480px, calc(100vw - 12px));
-  min-height: calc(100svh - 12px);
-  max-height: calc(100svh - 12px);
+  width: min(1360px, calc(100vw - 32px));
+  height: calc(100svh - 32px);
+  min-height: 0;
+  max-height: calc(100svh - 32px);
   gap: 8px;
 }
 
@@ -3022,7 +3025,7 @@
 }
 
 .match-pitch {
-  width: min(100%, 730px, calc((100svh - 224px) * 0.625));
+  width: min(100%, 730px, calc((100svh - 256px) * 0.625));
   max-width: 730px;
   max-height: 100%;
   border-color: rgba(236, 253, 245, 0.28);
@@ -3201,8 +3204,10 @@
 
 @media (max-width: 980px) {
   .match-modal {
-    max-height: calc(100svh - 10px);
-    min-height: calc(100svh - 10px);
+    width: calc(100vw - 16px);
+    height: calc(100svh - 16px);
+    max-height: calc(100svh - 16px);
+    min-height: 0;
   }
 
   .match-view__content {
@@ -3218,7 +3223,7 @@
   }
 
   .match-pitch {
-    width: min(100%, 510px, calc((100svh - 224px) * 0.625));
+    width: min(100%, 510px, calc((100svh - 256px) * 0.625));
   }
 
   .match-events__list {
@@ -3523,5 +3528,302 @@
 
   .match-result-button {
     width: 100%;
+  }
+}
+
+/* Landscape pitch presentation */
+@media (min-width: 981px) {
+  .match-view {
+    padding: 8px;
+  }
+
+  .match-modal {
+    width: calc(100vw - 16px);
+    max-width: none;
+    height: calc(100svh - 16px);
+    max-height: calc(100svh - 16px);
+    border-radius: 8px;
+  }
+
+  .match-modal__head {
+    min-height: 38px;
+    padding: 8px 12px 0 16px;
+  }
+
+  .match-modal__head strong {
+    font-size: 28px;
+  }
+
+  .match-scoreboard {
+    width: calc(100% - 24px);
+    min-height: 42px;
+    padding: 6px 12px;
+  }
+
+  .match-view__content {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) 92px;
+    gap: 8px;
+    padding: 0 12px 12px;
+  }
+
+  .match-debug-controls {
+    grid-column: 1;
+    grid-row: 1;
+    min-height: 32px;
+    padding: 2px 6px;
+  }
+
+  .match-pitch-shell {
+    grid-column: 1;
+    grid-row: 2;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .match-pitch-shell::before,
+  .technical-area,
+  .stadium-tunnel {
+    display: none;
+  }
+
+  .match-stadium {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: min(100%, 1280px, calc(154.4118svh - 457.0588px));
+    max-width: 1280px;
+    gap: 0;
+  }
+
+  .match-pitch {
+    width: 100%;
+    max-width: none;
+    max-height: none;
+    aspect-ratio: 105 / 68;
+    background:
+      linear-gradient(90deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 10%),
+      repeating-linear-gradient(
+        90deg,
+        rgba(18, 113, 64, 0.96) 0%,
+        rgba(18, 113, 64, 0.96) 10%,
+        rgba(12, 96, 56, 0.96) 10%,
+        rgba(12, 96, 56, 0.96) 20%
+      ),
+      linear-gradient(90deg, #239354 0%, #116538 55%, #0b472d 100%);
+  }
+
+  .match-pitch::before {
+    background:
+      radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.09), transparent 36%),
+      linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.08),
+        transparent 18%,
+        transparent 82%,
+        rgba(0, 0, 0, 0.12)
+      );
+  }
+
+  .pitch-line--mid {
+    top: 4%;
+    bottom: 4%;
+    left: 50%;
+    right: auto;
+    width: 0;
+    height: auto;
+    border-top: 0;
+    border-left: 2px solid rgba(255, 255, 255, 0.7);
+  }
+
+  .pitch-circle--center {
+    width: 17.4%;
+  }
+
+  .pitch-spot--home {
+    left: 84.5%;
+    top: 50%;
+  }
+
+  .pitch-spot--away {
+    left: 15.5%;
+    top: 50%;
+  }
+
+  .pitch-box--penalty {
+    width: 16.5%;
+    height: 52%;
+  }
+
+  .pitch-box--goal {
+    width: 6.4%;
+    height: 28%;
+  }
+
+  .pitch-box--penalty.pitch-box--home {
+    top: 24%;
+    right: 4%;
+    bottom: auto;
+    left: auto;
+  }
+
+  .pitch-box--penalty.pitch-box--away {
+    top: 24%;
+    right: auto;
+    left: 4%;
+  }
+
+  .pitch-box--goal.pitch-box--home {
+    top: 36%;
+    right: 4%;
+    bottom: auto;
+    left: auto;
+  }
+
+  .pitch-box--goal.pitch-box--away {
+    top: 36%;
+    right: auto;
+    left: 4%;
+  }
+
+  .pitch-goal {
+    top: 40.5%;
+    width: 4.4%;
+    height: 19%;
+  }
+
+  .pitch-goal--home {
+    right: max(1.1%, 6px);
+    bottom: auto;
+    left: auto;
+  }
+
+  .pitch-goal--away {
+    top: 40.5%;
+    left: max(1.1%, 6px);
+  }
+
+  .pitch-goal::before {
+    top: -5px;
+    bottom: -5px;
+    left: auto;
+    width: 5px;
+    height: auto;
+  }
+
+  .pitch-goal--home::before {
+    left: -5px;
+  }
+
+  .pitch-goal--away::before {
+    right: -5px;
+  }
+
+  .pitch-goal::after {
+    inset: -5px;
+    width: auto;
+    background: linear-gradient(
+      0deg,
+      #ffffff 0 5px,
+      transparent 5px calc(100% - 5px),
+      #ffffff calc(100% - 5px)
+    );
+  }
+
+  .player-node,
+  .match-ball {
+    left: calc(var(--pitch-length, 50) * 1%);
+    top: calc(var(--pitch-lateral, 50) * 1%);
+  }
+
+  @supports (width: 1cqw) {
+    .player-node,
+    .match-ball {
+      left: 0;
+      top: 0;
+    }
+
+    .player-node {
+      transform: translate3d(var(--landscape-x-pos, 50cqw), var(--landscape-y-pos, 50cqh), 0)
+        translate3d(-50%, -50%, 0);
+    }
+
+    .match-ball {
+      --ball-transform: translate3d(var(--landscape-x-pos, 50cqw), var(--landscape-y-pos, 50cqh), 0)
+        translate3d(-50%, -50%, 0);
+    }
+  }
+
+  .player-node {
+    width: clamp(16px, 4.7cqh, 28px);
+    height: clamp(16px, 4.7cqh, 28px);
+  }
+
+  .match-events {
+    grid-column: 1;
+    grid-row: 3;
+    display: grid;
+    grid-template-columns: 118px minmax(0, 1fr);
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .match-events__head {
+    align-content: center;
+    padding: 8px 12px;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 0;
+  }
+
+  .match-events__list {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(220px, 1fr);
+    gap: 6px;
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 7px;
+  }
+
+  .match-event {
+    grid-template-columns: 46px minmax(0, 1fr);
+    min-height: 0;
+    padding: 7px 9px;
+  }
+}
+
+@media (max-width: 980px) {
+  .player-node,
+  .match-ball {
+    left: calc(var(--pitch-lateral, 50) * 1%);
+    top: calc(var(--pitch-length, 50) * 1%);
+  }
+
+  @supports (width: 1cqw) {
+    .player-node,
+    .match-ball {
+      left: 0;
+      top: 0;
+    }
+
+    .player-node {
+      transform: translate3d(var(--portrait-x-pos, 50cqw), var(--portrait-y-pos, 50cqh), 0)
+        translate3d(-50%, -50%, 0);
+    }
+
+    .match-ball {
+      --ball-transform: translate3d(var(--portrait-x-pos, 50cqw), var(--portrait-y-pos, 50cqh), 0)
+        translate3d(-50%, -50%, 0);
+    }
+  }
+
+  .player-node {
+    width: clamp(14px, 4.8cqw, 18px);
+    height: clamp(14px, 4.8cqw, 18px);
   }
 }

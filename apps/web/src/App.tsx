@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useNavigate, type Location } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import { AppLayout } from './layouts/AppLayout';
 import { LoginPage } from './pages/LoginPage';
@@ -69,6 +69,8 @@ function App() {
   const { session, isAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const backgroundLocation = (location.state as { backgroundLocation?: Location } | null)
+    ?.backgroundLocation;
 
   // Redirect authenticated users away from login
   useEffect(() => {
@@ -81,38 +83,61 @@ function App() {
   }, [session, isAdmin, location.pathname, navigate]);
 
   return (
-    <Routes>
-      <Route path={ROUTES.login} element={<LoginPage />} />
-      <Route path={ROUTES.adminLogin} element={<AdminLoginPage />} />
+    <>
+      <Routes location={backgroundLocation ?? location}>
+        <Route path={ROUTES.login} element={<LoginPage />} />
+        <Route path={ROUTES.adminLogin} element={<AdminLoginPage />} />
 
-      <Route
-        element={
-          <RequireAuth>
-            <RequireStarterTeam>
-              <AppLayout />
-            </RequireStarterTeam>
-          </RequireAuth>
-        }
-      >
-        <Route path={ROUTES.teamSetup} element={<TeamSetupPage />} />
-        <Route path={ROUTES.club} element={<ClubPage />} />
-        <Route path={ROUTES.players} element={<PlayersPage />} />
-        <Route path={ROUTES.gacha} element={<GachaPage />} />
-        <Route path={ROUTES.aiMatch} element={<AiMatchPage />} />
-        <Route path={ROUTES.matchLive} element={<MatchView />} />
-        <Route path={ROUTES.pvp} element={<PvpPage />} />
         <Route
-          path={ROUTES.admin}
           element={
-            <RequireAdmin>
-              <AdminPage />
-            </RequireAdmin>
+            <RequireAuth>
+              <RequireStarterTeam>
+                <AppLayout />
+              </RequireStarterTeam>
+            </RequireAuth>
           }
-        />
-        <Route path="/" element={<Navigate to={isAdmin ? ROUTES.admin : ROUTES.club} replace />} />
-        <Route path="*" element={<Navigate to={isAdmin ? ROUTES.admin : ROUTES.club} replace />} />
-      </Route>
-    </Routes>
+        >
+          <Route path={ROUTES.teamSetup} element={<TeamSetupPage />} />
+          <Route path={ROUTES.club} element={<ClubPage />} />
+          <Route path={ROUTES.players} element={<PlayersPage />} />
+          <Route path={ROUTES.gacha} element={<GachaPage />} />
+          <Route path={ROUTES.aiMatch} element={<AiMatchPage />} />
+          <Route path={ROUTES.matchLive} element={<MatchView />} />
+          <Route path={ROUTES.pvp} element={<PvpPage />} />
+          <Route
+            path={ROUTES.admin}
+            element={
+              <RequireAdmin>
+                <AdminPage />
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/"
+            element={<Navigate to={isAdmin ? ROUTES.admin : ROUTES.club} replace />}
+          />
+          <Route
+            path="*"
+            element={<Navigate to={isAdmin ? ROUTES.admin : ROUTES.club} replace />}
+          />
+        </Route>
+      </Routes>
+
+      {backgroundLocation ? (
+        <Routes>
+          <Route
+            path={ROUTES.matchLive}
+            element={
+              <RequireAuth>
+                <RequireStarterTeam>
+                  <MatchView />
+                </RequireStarterTeam>
+              </RequireAuth>
+            }
+          />
+        </Routes>
+      ) : null}
+    </>
   );
 }
 

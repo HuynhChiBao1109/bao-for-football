@@ -27,12 +27,6 @@ function linear(alpha: number) {
   return clamp(alpha, 0, 1);
 }
 
-function passRollProgress(alpha: number) {
-  const value = clamp(alpha, 0, 1);
-  const progress = 1 - Math.pow(1 - value, 1.3);
-  return progress >= 0.995 ? 1 : progress;
-}
-
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
@@ -72,11 +66,11 @@ function getBallAnimationDuration(snapshot: MatchSnapshot, frameDuration: number
     return clamp(180 + travelDistance * 4, 220, frameDuration * 0.96);
   }
   if (isShotSkill(snapshot)) {
-    return clamp(105 + travelDistance * 1.9, 145, frameDuration * 0.62);
+    return clamp(280 + travelDistance * 4.5, 360, frameDuration * 0.94);
   }
   if (snapshot.ball.skillTrajectory || snapshot.highlight?.skill) return frameDuration;
   if (event === 7 || event === 36 || event === 38) {
-    return clamp(115 + travelDistance * 2.2, 155, frameDuration * 0.72);
+    return clamp(240 + travelDistance * 4.2, 320, frameDuration * 0.9);
   }
   return frameDuration;
 }
@@ -248,10 +242,7 @@ function getPassBallPosition(input: {
   const flightAlpha = (input.ballAlpha - PASS_RELEASE_SHARE) / (1 - PASS_RELEASE_SHARE);
   const curvedPath = input.next.highlight?.skill === EPlayerSkill.EAGLE_EYE ? forwardPath : [];
 
-  return interpolatePathByDistance(
-    [releasePosition, ...curvedPath, target],
-    passRollProgress(flightAlpha),
-  );
+  return interpolatePathByDistance([releasePosition, ...curvedPath, target], linear(flightAlpha));
 }
 
 function interpolateSnapshot(

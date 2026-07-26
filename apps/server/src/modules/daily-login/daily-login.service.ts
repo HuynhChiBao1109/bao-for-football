@@ -8,10 +8,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, In, Repository } from "typeorm";
 import { AuthUser } from "../auth/types";
 import { PlayerEntity, PlayerSkillEntity } from "../player/entities/player-admin.entity";
-import {
-  UserPlayerEntity,
-  UserPlayerSkillEntity,
-} from "../player/entities/player-user.entity";
+import { UserPlayerEntity, UserPlayerSkillEntity } from "../player/entities/player-user.entity";
 import { TeamEntity } from "../team/entities/team.entity";
 import {
   DAILY_LOGIN_REWARDS,
@@ -39,8 +36,7 @@ export class DailyLoginService {
     const completed = claimedDays >= DAILY_LOGIN_REWARDS.length;
     const canClaim = !completed && String(progress?.lastClaimDate ?? "") !== today;
     const playerSlugs = DAILY_LOGIN_REWARDS.filter(
-      (reward): reward is Extract<DailyLoginReward, { type: "player" }> =>
-        reward.type === "player",
+      (reward): reward is Extract<DailyLoginReward, { type: "player" }> => reward.type === "player",
     ).map((reward) => reward.playerSlug);
     const players = await this.playerRepository.find({ where: { slug: In(playerSlugs) } });
     const playerBySlug = new Map(players.map((player) => [String(player.slug), player]));
@@ -104,8 +100,15 @@ export class DailyLoginService {
         if (!team) {
           throw new BadRequestException("Choose a club before claiming this reward.");
         }
-        team.budget = Number(team.budget ?? 0) + reward.amount;
-        await manager.save(TeamEntity, team);
+        const budgetUpdate = await manager.increment(
+          TeamEntity,
+          { id: team.id },
+          "budget",
+          reward.amount,
+        );
+        if (budgetUpdate.affected !== 1) {
+          throw new ServiceUnavailableException("Cannot apply the daily login money reward.");
+        }
       } else {
         const player = await manager.findOne(PlayerEntity, {
           where: { slug: reward.playerSlug },

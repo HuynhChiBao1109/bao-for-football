@@ -1,5 +1,5 @@
 import { startTransition, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTactics, useSaveTactics } from '../hooks/useTactics';
 import { useSession } from '../hooks/useSession';
 import { usePlayerCards } from '../hooks/usePlayerCards';
@@ -351,6 +351,7 @@ export function TacticsPopup({
   onClose: () => void;
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { data: sessionData } = useSession();
   const tacticsTeamId = sessionData?.team?.id ? `team-${sessionData.team.id}` : undefined;
   const { data: loaded, isLoading, error } = useTactics(tacticsTeamId);
@@ -386,7 +387,9 @@ export function TacticsPopup({
 
   async function startMatch() {
     const response = await startCampaignMatch.mutateAsync({ campainMatchId: campaignMatchId });
-    navigate(matchLivePath(response.matchId));
+    navigate(matchLivePath(response.matchId), {
+      state: { backgroundLocation: location },
+    });
     onClose();
   }
 
@@ -548,6 +551,7 @@ export function TacticsPage({
   onClose,
 }: TacticsEditorProps = {}) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const pendingCampaignMatchId =
     pendingCampaignMatchIdOverride || searchParams.get('startCampaignMatchId') || '';
@@ -685,7 +689,9 @@ export function TacticsPage({
           campainMatchId: pendingCampaignMatchId,
         });
         startTransition(() => {
-          navigate(matchLivePath(response.matchId));
+          navigate(matchLivePath(response.matchId), {
+            state: { backgroundLocation: location },
+          });
         });
         onClose?.();
         return;

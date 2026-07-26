@@ -39,6 +39,9 @@ export const MATCH_DURATION_TICKS = MATCH_CLOCK_SECONDS * TICKS_PER_SECOND;
 export const DEBUG_TICK_STEP = 1;
 export const FRAME_DURATION_MS = MATCH_TICK_MS;
 export const AUTO_TICK_INTERVAL_MS = MATCH_TICK_MS;
+const PITCH_LENGTH_METERS = 105;
+const PITCH_WIDTH_METERS = 68;
+const PITCH_COORDINATE_MAX = 100;
 const SKILL_FRAME_DURATION_MS = 440;
 const SKILL_SHOT_FRAME_DURATION_MS = 440;
 const SKILL_PASS_FRAME_DURATION_MS = 420;
@@ -48,7 +51,7 @@ const PASS_FRAME_DURATION_MS = FRAME_DURATION_MS;
 const SHOT_FRAME_DURATION_MS = FRAME_DURATION_MS;
 const TACKLE_FRAME_DURATION_MS = 420;
 const DEAD_BALL_FRAME_DURATION_MS = 450;
-const KEEPER_HOLD_FRAME_DURATION_MS = Math.round(FRAME_DURATION_MS * 0.75);
+const KEEPER_HOLD_FRAME_DURATION_MS = 1_500;
 const CORNER_SETUP_DELAY_MS = 560;
 const CORNER_DELIVERY_FRAME_DURATION_MS = 500;
 const CORNER_FINISH_FRAME_DURATION_MS = 460;
@@ -108,8 +111,8 @@ type MatchStep =
   | "full_time";
 type PlayActionType = "pass" | "shoot" | "block" | "goal" | "save";
 type PossessionTempoKind = "pass" | "hold" | "carry" | "reposition";
-type PassStyle = "short" | "lead" | "one_two" | "through" | "lob" | "switch";
-type PassTargetIntent = "feet" | "lead" | "through";
+type PassStyle = "short" | "one_two" | "through" | "lob" | "switch";
+type PassTargetIntent = "feet" | "through";
 type RunTimingState =
   | "STAY_ONSIDE"
   | "CHECK_BACK_ONSIDE"
@@ -2043,6 +2046,7 @@ export function generateNextMatchTick(input: {
     ballTarget,
     pressDefender,
     passStyle,
+    targetIntent: passTargetIntent,
     skill: passSkill,
     skillLabel: passSkillLabel,
     offside,
@@ -2103,6 +2107,7 @@ export function generateNextMatchTick(input: {
           reason: "offside",
           offenderPlayerId: receiver.userPlayerId,
           passStyle,
+          passTargetIntent,
           lineY: offside.lineY,
           offsideSnapshot,
           receiverWasOffsideAtPass: offsideReceive.receiverWasOffsideAtPass,
@@ -2165,6 +2170,7 @@ export function generateNextMatchTick(input: {
           to: recoveredBall,
           recoveredPossession: newPossession,
           passStyle,
+          passTargetIntent,
           offsideSnapshot,
           receiverWasOffsideAtPass: passDecision.receiverWasOffsideAtPass,
           passWasLegal: passDecision.passWasLegal,
@@ -2213,6 +2219,7 @@ export function generateNextMatchTick(input: {
       passSkill,
     ),
     activeSkill: passSkill,
+    passTargetIntent,
     focusId: receiver.userPlayerId,
     pressId: pressDefender?.userPlayerId ?? null,
     positionState: previousPositionState,
@@ -2231,9 +2238,11 @@ export function generateNextMatchTick(input: {
         from: { x: latestTick.ball.x, y: latestTick.ball.y },
         to: ballTarget,
         passStyle,
+        passTargetIntent,
         skill: passSkill,
         skillLabel: passSkillLabel,
-        receiverRunTarget: ballTarget,
+        receiverPositionAtPass: offsideSnapshot?.receiverPositionAtPass ?? ballTarget,
+        receiverRunTarget: passTargetIntent === "through" ? ballTarget : null,
         offsideSnapshot,
         receiverWasOffsideAtPass: passDecision.receiverWasOffsideAtPass,
         passWasLegal: passDecision.passWasLegal,
@@ -2740,10 +2749,8 @@ function resolveDebugPossessionTempoAction(input: {
 
   const releaseRoll =
     ((input.nextTick * 19 + input.actor.userPlayerId * 11 + teamTicks * 7) % 100) / 100;
-  const hasShootSkill =
-    input.actor.raw.skills.includes(EPlayerSkill.SHOOT_THUNDER) ||
-    input.actor.raw.skills.includes(EPlayerSkill.KAISER_SHOT);
-  const inShotZone = goalDistance <= getRoleMaxShotDistance(role, hasShootSkill) + 4;
+  const hasChargedShootSkill = Boolean(getChargedSkill(input.actor, "shoot"));
+  const inShotZone = goalDistance <= getRoleMaxShotDistance(role, hasChargedShootSkill) + 1.5;
   const counterAttackWindow = teamTicks <= Math.max(5, Math.round(4 * TICKS_PER_SECOND));
   const openForwardLane = forwardSpace >= 0.62 && pressure.frontDistance >= 9;
   const chasedFromBehind = pressure.rearDistance <= 7 && pressure.frontDistance >= 8;
@@ -3046,6 +3053,7 @@ function resolveDebugPassingAction(input: {
       ballTarget: moveToward(input.ball, input.actor.anchors, PASS_SPEED_UNITS_PER_TICK),
       pressDefender: input.defending[0],
       passStyle: "short" as PassStyle,
+      targetIntent: "feet" as PassTargetIntent,
       skill: null,
       skillLabel: null,
       interception: null,
@@ -3206,11 +3214,9 @@ function resolveDebugPassingAction(input: {
             ? 0.11
             : passStyle === "through"
               ? 0.14 + throughRunScore * 0.16
-              : passStyle === "lead"
-                ? 0.08
-                : passStyle === "one_two"
-                  ? 0.18 + oneTwoValue * 0.18
-                  : 0;
+              : passStyle === "one_two"
+                ? 0.18 + oneTwoValue * 0.18
+                : 0;
       const offsidePenalty = offside.isOffside ? 2.2 : offside.warning ? 0.24 : 0;
       const legalRunBonus =
         !offside.isOffside && (passStyle === "through" || passStyle === "lob")
@@ -3252,6 +3258,7 @@ function resolveDebugPassingAction(input: {
         ballTarget,
         lane,
         passStyle,
+        targetIntent: passTarget.intent,
         offside,
         offsideSnapshot,
         score:
@@ -3314,6 +3321,7 @@ function resolveDebugPassingAction(input: {
         previousPositionState: input.previousPositionState,
       }),
       passStyle: "short" as PassStyle,
+      targetIntent: "feet" as PassTargetIntent,
       offside: { isOffside: false, warning: false, lineY: 50 },
       offsideSnapshot: null as OffsideSnapshot | null,
       score: 0,
@@ -3326,6 +3334,7 @@ function resolveDebugPassingAction(input: {
     ballTarget: selected.ballTarget,
     pressDefender,
     passStyle: selected.passStyle,
+    targetIntent: selected.targetIntent,
     skill: activeSkill,
     skillLabel: activeSkill ? getSkillLabel(activeSkill) : null,
     offside: selected.offside,
@@ -3363,6 +3372,7 @@ function resolveEagleEyePassAction(input: {
     ballTarget: TrajectoryPoint;
     lane: ReturnType<typeof evaluatePassLane>;
     passStyle: PassStyle;
+    targetIntent: PassTargetIntent;
     offside: ReturnType<typeof evaluateOffside>;
     offsideSnapshot: OffsideSnapshot | null;
     score: number;
@@ -3429,6 +3439,7 @@ function resolveEagleEyePassAction(input: {
           distance: lane.distance + 5,
         },
         passStyle: "lob" as PassStyle,
+        targetIntent: "through" as PassTargetIntent,
         offside,
         offsideSnapshot,
         score: lineBreak * 0.42 + goalThreat * 0.3 + lane.score * 0.12 + roleBonus,
@@ -3453,8 +3464,6 @@ function resolvePassStyle(input: {
   defending: InternalLineupPlayer[];
   previousPositionState: PositionState;
 }): PassStyle {
-  const direction = attackDirection(input.possession);
-  const forwardProgress = (input.to.y - input.from.y) * direction;
   const anchorDistance = distance(input.actor.anchors, input.receiver.anchors);
   const offside = evaluateOffside({
     receiver: input.receiver,
@@ -3469,19 +3478,16 @@ function resolvePassStyle(input: {
     anchorDistance >= 24 &&
     input.laneScore >= 0.45;
 
-  if (switchFlank) return "switch";
-  if (input.oneTwoValue >= 0.54 && input.laneScore >= 0.45) return "one_two";
   if (input.targetIntent === "through" && !offside.isOffside) {
     return input.laneScore < 0.48 || anchorDistance >= 28 ? "lob" : "through";
   }
-  if (input.targetIntent === "lead" && forwardProgress > -3) return "lead";
+  if (switchFlank) return "switch";
+  if (input.oneTwoValue >= 0.54 && input.laneScore >= 0.45) return "one_two";
   return "short";
 }
 
 function getPassStyleLabel(style: PassStyle) {
   switch (style) {
-    case "lead":
-      return "chuyen don buoc";
     case "one_two":
       return "bat tuong";
     case "lob":
@@ -3638,7 +3644,7 @@ function evaluatePassChanceCreation(input: {
   const goalY = input.possession === "home" ? 4 : 96;
   const goal = { x: 50, y: goalY };
   const forwardProgress = (input.to.y - input.from.y) * direction;
-  const receiveDistanceToGoal = distance(input.to, goal);
+  const receiveDistanceToGoal = pitchDistanceMeters(input.to, goal);
   const centrality = clamp((24 - Math.abs(input.to.x - 50)) / 24, 0, 1);
   const finalThird = isFinalThird(input.possession, input.to.y);
   const laneToGoal = evaluateShotLane({
@@ -3661,8 +3667,8 @@ function evaluatePassChanceCreation(input: {
       ? clamp((18 - nearestDefenderDistance) / 18, 0, 1)
       : 0;
   const receiverShotWindow =
-    receiveDistanceToGoal <= getRoleMaxShotDistance(role, false) + 5
-      ? clamp((getRoleMaxShotDistance(role, false) + 7 - receiveDistanceToGoal) / 24, 0, 1)
+    receiveDistanceToGoal <= getRoleMaxShotDistance(role, false) + 2.5
+      ? clamp((getRoleMaxShotDistance(role, false) + 4 - receiveDistanceToGoal) / 18, 0, 1)
       : 0;
 
   return clamp(
@@ -3902,7 +3908,6 @@ function getDebugPassTarget(input: {
     x: Number(receiverState?.vx ?? 0),
     y: Number(receiverState?.vy ?? 0),
   };
-  const receiverSpeed = Math.hypot(receiverVelocity.x, receiverVelocity.y);
   const forwardRunSpeed = receiverVelocity.y * direction;
   const passDistance = distance(input.ball, input.receiverPreviousPosition);
   const nearestMarkerDistance =
@@ -3951,165 +3956,12 @@ function getDebugPassTarget(input: {
     return { target: throughPoint, intent: "through" };
   }
 
-  const footPass = shouldPlayIntoFeet({
-    receiver: input.receiver,
-    receiverPosition: input.receiverPreviousPosition,
-    ball: input.ball,
-    defending: input.defending,
-    previousPositionState: input.previousPositionState,
-  });
-  const shouldLeadReceiver =
-    !offside.isOffside &&
-    !offside.warning &&
-    nearestMarkerDistance > 4.5 &&
-    (isForwardRunner ||
-      (passDistance >= 28 && Math.abs(input.ball.x - input.receiverPreviousPosition.x) >= 22));
-
-  if (shouldLeadReceiver && (!footPass || passDistance >= 28)) {
-    const isLongPass = passDistance >= 28;
-    const velocityDirection =
-      receiverSpeed > 0.25
-        ? {
-            x: receiverVelocity.x / receiverSpeed,
-            y: receiverVelocity.y / receiverSpeed,
-          }
-        : { x: 0, y: direction };
-    const leadDistance = clamp(
-      receiverSpeed * PASS_RECEIVE_WINDOW_SECONDS * 0.58 + (isLongPass ? 1.4 : 0.7),
-      0.8,
-      isLongPass ? 4.6 : 3.2,
-    );
-    const target = {
-      x: clamp(input.receiverPreviousPosition.x + velocityDirection.x * leadDistance, 6, 94),
-      y: clamp(input.receiverPreviousPosition.y + velocityDirection.y * leadDistance, 6, 94),
-    };
-    const targetOffside = evaluateOffside({
-      receiver: input.receiver,
-      receiverPosition: target,
-      ball: input.ball,
-      defending: input.defending,
-      possession: input.possession,
-      previousPositionState: input.previousPositionState,
-    });
-
-    if (!targetOffside.isOffside) {
-      return { target, intent: "lead" };
-    }
-  }
-
-  if (footPass || passDistance <= 24 || nearestMarkerDistance <= 5) {
-    const settleBias = nearestMarkerDistance <= 5 ? 0.45 : 0;
-    const pressureRelease = getReceiverPressureRelease({
-      receiver: input.receiver,
-      receiverPosition: input.receiverPreviousPosition,
-      defending: input.defending,
-      previousPositionState: input.previousPositionState,
-    });
-    const receivePoint = {
-      x: clamp(input.receiverPreviousPosition.x + pressureRelease.x * settleBias, 5, 95),
-      y: clamp(input.receiverPreviousPosition.y + pressureRelease.y * settleBias, 5, 95),
-    };
-
-    return { target: receivePoint, intent: "feet" };
-  }
-
-  const wideLaneX = getWideLaneX(input.receiver);
-  const halfSpaceX = wideLaneX < 50 ? 30 : 70;
-  const nearTouchline =
-    input.receiverPreviousPosition.x <= 13 || input.receiverPreviousPosition.x >= 87;
-  const widthPull =
-    role === "W" || role === "FB"
-      ? lerp(
-          input.receiverPreviousPosition.x,
-          nearTouchline || role === "FB" ? halfSpaceX : wideLaneX,
-          role === "FB" ? 0.35 : 0.28,
-        ) - input.receiverPreviousPosition.x
-      : (50 - input.receiverPreviousPosition.x) * 0.12;
-  const progress =
-    role === "CB" ? 5 : role === "FB" ? 7 : role === "CM" ? 8 : role === "W" ? 11 : 9;
-  const supportOffset = ((input.tick / 2) % 3) - 1;
-
-  const desired = {
-    x: clamp(
-      lerp(input.receiverPreviousPosition.x, input.receiver.anchors.x, 0.22) +
-        widthPull +
-        supportOffset * 2,
-      7,
-      93,
-    ),
-    y: clamp(
-      Math.min(
-        94,
-        Math.max(
-          6,
-          lerp(input.receiverPreviousPosition.y, input.receiver.anchors.y, 0.18) +
-            direction * progress,
-        ),
-      ),
-      6,
-      94,
-    ),
-  };
-
-  const receivePoint = moveToward(
-    input.receiverPreviousPosition,
-    desired,
-    getReceiverReachForTick(input.receiver),
-  );
-
-  return { target: receivePoint, intent: "lead" };
-}
-
-function shouldPlayIntoFeet(input: {
-  receiver: InternalLineupPlayer;
-  receiverPosition: TrajectoryPoint;
-  ball: TrajectoryPoint;
-  defending: InternalLineupPlayer[];
-  previousPositionState: PositionState;
-}) {
-  const role = normalizeRole(input.receiver.role);
-  const passDistance = distance(input.ball, input.receiverPosition);
-  const nearestMarkerDistance =
-    input.defending
-      .filter((player) => player.role !== "GK")
-      .map((defender) => {
-        const defenderPosition =
-          input.previousPositionState.players.get(defender.userPlayerId) ?? defender.anchors;
-        return distance(defenderPosition, input.receiverPosition);
-      })
-      .sort((left, right) => left - right)[0] ?? 99;
-
-  if (role === "CB" || role === "DM" || role === "CM" || role === "FB") return true;
-  if (passDistance <= 24 && nearestMarkerDistance >= 5.5) return true;
-  return false;
-}
-
-function getReceiverPressureRelease(input: {
-  receiver: InternalLineupPlayer;
-  receiverPosition: TrajectoryPoint;
-  defending: InternalLineupPlayer[];
-  previousPositionState: PositionState;
-}) {
-  const nearest =
-    input.defending
-      .filter((player) => player.role !== "GK")
-      .map((defender) => {
-        const defenderPosition =
-          input.previousPositionState.players.get(defender.userPlayerId) ?? defender.anchors;
-        return {
-          position: defenderPosition,
-          gap: distance(defenderPosition, input.receiverPosition),
-        };
-      })
-      .sort((left, right) => left.gap - right.gap)[0] ?? null;
-
-  if (!nearest || nearest.gap <= 0 || nearest.gap >= 9) {
-    return { x: 0, y: 0 };
-  }
-
   return {
-    x: (input.receiverPosition.x - nearest.position.x) / nearest.gap,
-    y: (input.receiverPosition.y - nearest.position.y) / nearest.gap,
+    target: {
+      x: input.receiverPreviousPosition.x,
+      y: input.receiverPreviousPosition.y,
+    },
+    intent: "feet",
   };
 }
 
@@ -4621,7 +4473,7 @@ function resolveDebugShotAction(
   const passBias = getClampedPlayerAiTendency(input.shooter, "passBias", 1, 0.45, 1.4);
   const riskTaking = getClampedPlayerAiTendency(input.shooter, "riskTaking", 0.5, 0, 1);
   const goalCenter = { x: 50, y: goalY };
-  const distanceToGoal = distance(input.ball, goalCenter);
+  const distanceToGoal = pitchDistanceMeters(input.ball, goalCenter);
   const keeperPosition = getPlayerPosition(input.previousPositionState, keeper);
   const pressure = evaluateBallPressure({
     actor: input.shooter,
@@ -4632,11 +4484,6 @@ function resolveDebugShotAction(
   });
   const angleScore = evaluateShotAngle(input.ball, input.possession);
   const baseMaxShotDistance = getRoleMaxShotDistance(role, false);
-  const distanceScore = clamp(
-    (baseMaxShotDistance + 8 - distanceToGoal) / (baseMaxShotDistance + 4),
-    0,
-    1,
-  );
   const centralPenalty = clamp(Math.abs(input.ball.x - goalCenter.x) / 40, 0, 0.22);
   const composurePenalty = pressure.distance <= 2.5 ? 0.18 : pressure.score * 0.08;
   const pressureUrgency = pressure.distance <= 3.2 && distanceToGoal <= 24 ? 0.08 : 0;
@@ -4672,9 +4519,17 @@ function resolveDebugShotAction(
       1,
     ),
   };
-  const maxShotDistance =
+  const technicalRangeAdjustment = clamp((input.shooter.raw.stats.shoot - 72) / 14, -2, 2);
+  const tendencyRangeAdjustment = clamp((shootBias - 1) * 1.8 + (riskTaking - 0.5) * 0.8, -1, 2);
+  const maxShotDistance = clamp(
     getRoleMaxShotDistance(role, hasPowerShotSkill) +
-    clamp((shootBias - 1) * 6 + (riskTaking - 0.5) * 3, -3, 8);
+      technicalRangeAdjustment +
+      tendencyRangeAdjustment,
+    10,
+    hasPowerShotSkill ? 30 : 27,
+  );
+  const distanceScore = getShotDistanceDecisionScore(distanceToGoal, maxShotDistance);
+  const locationScore = clamp(distanceScore * 0.78 + angleScore * 0.22, 0, 1);
   const shotType = chooseShotType({
     shooter: input.shooter,
     role,
@@ -4706,7 +4561,7 @@ function resolveDebugShotAction(
   const targetScoreBonus = clamp((targetSelection.score - 0.45) * 0.16, -0.04, 0.08);
   const unmarkedShotBonus = clamp(unmarkedSpace * (distanceToGoal <= 24 ? 0.16 : 0.1), 0, 0.16);
   const closePressureShotPenalty = clamp(tightMarkPenalty * 0.14 + crowdPenalty * 0.7, 0, 0.22);
-  const shotQuality = clamp(
+  const rawShotQuality = clamp(
     distanceScore * 0.38 +
       angleScore * 0.28 +
       lane.score * 0.22 +
@@ -4723,6 +4578,7 @@ function resolveDebugShotAction(
     0,
     1,
   );
+  const shotQuality = clamp(rawShotQuality * (0.28 + locationScore * 0.72), 0, 1);
   const betterChance = evaluateBetterShotPass({
     shooter: input.shooter,
     attacking: input.attacking,
@@ -4738,21 +4594,47 @@ function resolveDebugShotAction(
     lane.distance < (hasThunderShot ? 3.1 : 4.1) &&
     lane.blockerDistanceToBall < (hasThunderShot ? 13 : 17);
   const emergencyShot =
-    pressure.distance <= 2.6 && distanceToGoal <= 23 && lane.score >= 0.2 && angleScore >= 0.24;
+    pressure.distance <= 2.6 && distanceToGoal <= 18 && lane.score >= 0.2 && angleScore >= 0.3;
+  const cadenceWindow = input.nextTick % SHOT_CADENCE_TICKS === 0;
+  const closeRangeShot =
+    distanceToGoal <= 17 &&
+    locationScore >= 0.5 &&
+    (shotQuality >= 0.3 || decisionRoll < shotQuality * 0.9 * shootBias);
+  const standardShot =
+    distanceToGoal <= 22 &&
+    locationScore >= 0.42 &&
+    lane.score >= 0.2 &&
+    (shotQuality >= 0.5 || decisionRoll < shotQuality * 0.58 * shootBias);
+  const selectiveLongShot =
+    distanceToGoal > 22 &&
+    distanceToGoal <= Math.min(maxShotDistance, 26.5) &&
+    locationScore >= 0.34 &&
+    angleScore >= 0.48 &&
+    lane.score >= 0.48 &&
+    pressure.distance >= 3 &&
+    shotQuality >= 0.54 &&
+    decisionRoll < shotQuality * 0.2 * shootBias;
+  const powerSkillLongShot =
+    hasPowerShotSkill &&
+    distanceToGoal > 22 &&
+    distanceToGoal <= maxShotDistance &&
+    locationScore >= 0.28 &&
+    angleScore >= 0.45 &&
+    lane.score >= 0.4 &&
+    pressure.distance >= 2.5 &&
+    shotQuality >= 0.48 &&
+    decisionRoll < shotQuality * (distanceToGoal <= 25 ? 0.34 : 0.14) * shootBias;
+  const positionAllowsShot =
+    emergencyShot ||
+    closeRangeShot ||
+    (cadenceWindow && (standardShot || selectiveLongShot || powerSkillLongShot));
   const shouldShoot =
     distanceToGoal <= maxShotDistance &&
-    (input.nextTick % SHOT_CADENCE_TICKS === 0 || distanceToGoal <= 30 || hasThunderShot) &&
+    positionAllowsShot &&
     (!blockedLane || hasThunderShot) &&
     (!betterPassAvailable ||
       emergencyShot ||
-      shotQuality >= betterChance.score + 0.08 - clamp((shootBias - 1) * 0.08, 0, 0.1)) &&
-    (distanceToGoal <= 24 ||
-      emergencyShot ||
-      (distanceToGoal <= maxShotDistance - 2 && lane.score >= 0.24) ||
-      shotQuality >= (hasThunderShot ? 0.24 : 0.34) - clamp((shootBias - 1) * 0.08, 0, 0.1) ||
-      ((role === "ST" || role === "W") &&
-        shotQuality >= 0.26 - clamp((shootBias - 1) * 0.06, 0, 0.08)) ||
-      decisionRoll < shotQuality * (hasThunderShot ? 1.05 : 0.84) * shootBias);
+      shotQuality >= betterChance.score + 0.08 - clamp((shootBias - 1) * 0.08, 0, 0.1));
 
   if (!shouldShoot) {
     return null;
@@ -4967,21 +4849,34 @@ function resolveDebugShotAction(
   };
 }
 
-function getRoleMaxShotDistance(role: ReturnType<typeof normalizeRole>, hasThunderShot: boolean) {
+function getRoleMaxShotDistance(
+  role: ReturnType<typeof normalizeRole>,
+  hasPowerShotSkill: boolean,
+) {
   const normal =
     role === "ST"
-      ? 28
+      ? 25
       : role === "W"
-        ? 24
+        ? 23
         : role === "CM"
           ? 22
-          : role === "DM" || role === "FB"
-            ? 18
-            : role === "CB"
-              ? 12
-              : 10;
+          : role === "DM"
+            ? 20
+            : role === "FB"
+              ? 19
+              : role === "CB"
+                ? 18
+                : 10;
 
-  return hasThunderShot ? Math.min(34, normal + 7) : normal;
+  return hasPowerShotSkill ? Math.min(29.5, normal + 4.5) : normal;
+}
+
+function getShotDistanceDecisionScore(distanceToGoal: number, maxShotDistance: number) {
+  const closeRangeMeters = 14;
+  const range = Math.max(8, maxShotDistance - closeRangeMeters + 3);
+  const rangeProgress = clamp((distanceToGoal - closeRangeMeters) / range, 0, 1);
+
+  return clamp(1 - Math.pow(rangeProgress, 1.15), 0, 1);
 }
 
 function evaluateBetterShotPass(input: {
@@ -5005,8 +4900,8 @@ function evaluateBetterShotPass(input: {
       const teammatePosition =
         input.previousPositionState.players.get(teammate.userPlayerId) ?? teammate.anchors;
       const role = normalizeRole(teammate.role);
-      const teammateDistance = distance(teammatePosition, goalCenter);
-      const maxDistance = getRoleMaxShotDistance(role, false) + 4;
+      const teammateDistance = pitchDistanceMeters(teammatePosition, goalCenter);
+      const maxDistance = getRoleMaxShotDistance(role, false) + 1.5;
       if (teammateDistance > maxDistance) return best;
 
       const passLane = evaluatePassLane({
@@ -5215,7 +5110,7 @@ function resolveFreeKickAction(input: {
   isGoal: boolean;
 } {
   const goalY = input.possession === "home" ? 4 : 96;
-  const distanceToGoal = Math.abs(input.ball.y - goalY);
+  const distanceToGoal = distanceToAttackingGoal(input.possession, input.ball);
   const keeper = input.defending.find((player) => player.role === "GK") ?? input.defending[0];
   const wall = selectFreeKickWall({
     defending: input.defending,
@@ -6360,9 +6255,11 @@ function getPlayerPosition(
 
 function evaluateShotAngle(ball: TrajectoryPoint, possession: Side) {
   const goalY = possession === "home" ? 4 : 96;
-  const distanceY = Math.max(1, Math.abs(ball.y - goalY));
-  const lateral = Math.abs(ball.x - 50);
-  return clamp(1 - lateral / (distanceY * 0.9 + 18), 0, 1);
+  const distanceY =
+    (Math.max(1, Math.abs(ball.y - goalY)) / PITCH_COORDINATE_MAX) * PITCH_LENGTH_METERS;
+  const lateral = (Math.abs(ball.x - 50) / PITCH_COORDINATE_MAX) * PITCH_WIDTH_METERS;
+
+  return clamp(1 - lateral / (distanceY * 0.8 + 12), 0, 1);
 }
 
 function getNextMatchClockSecond(latestTick: MatchSnapshot) {
@@ -6866,9 +6763,16 @@ function resolveTakeOnOutcome(input: {
   };
 }
 
+function pitchDistanceMeters(from: TrajectoryPoint, to: TrajectoryPoint) {
+  const lateralMeters = ((from.x - to.x) / PITCH_COORDINATE_MAX) * PITCH_WIDTH_METERS;
+  const lengthMeters = ((from.y - to.y) / PITCH_COORDINATE_MAX) * PITCH_LENGTH_METERS;
+
+  return Math.hypot(lateralMeters, lengthMeters);
+}
+
 function distanceToAttackingGoal(possession: Side, point: TrajectoryPoint) {
   const goalY = possession === "home" ? 4 : 96;
-  return distance(point, { x: 50, y: goalY });
+  return pitchDistanceMeters(point, { x: 50, y: goalY });
 }
 
 function isFinalThird(possession: Side, y: number) {
@@ -8388,6 +8292,7 @@ function buildSnapshot(input: {
   ballPath: TrajectoryPoint[];
   highlight: MatchSnapshot["highlight"];
   activeSkill: EPlayerSkill | null;
+  passTargetIntent?: PassTargetIntent;
   focusId: number;
   pressId: number | null;
   forceLooseBall?: boolean;
@@ -8490,6 +8395,7 @@ function buildSnapshot(input: {
     ballVelocity,
     ballOwnerId: controlledOwnerId,
     intendedReceiverId,
+    passTargetIntent: input.passTargetIntent,
     focusId: input.focusId,
     pressId: input.pressId,
     freeKickWallTargets,
@@ -8514,6 +8420,7 @@ function buildSnapshot(input: {
     ballVelocity,
     ballOwnerId: controlledOwnerId,
     intendedReceiverId,
+    passTargetIntent: input.passTargetIntent,
     focusId: input.focusId,
     pressId: input.pressId,
     freeKickWallTargets,
@@ -8542,7 +8449,15 @@ function buildSnapshot(input: {
     controlledOwnerId == null
       ? null
       : allRenderPlayers.find((player) => player.userPlayerId === controlledOwnerId);
-  const finalBall = ownerRenderPlayer ? getBallCarryPosition(ownerRenderPlayer) : ball;
+  const feetReceiverRenderPlayer =
+    input.passTargetIntent === "feet" && intendedReceiverId != null
+      ? allRenderPlayers.find((player) => player.userPlayerId === intendedReceiverId)
+      : null;
+  const finalBall = ownerRenderPlayer
+    ? getBallCarryPosition(ownerRenderPlayer)
+    : feetReceiverRenderPlayer
+      ? { x: feetReceiverRenderPlayer.x, y: feetReceiverRenderPlayer.y }
+      : ball;
 
   return {
     frameId: input.frameId,
@@ -8679,6 +8594,7 @@ function projectPlayers(input: {
   ballVelocity: TrajectoryPoint;
   ballOwnerId: number | null;
   intendedReceiverId: number | null;
+  passTargetIntent?: PassTargetIntent;
   focusId: number;
   pressId: number | null;
   freeKickWallTargets: Map<number, TrajectoryPoint>;
@@ -8753,9 +8669,7 @@ function projectPlayers(input: {
       ownerPlayerId: input.ballOwnerId,
       intendedReceiverId: input.intendedReceiverId,
       targetPosition: input.intendedReceiverId != null ? input.ball : null,
-      isLoose:
-        hasLooseBall ||
-        (input.intendedReceiverId != null && input.intendedReceiverId !== input.ballOwnerId),
+      isLoose: hasLooseBall,
     },
   };
 
@@ -8772,6 +8686,7 @@ function projectPlayers(input: {
     };
     const hasBall = player.userPlayerId === input.ballOwnerId;
     const isIntendedReceiver = input.intendedReceiverId === player.userPlayerId;
+    const receivesToFeet = isIntendedReceiver && input.passTargetIntent === "feet";
     const keeperAction =
       input.keeperAction?.playerId === player.userPlayerId ? input.keeperAction : null;
     const setPieceTarget = input.setPieceTargets.get(player.userPlayerId) ?? null;
@@ -8838,23 +8753,25 @@ function projectPlayers(input: {
       target = tactical.targetPosition;
       intent = "run";
       aiState = tactical.state;
-    } else if (isIntendedReceiver) {
-      target = predictBallIntercept(
-        movementPlayer,
-        {
-          ...gameState.ball,
-          position: ballOrigin,
-          targetPosition: input.ball,
-        },
-        PLAYER_MOVEMENT_TEMPO_MULTIPLIER,
-      );
-      intent = "run";
+    } else if (isIntendedReceiver && !hasLooseBall) {
+      target = receivesToFeet
+        ? { x: prev.x, y: prev.y }
+        : predictBallIntercept(
+            movementPlayer,
+            {
+              ...gameState.ball,
+              position: ballOrigin,
+              targetPosition: input.ball,
+            },
+            PLAYER_MOVEMENT_TEMPO_MULTIPLIER,
+          );
+      intent = receivesToFeet ? "anchor" : "run";
       aiState = "RECEIVE_PASS";
     } else if (input.freeKickWallTargets.has(player.userPlayerId)) {
       target = input.freeKickWallTargets.get(player.userPlayerId)!;
       intent = "cover";
       aiState = "HOLD_POSITION";
-    } else if (isPress) {
+    } else if (isPress && !hasLooseBall) {
       if (normalizeRole(player.role) === "GK") {
         target = {
           x: clamp(input.ball.x, 35, 65),
@@ -8873,7 +8790,12 @@ function projectPlayers(input: {
       target = tactical.targetPosition;
       intent = getIntentForState(tactical.state);
       aiState = tactical.state;
-      if (normalizeRole(player.role) !== "CB" && normalizeRole(player.role) !== "GK") {
+      if (
+        !hasLooseBall &&
+        aiState !== "PRESS_BALL" &&
+        normalizeRole(player.role) !== "CB" &&
+        normalizeRole(player.role) !== "GK"
+      ) {
         const offsideAware = getOffsideAwareTarget({
           player,
           playerPosition: { x: prev.x, y: prev.y },
@@ -8897,7 +8819,7 @@ function projectPlayers(input: {
     }
 
     movementPlayer.position = { x: prev.x, y: prev.y };
-    movementPlayer.velocity = { x: prev.vx, y: prev.vy };
+    movementPlayer.velocity = receivesToFeet ? { x: 0, y: 0 } : { x: prev.vx, y: prev.vy };
     movementPlayer.targetPosition = target;
     movementPlayer.state = aiState;
     const isImmediateTurnoverRecovery =
@@ -8917,7 +8839,7 @@ function projectPlayers(input: {
     } else if (setPieceTarget && input.instantSetPiece) {
       movementPlayer.position = setPieceTarget.target;
       movementPlayer.velocity = { x: 0, y: 0 };
-    } else if (!keeperAction && !setPieceTarget) {
+    } else if (!keeperAction && !setPieceTarget && !receivesToFeet) {
       applySeparation(movementPlayer, [...teammateMovement, ...opponentMovement]);
     }
     if (!forceLifecycleTarget && !(setPieceTarget && input.instantSetPiece)) {

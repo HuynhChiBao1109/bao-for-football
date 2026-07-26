@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import './MatchView.css';
@@ -45,16 +45,68 @@ function clampPercent(value: number) {
   return Math.min(100, Math.max(0, value));
 }
 
-function toVerticalPitchPosition(point: { x: number; y: number }, mirrorY = false) {
-  const x = clampPercent(point.x);
-  const y = clampPercent(mirrorY ? 100 - point.y : point.y);
+function toPitchPosition(point: { x: number; y: number }, mirrorY = false) {
+  const lateral = clampPercent(point.x);
+  const length = clampPercent(mirrorY ? 100 - point.y : point.y);
 
   return {
-    '--x': x,
-    '--y': y,
-    '--x-pos': `${x}cqw`,
-    '--y-pos': `${y}cqh`,
+    '--pitch-lateral': lateral,
+    '--pitch-length': length,
+    '--landscape-x-pos': `${length}cqw`,
+    '--landscape-y-pos': `${lateral}cqh`,
+    '--portrait-x-pos': `${lateral}cqw`,
+    '--portrait-y-pos': `${length}cqh`,
   } as CSSProperties;
+}
+
+function resolveVisualPlayerLayout(players: MatchPitchPlayer[]) {
+  const positioned = players.map((player) => ({
+    ...player,
+    x: clampPercent(Number(player.x)),
+    y: clampPercent(Number(player.y)),
+  }));
+  const minLateralGap = 5.65;
+  const minLengthGap = 3.7;
+
+  for (let iteration = 0; iteration < 12; iteration += 1) {
+    for (let leftIndex = 0; leftIndex < positioned.length; leftIndex += 1) {
+      for (let rightIndex = leftIndex + 1; rightIndex < positioned.length; rightIndex += 1) {
+        const left = positioned[leftIndex];
+        const right = positioned[rightIndex];
+        let dx = right.x - left.x;
+        let dy = right.y - left.y;
+        let normalizedGap = Math.hypot(dx / minLateralGap, dy / minLengthGap);
+        if (normalizedGap >= 1) continue;
+
+        if (normalizedGap < 0.0001) {
+          const seed = stablePlayerSeed(left.id) * 31 + stablePlayerSeed(right.id) * 17;
+          const angle = ((seed % 360) * Math.PI) / 180;
+          dx = Math.cos(angle) * 0.01;
+          dy = Math.sin(angle) * 0.01;
+          normalizedGap = Math.hypot(dx / minLateralGap, dy / minLengthGap);
+        }
+
+        const expansion = 1.02 / Math.max(normalizedGap, 0.0001) - 1;
+        const correctionX = dx * expansion;
+        const correctionY = dy * expansion;
+        const leftShare = left.hasBall ? 0.22 : right.hasBall ? 0.78 : 0.5;
+        const rightShare = 1 - leftShare;
+
+        left.x = Math.min(97.5, Math.max(2.5, left.x - correctionX * leftShare));
+        left.y = Math.min(97.5, Math.max(2.5, left.y - correctionY * leftShare));
+        right.x = Math.min(97.5, Math.max(2.5, right.x + correctionX * rightShare));
+        right.y = Math.min(97.5, Math.max(2.5, right.y + correctionY * rightShare));
+      }
+    }
+  }
+
+  return positioned;
+}
+
+function stablePlayerSeed(id: MatchPitchPlayer['id']) {
+  return String(id)
+    .split('')
+    .reduce((seed, character) => seed * 31 + character.charCodeAt(0), 7);
 }
 
 function formatCoord(value: number | undefined) {
@@ -393,7 +445,7 @@ const PlayerCircle = memo(function PlayerCircle({
   motionDurationMs: number;
 }) {
   const style = {
-    ...toVerticalPitchPosition(player, mirrorY),
+    ...toPitchPosition(player, mirrorY),
     '--player-motion-duration': `${motionDurationMs}ms`,
   } as CSSProperties;
   const teamClass = player.teamSide === 'away' ? 'player-circle--away' : 'player-circle--home';
@@ -507,7 +559,7 @@ const PlayerLayer = memo(function PlayerLayer({
 });
 
 function Ball({ snapshot, mirrorY }: { snapshot: MatchSnapshot; mirrorY: boolean }) {
-  const style = toVerticalPitchPosition(snapshot.ball, mirrorY);
+  const style = toPitchPosition(snapshot.ball, mirrorY);
   const thunderShot = isThunderShot(snapshot);
   const magicDribble = isMagicDribble(snapshot);
   const tankTackle = isTankTackle(snapshot);
@@ -728,6 +780,29 @@ function MatchPitch({ snapshot }: { snapshot: MatchSnapshot }) {
   const playerMotionDurationMs = snapPlayerPositions
     ? 0
     : Math.max(0, Math.min(5000, Number(snapshot.durationMs ?? 400)));
+  const visualPlayers = useMemo(
+    () => resolveVisualPlayerLayout([...snapshot.homePlayers, ...snapshot.awayPlayers]),
+    [snapshot.awayPlayers, snapshot.homePlayers],
+  );
+  const visualHomePlayers = visualPlayers.slice(0, snapshot.homePlayers.length);
+  const visualAwayPlayers = visualPlayers.slice(snapshot.homePlayers.length);
+  const visualOwner = visualPlayers.find((player) => player.hasBall);
+  const originalOwner = visualOwner
+    ? [...snapshot.homePlayers, ...snapshot.awayPlayers].find(
+        (player) => String(player.id) === String(visualOwner.id),
+      )
+    : null;
+  const visualSnapshot =
+    visualOwner && originalOwner
+      ? {
+          ...snapshot,
+          ball: {
+            ...snapshot.ball,
+            x: clampPercent(snapshot.ball.x + visualOwner.x - originalOwner.x),
+            y: clampPercent(snapshot.ball.y + visualOwner.y - originalOwner.y),
+          },
+        }
+      : snapshot;
 
   return (
     <section className="match-pitch-shell" aria-label="Top down football pitch">
@@ -741,15 +816,15 @@ function MatchPitch({ snapshot }: { snapshot: MatchSnapshot }) {
           <PitchLines />
           <PitchDebugGrid />
           <PlayerLayer
-            homePlayers={snapshot.homePlayers}
-            awayPlayers={snapshot.awayPlayers}
+            homePlayers={visualHomePlayers}
+            awayPlayers={visualAwayPlayers}
             highlightedPlayerId={highlightedPlayerId}
             celebratingSide={celebratingSide}
             slideTackleActorId={slideTackleActorId}
             mirrorY={mirrorY}
             motionDurationMs={playerMotionDurationMs}
           />
-          <Ball snapshot={snapshot} mirrorY={mirrorY} />
+          <Ball snapshot={visualSnapshot} mirrorY={mirrorY} />
           <SkillOverlay skill={activeSkill} />
           <GoalOverlay
             key={`${snapshot.frameId ?? snapshot.tick ?? 'goal'}-${snapshot.homeScore}-${snapshot.awayScore}`}

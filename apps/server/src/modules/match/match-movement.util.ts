@@ -227,9 +227,13 @@ export function applySeparation(player: Player, teammates: Player[]) {
   const push = teammates.reduce<Vec2>(
     (acc, teammate) => {
       if (teammate.id === player.id) return acc;
-      const away = sub(player.position, teammate.position);
-      const dist = length(away);
-      if (dist <= 0 || dist >= MOVEMENT.separationRadius) return acc;
+      let away = sub(player.position, teammate.position);
+      let dist = length(away);
+      if (dist <= 0.001) {
+        away = scale(getDeterministicSeparationDirection(player.id, teammate.id), 0.001);
+        dist = 0.001;
+      }
+      if (dist >= MOVEMENT.separationRadius) return acc;
       const strength =
         ((MOVEMENT.separationRadius - dist) / MOVEMENT.separationRadius) *
         MOVEMENT.separationStrength;
@@ -285,7 +289,7 @@ function evaluateImmediateAction(
     return evaluateBallCarrierIntent(player, context);
   }
 
-  if (gameState.ball.intendedReceiverId === player.id) {
+  if (gameState.ball.intendedReceiverId === player.id && !gameState.ball.isLoose) {
     return {
       state: "RECEIVE_PASS",
       targetPosition: predictBallIntercept(player, gameState.ball),
@@ -463,15 +467,18 @@ function evaluateBallRelatedAction(
   gameState: GameState,
   context: MovementContext,
 ): MovementDecision | null {
-  const canChaseLooseBall =
-    gameState.ball.ownerPlayerId == null &&
-    gameState.ball.intendedReceiverId == null &&
-    gameState.ball.isLoose;
+  const canChaseLooseBall = gameState.ball.ownerPlayerId == null && gameState.ball.isLoose;
 
   if (canChaseLooseBall && isNearestViableBallChaser(player, context.teammates, context.ball)) {
     return {
       state: "PRESS_BALL",
       targetPosition: predictBallIntercept(player, gameState.ball),
+    };
+  }
+  if (canChaseLooseBall) {
+    return {
+      state: context.hasPossession ? "PASS_SUPPORT" : "COVER_SPACE",
+      targetPosition: getLooseBallSupportTarget(player, context),
     };
   }
 
@@ -598,7 +605,12 @@ function evaluateAttackingShape(player: Player, context: MovementContext): Movem
     const support = getFullbackSupportTarget(player, context);
     return {
       state: support.state,
-      targetPosition: clampToRoleZone(player, support.targetPosition),
+      targetPosition: getCoordinatedAttackingTarget(
+        player,
+        context,
+        clampToRoleZone(player, support.targetPosition),
+        support.state,
+      ),
     };
   }
 
@@ -938,35 +950,55 @@ function evaluateSpaceOccupation(
 ): MovementDecision | null {
   if (!context.hasPossession) return null;
 
-  const { role, direction, ball, teammates } = context;
+  const { role } = context;
 
   if (role === "CM" && shouldInfiltrateFromMidfield(player, context)) {
+    const state = "ATTACK_SPACE";
     return {
-      state: "ATTACK_SPACE",
-      targetPosition: clampToRoleZone(player, getInfiltratingMidfielderSpace(player, context)),
+      state,
+      targetPosition: getCoordinatedAttackingTarget(
+        player,
+        context,
+        clampToRoleZone(player, getInfiltratingMidfielderSpace(player, context)),
+        state,
+      ),
     };
   }
 
   if (role === "W") {
+    const state = getWingerAttackState(player, context);
     return {
-      state: getWingerAttackState(player, context),
-      targetPosition: clampToRoleZone(player, getWingerAttackingSpace(player, context)),
+      state,
+      targetPosition: getCoordinatedAttackingTarget(
+        player,
+        context,
+        clampToRoleZone(player, getWingerAttackingSpace(player, context)),
+        state,
+      ),
     };
   }
 
   if (role === "ST") {
+    const state = getStrikerAttackState(player, context);
     return {
-      state: "ATTACK_SPACE",
-      targetPosition: clampToRoleZone(player, getStrikerAttackingSpace(player, context)),
+      state,
+      targetPosition: getCoordinatedAttackingTarget(
+        player,
+        context,
+        clampToRoleZone(player, getStrikerAttackingSpace(player, context, state)),
+        state,
+      ),
     };
   }
 
+  const state = "PASS_SUPPORT";
   return {
-    state: "PASS_SUPPORT",
-    targetPosition: applyTeamSpacing(
+    state,
+    targetPosition: getCoordinatedAttackingTarget(
       player,
-      teammates,
+      context,
       clampToRoleZone(player, getMidfieldAttackingSpace(player, context)),
+      state,
     ),
   };
 }
@@ -1055,6 +1087,14 @@ function isHighCommitmentState(state: PlayerAIState) {
     state === "UNDERLAP" ||
     state === "CUT_INSIDE" ||
     state === "ATTACK_SPACE" ||
+    state === "ATTACK_SPACE_BEHIND" ||
+    state === "RUN_ON_SHOULDER" ||
+    state === "CURVED_RUN" ||
+    state === "DIAGONAL_RUN" ||
+    state === "THIRD_MAN_RUN" ||
+    state === "BACK_POST_RUN" ||
+    state === "DROP_SHORT" ||
+    state === "HOLD_WIDTH" ||
     state === "RECOVER_DEFENSE"
   );
 }
@@ -1746,8 +1786,15 @@ function getPlayerMaxSpeed(player: Player) {
   const staminaScale = clamp(Number(player.stamina ?? 70) / 100, 0.72, 1.05);
   const stateSpeed =
     player.state === "PRESS_BALL" ||
+    player.state === "RECEIVE_PASS" ||
     player.state === "MOVE_TO_SPACE" ||
     player.state === "ATTACK_SPACE" ||
+    player.state === "ATTACK_SPACE_BEHIND" ||
+    player.state === "RUN_ON_SHOULDER" ||
+    player.state === "CURVED_RUN" ||
+    player.state === "DIAGONAL_RUN" ||
+    player.state === "THIRD_MAN_RUN" ||
+    player.state === "BACK_POST_RUN" ||
     player.state === "OVERLAP" ||
     player.state === "UNDERLAP" ||
     player.state === "CUT_INSIDE" ||
@@ -1756,8 +1803,7 @@ function getPlayerMaxSpeed(player: Player) {
       : player.state === "IDLE" ||
           player.state === "HOLD_POSITION" ||
           player.state === "HOLD_LINE" ||
-          player.state === "HOLD_DEPTH" ||
-          player.state === "HOLD_WIDTH"
+          player.state === "HOLD_DEPTH"
         ? MOVEMENT.walkingSpeed
         : MOVEMENT.jogSpeed;
   const ballScale = player.hasBall ? MOVEMENT.playerWithBallSpeedMultiplier : 1;
@@ -2004,6 +2050,31 @@ function isNearestViableBallChaser(player: Player, teammates: Player[], ball: Ve
     .sort((left, right) => left.score - right.score);
 
   return ranked[0]?.id === player.id && distance(player.position, ball) + roleRisk <= 34;
+}
+
+function getLooseBallSupportTarget(player: Player, context: MovementContext) {
+  const role = normalizeRole(player.role);
+  if (role === "GK") {
+    return clampToRoleZone(player, {
+      x: lerp(player.position.x, context.ball.x, 0.08),
+      y: ownGoalY(player.side) - context.direction * 3,
+    });
+  }
+
+  const laneOffset = clamp(
+    (player.homePosition.x - 50) * 0.34 +
+      (Math.abs(player.homePosition.x - 50) < 6 ? (player.id % 2 === 0 ? -5 : 5) : 0),
+    -15,
+    15,
+  );
+  const goalSideDepth =
+    role === "CB" ? 16 : role === "FB" || role === "DM" ? 12 : role === "CM" ? 9 : 7;
+  const target = clampToRoleZone(player, {
+    x: context.ball.x + laneOffset,
+    y: context.ball.y - context.direction * goalSideDepth,
+  });
+
+  return applyTeamSpacing(player, context.teammates, target);
 }
 
 function getBackLineCohesionDecision(
@@ -2401,29 +2472,195 @@ function getStrikerDefensiveScreen(player: Player, context: MovementContext) {
   };
 }
 
-function getStrikerAttackingSpace(player: Player, context: MovementContext) {
-  const { ball, direction, opponents, tick } = context;
+function getStrikerAttackState(player: Player, context: MovementContext): PlayerAIState {
+  const ownerPressure = context.owner
+    ? countNearbyOpponents(context.owner.position, context.opponents, 7)
+    : 0;
+  const strikers = context.teammates
+    .filter((item) => normalizeRole(item.role) === "ST")
+    .sort((left, right) => left.homePosition.x - right.homePosition.x || left.id - right.id);
+  const supportStriker = [...strikers].sort(
+    (left, right) =>
+      distance(left.position, context.ball) - distance(right.position, context.ball) ||
+      left.id - right.id,
+  )[0];
+  const variant = getTacticalVariant(context.tick, player.id, 6, 1.2);
+
+  if ((ownerPressure >= 2 || variant === 0) && supportStriker?.id === player.id) {
+    return "DROP_SHORT";
+  }
+  if (isInFinalThird(player.side, context.ball.y) && variant === 1) {
+    return "BACK_POST_RUN";
+  }
+  if (variant === 2) return "CURVED_RUN";
+  if (variant === 3) return "RUN_ON_SHOULDER";
+  return "ATTACK_SPACE";
+}
+
+function getStrikerAttackingSpace(player: Player, context: MovementContext, state: PlayerAIState) {
+  const { ball, direction, opponents, tick, owner } = context;
   const centerBacks = opponents.filter((item) => normalizeRole(item.role) === "CB");
   const defenderGap = getLargestHorizontalGap(centerBacks);
   const onsideLine = getOffsideLine(player.side, opponents);
   const microShift = Math.sin(tick * SIM_TICK_SECONDS * 1.25 + player.id * 0.83) * 2.4;
-  const variant = getTacticalVariant(tick, player.id, 5, 1.4);
-  if (variant === 0) {
+
+  if (state === "DROP_SHORT") {
+    const supportOrigin = owner?.side === player.side ? owner.position : ball;
+    const supportSide = player.homePosition.x < 50 ? -1 : player.homePosition.x > 50 ? 1 : 0;
     return {
-      x: clamp(lerp(player.homePosition.x, ball.x, 0.28) + microShift, 32, 68),
-      y: clamp(ball.y - direction * 8, 16, 84),
+      x: clamp(lerp(player.position.x, supportOrigin.x + supportSide * 7, 0.62), 30, 70),
+      y: clamp(supportOrigin.y - direction * 8, 16, 84),
     };
   }
 
+  const runDepth =
+    state === "BACK_POST_RUN"
+      ? 18
+      : state === "RUN_ON_SHOULDER"
+        ? 15
+        : state === "CURVED_RUN"
+          ? 13
+          : 16;
   const targetY =
     direction < 0
-      ? Math.max(onsideLine + 1.5, ball.y + direction * 16)
-      : Math.min(onsideLine - 1.5, ball.y + direction * 16);
+      ? Math.max(onsideLine + 1.5, ball.y + direction * runDepth)
+      : Math.min(onsideLine - 1.5, ball.y + direction * runDepth);
+  const farPostX = ball.x < 50 ? 61 : 39;
+  const channelX = state === "BACK_POST_RUN" ? farPostX : defenderGap;
 
   return {
-    x: clamp(lerp(player.homePosition.x, defenderGap, 0.62) + microShift, 28, 72),
+    x: clamp(lerp(player.homePosition.x, channelX, 0.62) + microShift, 28, 72),
     y: targetY,
   };
+}
+
+function getCoordinatedAttackingTarget(
+  player: Player,
+  context: MovementContext,
+  baseTarget: Vec2,
+  state: PlayerAIState,
+) {
+  if (context.owner?.id === player.id) return baseTarget;
+
+  const role = normalizeRole(player.role);
+  const ownerPosition = context.owner?.side === player.side ? context.owner.position : context.ball;
+  const sideSign =
+    player.homePosition.x < 48 ? -1 : player.homePosition.x > 52 ? 1 : player.id % 2 === 0 ? -1 : 1;
+  const laneStep = role === "W" || role === "FB" ? 9 : role === "ST" ? 8 : 10;
+  const depthStep = role === "ST" || role === "W" ? 8 : 6;
+  const runState =
+    state === "ATTACK_SPACE" ||
+    state === "ATTACK_SPACE_BEHIND" ||
+    state === "RUN_ON_SHOULDER" ||
+    state === "CURVED_RUN" ||
+    state === "DIAGONAL_RUN" ||
+    state === "THIRD_MAN_RUN" ||
+    state === "BACK_POST_RUN" ||
+    state === "OVERLAP" ||
+    state === "UNDERLAP";
+  const supportDepth = state === "DROP_SHORT" ? 8 : role === "DM" ? 10 : 6;
+  const forwardDepth = isInFinalThird(player.side, context.ball.y)
+    ? role === "ST" || role === "W"
+      ? 14
+      : 9
+    : role === "ST" || role === "W"
+      ? 11
+      : 7;
+  const candidates = [
+    baseTarget,
+    {
+      x: baseTarget.x + sideSign * laneStep,
+      y: baseTarget.y - context.direction * depthStep * 0.35,
+    },
+    {
+      x: baseTarget.x - sideSign * laneStep * 0.8,
+      y: baseTarget.y - context.direction * depthStep,
+    },
+    {
+      x: ownerPosition.x + sideSign * (role === "W" || role === "FB" ? 18 : 12),
+      y: ownerPosition.y - context.direction * supportDepth,
+    },
+    {
+      x: ownerPosition.x - sideSign * (role === "ST" ? 10 : 13),
+      y: ownerPosition.y - context.direction * (supportDepth + 2),
+    },
+    {
+      x: baseTarget.x + sideSign * laneStep * 0.45,
+      y: context.ball.y + context.direction * forwardDepth,
+    },
+  ].map((target) => clampToRoleZone(player, target));
+  const desiredSpacing =
+    role === "W" || role === "FB" ? 11 : role === "ST" ? 9.5 : role === "CM" ? 10 : 9;
+  const idealOwnerGap = runState ? (role === "ST" || role === "W" ? 22 : 18) : 14;
+  const preferredVariant = getTacticalVariant(context.tick, player.id, candidates.length, 1.6);
+  const scored = candidates.map((candidate, index) => {
+    const teammateClearance = getAttackingTeammateClearance(player, context.teammates, candidate);
+    const opponentClearance = getNearestOpponentDistance(candidate, context.opponents);
+    const ownerGap = distance(candidate, ownerPosition);
+    const laneClearance = getPassingLaneClearance(ownerPosition, candidate, context.opponents);
+    const progress = (candidate.y - context.ball.y) * context.direction;
+    const crowdPenalty = Math.max(0, desiredSpacing - teammateClearance) * 3.4;
+    const progressionScore = runState
+      ? clamp(progress, -8, 18) * 0.22
+      : -Math.abs(progress + supportDepth) * 0.12;
+    const laneIdentity =
+      Math.sign(candidate.x - 50) === sideSign || Math.abs(candidate.x - 50) <= 4 ? 0.8 : 0;
+
+    return {
+      candidate,
+      score:
+        Math.min(teammateClearance, 18) * 0.82 -
+        crowdPenalty +
+        Math.min(opponentClearance, 15) * 0.34 +
+        Math.min(laneClearance, 10) * 0.56 -
+        Math.abs(ownerGap - idealOwnerGap) * 0.18 -
+        distance(candidate, baseTarget) * 0.11 +
+        progressionScore +
+        laneIdentity +
+        (index === preferredVariant ? 0.65 : 0),
+    };
+  });
+  const selected =
+    scored.sort((left, right) => right.score - left.score)[0]?.candidate ?? baseTarget;
+
+  return applyTeamSpacing(player, context.teammates, selected);
+}
+
+function getAttackingTeammateClearance(player: Player, teammates: Player[], point: Vec2) {
+  return (
+    teammates
+      .filter((teammate) => teammate.id !== player.id && normalizeRole(teammate.role) !== "GK")
+      .map((teammate) =>
+        Math.min(
+          distance(point, teammate.position),
+          distance(point, teammate.targetPosition ?? teammate.position),
+        ),
+      )
+      .sort((left, right) => left - right)[0] ?? 24
+  );
+}
+
+function getPassingLaneClearance(from: Vec2, to: Vec2, opponents: Player[]) {
+  return (
+    opponents
+      .filter((opponent) => normalizeRole(opponent.role) !== "GK")
+      .map((opponent) => distanceToSegment(opponent.position, from, to))
+      .sort((left, right) => left - right)[0] ?? 16
+  );
+}
+
+function distanceToSegment(point: Vec2, from: Vec2, to: Vec2) {
+  const segment = sub(to, from);
+  const segmentLengthSquared = segment.x * segment.x + segment.y * segment.y;
+  if (segmentLengthSquared <= 0.0001) return distance(point, from);
+
+  const relative = sub(point, from);
+  const projection = clamp(
+    (relative.x * segment.x + relative.y * segment.y) / segmentLengthSquared,
+    0,
+    1,
+  );
+  return distance(point, add(from, scale(segment, projection)));
 }
 
 function getPassingLaneBlockPoint(
@@ -2699,18 +2936,29 @@ function getCentralLaneX(player: Player) {
 
 function applyTeamSpacing(player: Player, teammates: Player[], target: Vec2) {
   const role = normalizeRole(player.role);
-  const minDistance = role === "CB" ? 8.5 : role === "CM" || role === "DM" ? 7.5 : 6;
+  const minDistance =
+    role === "CB"
+      ? 8.5
+      : role === "CM" || role === "DM"
+        ? 9
+        : role === "W" || role === "FB"
+          ? 10
+          : 8;
   const push = teammates.reduce<Vec2>(
     (acc, teammate) => {
       if (teammate.id === player.id) return acc;
       const teammateRole = normalizeRole(teammate.role);
       if (teammateRole === "GK") return acc;
       const teammateTarget = teammate.targetPosition ?? teammate.position;
-      const delta = sub(target, teammateTarget);
-      const gap = length(delta);
-      if (gap <= 0 || gap >= minDistance) return acc;
+      let delta = sub(target, teammateTarget);
+      let gap = length(delta);
+      if (gap <= 0.001) {
+        delta = scale(getDeterministicSeparationDirection(player.id, teammate.id), 0.001);
+        gap = 0.001;
+      }
+      if (gap >= minDistance) return acc;
       const direction = scale(delta, 1 / gap);
-      return add(acc, scale(direction, (minDistance - gap) * 0.7));
+      return add(acc, scale(direction, (minDistance - gap) * 0.82));
     },
     { x: 0, y: 0 },
   );
@@ -2808,6 +3056,14 @@ export function attackDirection(side: Side) {
 function normalize(vector: Vec2) {
   const vectorLength = length(vector);
   return vectorLength > 0 ? scale(vector, 1 / vectorLength) : { x: 0, y: 0 };
+}
+
+function getDeterministicSeparationDirection(playerId: number, teammateId: number) {
+  const lowerId = Math.min(playerId, teammateId);
+  const upperId = Math.max(playerId, teammateId);
+  const angle = (((lowerId * 31 + upperId * 17) % 360) * Math.PI) / 180;
+  const direction = { x: Math.cos(angle), y: Math.sin(angle) };
+  return playerId === lowerId ? direction : scale(direction, -1);
 }
 
 function clampVector(vector: Vec2, maxLength: number) {
