@@ -370,6 +370,14 @@ export type MatchSnapshot = {
       | 'TRANSITION_WON_BALL';
     possessionTicks: number;
   };
+  restart?: {
+    kind: 'direct_free_kick' | 'indirect_free_kick';
+    source: 'foul' | 'offside';
+    spot: { x: number; y: number };
+    takerPlayerId: number | string;
+    wallPlayerIds: Array<number | string>;
+    distanceToGoal: number;
+  } | null;
 };
 
 export type MatchEventRecord = {

@@ -8,6 +8,9 @@ export type RenderedMatchSnapshot = MatchSnapshot & {
 };
 
 const PASS_EVENT = 35;
+const GOAL_EVENT = 7;
+const SHOOT_EVENT = 36;
+const GOALKEEPER_SAVE_EVENT = 38;
 const PASS_RELEASE_SHARE = 0.1;
 const FULL_MATCH_DISPLAY_SECONDS = 90 * 60;
 const FRAME_JITTER_BUFFER_MAX_MS = 120;
@@ -39,10 +42,10 @@ function shouldUseBallTrajectory(snapshot: MatchSnapshot) {
   const event = snapshot.highlight?.event;
   return (
     Boolean(snapshot.ball.skillTrajectory) ||
-    event === 7 ||
-    event === 35 ||
-    event === 36 ||
-    event === 38 ||
+    event === GOAL_EVENT ||
+    event === PASS_EVENT ||
+    event === SHOOT_EVENT ||
+    event === GOALKEEPER_SAVE_EVENT ||
     event === 41
   );
 }
@@ -52,9 +55,27 @@ function isShotSkill(snapshot: MatchSnapshot) {
   return skill === EPlayerSkill.SHOOT_THUNDER || skill === EPlayerSkill.KAISER_SHOT;
 }
 
+function isBallFlightSnapshot(snapshot: MatchSnapshot) {
+  const event = snapshot.highlight?.event;
+  return (
+    Boolean(snapshot.ball.trajectory?.length) &&
+    (event === PASS_EVENT ||
+      event === GOAL_EVENT ||
+      event === SHOOT_EVENT ||
+      event === GOALKEEPER_SAVE_EVENT ||
+      isShotSkill(snapshot) ||
+      snapshot.highlight?.skill === EPlayerSkill.EAGLE_EYE)
+  );
+}
+
+function isLightningDribbleSnapshot(snapshot: MatchSnapshot) {
+  const skill = snapshot.ball.skillTrajectory ?? snapshot.highlight?.skill ?? null;
+  return Boolean(snapshot.ball.trajectory?.length) && skill === EPlayerSkill.LIGHTNING_DRIBBLE;
+}
+
 function getBallAnimationDuration(snapshot: MatchSnapshot, frameDuration: number) {
   const event = snapshot.highlight?.event;
-  if (snapshot.ball.ownerPlayerId) return frameDuration;
+  if (snapshot.ball.ownerPlayerId && !isBallFlightSnapshot(snapshot)) return frameDuration;
 
   const from = {
     x: Number(snapshot.ball.fromX ?? snapshot.ball.x),
@@ -69,7 +90,7 @@ function getBallAnimationDuration(snapshot: MatchSnapshot, frameDuration: number
     return clamp(280 + travelDistance * 4.5, 360, frameDuration * 0.94);
   }
   if (snapshot.ball.skillTrajectory || snapshot.highlight?.skill) return frameDuration;
-  if (event === 7 || event === 36 || event === 38) {
+  if (event === GOAL_EVENT || event === SHOOT_EVENT || event === GOALKEEPER_SAVE_EVENT) {
     return clamp(240 + travelDistance * 4.2, 320, frameDuration * 0.9);
   }
   return frameDuration;
@@ -117,11 +138,14 @@ function isTimelineDiscontinuity(previous: MatchSnapshot | null, next: MatchSnap
 
 function getBallProgressAlpha(snapshot: MatchSnapshot, alpha: number) {
   const event = snapshot.highlight?.event;
+  if (isBallFlightSnapshot(snapshot)) return linear(alpha);
   if (snapshot.ball.ownerPlayerId) return linear(alpha);
   if (event === PASS_EVENT) return linear(alpha);
   if (isShotSkill(snapshot)) return easeInOut(alpha);
   if (snapshot.ball.skillTrajectory || snapshot.highlight?.skill) return easeInOut(alpha);
-  if (event === 7 || event === 36 || event === 38) return easeInOut(alpha);
+  if (event === GOAL_EVENT || event === SHOOT_EVENT || event === GOALKEEPER_SAVE_EVENT) {
+    return linear(alpha);
+  }
   return easeInOut(alpha);
 }
 
@@ -164,8 +188,12 @@ function smoothBallPath(points: Array<{ x: number; y: number }>) {
   return path;
 }
 
-function interpolatePathByDistance(points: Array<{ x: number; y: number }>, alpha: number) {
-  const path = smoothBallPath(points);
+function interpolatePathByDistance(
+  points: Array<{ x: number; y: number }>,
+  alpha: number,
+  shouldSmooth = true,
+) {
+  const path = shouldSmooth ? smoothBallPath(points) : normalizeBallPath(points);
   if (path.length <= 1) {
     return path[0] ?? { x: 50, y: 50 };
   }
@@ -199,6 +227,23 @@ function interpolatePathByDistance(points: Array<{ x: number; y: number }>, alph
 function findPlayerById(players: MatchPitchPlayer[], playerId: string | null | undefined) {
   if (!playerId) return null;
   return players.find((player) => String(player.id) === String(playerId)) ?? null;
+}
+
+function interpolatePlayers(
+  previousPlayers: MatchPitchPlayer[],
+  nextPlayers: MatchPitchPlayer[],
+  alpha: number,
+) {
+  return nextPlayers.map((nextPlayer) => {
+    const previousPlayer = findPlayerById(previousPlayers, nextPlayer.id);
+    if (!previousPlayer) return nextPlayer;
+
+    return {
+      ...nextPlayer,
+      x: lerp(previousPlayer.x, nextPlayer.x, alpha),
+      y: lerp(previousPlayer.y, nextPlayer.y, alpha),
+    };
+  });
 }
 
 function getPassBallPosition(input: {
@@ -278,7 +323,11 @@ function interpolateSnapshot(
   const ballPosition =
     passBallPosition ??
     (ballPath
-      ? interpolatePathByDistance(ballPath, easedBallAlpha)
+      ? interpolatePathByDistance(
+          ballPath,
+          easedBallAlpha,
+          next.highlight?.event !== GOALKEEPER_SAVE_EVENT,
+        )
       : {
           x: lerp(ballFromX, next.ball.x, easedBallAlpha),
           y: lerp(ballFromY, next.ball.y, easedBallAlpha),
@@ -296,6 +345,16 @@ function interpolateSnapshot(
     Number.isFinite(previousSimulationSecond) && Number.isFinite(nextSimulationSecond)
       ? lerp(previousSimulationSecond, nextSimulationSecond, easedPlayerAlpha)
       : next.second;
+  const homePlayers = interpolatePlayers(
+    previous?.homePlayers ?? next.homePlayers,
+    next.homePlayers,
+    easedPlayerAlpha,
+  );
+  const awayPlayers = interpolatePlayers(
+    previous?.awayPlayers ?? next.awayPlayers,
+    next.awayPlayers,
+    easedPlayerAlpha,
+  );
 
   return {
     ...next,
@@ -313,8 +372,8 @@ function interpolateSnapshot(
       x: ballPosition.x,
       y: ballPosition.y,
     },
-    homePlayers: next.homePlayers,
-    awayPlayers: next.awayPlayers,
+    homePlayers,
+    awayPlayers,
   };
 }
 
@@ -333,6 +392,7 @@ export function useMatchMotion(
   const playerMotionDurationRef = useRef(400);
   const promotionLeadRef = useRef(0);
   const frameRef = useRef<number | null>(null);
+  const promotionTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     onTickCompleteRef.current = options.onTickComplete;
@@ -343,6 +403,10 @@ export function useMatchMotion(
       if (frameRef.current) {
         cancelAnimationFrame(frameRef.current);
         frameRef.current = null;
+      }
+      if (promotionTimerRef.current !== null) {
+        window.clearTimeout(promotionTimerRef.current);
+        promotionTimerRef.current = null;
       }
       previousRef.current = null;
       nextRef.current = null;
@@ -355,6 +419,10 @@ export function useMatchMotion(
         if (frameRef.current) {
           cancelAnimationFrame(frameRef.current);
           frameRef.current = null;
+        }
+        if (promotionTimerRef.current !== null) {
+          window.clearTimeout(promotionTimerRef.current);
+          promotionTimerRef.current = null;
         }
       };
     }
@@ -376,14 +444,26 @@ export function useMatchMotion(
     durationRef.current = instantFrame ? 16 : baseDuration + jitterBuffer;
     playerMotionDurationRef.current = instantFrame ? 0 : durationRef.current;
     promotionLeadRef.current = jitterBuffer;
+    const promotionDuration = Math.max(120, durationRef.current - promotionLeadRef.current);
     ballDurationRef.current = instantFrame
       ? 16
-      : Math.max(
-          120,
-          Math.min(durationRef.current, getBallAnimationDuration(snapshot, durationRef.current)),
-        );
+      : isBallFlightSnapshot(snapshot) || isLightningDribbleSnapshot(snapshot)
+        ? promotionDuration
+        : Math.max(
+            120,
+            Math.min(durationRef.current, getBallAnimationDuration(snapshot, durationRef.current)),
+          );
     startRef.current = performance.now();
     let didAcknowledgeTick = false;
+    const acknowledgeTick = () => {
+      if (didAcknowledgeTick) return;
+      didAcknowledgeTick = true;
+      onTickCompleteRef.current?.(snapshot);
+    };
+    promotionTimerRef.current = window.setTimeout(
+      acknowledgeTick,
+      Math.max(16, promotionDuration + 32),
+    );
 
     const animate = (now: number) => {
       const next = nextRef.current;
@@ -406,8 +486,7 @@ export function useMatchMotion(
 
       const promotionTime = Math.max(0, durationRef.current - promotionLeadRef.current);
       if (!didAcknowledgeTick && elapsed >= promotionTime) {
-        didAcknowledgeTick = true;
-        onTickCompleteRef.current?.(next);
+        acknowledgeTick();
       }
 
       if (playerProgress < 1) {
@@ -415,8 +494,7 @@ export function useMatchMotion(
       } else {
         frameRef.current = null;
         if (!didAcknowledgeTick) {
-          didAcknowledgeTick = true;
-          onTickCompleteRef.current?.(next);
+          acknowledgeTick();
         }
       }
     };
@@ -430,6 +508,10 @@ export function useMatchMotion(
       if (frameRef.current) {
         cancelAnimationFrame(frameRef.current);
         frameRef.current = null;
+      }
+      if (promotionTimerRef.current !== null) {
+        window.clearTimeout(promotionTimerRef.current);
+        promotionTimerRef.current = null;
       }
     };
   }, [snapshot]);

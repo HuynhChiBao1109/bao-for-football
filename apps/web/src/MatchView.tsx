@@ -59,7 +59,7 @@ function toPitchPosition(point: { x: number; y: number }, mirrorY = false) {
   } as CSSProperties;
 }
 
-function resolveVisualPlayerLayout(players: MatchPitchPlayer[]) {
+function resolveVisualPlayerLayout(players: MatchPitchPlayer[], protectedPlayerId?: string | null) {
   const positioned = players.map((player) => ({
     ...player,
     x: clampPercent(Number(player.x)),
@@ -89,7 +89,19 @@ function resolveVisualPlayerLayout(players: MatchPitchPlayer[]) {
         const expansion = 1.02 / Math.max(normalizedGap, 0.0001) - 1;
         const correctionX = dx * expansion;
         const correctionY = dy * expansion;
-        const leftShare = left.hasBall ? 0.22 : right.hasBall ? 0.78 : 0.5;
+        const leftProtected =
+          protectedPlayerId != null && String(left.id) === String(protectedPlayerId);
+        const rightProtected =
+          protectedPlayerId != null && String(right.id) === String(protectedPlayerId);
+        const leftShare = leftProtected
+          ? 0
+          : rightProtected
+            ? 1
+            : left.hasBall
+              ? 0.22
+              : right.hasBall
+                ? 0.78
+                : 0.5;
         const rightShare = 1 - leftShare;
 
         left.x = Math.min(97.5, Math.max(2.5, left.x - correctionX * leftShare));
@@ -435,19 +447,14 @@ const PlayerCircle = memo(function PlayerCircle({
   celebrating,
   slideTackleActive,
   mirrorY,
-  motionDurationMs,
 }: {
   player: MatchPitchPlayer;
   activeHighlight: boolean;
   celebrating: boolean;
   slideTackleActive: boolean;
   mirrorY: boolean;
-  motionDurationMs: number;
 }) {
-  const style = {
-    ...toPitchPosition(player, mirrorY),
-    '--player-motion-duration': `${motionDurationMs}ms`,
-  } as CSSProperties;
+  const style = toPitchPosition(player, mirrorY);
   const teamClass = player.teamSide === 'away' ? 'player-circle--away' : 'player-circle--home';
   const isGoalkeeper = player.position === 'GK';
   const keeperAction =
@@ -531,7 +538,6 @@ const PlayerLayer = memo(function PlayerLayer({
   celebratingSide,
   slideTackleActorId,
   mirrorY,
-  motionDurationMs,
 }: {
   homePlayers: MatchPitchPlayer[];
   awayPlayers: MatchPitchPlayer[];
@@ -539,7 +545,6 @@ const PlayerLayer = memo(function PlayerLayer({
   celebratingSide?: 'home' | 'away' | null;
   slideTackleActorId?: string | null;
   mirrorY: boolean;
-  motionDurationMs: number;
 }) {
   return (
     <>
@@ -551,7 +556,6 @@ const PlayerLayer = memo(function PlayerLayer({
           celebrating={Boolean(celebratingSide && player.teamSide === celebratingSide)}
           slideTackleActive={Boolean(slideTackleActorId && player.id === slideTackleActorId)}
           mirrorY={mirrorY}
-          motionDurationMs={motionDurationMs}
         />
       ))}
     </>
@@ -774,15 +778,14 @@ function MatchPitch({ snapshot }: { snapshot: MatchSnapshot }) {
   const activeSkill = snapshot.highlight?.skill ?? snapshot.ball.skillTrajectory ?? undefined;
   const goalCelebration = isGoalCelebration(snapshot);
   const celebratingSide = goalCelebration ? snapshot.highlight?.teamSide : null;
-  const snapPlayerPositions =
-    snapshot.highlight?.event === MATCH_EVENT.CORNER_KICK ||
-    snapshot.highlight?.event === MATCH_EVENT.PENALTY;
-  const playerMotionDurationMs = snapPlayerPositions
-    ? 0
-    : Math.max(0, Math.min(5000, Number(snapshot.durationMs ?? 400)));
+  const passReceiverId =
+    snapshot.highlight?.event === MATCH_EVENT.PASS && !snapshot.ball.ownerPlayerId
+      ? snapshot.highlight.secondaryPlayerId
+      : null;
   const visualPlayers = useMemo(
-    () => resolveVisualPlayerLayout([...snapshot.homePlayers, ...snapshot.awayPlayers]),
-    [snapshot.awayPlayers, snapshot.homePlayers],
+    () =>
+      resolveVisualPlayerLayout([...snapshot.homePlayers, ...snapshot.awayPlayers], passReceiverId),
+    [passReceiverId, snapshot.awayPlayers, snapshot.homePlayers],
   );
   const visualHomePlayers = visualPlayers.slice(0, snapshot.homePlayers.length);
   const visualAwayPlayers = visualPlayers.slice(snapshot.homePlayers.length);
@@ -822,7 +825,6 @@ function MatchPitch({ snapshot }: { snapshot: MatchSnapshot }) {
             celebratingSide={celebratingSide}
             slideTackleActorId={slideTackleActorId}
             mirrorY={mirrorY}
-            motionDurationMs={playerMotionDurationMs}
           />
           <Ball snapshot={visualSnapshot} mirrorY={mirrorY} />
           <SkillOverlay skill={activeSkill} />

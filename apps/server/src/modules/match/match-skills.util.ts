@@ -211,15 +211,18 @@ export function buildThunderShotTrajectory(
 ): TrajectoryPoint[] {
   const points: TrajectoryPoint[] = [{ x: fromX, y: fromY }];
   const totalSteps = Math.max(4, segments);
+  const targetX = clamp(50 + (random() - 0.5) * 10, 42, 58);
+  const lightningPhase = random() * Math.PI;
 
   for (let index = 1; index <= totalSteps; index += 1) {
     const progress = index / totalSteps;
-    const zigzag = Math.sin(progress * Math.PI * 6 + random() * 0.5) * (10 - progress * 3.5);
-    const x = clamp(fromX + zigzag + (random() - 0.5) * 3.2, 8, 92);
+    const zigzag = Math.sin(progress * Math.PI * 5 + lightningPhase) * (1 - progress) * 1.8;
+    const x = clamp(lerp(fromX, targetX, progress) + zigzag, 8, 92);
     const y = clamp(fromY + (goalY - fromY) * progress, 6, 94);
     points.push({ x, y });
   }
 
+  points[points.length - 1] = { x: targetX, y: clamp(goalY, 6, 94) };
   return points;
 }
 
@@ -254,21 +257,25 @@ export function buildLightningDribbleTrajectory(
   random: () => number,
 ): TrajectoryPoint[] {
   const points: TrajectoryPoint[] = [{ x: fromX, y: fromY }];
-  const totalSteps = Math.max(4, segments);
+  const totalSteps = Math.max(6, segments);
   const side = random() > 0.5 ? 1 : -1;
 
   for (let index = 1; index <= totalSteps; index += 1) {
     const progress = index / totalSteps;
-    const burst = progress < 0.58 ? progress * 1.34 : 1 - (progress - 0.58) * 0.34;
-    const feint = Math.sin(progress * Math.PI * 4.8) * side * (7.8 - progress * 3.8);
-    const snap = Math.sin(progress * Math.PI * 9 + random() * 0.8) * (1 - progress) * 2.2;
+    const burstProgress = 1 - Math.pow(1 - progress, 1.45);
+    const evadeArc = Math.sin(progress * Math.PI) * side * 4.8;
+    const firstTouchCut = Math.sin(progress * Math.PI * 2) * side * (1 - progress) * 1.15;
 
     points.push({
-      x: clamp(fromX + (toX - fromX) * burst + feint + snap, 6, 94),
-      y: clamp(fromY + (toY - fromY) * Math.min(1, progress * 1.18), 5, 95),
+      x: clamp(lerp(fromX, toX, progress) + evadeArc + firstTouchCut, 6, 94),
+      y: clamp(lerp(fromY, toY, burstProgress), 5, 95),
     });
   }
 
+  points[points.length - 1] = {
+    x: clamp(toX, 6, 94),
+    y: clamp(toY, 5, 95),
+  };
   return points;
 }
 
@@ -303,6 +310,10 @@ export function getSkillLabel(skill: EPlayerSkill | null): string {
     return "Build-up";
   }
   return SKILL_META[skill]?.label ?? "Skill";
+}
+
+function lerp(from: number, to: number, progress: number) {
+  return from + (to - from) * progress;
 }
 
 function clamp(value: number, min: number, max: number) {

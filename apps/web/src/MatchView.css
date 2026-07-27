@@ -652,10 +652,6 @@
 
 .player-node {
   transform: translate3d(-50%, -50%, 0);
-  transition:
-    transform var(--player-motion-duration, 400ms) linear,
-    left var(--player-motion-duration, 400ms) linear,
-    top var(--player-motion-duration, 400ms) linear;
 }
 
 .match-ball {
@@ -796,37 +792,34 @@
 }
 
 .player-node--lightning-dribble .player-circle {
-  border-color: rgba(145, 238, 255, 0.98);
-  background: linear-gradient(145deg, #071a25 0%, #24d8ff 54%, #fff06a 100%);
+  border-color: rgba(255, 246, 154, 0.98);
+  background: linear-gradient(145deg, #211900 0%, #f6ba00 54%, #fff176 100%);
   box-shadow:
-    0 0 34px rgba(78, 218, 255, 0.72),
-    0 0 48px rgba(255, 238, 92, 0.42),
+    0 0 28px rgba(255, 215, 32, 0.78),
+    0 0 44px rgba(255, 240, 92, 0.46),
     0 12px 20px rgba(0, 0, 0, 0.34),
     inset 0 1px 14px rgba(255, 255, 255, 0.34);
-  animation: lightningDribbleJitter 0.14s steps(2, end) infinite;
+  animation: lightningDribblePulse 0.28s ease-in-out infinite alternate;
 }
 
 .player-node--lightning-dribble .player-circle::after {
   position: absolute;
   left: 50%;
   bottom: -15px;
-  width: 74px;
-  height: 18px;
+  width: 70px;
+  height: 16px;
   content: '';
-  border-radius: 999px;
-  background:
-    linear-gradient(
-      100deg,
-      transparent 0 16%,
-      rgba(128, 239, 255, 0.94) 17% 27%,
-      transparent 28% 42%,
-      rgba(255, 240, 96, 0.9) 43% 51%,
-      transparent 52%
-    ),
-    radial-gradient(ellipse at 50% 50%, rgba(88, 218, 255, 0.72), transparent 64%);
-  filter: drop-shadow(0 0 14px rgba(95, 228, 255, 0.95));
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 190, 0, 0.38),
+    rgba(255, 246, 132, 0.98),
+    rgba(255, 207, 31, 0.76)
+  );
+  clip-path: polygon(0 44%, 35% 42%, 28% 0, 68% 45%, 55% 48%, 100% 100%, 46% 58%);
+  filter: drop-shadow(0 0 10px rgba(255, 223, 54, 0.96));
   transform: translateX(-50%);
-  animation: lightningFootBurst 0.18s steps(2, end) infinite alternate;
+  animation: lightningFootBurst 0.28s ease-in-out infinite alternate;
 }
 
 .player-node--tank-tackle .player-circle {
@@ -1191,20 +1184,20 @@
 }
 
 .match-ball--thunder {
-  border-color: rgba(190, 245, 255, 0.98);
+  border-color: rgba(255, 249, 181, 0.98);
   background: radial-gradient(
     circle at 35% 28%,
     #ffffff 0 18%,
-    #dffaff 19% 48%,
-    #071a25 49% 58%,
-    #f8ff93 59%
+    #fff47c 19% 48%,
+    #4d3900 49% 58%,
+    #ffd20a 59%
   );
   box-shadow:
-    -26px 0 32px rgba(78, 205, 255, 0.72),
-    0 0 34px rgba(255, 244, 105, 0.98),
-    0 0 54px rgba(70, 190, 255, 0.86),
+    -26px 0 32px rgba(255, 192, 0, 0.68),
+    0 0 34px rgba(255, 246, 124, 0.98),
+    0 0 54px rgba(255, 208, 18, 0.82),
     0 12px 24px rgba(0, 0, 0, 0.38);
-  animation: thunderBallJitter 0.16s steps(2, end) infinite;
+  animation: thunderBallPulse 0.24s ease-in-out infinite;
 }
 
 .match-ball--shot::after {
@@ -1243,28 +1236,26 @@
   top: 50%;
   width: 82px;
   height: 24px;
-  background:
-    linear-gradient(
-      135deg,
-      transparent 0 24%,
-      rgba(144, 235, 255, 0.98) 25% 31%,
-      transparent 32% 45%,
-      rgba(255, 245, 118, 0.96) 46% 53%,
-      transparent 54%
-    ),
-    linear-gradient(45deg, transparent 0 34%, rgba(85, 205, 255, 0.82) 35% 40%, transparent 41%);
-  filter: drop-shadow(0 0 10px rgba(104, 224, 255, 0.95));
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 181, 0, 0.36),
+    rgba(255, 247, 150, 0.98),
+    rgba(255, 204, 14, 0.88)
+  );
+  clip-path: polygon(0 42%, 34% 40%, 25% 2%, 65% 44%, 52% 48%, 100% 98%, 43% 58%);
+  filter: drop-shadow(0 0 11px rgba(255, 221, 47, 0.98));
   transform: translateY(-50%);
   animation: thunderTrailFlash 0.2s steps(2, end) infinite;
 }
 
 .match-ball--thunder::after {
   inset: -18px;
-  border: 2px solid rgba(145, 235, 255, 0.72);
+  border: 2px solid rgba(255, 236, 94, 0.76);
   border-radius: 999px;
   box-shadow:
-    0 0 30px rgba(255, 246, 112, 0.55),
-    inset 0 0 18px rgba(100, 220, 255, 0.48);
+    0 0 30px rgba(255, 229, 64, 0.62),
+    inset 0 0 18px rgba(255, 196, 0, 0.42);
   animation: thunderRing 0.58s ease-out infinite;
 }
 
@@ -1295,19 +1286,19 @@
 }
 
 .match-ball--lightning {
-  border-color: rgba(180, 246, 255, 0.98);
+  border-color: rgba(255, 249, 181, 0.98);
   background: radial-gradient(
     circle at 35% 28%,
     #ffffff 0 18%,
-    #d8fbff 19% 48%,
-    #06202c 49% 58%,
-    #fff06a 59%
+    #fff47c 19% 48%,
+    #4d3900 49% 58%,
+    #ffd20a 59%
   );
   box-shadow:
-    -28px 0 36px rgba(91, 225, 255, 0.74),
-    0 0 34px rgba(255, 239, 92, 0.96),
-    0 0 52px rgba(51, 206, 255, 0.72);
-  animation: lightningBallFlash 0.12s steps(2, end) infinite;
+    -24px 0 30px rgba(255, 192, 0, 0.66),
+    0 0 32px rgba(255, 246, 124, 0.98),
+    0 0 50px rgba(255, 208, 18, 0.8);
+  animation: lightningBallFlash 0.24s ease-in-out infinite alternate;
 }
 
 .match-ball--lightning::before,
@@ -1322,27 +1313,25 @@
   top: 50%;
   width: 62px;
   height: 18px;
-  background:
-    linear-gradient(
-      135deg,
-      transparent 0 24%,
-      rgba(140, 238, 255, 0.98) 25% 33%,
-      transparent 34% 48%,
-      rgba(255, 240, 92, 0.92) 49% 58%,
-      transparent 59%
-    ),
-    linear-gradient(90deg, transparent, rgba(78, 220, 255, 0.5), transparent);
-  filter: blur(0.4px) drop-shadow(0 0 12px rgba(91, 225, 255, 0.95));
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 184, 0, 0.32),
+    rgba(255, 247, 150, 0.98),
+    rgba(255, 204, 14, 0.86)
+  );
+  clip-path: polygon(0 42%, 34% 40%, 25% 2%, 65% 44%, 52% 48%, 100% 98%, 43% 58%);
+  filter: drop-shadow(0 0 10px rgba(255, 221, 47, 0.98));
   transform: translateY(-50%);
 }
 
 .match-ball--lightning::after {
   inset: -20px;
-  border: 2px solid rgba(132, 238, 255, 0.66);
+  border: 2px solid rgba(255, 236, 94, 0.72);
   border-radius: 999px;
   box-shadow:
-    0 0 30px rgba(82, 218, 255, 0.62),
-    inset 0 0 18px rgba(255, 238, 92, 0.36);
+    0 0 30px rgba(255, 229, 64, 0.58),
+    inset 0 0 18px rgba(255, 196, 0, 0.4);
   animation: thunderRing 0.38s ease-out infinite;
 }
 
@@ -1404,7 +1393,7 @@
     0 0 32px rgba(255, 235, 92, 0.98),
     0 0 48px rgba(255, 43, 66, 0.72),
     0 12px 24px rgba(0, 0, 0, 0.38);
-  animation: kaiserBallFocus 0.2s steps(2, end) infinite;
+  animation: kaiserBallFocus 0.24s ease-in-out infinite;
 }
 
 .match-ball--kaiser::before,
@@ -1539,8 +1528,8 @@
 }
 
 .skill-overlay[data-skill='1'] {
-  --skill-color: 82, 216, 255;
-  --skill-accent: 255, 239, 92;
+  --skill-color: 255, 208, 20;
+  --skill-accent: 255, 246, 142;
 }
 
 .skill-overlay[data-skill='2'] {
@@ -1571,12 +1560,12 @@
 }
 
 .skill-overlay[data-skill='4'] {
-  --skill-color: 92, 224, 255;
-  --skill-accent: 255, 236, 73;
+  --skill-color: 255, 208, 20;
+  --skill-accent: 255, 246, 142;
 }
 
 .skill-overlay[data-skill='4'] .skill-overlay__wash {
-  animation-duration: 0.3s;
+  animation-duration: 0.52s;
 }
 
 .skill-overlay[data-skill='5'] {
@@ -2053,18 +2042,18 @@
   }
 }
 
-@keyframes thunderBallJitter {
+@keyframes thunderBallPulse {
   0%,
   100% {
-    transform: var(--ball-transform) translateX(0);
+    filter: saturate(1.3) contrast(1.14) brightness(1.08);
   }
 
   35% {
-    transform: var(--ball-transform) translateX(-3px) translateY(2px);
+    filter: saturate(1.42) contrast(1.2) brightness(1.24);
   }
 
   70% {
-    transform: var(--ball-transform) translateX(3px) translateY(-2px);
+    filter: saturate(1.36) contrast(1.18) brightness(1.14);
   }
 }
 
@@ -2270,27 +2259,35 @@
 
 @keyframes lightningFootBurst {
   from {
-    opacity: 0.68;
-    transform: translateX(-50%) skewX(-16deg) scaleX(0.78);
+    opacity: 0.58;
+    transform: translateX(-50%) scaleX(0.82);
   }
 
   to {
     opacity: 1;
-    transform: translateX(-50%) skewX(16deg) scaleX(1.12);
+    transform: translateX(-50%) scaleX(1.12);
   }
 }
 
-@keyframes lightningDribbleJitter {
+@keyframes lightningDribblePulse {
+  0%,
+  100% {
+    filter: brightness(1.04) saturate(1.08);
+  }
+
   50% {
-    filter: brightness(1.28) saturate(1.24);
-    transform: translate(1px, -1px) scale(1.03);
+    filter: brightness(1.24) saturate(1.22);
   }
 }
 
 @keyframes lightningBallFlash {
+  0%,
+  100% {
+    filter: saturate(1.3) contrast(1.14) brightness(1.08);
+  }
+
   50% {
-    filter: brightness(1.4) saturate(1.35);
-    transform: translate(-50%, -50%) translate(2px, -1px) scale(1.08);
+    filter: saturate(1.42) contrast(1.2) brightness(1.26);
   }
 }
 
@@ -2321,11 +2318,11 @@
 @keyframes kaiserBallFocus {
   0%,
   100% {
-    transform: var(--ball-transform) translateX(0) scale(1);
+    filter: saturate(1.3) contrast(1.14) brightness(1.08);
   }
 
   50% {
-    transform: var(--ball-transform) translateX(-3px) scale(1.06);
+    filter: saturate(1.42) contrast(1.2) brightness(1.24);
   }
 }
 
@@ -2356,12 +2353,10 @@
 @keyframes eagleBallScan {
   from {
     filter: brightness(1) saturate(1.05);
-    transform: var(--ball-transform) translateY(0);
   }
 
   to {
     filter: brightness(1.28) saturate(1.32);
-    transform: var(--ball-transform) translateY(-2px);
   }
 }
 
@@ -3183,9 +3178,9 @@
 
 .match-ball--lightning {
   box-shadow:
-    -15px 0 20px rgba(91, 225, 255, 0.62),
-    0 0 18px rgba(255, 239, 92, 0.9),
-    0 0 28px rgba(51, 206, 255, 0.58);
+    -15px 0 20px rgba(255, 190, 0, 0.58),
+    0 0 18px rgba(255, 246, 124, 0.92),
+    0 0 28px rgba(255, 207, 20, 0.56);
 }
 
 .pitch-debug-grid {
