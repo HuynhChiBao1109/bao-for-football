@@ -156,12 +156,21 @@ export class DailyLoginService {
         }
       }
 
-      progress.claimedDays = reward.day;
-      progress.lastClaimDate = today;
-      if (reward.day === DAILY_LOGIN_REWARDS.length) {
-        progress.completedAt = new Date();
+      const progressUpdate = await manager.update(
+        DailyLoginProgressEntity,
+        { userId: user.id },
+        {
+          claimedDays: reward.day,
+          lastClaimDate: today,
+          completedAt:
+            reward.day === DAILY_LOGIN_REWARDS.length
+              ? new Date()
+              : progress.completedAt,
+        },
+      );
+      if (progressUpdate.affected !== 1) {
+        throw new ServiceUnavailableException("Cannot update daily login progress.");
       }
-      await manager.save(DailyLoginProgressEntity, progress);
 
       return {
         day: reward.day,

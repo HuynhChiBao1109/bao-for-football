@@ -4,6 +4,7 @@ import {
   CreateDateColumn,
   Entity,
   JoinColumn,
+  ManyToOne,
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
@@ -71,11 +72,11 @@ export class MatchEntity extends AbstractEntity {
   @JoinColumn({ name: "campain_id" })
   campainMatch: CampainMatchEntity;
 
-  @OneToOne(() => TeamEntity, { nullable: true, onDelete: "CASCADE" })
+  @ManyToOne(() => TeamEntity, { nullable: true, onDelete: "CASCADE" })
   @JoinColumn({ name: "home_team_id" })
   homeTeam: TeamEntity | null;
 
-  @OneToOne(() => TeamEntity, { nullable: true, onDelete: "CASCADE" })
+  @ManyToOne(() => TeamEntity, { nullable: true, onDelete: "CASCADE" })
   @JoinColumn({ name: "away_team_id" })
   awayTeam: TeamEntity | null;
 

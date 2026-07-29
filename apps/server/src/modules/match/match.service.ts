@@ -49,6 +49,15 @@ type MatchTickOptions = {
   emitSocket?: boolean;
 };
 
+type CampaignCompletionResult = {
+  stageCleared: boolean;
+  completedLevel: number;
+  unlockedLevel: number | null;
+  nextStageUnlocked: boolean;
+  campaignCompleted: boolean;
+  rewardGranted: number;
+};
+
 @Injectable()
 export class MatchService implements IMatchService {
   private readonly autoTickTimers = new Map<number, NodeJS.Timeout>();
@@ -264,6 +273,7 @@ export class MatchService implements IMatchService {
 
     const timeline = [...previousTicks, nextTick.snapshot];
     const isFinished = nextTick.snapshot.highlight?.event === EMatchEvent.MATCH_END;
+    let campaignCompletion: CampaignCompletionResult | null = null;
     const nextRuntimeState: MatchRuntimeState = {
       ...runtimeState,
       status: isFinished ? EMatchStatus.FINISHED : EMatchStatus.IN_PROGRESS,
@@ -292,7 +302,11 @@ export class MatchService implements IMatchService {
         endedAt: new Date(),
       });
 
-      await this.completeCampaignProgress(matchId);
+      campaignCompletion = await this.completeCampaignProgress(matchId);
+      nextTick.event.payload = {
+        ...nextTick.event.payload,
+        campaignCompletion,
+      };
     }
 
     await this.repository.saveEvents([
@@ -308,10 +322,13 @@ export class MatchService implements IMatchService {
     ]);
 
     if (shouldEmitSocket) {
-      this.emitTickResult(matchId, nextTick.snapshot, isFinished);
+      this.emitTickResult(matchId, nextTick.snapshot, isFinished, campaignCompletion);
     }
 
-    return nextTick;
+    return {
+      ...nextTick,
+      campaignCompletion,
+    };
   }
 
   async startAutoTick(matchId: number) {
@@ -351,7 +368,12 @@ export class MatchService implements IMatchService {
           return;
         }
 
-        this.emitTickResult(matchId, nextTick.snapshot, isFinished);
+        this.emitTickResult(
+          matchId,
+          nextTick.snapshot,
+          isFinished,
+          nextTick.campaignCompletion,
+        );
 
         if (isFinished) {
           shouldContinue = false;
@@ -470,37 +492,73 @@ export class MatchService implements IMatchService {
     await this.redisService.setJson(this.getMatchRuntimeKey(match.id), runtimeState);
   }
 
-  private async completeCampaignProgress(matchId: number) {
+  private async completeCampaignProgress(
+    matchId: number,
+  ): Promise<CampaignCompletionResult | null> {
     const match = await this.repository.findMatchById(matchId);
     const campaignMatch = match?.campainMatch;
     const campaign = campaignMatch?.campain;
 
     if (!match || !campaignMatch || !campaign) {
-      return;
+      return null;
     }
 
     if (match.status !== EMatchStatus.FINISHED) {
-      return;
-    }
-
-    if (!this.didCampaignTeamWin(match, Number(campaign.teamId))) {
-      return;
+      return null;
     }
 
     const completedLevel = Number(campaignMatch.level ?? 0);
     const nextLevel = completedLevel + 1;
     const currentLevel = Number(campaign.level ?? 1);
+    const stageCleared = this.didCampaignTeamWin(match, Number(campaign.teamId));
 
-    if (nextLevel <= currentLevel) {
-      return;
+    if (!stageCleared) {
+      return {
+        stageCleared: false,
+        completedLevel,
+        unlockedLevel: null,
+        nextStageUnlocked: false,
+        campaignCompleted: false,
+        rewardGranted: 0,
+      };
     }
 
-    await this.repository.completeCampaignMatch({
+    if (nextLevel <= currentLevel) {
+      const nextStage = await this.repository.findCampaignMatchByLevel(
+        Number(campaign.id),
+        nextLevel,
+      );
+      return {
+        stageCleared: true,
+        completedLevel,
+        unlockedLevel: nextStage ? nextLevel : null,
+        nextStageUnlocked: Boolean(nextStage),
+        campaignCompleted: !nextStage,
+        rewardGranted: 0,
+      };
+    }
+
+    const nextStage = await this.repository.findCampaignMatchByLevel(
+      Number(campaign.id),
+      nextLevel,
+    );
+    const completion = await this.repository.completeCampaignMatch({
       campaignId: campaign.id,
       teamId: campaign.teamId,
       nextLevel,
       reward: Number(campaignMatch.matchReward ?? 0),
     });
+
+    return {
+      stageCleared: true,
+      completedLevel,
+      unlockedLevel: nextStage ? nextLevel : null,
+      nextStageUnlocked: Boolean(nextStage),
+      campaignCompleted: !nextStage,
+      rewardGranted: completion.progressUpdated
+        ? Number(campaignMatch.matchReward ?? 0)
+        : 0,
+    };
   }
 
   private async completePreviousCampaignProgress(campaignId: number, targetLevel: number) {
@@ -595,7 +653,12 @@ export class MatchService implements IMatchService {
     }
   }
 
-  private emitTickResult(matchId: number | string, snapshot: MatchSnapshot, isFinished: boolean) {
+  private emitTickResult(
+    matchId: number | string,
+    snapshot: MatchSnapshot,
+    isFinished: boolean,
+    campaignCompletion: CampaignCompletionResult | null = null,
+  ) {
     this.emitSnapshot(matchId, snapshot);
 
     if (isFinished) {
@@ -606,6 +669,7 @@ export class MatchService implements IMatchService {
           matchId: String(matchId),
           homeScore: snapshot.homeScore,
           awayScore: snapshot.awayScore,
+          campaignCompletion,
         },
       });
     }

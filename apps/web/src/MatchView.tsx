@@ -12,7 +12,7 @@ import {
 import { useMatchSocket, type LiveMatchEvent } from './hooks/useMatchSocket';
 import { EPlayerSkill, skillName } from './enums/skill';
 import { ROUTES } from './routes';
-import type { MatchPitchPlayer, MatchSnapshot } from './types';
+import type { CampaignCompletion, MatchPitchPlayer, MatchSnapshot } from './types';
 
 const MATCH_EVENT = {
   FIRST_HALF_START: 2,
@@ -663,6 +663,7 @@ function MatchResultOverlay({
   retryError,
   onRetry,
   onContinue,
+  campaignCompletion,
 }: {
   snapshot: MatchSnapshot;
   reward: number;
@@ -670,9 +671,11 @@ function MatchResultOverlay({
   retryError?: string;
   onRetry: () => void;
   onContinue: () => void;
+  campaignCompletion?: CampaignCompletion | null;
 }) {
-  const won = snapshot.homeScore > snapshot.awayScore;
+  const won = campaignCompletion?.stageCleared ?? snapshot.homeScore > snapshot.awayScore;
   const draw = snapshot.homeScore === snapshot.awayScore;
+  const rewardGranted = campaignCompletion?.rewardGranted ?? reward;
 
   return (
     <div
@@ -691,15 +694,19 @@ function MatchResultOverlay({
         </div>
         <p className="match-result-panel__message">
           {won
-            ? 'Stage cleared. The next campaign match is now unlocked.'
+            ? campaignCompletion?.campaignCompleted
+              ? 'Stage cleared. You completed this campaign.'
+              : campaignCompletion?.nextStageUnlocked
+                ? `Stage ${campaignCompletion.completedLevel} cleared. Stage ${campaignCompletion.unlockedLevel} is now unlocked.`
+                : 'Stage cleared. The next campaign match is now unlocked.'
             : draw
               ? 'The match ended level. Win this stage to advance.'
               : 'This stage remains locked. Rebuild and fight again.'}
         </p>
-        {won ? (
+        {won && rewardGranted > 0 ? (
           <div className="match-result-panel__reward">
             <span>Reward earned</span>
-            <strong>+{reward.toLocaleString()}</strong>
+            <strong>+{rewardGranted.toLocaleString()}</strong>
           </div>
         ) : null}
         {retryError ? <p className="match-result-panel__error">{retryError}</p> : null}
@@ -866,6 +873,7 @@ export function MatchView() {
     queuedTicks,
     ackActiveTick,
     resetLiveState,
+    campaignCompletion,
   } = useMatchSocket(matchId);
   useKickoffWhistle(snapshot);
   const getNextTick = useGetNextMatchTick(matchId);
@@ -881,7 +889,7 @@ export function MatchView() {
   const returnToCampaign = () => {
     void queryClient.invalidateQueries({ queryKey: ['campainMatches'] });
     void queryClient.invalidateQueries({ queryKey: ['session'] });
-    navigate(ROUTES.club);
+    navigate(ROUTES.aiMatch);
   };
 
   const retryCampaignMatch = () => {
@@ -1030,6 +1038,7 @@ export function MatchView() {
             retryError={resetMatch.error?.message}
             onRetry={retryCampaignMatch}
             onContinue={returnToCampaign}
+            campaignCompletion={campaignCompletion}
           />
         ) : null}
       </section>

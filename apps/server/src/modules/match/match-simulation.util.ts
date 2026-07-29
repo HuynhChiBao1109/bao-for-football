@@ -30,7 +30,7 @@ import {
   updatePlayerMovement,
 } from "./match-movement.util";
 
-export const MATCH_REAL_DURATION_MS = 360_000;
+export const MATCH_REAL_DURATION_MS = 180_000;
 export const MATCH_CLOCK_SECONDS = MATCH_REAL_DURATION_MS / 1000;
 export const MATCH_TICK_MS = SIM_TICK_MS;
 export const TICKS_PER_SECOND = SIM_TICKS_PER_SECOND;
@@ -65,9 +65,9 @@ const FREE_KICK_SETUP_MIN_DELAY_MS = 1_500;
 const FREE_KICK_SETUP_MAX_DELAY_MS = 2_800;
 const QUICK_FREE_KICK_MIN_GOAL_DISTANCE_METERS = 42;
 const QUICK_FREE_KICK_MAX_TAKER_DISTANCE_METERS = 12;
-const HALF_TIME_WHISTLE_DURATION_MS = 420;
-const HALF_TIME_TUNNEL_DURATION_MS = 700;
-const SECOND_HALF_KICKOFF_DURATION_MS = 520;
+const HALF_TIME_WHISTLE_DURATION_MS = 600;
+const HALF_TIME_TUNNEL_DURATION_MS = 1_200;
+const SECOND_HALF_KICKOFF_DURATION_MS = 1_400;
 const GOAL_CELEBRATION_DURATION_MS = 3_000;
 const KICKOFF_WHISTLE_DURATION_MS = 1_000;
 const MIN_OWNER_POSSESSION_TICKS = Math.max(2, Math.round(0.8 * TICKS_PER_SECOND));
@@ -882,7 +882,10 @@ export function generateNextMatchTick(input: {
       positionState: lifecyclePositionState,
     });
     if (isSecondHalfStart) {
-      snapshot.durationMs = KICKOFF_WHISTLE_DURATION_MS;
+      snapshot.durationMs = Math.max(
+        SECOND_HALF_KICKOFF_DURATION_MS,
+        KICKOFF_WHISTLE_DURATION_MS,
+      );
       snapshot.highlight.kickoffWhistle = true;
     }
 

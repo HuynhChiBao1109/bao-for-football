@@ -12,6 +12,9 @@ const GOAL_EVENT = 7;
 const SHOOT_EVENT = 36;
 const GOALKEEPER_SAVE_EVENT = 38;
 const FREE_KICK_EVENT = 8;
+const FIRST_HALF_END_EVENT = 3;
+const SECOND_HALF_START_EVENT = 4;
+const HALF_TIME_TUNNEL_EVENT = 45;
 const TACKLE_EVENT = 42;
 const SLIDE_TACKLE_EVENT = 43;
 const FOUL_EVENT = 49;
@@ -174,7 +177,13 @@ function isTackleMotionSnapshot(snapshot: MatchSnapshot) {
 
 function requiresFullMotionCompletion(snapshot: MatchSnapshot) {
   const event = snapshot.highlight?.event;
-  return (event === FREE_KICK_EVENT && Boolean(snapshot.restart)) || isTackleMotionSnapshot(snapshot);
+  return (
+    (event === FREE_KICK_EVENT && Boolean(snapshot.restart)) ||
+    event === FIRST_HALF_END_EVENT ||
+    event === HALF_TIME_TUNNEL_EVENT ||
+    event === SECOND_HALF_START_EVENT ||
+    isTackleMotionSnapshot(snapshot)
+  );
 }
 
 function normalizeBallPath(points: Array<{ x: number; y: number }>) {

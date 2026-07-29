@@ -436,9 +436,19 @@ export type MatchStartResponse = {
   awayLineup?: Array<Record<string, unknown>> | null;
 };
 
+export type CampaignCompletion = {
+  stageCleared: boolean;
+  completedLevel: number;
+  unlockedLevel: number | null;
+  nextStageUnlocked: boolean;
+  campaignCompleted: boolean;
+  rewardGranted: number;
+};
+
 export type MatchNextTickResponse = {
   snapshot: MatchSnapshot;
   event: MatchEventRecord;
+  campaignCompletion?: CampaignCompletion | null;
 };
 
 // ─── Gacha ────────────────────────────────────────────────────────────────────

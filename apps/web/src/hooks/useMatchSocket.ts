@@ -3,7 +3,7 @@ import { ESocketEvent } from '../enums/socket';
 import { normalizeSnapshot } from '../lib/normalizeMatchSnapshot';
 import { useMatch } from './useMatch';
 import { useSocketSession } from './useSocketSession';
-import type { MatchSnapshot, MatchState } from '../types';
+import type { CampaignCompletion, MatchSnapshot, MatchState } from '../types';
 
 const MAX_TICK_QUEUE = 80;
 const MAX_EVENTS = 16;
@@ -37,6 +37,7 @@ type CompletedPacket = {
   matchId?: number | string;
   homeScore?: number;
   awayScore?: number;
+  campaignCompletion?: CampaignCompletion | null;
 };
 
 type TickBuffer = {
@@ -164,6 +165,10 @@ export function useMatchSocket(matchId: string | undefined) {
   } | null>(null);
   const completedFrameIdRef = useRef(-1);
   const [liveStatus, setLiveStatus] = useState<{ matchId: string; status: string } | null>(null);
+  const [campaignCompletionState, setCampaignCompletionState] = useState<{
+    matchId: string;
+    completion: CampaignCompletion | null;
+  } | null>(null);
 
   const initialSnapshot = useMemo(() => {
     if (data?.latestSnapshot) {
@@ -189,6 +194,10 @@ export function useMatchSocket(matchId: string | undefined) {
     liveStatus && liveStatus.matchId === matchId
       ? liveStatus.status
       : data?.status ?? (isLoading ? 'loading' : 'ready');
+  const campaignCompletion =
+    campaignCompletionState && campaignCompletionState.matchId === matchId
+      ? campaignCompletionState.completion
+      : null;
 
   const promoteSnapshotEvent = useCallback(
     (snapshotToPromote: MatchSnapshot) => {
@@ -278,6 +287,7 @@ export function useMatchSocket(matchId: string | undefined) {
       pendingSocketEventsRef.current = null;
       setLiveEvents({ matchId, events: [] });
       setLiveStatus({ matchId, status: match.status ?? 'in_progress' });
+      setCampaignCompletionState({ matchId, completion: null });
       setTickBuffer(
         resetSnapshot
           ? {
@@ -371,6 +381,10 @@ export function useMatchSocket(matchId: string | undefined) {
         return;
       }
       setLiveStatus({ matchId, status: 'finished' });
+      setCampaignCompletionState({
+        matchId,
+        completion: packet.campaignCompletion ?? null,
+      });
       setTickBuffer((current) => {
         if (!current || current.matchId !== matchId || !current.active) {
           return current;
@@ -421,6 +435,7 @@ export function useMatchSocket(matchId: string | undefined) {
       queuedTicks,
       ackActiveTick,
       resetLiveState,
+      campaignCompletion,
     }),
     [
       ackActiveTick,
@@ -433,6 +448,7 @@ export function useMatchSocket(matchId: string | undefined) {
       resetLiveState,
       snapshot,
       status,
+      campaignCompletion,
     ],
   );
 }

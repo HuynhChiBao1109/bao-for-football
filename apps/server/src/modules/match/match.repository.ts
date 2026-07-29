@@ -83,6 +83,18 @@ export class MatchRepository {
     });
   }
 
+  async findCampaignMatchByLevel(
+    campaignId: number,
+    level: number,
+  ): Promise<CampainMatchEntity | null> {
+    return this.campainMatchRepository.findOne({
+      where: {
+        campainId: campaignId,
+        level,
+      },
+    });
+  }
+
   async findCampaignMatchesUpToLevel(campaignId: number, level: number) {
     return this.campainMatchRepository
       .createQueryBuilder("campaignMatch")
@@ -138,8 +150,8 @@ export class MatchRepository {
     teamId: number;
     nextLevel: number;
     reward: number;
-  }): Promise<void> {
-    await this.campainMatchRepository.manager.transaction(async (manager) => {
+  }): Promise<{ progressUpdated: boolean }> {
+    return this.campainMatchRepository.manager.transaction(async (manager) => {
       const progressResult = await manager.query(
         "UPDATE campains SET level = GREATEST(level, ?) WHERE id = ? AND level < ?",
         [data.nextLevel, data.campaignId, data.nextLevel],
@@ -152,6 +164,8 @@ export class MatchRepository {
           data.teamId,
         ]);
       }
+
+      return { progressUpdated };
     });
   }
 
