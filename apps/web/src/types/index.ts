@@ -377,6 +377,7 @@ export type MatchSnapshot = {
     takerPlayerId: number | string;
     wallPlayerIds: Array<number | string>;
     distanceToGoal: number;
+    quick: boolean;
   } | null;
 };
 

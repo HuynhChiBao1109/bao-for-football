@@ -11,7 +11,12 @@ const PASS_EVENT = 35;
 const GOAL_EVENT = 7;
 const SHOOT_EVENT = 36;
 const GOALKEEPER_SAVE_EVENT = 38;
+const FREE_KICK_EVENT = 8;
+const TACKLE_EVENT = 42;
+const SLIDE_TACKLE_EVENT = 43;
+const FOUL_EVENT = 49;
 const PASS_RELEASE_SHARE = 0.1;
+const TACKLE_CONTACT_SHARE = 0.3;
 const FULL_MATCH_DISPLAY_SECONDS = 90 * 60;
 const FRAME_JITTER_BUFFER_MAX_MS = 120;
 const FRAME_DURATION_MIN_MS = 140;
@@ -46,6 +51,7 @@ function shouldUseBallTrajectory(snapshot: MatchSnapshot) {
     event === PASS_EVENT ||
     event === SHOOT_EVENT ||
     event === GOALKEEPER_SAVE_EVENT ||
+    event === SLIDE_TACKLE_EVENT ||
     event === 41
   );
 }
@@ -63,6 +69,7 @@ function isBallFlightSnapshot(snapshot: MatchSnapshot) {
       event === GOAL_EVENT ||
       event === SHOOT_EVENT ||
       event === GOALKEEPER_SAVE_EVENT ||
+      event === SLIDE_TACKLE_EVENT ||
       isShotSkill(snapshot) ||
       snapshot.highlight?.skill === EPlayerSkill.EAGLE_EYE)
   );
@@ -152,6 +159,22 @@ function getBallProgressAlpha(snapshot: MatchSnapshot, alpha: number) {
 function shouldSnapPlayers(snapshot: MatchSnapshot) {
   const event = snapshot.highlight?.event;
   return event === 51 || event === 53;
+}
+
+function isTackleMotionSnapshot(snapshot: MatchSnapshot) {
+  const event = snapshot.highlight?.event;
+  const skill = snapshot.ball.skillTrajectory ?? snapshot.highlight?.skill ?? null;
+  return (
+    event === TACKLE_EVENT ||
+    event === SLIDE_TACKLE_EVENT ||
+    event === FOUL_EVENT ||
+    skill === EPlayerSkill.TANK_TACKLE
+  );
+}
+
+function requiresFullMotionCompletion(snapshot: MatchSnapshot) {
+  const event = snapshot.highlight?.event;
+  return (event === FREE_KICK_EVENT && Boolean(snapshot.restart)) || isTackleMotionSnapshot(snapshot);
 }
 
 function normalizeBallPath(points: Array<{ x: number; y: number }>) {
@@ -290,6 +313,29 @@ function getPassBallPosition(input: {
   return interpolatePathByDistance([releasePosition, ...curvedPath, target], linear(flightAlpha));
 }
 
+function getTackleBallPosition(input: {
+  next: MatchSnapshot;
+  ballFrom: { x: number; y: number };
+  ballAlpha: number;
+}) {
+  if (input.ballAlpha <= TACKLE_CONTACT_SHARE) {
+    return input.ballFrom;
+  }
+
+  const contactAlpha =
+    (input.ballAlpha - TACKLE_CONTACT_SHARE) / (1 - TACKLE_CONTACT_SHARE);
+  const path =
+    input.next.highlight?.event === SLIDE_TACKLE_EVENT
+      ? [
+          input.ballFrom,
+          ...(input.next.ball.trajectory ?? []),
+          { x: input.next.ball.x, y: input.next.ball.y },
+        ]
+      : [input.ballFrom, { x: input.next.ball.x, y: input.next.ball.y }];
+
+  return interpolatePathByDistance(path, linear(contactAlpha));
+}
+
 function interpolateSnapshot(
   previous: MatchSnapshot | null,
   next: MatchSnapshot,
@@ -320,8 +366,17 @@ function interpolateSnapshot(
           ballAlpha: easedBallAlpha,
         })
       : null;
+  const tackleBallPosition =
+    isTackleMotionSnapshot(next)
+      ? getTackleBallPosition({
+          next,
+          ballFrom: { x: ballFromX, y: ballFromY },
+          ballAlpha: easedBallAlpha,
+        })
+      : null;
   const ballPosition =
     passBallPosition ??
+    tackleBallPosition ??
     (ballPath
       ? interpolatePathByDistance(
           ballPath,
@@ -443,7 +498,7 @@ export function useMatchMotion(
     nextRef.current = snapshot;
     durationRef.current = instantFrame ? 16 : baseDuration + jitterBuffer;
     playerMotionDurationRef.current = instantFrame ? 0 : durationRef.current;
-    promotionLeadRef.current = jitterBuffer;
+    promotionLeadRef.current = requiresFullMotionCompletion(snapshot) ? 0 : jitterBuffer;
     const promotionDuration = Math.max(120, durationRef.current - promotionLeadRef.current);
     ballDurationRef.current = instantFrame
       ? 16

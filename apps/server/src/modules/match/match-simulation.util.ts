@@ -60,7 +60,11 @@ const THROW_IN_SETUP_DELAY_MS = 420;
 const THROW_IN_FRAME_DURATION_MS = 440;
 const PENALTY_SETUP_DELAY_MS = 600;
 const PENALTY_KICK_FRAME_DURATION_MS = 520;
-const FREE_KICK_SETUP_DELAY_MS = 900;
+const FREE_KICK_QUICK_SETUP_DELAY_MS = 620;
+const FREE_KICK_SETUP_MIN_DELAY_MS = 1_500;
+const FREE_KICK_SETUP_MAX_DELAY_MS = 2_800;
+const QUICK_FREE_KICK_MIN_GOAL_DISTANCE_METERS = 42;
+const QUICK_FREE_KICK_MAX_TAKER_DISTANCE_METERS = 12;
 const HALF_TIME_WHISTLE_DURATION_MS = 420;
 const HALF_TIME_TUNNEL_DURATION_MS = 700;
 const SECOND_HALF_KICKOFF_DURATION_MS = 520;
@@ -99,11 +103,14 @@ const SHOT_SPEED_UNITS_PER_TICK = MOVEMENT.shotSpeed * SIM_TICK_SECONDS * 1.18;
 const PLAYER_MOVEMENT_TEMPO_MULTIPLIER = 1.3;
 const LOOSE_BALL_CHASE_MULTIPLIER = 1.5;
 const PASS_RECEIVE_WINDOW_SECONDS = PASS_FRAME_DURATION_MS / 1000;
-const SLIDE_TACKLE_MAX_SHAPE_DISTANCE = 1.35;
-const SLIDE_TACKLE_EMERGENCY_SHAPE_DISTANCE = 1.12;
-const STANDING_TACKLE_MAX_SHAPE_DISTANCE = 1.22;
-const TANK_TACKLE_MAX_SHAPE_DISTANCE = 1.55;
-const TACKLE_MAX_BALL_DISTANCE = 6.2;
+const SLIDE_TACKLE_MAX_SHAPE_DISTANCE = 1.12;
+const SLIDE_TACKLE_EMERGENCY_SHAPE_DISTANCE = 1.02;
+const STANDING_TACKLE_MAX_SHAPE_DISTANCE = 1.05;
+const TANK_TACKLE_MAX_SHAPE_DISTANCE = 1.2;
+const TACKLE_MAX_BALL_DISTANCE = 3.8;
+const TACKLE_BALL_CONTACT_DISTANCE = 2.7;
+const TACKLE_PLAYER_CONTACT_SHAPE_DISTANCE = 1.08;
+const TACKLE_FROM_BEHIND_DOT_THRESHOLD = -0.18;
 export const FRAMES_PER_ACTION = 7;
 export const ACTIONS_PER_HALF = 14;
 
@@ -262,6 +269,7 @@ type MatchRestart = {
   takerPlayerId: number;
   wallPlayerIds: number[];
   distanceToGoal: number;
+  quick: boolean;
 };
 
 type CornerDeliveryResult = {
@@ -1024,13 +1032,24 @@ export function generateNextMatchTick(input: {
     const attackingLineup = freeKickSide === "home" ? homeLineup : awayLineup;
     const defendingLineup = freeKickSide === "home" ? awayLineup : homeLineup;
     const spot = { x: latestTick.ball.x, y: latestTick.ball.y };
-    const taker = chooseFreeKickTaker(attackingLineup, spot, previousPositionState);
-    const wallPlayerIds = selectFreeKickWall({
-      defending: defendingLineup,
-      ball: spot,
+    const quickTaker = findNearestOutfieldPlayer(attackingLineup, spot, previousPositionState);
+    const quick = shouldTakeQuickFreeKick({
       possession: freeKickSide,
-      previousPositionState,
-    }).wallPlayerIds;
+      spot,
+      taker: quickTaker,
+      positionState: previousPositionState,
+    });
+    const taker =
+      (quick ? quickTaker : null) ??
+      chooseFreeKickTaker(attackingLineup, spot, previousPositionState);
+    const wallPlayerIds = quick
+      ? []
+      : selectFreeKickWall({
+          defending: defendingLineup,
+          ball: spot,
+          possession: freeKickSide,
+          previousPositionState,
+        }).wallPlayerIds;
     const restart: MatchRestart = {
       kind: "indirect_free_kick",
       source: "offside",
@@ -1038,7 +1057,15 @@ export function generateNextMatchTick(input: {
       takerPlayerId: taker.userPlayerId,
       wallPlayerIds,
       distanceToGoal: distanceToAttackingGoal(freeKickSide, spot),
+      quick,
     };
+    const setupTargets = getFreeKickSetupTargetsForRestart({
+      attacking: attackingLineup,
+      defending: defendingLineup,
+      possession: freeKickSide,
+      restart,
+      positionState: previousPositionState,
+    });
     const snapshot = buildSnapshot({
       frameId,
       minute,
@@ -1056,7 +1083,11 @@ export function generateNextMatchTick(input: {
       ballPath: pathBetween(spot, spot),
       highlight: createHighlight(
         EMatchEvent.FREE_KICK,
-        `Tick ${nextTickValue}: ${taker.shortName} chuan bi da phat gian tiep sau loi viet vi`,
+        `Tick ${nextTickValue}: ${taker.shortName} ${
+          quick
+            ? "da phat nhanh sau loi viet vi"
+            : "chuan bi da phat gian tiep sau loi viet vi"
+        }`,
         freeKickSide,
         taker.userPlayerId,
         wallPlayerIds[0] ?? null,
@@ -1065,7 +1096,12 @@ export function generateNextMatchTick(input: {
       activeSkill: null,
       focusId: taker.userPlayerId,
       pressId: wallPlayerIds[0] ?? null,
-      durationMsOverride: FREE_KICK_SETUP_DELAY_MS,
+      durationMsOverride: getFreeKickSetupDurationMs(
+        setupTargets,
+        previousPositionState,
+        quick,
+      ),
+      setPieceTargetsOverride: setupTargets,
       instantSetPiece: true,
       restart,
       positionState: previousPositionState,
@@ -1088,6 +1124,7 @@ export function generateNextMatchTick(input: {
           wallCount: wallPlayerIds.length,
           wallPlayerIds,
           distanceToGoal: restart.distanceToGoal,
+          quickFreeKick: restart.quick,
           spot,
         },
       },
@@ -1105,6 +1142,7 @@ export function generateNextMatchTick(input: {
       takerPlayerId: latestTick.highlight.actorPlayerId ?? attackingLineup[0].userPlayerId,
       wallPlayerIds: [],
       distanceToGoal: distanceToAttackingGoal(freeKickSide, latestTick.ball),
+      quick: false,
     };
     const taker =
       attackingLineup.find((player) => player.userPlayerId === restart.takerPlayerId) ??
@@ -1170,6 +1208,7 @@ export function generateNextMatchTick(input: {
           wallCount: freeKick.wallPlayerIds.length,
           wallPlayerIds: freeKick.wallPlayerIds,
           distanceToGoal: freeKick.distanceToGoal,
+          quickFreeKick: restart.quick,
           from: restart.spot,
           to: freeKick.target,
           isGoal: freeKick.isGoal,
@@ -1315,14 +1354,26 @@ export function generateNextMatchTick(input: {
     }
 
     const spot = { x: latestTick.ball.x, y: latestTick.ball.y };
-    const freeKickTaker =
-      chooseFreeKickTaker(attackingLineup, spot, previousPositionState) ?? taker;
-    const wallPlayerIds = selectFreeKickWall({
-      defending: defendingLineup,
-      ball: spot,
+    const quickTaker =
+      findNearestOutfieldPlayer(attackingLineup, spot, previousPositionState) ?? taker;
+    const quick = shouldTakeQuickFreeKick({
       possession: freeKickSide,
-      previousPositionState,
-    }).wallPlayerIds;
+      spot,
+      taker: quickTaker,
+      positionState: previousPositionState,
+    });
+    const freeKickTaker =
+      (quick ? quickTaker : null) ??
+      chooseFreeKickTaker(attackingLineup, spot, previousPositionState) ??
+      taker;
+    const wallPlayerIds = quick
+      ? []
+      : selectFreeKickWall({
+          defending: defendingLineup,
+          ball: spot,
+          possession: freeKickSide,
+          previousPositionState,
+        }).wallPlayerIds;
     const restart: MatchRestart = {
       kind: "direct_free_kick",
       source: "foul",
@@ -1330,7 +1381,15 @@ export function generateNextMatchTick(input: {
       takerPlayerId: freeKickTaker.userPlayerId,
       wallPlayerIds,
       distanceToGoal: distanceToAttackingGoal(freeKickSide, spot),
+      quick,
     };
+    const setupTargets = getFreeKickSetupTargetsForRestart({
+      attacking: attackingLineup,
+      defending: defendingLineup,
+      possession: freeKickSide,
+      restart,
+      positionState: previousPositionState,
+    });
     const snapshot = buildSnapshot({
       frameId,
       minute,
@@ -1348,7 +1407,9 @@ export function generateNextMatchTick(input: {
       ballPath: pathBetween(spot, spot),
       highlight: createHighlight(
         EMatchEvent.FREE_KICK,
-        `Tick ${nextTickValue}: ${freeKickTaker.shortName} chuan bi da phat truc tiep`,
+        `Tick ${nextTickValue}: ${freeKickTaker.shortName} ${
+          quick ? "thuc hien da phat nhanh" : "chuan bi da phat truc tiep"
+        }`,
         freeKickSide,
         freeKickTaker.userPlayerId,
         wallPlayerIds[0] ?? null,
@@ -1357,7 +1418,12 @@ export function generateNextMatchTick(input: {
       activeSkill: null,
       focusId: freeKickTaker.userPlayerId,
       pressId: wallPlayerIds[0] ?? null,
-      durationMsOverride: FREE_KICK_SETUP_DELAY_MS,
+      durationMsOverride: getFreeKickSetupDurationMs(
+        setupTargets,
+        previousPositionState,
+        quick,
+      ),
+      setPieceTargetsOverride: setupTargets,
       instantSetPiece: true,
       restart,
       positionState: previousPositionState,
@@ -1380,6 +1446,7 @@ export function generateNextMatchTick(input: {
           wallCount: wallPlayerIds.length,
           wallPlayerIds,
           distanceToGoal: restart.distanceToGoal,
+          quickFreeKick: restart.quick,
           spot,
         },
       },
@@ -1976,6 +2043,12 @@ export function generateNextMatchTick(input: {
         : null;
 
     if (tackleDecision) {
+      const tacklePlayerTargets = getTacklePlayerTargets({
+        defender: tempoDecision.pressDefender,
+        actor,
+        ball: latestTick.ball,
+        positionState: previousPositionState,
+      });
       if (tackleDecision.isFoul) {
         const snapshot = buildSnapshot({
           frameId,
@@ -1997,7 +2070,7 @@ export function generateNextMatchTick(input: {
           ),
           highlight: createHighlight(
             EMatchEvent.FOUL,
-            `Tick ${nextTickValue}: ${tempoDecision.pressDefender.shortName} xoac sai, pham loi voi ${actor.shortName}`,
+            `Tick ${nextTickValue}: ${tempoDecision.pressDefender.shortName} ${tackleDecision.label} voi ${actor.shortName}`,
             possession,
             actor.userPlayerId,
             tempoDecision.pressDefender.userPlayerId,
@@ -2006,6 +2079,8 @@ export function generateNextMatchTick(input: {
           activeSkill: null,
           focusId: actor.userPlayerId,
           pressId: tempoDecision.pressDefender.userPlayerId,
+          forceLooseBall: true,
+          setPieceTargetsOverride: tacklePlayerTargets,
           positionState: previousPositionState,
         });
 
@@ -2064,6 +2139,7 @@ export function generateNextMatchTick(input: {
         pressId: actor.userPlayerId,
         forceLooseBall:
           tackleDecision.isDeflection || tackleDecision.event === EMatchEvent.SLIDE_TACKLE,
+        setPieceTargetsOverride: tacklePlayerTargets,
         positionState: previousPositionState,
       });
 
@@ -4719,10 +4795,32 @@ function resolveDebugDefensiveAction(input: {
     0.12,
     skill === EPlayerSkill.TANK_TACKLE ? 0.9 : 0.74,
   );
+  const carrierDirection = getNormalizedDirection(actorPosition, input.ballTarget, {
+    x: 0,
+    y: attackDirection(input.actor.side),
+  });
+  const defenderApproach = getNormalizedDirection(actorPosition, defenderPosition, {
+    x: 0,
+    y: 0,
+  });
+  const approachDot =
+    carrierDirection.x * defenderApproach.x + carrierDirection.y * defenderApproach.y;
+  const hitsPlayer = shapeDistance <= TACKLE_PLAYER_CONTACT_SHAPE_DISTANCE;
+  const missesBall = distanceToBall > TACKLE_BALL_CONTACT_DISTANCE;
+  const tacklesFromBehind = hitsPlayer && approachDot <= TACKLE_FROM_BEHIND_DOT_THRESHOLD;
+  const foulResult = (label: string) => ({
+    event: EMatchEvent.FOUL,
+    label,
+    target: moveToward(input.ball, input.ballTarget, PASS_SPEED_UNITS_PER_TICK * 0.28),
+    isFoul: true,
+    shapeDistance,
+    ballDistanceAtChallenge: distanceToBall,
+  });
 
   if (
     (input.nextTick % TACKLE_CADENCE_TICKS === 0 ||
-      (shapeDistance <= SLIDE_TACKLE_EMERGENCY_SHAPE_DISTANCE && distanceToBall <= 4.2)) &&
+      (shapeDistance <= SLIDE_TACKLE_EMERGENCY_SHAPE_DISTANCE &&
+        distanceToBall <= TACKLE_BALL_CONTACT_DISTANCE)) &&
     challengeDistance <= TACKLE_MAX_BALL_DISTANCE &&
     shapeDistance <= maxShapeDistance
   ) {
@@ -4734,12 +4832,29 @@ function resolveDebugDefensiveAction(input: {
       y: clamp(lerp(input.ball.y, defenderPosition.y, isClean ? 0.78 : 0.34), 6, 94),
     };
 
+    if (tacklesFromBehind) {
+      return foulResult("xoac tu phia sau va pham loi");
+    }
+
     if (!isClean) {
+      if (missesBall && hitsPlayer) {
+        return foulResult("xoac khong trung bong va pham loi");
+      }
+
+      if (missesBall) {
+        return null;
+      }
+
       return {
-        event: EMatchEvent.FOUL,
-        label: "xoac sai va pham loi",
-        target: moveToward(input.ball, input.ballTarget, PASS_SPEED_UNITS_PER_TICK * 0.45),
-        isFoul: true,
+        event: EMatchEvent.SLIDE_TACKLE,
+        label: "xoac cham bong lam bong vang ra",
+        target: getTackleDeflectionTarget({
+          ball: input.ball,
+          ballTarget: input.ballTarget,
+          defenderPosition,
+          nextTick: input.nextTick,
+        }),
+        isDeflection: true,
         shapeDistance,
         ballDistanceAtChallenge: distanceToBall,
       };
@@ -4765,7 +4880,13 @@ function resolveDebugDefensiveAction(input: {
       event: skill === EPlayerSkill.TANK_TACKLE ? EMatchEvent.SKILL_USED : EMatchEvent.SLIDE_TACKLE,
       label:
         skill === EPlayerSkill.TANK_TACKLE ? `dung ${getSkillLabel(skill)} cuop bong` : "xoac bong",
-      target: moveToward(input.ball, target, 3.2),
+      target: getTackleDeflectionTarget({
+        ball: input.ball,
+        ballTarget: target,
+        defenderPosition,
+        nextTick: input.nextTick,
+      }),
+      isDeflection: skill !== EPlayerSkill.TANK_TACKLE,
       skill,
       skillLabel: skill ? getSkillLabel(skill) : null,
       shapeDistance,
@@ -4777,12 +4898,21 @@ function resolveDebugDefensiveAction(input: {
     skill === EPlayerSkill.TANK_TACKLE
       ? TANK_TACKLE_MAX_SHAPE_DISTANCE
       : STANDING_TACKLE_MAX_SHAPE_DISTANCE;
-  if (
+  const attemptsStandingTackle =
     input.nextTick % Math.max(3, Math.round(TACKLE_CADENCE_TICKS * 0.7)) === 0 &&
     shapeDistance <= standingShapeDistance &&
-    distanceToBall <= TACKLE_MAX_BALL_DISTANCE &&
-    timingRoll < successChance + 0.08
-  ) {
+    distanceToBall <= TACKLE_MAX_BALL_DISTANCE;
+  if (attemptsStandingTackle) {
+    if (tacklesFromBehind) {
+      return foulResult("tac bong tu phia sau va pham loi");
+    }
+
+    if (timingRoll >= successChance + 0.08) {
+      return missesBall && hitsPlayer
+        ? foulResult("tac khong trung bong va pham loi")
+        : null;
+    }
+
     addSkillCharge(input.defender, EPlayerSkill.TANK_TACKLE, 25);
     const target = {
       x: clamp(lerp(input.ballTarget.x, defenderPosition.x, 0.55), 6, 94),
@@ -4829,6 +4959,45 @@ function getTackleDeflectionTarget(input: {
     x: clamp(lerp(input.ball.x, input.defenderPosition.x, 0.42) + deflect.x, -4, 104),
     y: clamp(lerp(input.ball.y, input.defenderPosition.y, 0.42) + deflect.y, -4, 104),
   };
+}
+
+function getNormalizedDirection(
+  from: TrajectoryPoint,
+  to: TrajectoryPoint,
+  fallback: TrajectoryPoint,
+) {
+  const vector = { x: to.x - from.x, y: to.y - from.y };
+  const length = Math.hypot(vector.x, vector.y);
+  if (length <= 0.001) return fallback;
+  return { x: vector.x / length, y: vector.y / length };
+}
+
+function getTacklePlayerTargets(input: {
+  defender: InternalLineupPlayer;
+  actor: InternalLineupPlayer;
+  ball: TrajectoryPoint;
+  positionState: PositionState;
+}) {
+  const targets = new Map<number, SetPiecePlayerTarget>();
+  const defenderPosition = getPlayerPosition(input.positionState, input.defender);
+  const actorPosition = getPlayerPosition(input.positionState, input.actor);
+  const contactPoint = {
+    x: lerp(input.ball.x, actorPosition.x, 0.35),
+    y: lerp(input.ball.y, actorPosition.y, 0.35),
+  };
+
+  targets.set(input.defender.userPlayerId, {
+    target: moveToward(defenderPosition, contactPoint, TACKLE_MAX_BALL_DISTANCE),
+    intent: "press",
+    aiState: "PRESS_BALL",
+  });
+  targets.set(input.actor.userPlayerId, {
+    target: actorPosition,
+    intent: "anchor",
+    aiState: "HOLD_POSITION",
+  });
+
+  return targets;
 }
 
 function resolveDebugShotAction(
@@ -5425,6 +5594,38 @@ function chooseFreeKickTaker(
   );
 }
 
+function findNearestOutfieldPlayer(
+  lineup: InternalLineupPlayer[],
+  spot: TrajectoryPoint,
+  positionState: PositionState,
+) {
+  return (
+    lineup
+      .filter((player) => player.role !== "GK")
+      .map((player) => ({
+        player,
+        distance: pitchDistanceMeters(getPlayerPosition(positionState, player), spot),
+      }))
+      .sort((left, right) => left.distance - right.distance)[0]?.player ?? null
+  );
+}
+
+function shouldTakeQuickFreeKick(input: {
+  possession: Side;
+  spot: TrajectoryPoint;
+  taker: InternalLineupPlayer | null;
+  positionState: PositionState;
+}) {
+  if (!input.taker) return false;
+
+  return (
+    distanceToAttackingGoal(input.possession, input.spot) >=
+      QUICK_FREE_KICK_MIN_GOAL_DISTANCE_METERS &&
+    pitchDistanceMeters(getPlayerPosition(input.positionState, input.taker), input.spot) <=
+      QUICK_FREE_KICK_MAX_TAKER_DISTANCE_METERS
+  );
+}
+
 function resolvePenaltyKickAction(input: {
   taker: InternalLineupPlayer;
   defending: InternalLineupPlayer[];
@@ -5929,6 +6130,62 @@ function getFreeKickSetupTargets(input: {
   });
 
   return targets;
+}
+
+function getFreeKickSetupTargetsForRestart(input: {
+  attacking: InternalLineupPlayer[];
+  defending: InternalLineupPlayer[];
+  possession: Side;
+  restart: MatchRestart;
+  positionState: PositionState;
+}) {
+  if (input.restart.quick) {
+    return new Map<number, SetPiecePlayerTarget>([
+      [
+        input.restart.takerPlayerId,
+        {
+          target: input.restart.spot,
+          intent: "anchor",
+          aiState: "HOLD_POSITION",
+        },
+      ],
+    ]);
+  }
+
+  return getFreeKickSetupTargets({
+    attacking: input.attacking,
+    defending: input.defending,
+    possession: input.possession,
+    spot: input.restart.spot,
+    takerId: input.restart.takerPlayerId,
+    wallPlayerIds: input.restart.wallPlayerIds,
+    positionState: input.positionState,
+  });
+}
+
+function getFreeKickSetupDurationMs(
+  targets: Map<number, SetPiecePlayerTarget>,
+  positionState: PositionState,
+  quick: boolean,
+) {
+  if (quick) return FREE_KICK_QUICK_SETUP_DELAY_MS;
+
+  const longestTravelMeters = Array.from(targets.entries()).reduce(
+    (longest, [playerId, target]) => {
+      const current = positionState.players.get(playerId);
+      if (!current) return longest;
+      return Math.max(longest, pitchDistanceMeters(current, target.target));
+    },
+    0,
+  );
+
+  return Math.round(
+    clamp(
+      FREE_KICK_SETUP_MIN_DELAY_MS + longestTravelMeters * 18,
+      FREE_KICK_SETUP_MIN_DELAY_MS,
+      FREE_KICK_SETUP_MAX_DELAY_MS,
+    ),
+  );
 }
 
 function chooseShotTarget(ball: TrajectoryPoint, possession: Side, nextTick: number) {
@@ -8999,13 +9256,11 @@ function buildSnapshot(input: {
   const setPieceTargets =
     input.setPieceTargetsOverride ??
     (input.highlight.event === EMatchEvent.FREE_KICK && input.restart
-      ? getFreeKickSetupTargets({
+      ? getFreeKickSetupTargetsForRestart({
           attacking: input.possession === "home" ? input.homeLineup : input.awayLineup,
           defending: input.possession === "home" ? input.awayLineup : input.homeLineup,
           possession: input.possession,
-          spot: input.restart.spot,
-          takerId: input.restart.takerPlayerId,
-          wallPlayerIds: input.restart.wallPlayerIds,
+          restart: input.restart,
           positionState: input.positionState,
         })
       : input.highlight.event === EMatchEvent.CORNER_KICK
