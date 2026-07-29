@@ -951,6 +951,10 @@ function evaluateSpaceOccupation(
   if (!context.hasPossession) return null;
 
   const { role } = context;
+  const frontUnitCombination = getFrontUnitCombinationDecision(player, context);
+  if (frontUnitCombination) {
+    return frontUnitCombination;
+  }
 
   if (role === "CM" && shouldInfiltrateFromMidfield(player, context)) {
     const state = "ATTACK_SPACE";
@@ -2495,6 +2499,83 @@ function getStrikerAttackState(player: Player, context: MovementContext): Player
   if (variant === 2) return "CURVED_RUN";
   if (variant === 3) return "RUN_ON_SHOULDER";
   return "ATTACK_SPACE";
+}
+
+function getFrontUnitCombinationDecision(
+  player: Player,
+  context: MovementContext,
+): MovementDecision | null {
+  const role = normalizeRole(player.role);
+  const owner = context.owner?.side === player.side ? context.owner : null;
+  if (!owner || owner.id === player.id || (role !== "ST" && role !== "W")) {
+    return null;
+  }
+
+  const ownerRole = normalizeRole(owner.role);
+  if (ownerRole !== "ST" && ownerRole !== "W" && ownerRole !== "CM") {
+    return null;
+  }
+
+  const attackProgress = context.direction < 0 ? 100 - context.ball.y : context.ball.y;
+  if (attackProgress < 56) {
+    return null;
+  }
+
+  const ownerPressure = countNearbyOpponents(owner.position, context.opponents, 8);
+  const patternVariant = getTacticalVariant(context.tick, owner.id, 5, 1.8);
+  const finalThird = isInFinalThird(player.side, context.ball.y);
+  if (!finalThird && ownerPressure === 0 && patternVariant > 1) {
+    return null;
+  }
+  if (finalThird && ownerPressure === 0 && patternVariant > 2) {
+    return null;
+  }
+
+  const forwardPartners = context.teammates
+    .filter((teammate) => {
+      const teammateRole = normalizeRole(teammate.role);
+      return (
+        teammate.id !== owner.id &&
+        (teammateRole === "ST" || teammateRole === "W")
+      );
+    })
+    .sort(
+      (left, right) =>
+        distance(left.position, owner.position) - distance(right.position, owner.position) ||
+        left.id - right.id,
+    );
+  const wallPlayer = forwardPartners[0] ?? null;
+  const thirdRunner = forwardPartners[1] ?? null;
+  if (player.id !== wallPlayer?.id && player.id !== thirdRunner?.id) {
+    return null;
+  }
+
+  const wallSide =
+    wallPlayer && Math.abs(wallPlayer.position.x - owner.position.x) >= 2
+      ? Math.sign(wallPlayer.position.x - owner.position.x)
+      : wallPlayer && wallPlayer.homePosition.x < 50
+        ? -1
+        : 1;
+
+  if (player.id === wallPlayer?.id) {
+    const target = clampToRoleZone(player, {
+      x: clamp(owner.position.x + wallSide * (finalThird ? 7 : 9), 12, 88),
+      y: clamp(owner.position.y - context.direction * (finalThird ? 4.5 : 6), 8, 92),
+    });
+    return {
+      state: "DROP_SHORT",
+      targetPosition: applyTeamSpacing(player, context.teammates, target),
+    };
+  }
+
+  const target = clampToRoleZone(player, {
+    x: clamp(owner.position.x - wallSide * (finalThird ? 12 : 14), 10, 90),
+    y: clamp(owner.position.y + context.direction * (finalThird ? 13 : 11), 7, 93),
+  });
+  return {
+    state: "THIRD_MAN_RUN",
+    targetPosition: applyTeamSpacing(player, context.teammates, target),
+  };
 }
 
 function getStrikerAttackingSpace(player: Player, context: MovementContext, state: PlayerAIState) {

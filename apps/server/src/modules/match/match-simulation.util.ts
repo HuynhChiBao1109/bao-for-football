@@ -126,6 +126,14 @@ type MatchStep =
 type PlayActionType = "pass" | "shoot" | "block" | "goal" | "save";
 type PossessionTempoKind = "pass" | "hold" | "carry" | "reposition";
 type PassStyle = "short" | "one_two" | "through" | "lob" | "switch";
+type MatchCombination = {
+  kind: "one_two" | "triangle";
+  step: 1 | 2;
+  initiatorPlayerId: number;
+  wallPlayerId: number;
+  thirdRunnerPlayerId: number | null;
+  expiresAtTick: number;
+};
 type PassTargetIntent = "feet" | "through";
 type PassingPhase =
   | "pressure_escape"
@@ -427,6 +435,8 @@ export type MatchSnapshot = {
     skill: EPlayerSkill | null;
     skillSlug: string | null;
     kickoffWhistle?: boolean;
+    passStyle?: PassStyle;
+    combination?: MatchCombination | null;
   };
 };
 
@@ -1941,6 +1951,12 @@ export function generateNextMatchTick(input: {
           looseBallContest.winner.userPlayerId,
           looseBallContest.receiver.userPlayerId,
           null,
+          isRecoveryByOpponent
+            ? undefined
+            : {
+                passStyle: latestTick.highlight?.passStyle,
+                combination: latestTick.highlight?.combination ?? null,
+              },
         ),
         activeSkill: null,
         focusId: looseBallContest.winner.userPlayerId,
@@ -2056,15 +2072,18 @@ export function generateNextMatchTick(input: {
     ) ??
     attacking[0];
   const phase = latestTick.phase === "second_half" ? "second_half" : "first_half";
+  const activeCombination = getActiveMatchCombination(latestTick, actor, nextTickValue);
   const tempoDecision = resolveDebugPossessionTempoAction({
     previousTicks,
     latestEvent: latestTick.highlight?.event ?? null,
     actor,
+    attacking,
     defending,
     previousPositionState,
     ball: latestTick.ball,
     nextTick: actionTick,
     possession,
+    forceCombinationPass: Boolean(activeCombination),
   });
   const shotAction = resolveDebugShotAction(
     {
@@ -2077,7 +2096,7 @@ export function generateNextMatchTick(input: {
       nextTick: actionTick,
       latestEvent: latestTick.highlight?.event ?? null,
     },
-    true,
+    !activeCombination,
   );
 
   if (shotAction) {
@@ -2400,6 +2419,10 @@ export function generateNextMatchTick(input: {
     preferProgressive:
       countConsecutivePossessionTicks(previousTicks, possession) <=
       Math.max(5, Math.round(4 * TICKS_PER_SECOND)),
+    preferredReceiverIds: activeCombination
+      ? getCombinationReceiverPriority(activeCombination)
+      : undefined,
+    forcedPassStyle: activeCombination ? "one_two" : undefined,
   });
   const {
     receiver,
@@ -2413,6 +2436,7 @@ export function generateNextMatchTick(input: {
     estimatedCompletion: passEstimatedCompletion,
     offside,
     offsideSnapshot,
+    triangleRunner,
   } = passDecision;
   const defensiveAction = passDecision.interception;
   const offsideReceive = checkOffsideOnReceive(receiver, offsideSnapshot);
@@ -2548,7 +2572,28 @@ export function generateNextMatchTick(input: {
     };
   }
 
-  const passLabel = getPassStyleLabel(passStyle);
+  const combination: MatchCombination | null = activeCombination
+    ? {
+        ...activeCombination,
+        step: 2,
+        expiresAtTick: nextTickValue + Math.max(2, Math.round(1.2 * TICKS_PER_SECOND)),
+      }
+    : passStyle === "one_two"
+      ? {
+          kind: triangleRunner ? "triangle" : "one_two",
+          step: 1,
+          initiatorPlayerId: actor.userPlayerId,
+          wallPlayerId: receiver.userPlayerId,
+          thirdRunnerPlayerId: triangleRunner?.userPlayerId ?? null,
+          expiresAtTick: nextTickValue + Math.max(3, Math.round(1.8 * TICKS_PER_SECOND)),
+        }
+      : null;
+  const passLabel =
+    combination?.kind === "triangle"
+      ? combination.step === 1
+        ? "phoi hop tam giac"
+        : "chuyen cho nguoi thu ba"
+      : getPassStyleLabel(passStyle);
   const passBallPath =
     passSkill === EPlayerSkill.EAGLE_EYE
       ? buildEagleEyePassTrajectory(
@@ -2585,11 +2630,27 @@ export function generateNextMatchTick(input: {
       actor.userPlayerId,
       receiver.userPlayerId,
       passSkill,
+      {
+        passStyle,
+        combination,
+      },
     ),
     activeSkill: passSkill,
     passTargetIntent,
     focusId: receiver.userPlayerId,
     pressId: pressDefender?.userPlayerId ?? null,
+    setPieceTargetsOverride: combination
+      ? getCombinationRunTargets({
+          attacking,
+          defending,
+          possession,
+          actor,
+          receiver,
+          combination,
+          positionState: previousPositionState,
+        })
+      : undefined,
+    instantSetPiece: false,
     positionState: previousPositionState,
   });
 
@@ -2609,6 +2670,7 @@ export function generateNextMatchTick(input: {
         passTargetIntent,
         passSelectionPhase,
         passEstimatedCompletion,
+        combination,
         skill: passSkill,
         skillLabel: passSkillLabel,
         receiverPositionAtPass: offsideSnapshot?.receiverPositionAtPass ?? ballTarget,
@@ -3071,11 +3133,13 @@ function resolveDebugPossessionTempoAction(input: {
   previousTicks: MatchSnapshot[];
   latestEvent: EMatchEvent | null;
   actor: InternalLineupPlayer;
+  attacking: InternalLineupPlayer[];
   defending: InternalLineupPlayer[];
   previousPositionState: PositionState;
   ball: TrajectoryPoint;
   nextTick: number;
   possession: Side;
+  forceCombinationPass?: boolean;
 }): {
   kind: PossessionTempoKind;
   label: string;
@@ -3104,6 +3168,14 @@ function resolveDebugPossessionTempoAction(input: {
   });
   const goalDistance = distanceToAttackingGoal(input.possession, input.ball);
   const role = normalizeRole(input.actor.role);
+  const combinationWindow = evaluateAttackingCombinationWindow({
+    actor: input.actor,
+    attacking: input.attacking,
+    defending: input.defending,
+    ball: input.ball,
+    possession: input.possession,
+    previousPositionState: input.previousPositionState,
+  });
   const passBias = getClampedPlayerAiTendency(input.actor, "passBias", 1, 0.45, 1.4);
   const dribbleBias = getClampedPlayerAiTendency(input.actor, "dribbleBias", 1, 0.65, 1.75);
   const flairBias = getClampedPlayerAiTendency(input.actor, "flairBias", 0, 0, 1);
@@ -3131,6 +3203,11 @@ function resolveDebugPossessionTempoAction(input: {
     pressure.frontNearbyCount <= 1;
   const counterAttackWindow = teamTicks <= Math.max(5, Math.round(4 * TICKS_PER_SECOND));
   const openForwardLane = forwardSpace >= 0.62 && pressure.frontDistance >= 9;
+  const openCarryWindowTicks = Math.max(3, Math.round(1.45 * TICKS_PER_SECOND));
+  const shouldKeepDrivingIntoSpace =
+    openForwardLane &&
+    ownerTicks < openCarryWindowTicks &&
+    goalDistance > preferredFinishingDistance + 4;
   const chasedFromBehind = pressure.rearDistance <= 7 && pressure.frontDistance >= 8;
   const counterAttackCarry =
     !restartPass &&
@@ -3202,8 +3279,24 @@ function resolveDebugPossessionTempoAction(input: {
   const pressureReleaseDistance = passBias < 0.8 && dribbleBias > 1.2 ? 2.8 : 3.8;
   const passReleaseMargin = 0.12 + clamp((dribbleBias - 1) * 0.08, 0, 0.08);
   const tightPassReleaseMargin = 0.2 + clamp((dribbleBias - 1) * 0.1, 0, 0.12);
+  const combinationRoll =
+    ((input.nextTick * 29 +
+      input.actor.userPlayerId * 13 +
+      Math.round(input.ball.x * 5) +
+      ownerTicks * 7) %
+      100) /
+    100;
+  const shouldCombineInAttack =
+    combinationWindow.score >= 0.54 &&
+    ownerTicks >= MIN_OWNER_POSSESSION_TICKS &&
+    !shouldKeepDrivingIntoSpace &&
+    (pressure.frontDistance <= 8.5 ||
+      ownerTicks >= Math.max(4, Math.round(1.75 * TICKS_PER_SECOND)) ||
+      combinationRoll <= combinationWindow.score * 0.72);
   const shouldRelease =
     restartPass ||
+    Boolean(input.forceCombinationPass) ||
+    shouldCombineInAttack ||
     (!mustSettle &&
       !forceTakeOn &&
       !counterAttackCarry &&
@@ -3220,7 +3313,13 @@ function resolveDebugPossessionTempoAction(input: {
     return {
       kind: "pass",
       label:
-        pressure.frontDistance <= 3.8
+        input.forceCombinationPass
+          ? "tiep tuc pha phoi hop nhanh"
+          : shouldCombineInAttack
+            ? combinationWindow.hasTriangle
+              ? "mo pha phoi hop tam giac"
+              : "bat tuong voi dong doi phia tren"
+            : pressure.frontDistance <= 3.8
           ? "xa ap luc phia truoc bang duong chuyen"
           : "tim duong chuyen",
       ballTarget: input.ball,
@@ -3245,6 +3344,8 @@ function resolveDebugPossessionTempoAction(input: {
       label: "dan bong vao khoang trong de tien gan khung thanh",
       ballTarget: carryBallTarget({
         actor: input.actor,
+        defending: input.defending,
+        previousPositionState: input.previousPositionState,
         ball: input.ball,
         possession: input.possession,
         nextTick: input.nextTick,
@@ -3265,6 +3366,8 @@ function resolveDebugPossessionTempoAction(input: {
           : "keo bong tan cong 1v1",
       ballTarget: carryBallTarget({
         actor: input.actor,
+        defending: input.defending,
+        previousPositionState: input.previousPositionState,
         ball: input.ball,
         possession: input.possession,
         nextTick: input.nextTick,
@@ -3293,6 +3396,8 @@ function resolveDebugPossessionTempoAction(input: {
       label: forwardSpace >= 0.58 ? "tang toc dan bong len" : "keo bong giu nhip",
       ballTarget: carryBallTarget({
         actor: input.actor,
+        defending: input.defending,
+        previousPositionState: input.previousPositionState,
         ball: input.ball,
         possession: input.possession,
         nextTick: input.nextTick,
@@ -3321,6 +3426,196 @@ function resolveDebugPossessionTempoAction(input: {
     }),
     pressDefender,
   };
+}
+
+function evaluateAttackingCombinationWindow(input: {
+  actor: InternalLineupPlayer;
+  attacking: InternalLineupPlayer[];
+  defending: InternalLineupPlayer[];
+  ball: TrajectoryPoint;
+  possession: Side;
+  previousPositionState: PositionState;
+}) {
+  const actorRole = normalizeRole(input.actor.role);
+  const finalThird = isFinalThird(input.possession, input.ball.y);
+  const attackProgress = getAttackingProgress(input.possession, input.ball);
+  if (
+    attackProgress < 54 ||
+    (actorRole !== "ST" && actorRole !== "W" && actorRole !== "CM")
+  ) {
+    return { score: 0, hasTriangle: false };
+  }
+
+  const direction = attackDirection(input.possession);
+  const candidates = input.attacking
+    .filter((player) => {
+      if (player.userPlayerId === input.actor.userPlayerId) return false;
+      const role = normalizeRole(player.role);
+      return role === "ST" || role === "W" || role === "CM";
+    })
+    .map((player) => {
+      const role = normalizeRole(player.role);
+      const position = getPlayerPosition(input.previousPositionState, player);
+      const passDistance = distance(input.ball, position);
+      const forwardProgress = (position.y - input.ball.y) * direction;
+      const lane = evaluatePassLane({
+        from: input.ball,
+        to: position,
+        defending: input.defending,
+        previousPositionState: input.previousPositionState,
+      });
+      const offside = evaluateOffside({
+        receiver: player,
+        receiverPosition: position,
+        ball: input.ball,
+        defending: input.defending,
+        possession: input.possession,
+        previousPositionState: input.previousPositionState,
+      });
+      const frontPair =
+        (actorRole === "ST" || actorRole === "W") && (role === "ST" || role === "W");
+      const distanceFit = clamp(1 - Math.abs(passDistance - 12) / 16, 0, 1);
+      const forwardFit = clamp((forwardProgress + 8) / 18, 0, 1);
+
+      return {
+        player,
+        position,
+        passDistance,
+        offside,
+        score: offside.isOffside
+          ? 0
+          : clamp(
+              lane.score * 0.32 +
+                distanceFit * 0.28 +
+                forwardFit * 0.14 +
+                (frontPair ? 0.2 : 0.08) +
+                (finalThird ? 0.12 : 0),
+              0,
+              1,
+            ),
+      };
+    })
+    .filter((item) => item.passDistance >= 4.5 && item.passDistance <= 27)
+    .sort((left, right) => right.score - left.score);
+  const wallOption = candidates[0] ?? null;
+  if (!wallOption) {
+    return { score: 0, hasTriangle: false };
+  }
+
+  const thirdRunner = candidates.find((item) => {
+    if (item.player.userPlayerId === wallOption.player.userPlayerId) return false;
+    const wallToThird = distance(wallOption.position, item.position);
+    const triangleArea = Math.abs(
+      (wallOption.position.x - input.ball.x) * (item.position.y - input.ball.y) -
+        (wallOption.position.y - input.ball.y) * (item.position.x - input.ball.x),
+    );
+    return wallToThird >= 7 && wallToThird <= 29 && triangleArea >= 22 && !item.offside.isOffside;
+  });
+
+  return {
+    score: clamp(wallOption.score + (thirdRunner ? 0.16 : 0), 0, 1),
+    hasTriangle: Boolean(thirdRunner),
+  };
+}
+
+function getActiveMatchCombination(
+  latestTick: MatchSnapshot,
+  actor: InternalLineupPlayer,
+  nextTick: number,
+): MatchCombination | null {
+  const combination = latestTick.highlight?.combination;
+  if (
+    !combination ||
+    combination.step !== 1 ||
+    combination.wallPlayerId !== actor.userPlayerId ||
+    combination.expiresAtTick < nextTick
+  ) {
+    return null;
+  }
+
+  return combination;
+}
+
+function getCombinationReceiverPriority(combination: MatchCombination): number[] {
+  const priority =
+    combination.kind === "triangle"
+      ? [combination.thirdRunnerPlayerId, combination.initiatorPlayerId]
+      : [combination.initiatorPlayerId, combination.thirdRunnerPlayerId];
+
+  return priority.filter(
+    (playerId): playerId is number => playerId != null && playerId !== combination.wallPlayerId,
+  );
+}
+
+function getCombinationRunTargets(input: {
+  attacking: InternalLineupPlayer[];
+  defending: InternalLineupPlayer[];
+  possession: Side;
+  actor: InternalLineupPlayer;
+  receiver: InternalLineupPlayer;
+  combination: MatchCombination;
+  positionState: PositionState;
+}) {
+  const targets = new Map<number, SetPiecePlayerTarget>();
+  const direction = attackDirection(input.possession);
+  const actorPosition = getPlayerPosition(input.positionState, input.actor);
+  const receiverPosition = getPlayerPosition(input.positionState, input.receiver);
+  const offsideLine = getOffsideLine(
+    input.possession,
+    input.defending,
+    actorPosition,
+    input.positionState,
+  );
+  const runnerIds = [
+    input.combination.initiatorPlayerId,
+    input.combination.thirdRunnerPlayerId,
+    input.combination.wallPlayerId,
+  ].filter(
+    (playerId): playerId is number =>
+      playerId != null && playerId !== input.receiver.userPlayerId,
+  );
+
+  runnerIds.forEach((playerId, index) => {
+    const player = input.attacking.find((item) => item.userPlayerId === playerId);
+    if (!player) return;
+    const current = getPlayerPosition(input.positionState, player);
+    const sideFromReceiver =
+      Math.abs(current.x - receiverPosition.x) >= 2
+        ? Math.sign(current.x - receiverPosition.x)
+        : index % 2 === 0
+          ? -1
+          : 1;
+    const isThirdRunner = playerId === input.combination.thirdRunnerPlayerId;
+    const isInitiator = playerId === input.combination.initiatorPlayerId;
+    const rawY =
+      current.y +
+      direction *
+        (isThirdRunner ? 13 : isInitiator ? 11 : input.combination.step === 2 ? 9 : 7);
+    const onsideY =
+      direction < 0
+        ? Math.max(rawY, offsideLine.effectiveOffsideLineY + 1.25)
+        : Math.min(rawY, offsideLine.effectiveOffsideLineY - 1.25);
+    const target = {
+      x: clamp(
+        lerp(current.x, receiverPosition.x + sideFromReceiver * (isThirdRunner ? 13 : 9), 0.72),
+        9,
+        91,
+      ),
+      y: clamp(onsideY, 6, 94),
+    };
+
+    targets.set(playerId, {
+      target,
+      intent: "attack_space",
+      aiState: isThirdRunner
+        ? "THIRD_MAN_RUN"
+        : isInitiator
+          ? "ATTACK_SPACE_BEHIND"
+          : "DIAGONAL_RUN",
+    });
+  });
+
+  return targets;
 }
 
 function countConsecutivePossessionTicks(previousTicks: MatchSnapshot[], possession: Side) {
@@ -3366,6 +3661,8 @@ function getActionIntentVariant(
 
 function carryBallTarget(input: {
   actor: InternalLineupPlayer;
+  defending: InternalLineupPlayer[];
+  previousPositionState: PositionState;
   ball: TrajectoryPoint;
   possession: Side;
   nextTick: number;
@@ -3376,8 +3673,26 @@ function carryBallTarget(input: {
   const halfSpaceX = wideLaneX < 50 ? 30 : 70;
   const nearTouchline = input.ball.x <= 12 || input.ball.x >= 88;
   const finalThird = isFinalThird(input.possession, input.ball.y);
+  const openLane = evaluateForwardCarryLane({
+    actor: input.actor,
+    defending: input.defending,
+    ball: input.ball,
+    possession: input.possession,
+    previousPositionState: input.previousPositionState,
+  });
   const wobble =
     (getActionIntentVariant(input.nextTick, input.actor.userPlayerId, 5, 1.2) - 2) * 0.5;
+
+  if (openLane.score >= 0.58) {
+    return moveToward(
+      input.ball,
+      {
+        x: clamp(openLane.target.x + wobble * 0.35, 6, 94),
+        y: openLane.target.y,
+      },
+      PLAYER_SPEED_UNITS_PER_TICK.run * (openLane.score >= 0.78 ? 1.12 : 1),
+    );
+  }
 
   if (role === "FB" || role === "W") {
     const variant = getActionIntentVariant(input.nextTick, input.actor.userPlayerId, 4, 1.6);
@@ -3532,6 +3847,8 @@ function resolveDebugPassingAction(input: {
   nextTick: number;
   possession: Side;
   preferProgressive: boolean;
+  preferredReceiverIds?: number[];
+  forcedPassStyle?: PassStyle;
 }) {
   const candidates = input.lineup.filter(
     (player) => player.userPlayerId !== input.actor.userPlayerId && player.role !== "GK",
@@ -3642,19 +3959,34 @@ function resolveDebugPassingAction(input: {
         defending: input.defending,
         previousPositionState: input.previousPositionState,
       });
-      const passStyle = resolvePassStyle({
+      const trianglePattern = evaluateTrianglePattern({
+        lineup: input.lineup,
         actor: input.actor,
         receiver: player,
+        actorPosition: input.ball,
         receiverPosition: previous,
-        from: input.ball,
-        to: ballTarget,
         possession: input.possession,
-        laneScore: lane.score,
-        oneTwoValue,
-        targetIntent: passTarget.intent,
         defending: input.defending,
         previousPositionState: input.previousPositionState,
       });
+      const preferredReceiverIndex =
+        input.preferredReceiverIds?.findIndex((playerId) => playerId === player.userPlayerId) ?? -1;
+      const passStyle =
+        preferredReceiverIndex >= 0 && input.forcedPassStyle
+          ? input.forcedPassStyle
+          : resolvePassStyle({
+              actor: input.actor,
+              receiver: player,
+              receiverPosition: previous,
+              from: input.ball,
+              to: ballTarget,
+              possession: input.possession,
+              laneScore: lane.score,
+              oneTwoValue,
+              targetIntent: passTarget.intent,
+              defending: input.defending,
+              previousPositionState: input.previousPositionState,
+            });
       const offside = evaluateOffside({
         receiver: player,
         receiverPosition: previous,
@@ -3819,6 +4151,7 @@ function resolveDebugPassingAction(input: {
         targetIntent: passTarget.intent,
         offside,
         offsideSnapshot,
+        triangleRunner: trianglePattern.thirdRunner,
         completionProbability,
         passingPhase,
         score:
@@ -3830,6 +4163,7 @@ function resolveDebugPassingAction(input: {
           supportGeometry * 0.08 +
           combinationValue * 0.06 +
           oneTwoValue * 0.08 +
+          trianglePattern.score * 0.2 +
           phaseBonus +
           styleWeight +
           legalRunBonus +
@@ -3837,6 +4171,7 @@ function resolveDebugPassingAction(input: {
           trapBreakBonus +
           infiltratingReceiverBonus *
             (passingPhase === "transition" || passingPhase === "chance_creation" ? 1 : 0.25) +
+          (preferredReceiverIndex >= 0 ? 1.35 - preferredReceiverIndex * 0.12 : 0) +
           roleFit -
           pressurePenalty -
           backwardPassPenalty -
@@ -3848,7 +4183,7 @@ function resolveDebugPassingAction(input: {
     .sort((left, right) => right.score - left.score);
 
   const eagleEyePass =
-    buildUpSkill === EPlayerSkill.EAGLE_EYE
+    !input.forcedPassStyle && buildUpSkill === EPlayerSkill.EAGLE_EYE
       ? resolveEagleEyePassAction({
           lineup: input.lineup,
           defending: input.defending,
@@ -3886,6 +4221,7 @@ function resolveDebugPassingAction(input: {
       targetIntent: "feet" as PassTargetIntent,
       offside: { isOffside: false, warning: false, lineY: 50 },
       offsideSnapshot: null as OffsideSnapshot | null,
+      triangleRunner: null as InternalLineupPlayer | null,
       score: 0,
     };
   const pressDefender = selected.lane.defender ?? input.defending[0];
@@ -3911,6 +4247,10 @@ function resolveDebugPassingAction(input: {
     offsideSnapshot: selected.offsideSnapshot,
     receiverWasOffsideAtPass: Boolean(selected.offsideSnapshot?.wasReceiverOffsideAtPass),
     passWasLegal: !Boolean(selected.offsideSnapshot?.wasReceiverOffsideAtPass),
+    triangleRunner:
+      "triangleRunner" in selected
+        ? (selected.triangleRunner as InternalLineupPlayer | null)
+        : null,
     interception: eagleEyePass
       ? null
       : resolveDebugPassInterception({
@@ -4048,12 +4388,13 @@ function resolvePassStyle(input: {
     Math.abs(input.actor.anchors.x - input.receiver.anchors.x) >= 34 &&
     anchorDistance >= 24 &&
     input.laneScore >= 0.45;
+  const oneTwoThreshold = isFinalThird(input.possession, input.from.y) ? 0.16 : 0.23;
 
   if (input.targetIntent === "through" && !offside.isOffside) {
     return input.laneScore < 0.48 || anchorDistance >= 28 ? "lob" : "through";
   }
   if (switchFlank) return "switch";
-  if (input.oneTwoValue >= 0.24 && input.laneScore >= 0.12) return "one_two";
+  if (input.oneTwoValue >= oneTwoThreshold && input.laneScore >= 0.08) return "one_two";
   return "short";
 }
 
@@ -4314,7 +4655,16 @@ function evaluateCombinationPattern(input: {
   const lateralGap = Math.abs(input.actor.anchors.x - input.receiver.anchors.x);
   const receiverHalfSpace = input.to.x >= 24 && input.to.x <= 76;
   const receiverWide = Math.abs(input.to.x - 50) >= 28;
+  const finalThird = isFinalThird(input.possession, input.from.y);
+  const actorIsForward = actorRole === "ST" || actorRole === "W";
+  const receiverIsForward = receiverRole === "ST" || receiverRole === "W";
   let score = 0;
+
+  if (actorIsForward && receiverIsForward) {
+    score += finalThird ? 0.42 : 0.28;
+    if (forwardProgress >= -5 && forwardProgress <= 12) score += 0.14;
+    if (lateralGap >= 6 && lateralGap <= 28) score += 0.12;
+  }
 
   if (
     ((actorRole === "W" && receiverRole === "FB") ||
@@ -4349,6 +4699,94 @@ function evaluateCombinationPattern(input: {
   }
 
   return clamp(score, 0, 1);
+}
+
+function evaluateTrianglePattern(input: {
+  lineup: InternalLineupPlayer[];
+  actor: InternalLineupPlayer;
+  receiver: InternalLineupPlayer;
+  actorPosition: TrajectoryPoint;
+  receiverPosition: TrajectoryPoint;
+  possession: Side;
+  defending: InternalLineupPlayer[];
+  previousPositionState: PositionState;
+}) {
+  const direction = attackDirection(input.possession);
+  const actorRole = normalizeRole(input.actor.role);
+  const receiverRole = normalizeRole(input.receiver.role);
+  const frontPair =
+    (actorRole === "ST" || actorRole === "W") &&
+    (receiverRole === "ST" || receiverRole === "W");
+  const candidates = input.lineup
+    .filter((player) => {
+      if (
+        player.userPlayerId === input.actor.userPlayerId ||
+        player.userPlayerId === input.receiver.userPlayerId
+      ) {
+        return false;
+      }
+      const role = normalizeRole(player.role);
+      return role === "ST" || role === "W" || role === "CM";
+    })
+    .map((player) => {
+      const position = getPlayerPosition(input.previousPositionState, player);
+      const receiverToThird = distance(input.receiverPosition, position);
+      const actorToThird = distance(input.actorPosition, position);
+      const triangleArea = Math.abs(
+        (input.receiverPosition.x - input.actorPosition.x) *
+          (position.y - input.actorPosition.y) -
+          (input.receiverPosition.y - input.actorPosition.y) *
+            (position.x - input.actorPosition.x),
+      );
+      const returnLane = evaluatePassLane({
+        from: input.receiverPosition,
+        to: position,
+        defending: input.defending,
+        previousPositionState: input.previousPositionState,
+      });
+      const offside = evaluateOffside({
+        receiver: player,
+        receiverPosition: position,
+        ball: input.actorPosition,
+        defending: input.defending,
+        possession: input.possession,
+        previousPositionState: input.previousPositionState,
+      });
+      const forwardProgress = (position.y - input.actorPosition.y) * direction;
+      const geometry = clamp(triangleArea / 150, 0, 1);
+      const distanceFit =
+        clamp(1 - Math.abs(receiverToThird - 14) / 18, 0, 1) *
+        clamp(1 - Math.abs(actorToThird - 19) / 24, 0, 1);
+      const role = normalizeRole(player.role);
+      const forwardUnit = role === "ST" || role === "W";
+      const score = offside.isOffside
+        ? 0
+        : clamp(
+            geometry * 0.3 +
+              distanceFit * 0.24 +
+              returnLane.score * 0.24 +
+              clamp((forwardProgress + 7) / 22, 0, 1) * 0.1 +
+              (frontPair && forwardUnit ? 0.18 : forwardUnit ? 0.1 : 0.05) +
+              (isFinalThird(input.possession, input.actorPosition.y) ? 0.08 : 0),
+            0,
+            1,
+          );
+
+      return { player, receiverToThird, triangleArea, score };
+    })
+    .filter(
+      (item) =>
+        item.receiverToThird >= 6 &&
+        item.receiverToThird <= 30 &&
+        item.triangleArea >= 18,
+    )
+    .sort((left, right) => right.score - left.score);
+  const selected = candidates[0] ?? null;
+
+  return {
+    score: selected?.score ?? 0,
+    thirdRunner: selected && selected.score >= 0.42 ? selected.player : null,
+  };
 }
 
 function evaluateOneTwoPattern(input: {
@@ -4388,7 +4826,8 @@ function evaluateOneTwoPattern(input: {
     (actorRole === "FB" && receiverRole === "W") ||
     (actorRole === "W" && (receiverRole === "FB" || receiverRole === "CM")) ||
     (actorRole === "CM" && (receiverRole === "ST" || receiverRole === "W")) ||
-    (actorRole === "ST" && (receiverRole === "CM" || receiverRole === "W"));
+    (actorRole === "ST" && (receiverRole === "CM" || receiverRole === "W" || receiverRole === "ST")) ||
+    (actorRole === "W" && (receiverRole === "ST" || receiverRole === "W"));
 
   if (!wallPlayer || passDistance > 24 || passDistance < 5) return 0;
 
@@ -4398,7 +4837,7 @@ function evaluateOneTwoPattern(input: {
       clamp(lateralGap / 18, 0, 1) * 0.12 +
       clamp((forwardProgress + 5) / 16, 0, 1) * 0.1 +
       returnLane.score * 0.22 +
-      (naturalPair ? 0.14 : 0),
+      (naturalPair ? (isFinalThird(input.possession, input.from.y) ? 0.24 : 0.16) : 0),
     0,
     1,
   );
@@ -7601,25 +8040,77 @@ function evaluateForwardCarrySpace(input: {
   possession: Side;
   previousPositionState: PositionState;
 }) {
+  return evaluateForwardCarryLane(input).score;
+}
+
+function evaluateForwardCarryLane(input: {
+  actor: InternalLineupPlayer;
+  defending: InternalLineupPlayer[];
+  ball: TrajectoryPoint;
+  possession: Side;
+  previousPositionState: PositionState;
+}) {
   const direction = attackDirection(input.possession);
-  const probe = {
-    x: clamp(input.ball.x + (input.actor.anchors.x < 50 ? -2 : 2), 5, 95),
-    y: clamp(input.ball.y + direction * 12, 5, 95),
-  };
-  const nearestAhead =
-    input.defending
-      .filter((player) => player.role !== "GK")
-      .map((defender) => {
-        const position =
-          input.previousPositionState.players.get(defender.userPlayerId) ?? defender.anchors;
-        const isAhead = (position.y - input.ball.y) * direction > -2;
-        return isAhead ? distance(position, probe) : 28;
-      })
-      .sort((left, right) => left - right)[0] ?? 28;
   const role = normalizeRole(input.actor.role);
   const roleBonus = role === "W" || role === "ST" ? 0.12 : role === "CM" ? 0.08 : 0;
+  const finalThird = isFinalThird(input.possession, input.ball.y);
+  const probeDepth = finalThird ? 9 : 13;
+  const centerPull = clamp((50 - input.ball.x) * (finalThird ? 0.2 : 0.12), -4.5, 4.5);
+  const defenders = input.defending
+    .filter((player) => normalizeRole(player.role) !== "GK")
+    .map((player) => ({
+      player,
+      position: getPlayerPosition(input.previousPositionState, player),
+    }));
+  const lateralOffsets = [-8, -4, 0, 4, 8];
+  const candidates = lateralOffsets.map((offset) => {
+    const target = {
+      x: clamp(input.ball.x + centerPull + offset, 7, 93),
+      y: clamp(input.ball.y + direction * probeDepth, 6, 94),
+    };
+    const laneClearance =
+      defenders
+        .map(({ position }) => distanceToSegment(position, input.ball, target))
+        .sort((left, right) => left - right)[0] ?? 24;
+    const targetClearance =
+      defenders
+        .map(({ position }) => distance(position, target))
+        .sort((left, right) => left - right)[0] ?? 28;
+    const nearestAhead =
+      defenders
+        .map(({ position }) => {
+          const forwardGap = (position.y - input.ball.y) * direction;
+          const lateralGap = Math.abs(position.x - target.x);
+          return forwardGap >= -1.5 && lateralGap <= 11 ? Math.max(0, forwardGap) : 28;
+        })
+        .sort((left, right) => left - right)[0] ?? 28;
+    const routeCentrality = clamp(1 - Math.abs(target.x - 50) / 48, 0, 1);
+    const score = clamp(
+      clamp((laneClearance - 2) / 10, 0, 1) * 0.46 +
+        clamp((nearestAhead - 3) / 16, 0, 1) * 0.3 +
+        clamp((targetClearance - 3) / 14, 0, 1) * 0.14 +
+        routeCentrality * (finalThird ? 0.08 : 0.03) +
+        roleBonus,
+      0,
+      1,
+    );
 
-  return clamp((nearestAhead - 4) / 22 + roleBonus, 0, 1);
+    return { target, score };
+  });
+
+  return (
+    candidates.sort(
+      (left, right) =>
+        right.score - left.score ||
+        Math.abs(left.target.x - input.ball.x) - Math.abs(right.target.x - input.ball.x),
+    )[0] ?? {
+      target: {
+        x: input.ball.x,
+        y: clamp(input.ball.y + direction * probeDepth, 6, 94),
+      },
+      score: 0,
+    }
+  );
 }
 
 function getDribbleTrait(player: InternalLineupPlayer) {
@@ -10869,6 +11360,10 @@ function createHighlight(
   actorPlayerId: number | null,
   secondaryPlayerId: number | null,
   skill: EPlayerSkill | null,
+  tactical?: {
+    passStyle?: PassStyle;
+    combination?: MatchCombination | null;
+  },
 ): MatchSnapshot["highlight"] {
   return {
     event,
@@ -10878,6 +11373,8 @@ function createHighlight(
     secondaryPlayerId,
     skill,
     skillSlug: getPlayerSkillSlug(skill),
+    passStyle: tactical?.passStyle,
+    combination: tactical?.combination,
   };
 }
 
