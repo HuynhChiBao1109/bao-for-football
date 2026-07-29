@@ -10,7 +10,7 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Banner } from '../components/feedback';
 import { MatchMode } from '../enums/match';
 import {
@@ -205,6 +205,7 @@ export function ClubPage() {
   const { data: sessionData, isLoading } = useSession();
   const { setSession } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeModal, setActiveModal] = useState<ClubModal>(null);
 
   const team = sessionData?.team ?? null;
@@ -215,6 +216,14 @@ export function ClubPage() {
   useEffect(() => {
     dailyLoginAutoOpened.current = false;
   }, [sessionData?.user?.id]);
+
+  useEffect(() => {
+    const routeState = location.state as { openClubModal?: ClubModal } | null;
+    if (routeState?.openClubModal !== 'campaign') return;
+
+    setActiveModal('campaign');
+    navigate(ROUTES.club, { replace: true, state: null });
+  }, [location.state, navigate]);
 
   useEffect(() => {
     if (!team || !dailyLogin.data?.canClaim || dailyLoginAutoOpened.current) return;

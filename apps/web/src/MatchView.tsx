@@ -370,20 +370,27 @@ function Scoreboard({
   status,
   isConnected,
   queuedTicks,
+  homeTeamName,
+  awayTeamName,
 }: {
   snapshot: MatchSnapshot | null;
   status: string;
   isConnected: boolean;
   queuedTicks: number;
+  homeTeamName: string;
+  awayTeamName: string;
 }) {
   return (
     <header className="match-scoreboard">
       <div className="match-scoreboard__team">
         <span className="match-scoreboard__dot match-scoreboard__dot--home" />
-        <span>Home</span>
+        <span className="match-scoreboard__team-name">{homeTeamName}</span>
       </div>
       <div className="match-scoreboard__center">
-        <span className="match-scoreboard__clock">{snapshot?.clockLabel ?? '00:00'}</span>
+        <span className="match-scoreboard__clock">
+          <small>Match time</small>
+          {snapshot?.clockLabel ?? '00:00'}
+        </span>
         <strong className="match-scoreboard__score">
           {snapshot?.homeScore ?? 0}
           <span>:</span>
@@ -396,7 +403,7 @@ function Scoreboard({
         </span>
       </div>
       <div className="match-scoreboard__team match-scoreboard__team--away">
-        <span>Away</span>
+        <span className="match-scoreboard__team-name">{awayTeamName}</span>
         <span className="match-scoreboard__dot match-scoreboard__dot--away" />
       </div>
     </header>
@@ -740,11 +747,135 @@ function MatchResultOverlay({
   );
 }
 
+function MatchStatistics({
+  snapshot,
+  homeTeamName,
+  awayTeamName,
+}: {
+  snapshot: MatchSnapshot | null;
+  homeTeamName: string;
+  awayTeamName: string;
+}) {
+  const home = snapshot?.matchStats?.home;
+  const away = snapshot?.matchStats?.away;
+  const homePossessionMs = Number(home?.possessionMs ?? 0);
+  const awayPossessionMs = Number(away?.possessionMs ?? 0);
+  const totalPossessionMs = homePossessionMs + awayPossessionMs;
+  const homePossession =
+    totalPossessionMs > 0 ? Math.round((homePossessionMs / totalPossessionMs) * 100) : 50;
+  const awayPossession = 100 - homePossession;
+  const passAccuracy = (completed = 0, attempted = 0) =>
+    attempted > 0 ? `${Math.round((completed / attempted) * 100)}%` : '0%';
+  const metrics = [
+    {
+      label: 'Kiểm soát bóng',
+      home: `${homePossession}%`,
+      away: `${awayPossession}%`,
+    },
+    {
+      label: 'Sút',
+      home: home?.shots ?? 0,
+      away: away?.shots ?? 0,
+    },
+    {
+      label: 'Sút trúng đích',
+      home: home?.shotsOnTarget ?? 0,
+      away: away?.shotsOnTarget ?? 0,
+    },
+    {
+      label: 'Chuyền',
+      home: `${home?.passesCompleted ?? 0}/${home?.passesAttempted ?? 0}`,
+      away: `${away?.passesCompleted ?? 0}/${away?.passesAttempted ?? 0}`,
+    },
+    {
+      label: 'Chuyền chính xác',
+      home: passAccuracy(home?.passesCompleted, home?.passesAttempted),
+      away: passAccuracy(away?.passesCompleted, away?.passesAttempted),
+    },
+    {
+      label: 'Tắc bóng',
+      home: home?.tackles ?? 0,
+      away: away?.tackles ?? 0,
+    },
+    {
+      label: 'Phạm lỗi',
+      home: home?.fouls ?? 0,
+      away: away?.fouls ?? 0,
+    },
+    {
+      label: 'Việt vị',
+      home: home?.offsides ?? 0,
+      away: away?.offsides ?? 0,
+    },
+    {
+      label: 'Phạt góc',
+      home: home?.corners ?? 0,
+      away: away?.corners ?? 0,
+    },
+    {
+      label: 'Cứu thua',
+      home: home?.saves ?? 0,
+      away: away?.saves ?? 0,
+    },
+  ];
+
+  return (
+    <section className="match-statistics" aria-label="Thống kê trận đấu">
+      <header className="match-insight-head">
+        <span>Match data</span>
+        <strong>Thống kê trận đấu</strong>
+      </header>
+      <div className="match-statistics__teams" aria-hidden="true">
+        <span>{homeTeamName}</span>
+        <span>{awayTeamName}</span>
+      </div>
+      <div className="match-statistics__grid">
+        {metrics.map((metric) => (
+          <article className="match-statistic" key={metric.label}>
+            <strong>{metric.home}</strong>
+            <span>{metric.label}</span>
+            <strong>{metric.away}</strong>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function GoalScorers({ snapshot }: { snapshot: MatchSnapshot | null }) {
+  const scorers = snapshot?.matchStats?.scorers ?? [];
+
+  return (
+    <section className="match-scorers" aria-label="Cầu thủ ghi bàn">
+      <header className="match-insight-head">
+        <span>Goal log</span>
+        <strong>Cầu thủ ghi bàn</strong>
+      </header>
+      <div className="match-scorers__list">
+        {scorers.length === 0 ? (
+          <p className="match-scorers__empty">Chưa có bàn thắng.</p>
+        ) : (
+          scorers.map((scorer) => (
+            <article className="match-scorer" key={`${scorer.side}-${scorer.playerId}`}>
+              <span className={`match-scorer__team match-scorer__team--${scorer.side}`} />
+              <div>
+                <strong>{scorer.name}</strong>
+                <small>{scorer.minutes.map((minute) => `${minute}'`).join(', ')}</small>
+              </div>
+              <b>×{scorer.goals}</b>
+            </article>
+          ))
+        )}
+      </div>
+    </section>
+  );
+}
+
 function EventFeed({ events }: { events: LiveMatchEvent[] }) {
   return (
     <aside className="match-events" aria-label="Match events">
       <div className="match-events__head">
-        <span>Live Events</span>
+        <span>Diễn biến</span>
         <strong>{events.length}</strong>
       </div>
       <div className="match-events__list">
@@ -770,6 +901,18 @@ function EventFeed({ events }: { events: LiveMatchEvent[] }) {
         )}
       </div>
     </aside>
+  );
+}
+
+const STADIUM_CROWD = Array.from({ length: 42 }, (_, index) => index);
+
+function StadiumCrowd({ side }: { side: 'north' | 'south' }) {
+  return (
+    <div className={`stadium-crowd stadium-crowd--${side}`} aria-hidden="true">
+      {STADIUM_CROWD.map((seat) => (
+        <span key={`${side}-${seat}`} style={{ '--crowd-seat': seat } as CSSProperties} />
+      ))}
+    </div>
   );
 }
 
@@ -817,8 +960,13 @@ function MatchPitch({ snapshot }: { snapshot: MatchSnapshot }) {
   return (
     <section className="match-pitch-shell" aria-label="Top down football pitch">
       <div className={`match-stadium ${tunnelActive ? 'match-stadium--tunnel-active' : ''}`}>
+        <StadiumCrowd side="north" />
         <div className="technical-area technical-area--home" aria-label="Home technical area">
+          <small className="technical-area__label">Home staff</small>
           <span className="technical-area__bench" />
+          <span className="technical-area__sub technical-area__sub--one" />
+          <span className="technical-area__sub technical-area__sub--two" />
+          <span className="technical-area__sub technical-area__sub--three" />
           <span className="technical-area__coach technical-area__coach--one" />
           <span className="technical-area__coach technical-area__coach--two" />
         </div>
@@ -844,13 +992,18 @@ function MatchPitch({ snapshot }: { snapshot: MatchSnapshot }) {
           <KickoffWhistleOverlay show={Boolean(snapshot.highlight?.kickoffWhistle)} />
         </div>
         <div className="technical-area technical-area--away" aria-label="Away technical area">
+          <small className="technical-area__label">Away staff</small>
           <span className="technical-area__bench" />
+          <span className="technical-area__sub technical-area__sub--one" />
+          <span className="technical-area__sub technical-area__sub--two" />
+          <span className="technical-area__sub technical-area__sub--three" />
           <span className="technical-area__coach technical-area__coach--one" />
           <span className="technical-area__coach technical-area__coach--two" />
         </div>
         <div className="stadium-tunnel" aria-hidden="true">
           <span />
         </div>
+        <StadiumCrowd side="south" />
       </div>
     </section>
   );
@@ -885,11 +1038,16 @@ export function MatchView() {
   });
   const isMatchEnded = renderedSnapshot?.highlight?.event === MATCH_EVENT.MATCH_END;
   const matchReward = Number(match?.campainMatch?.matchReward ?? 0);
+  const homeTeamName = match?.homeTeam?.teamName?.trim() || 'Home XI';
+  const awayTeamName = match?.awayTeam?.teamName?.trim() || 'Away XI';
 
   const returnToCampaign = () => {
     void queryClient.invalidateQueries({ queryKey: ['campainMatches'] });
     void queryClient.invalidateQueries({ queryKey: ['session'] });
-    navigate(ROUTES.aiMatch);
+    navigate(ROUTES.club, {
+      replace: true,
+      state: { openClubModal: 'campaign' },
+    });
   };
 
   const retryCampaignMatch = () => {
@@ -924,13 +1082,17 @@ export function MatchView() {
       <section className="match-modal" role="dialog" aria-modal="true" aria-label="Live match">
         <header className="match-modal__head">
           <div>
-            <span>Live battle</span>
-            <strong>Match View</strong>
+            <span>RedLock match protocol</span>
+            <strong>Live Battle</strong>
           </div>
           <button
             type="button"
             className="match-modal__close"
             onClick={() => {
+              if (isMatchEnded) {
+                returnToCampaign();
+                return;
+              }
               void queryClient.invalidateQueries({ queryKey: ['campainMatches'] });
               void queryClient.invalidateQueries({ queryKey: ['session'] });
               navigate(ROUTES.club);
@@ -948,6 +1110,8 @@ export function MatchView() {
           status={status}
           isConnected={isConnected}
           queuedTicks={queuedTicks}
+          homeTeamName={homeTeamName}
+          awayTeamName={awayTeamName}
         />
 
         <div className="match-view__content">
@@ -1028,7 +1192,15 @@ export function MatchView() {
               </span>
             </section>
           )}
-          <EventFeed events={events} />
+          <div className="match-view__insights">
+            <MatchStatistics
+              snapshot={renderedSnapshot}
+              homeTeamName={homeTeamName}
+              awayTeamName={awayTeamName}
+            />
+            <GoalScorers snapshot={renderedSnapshot} />
+            <EventFeed events={events} />
+          </div>
         </div>
         {isMatchEnded && renderedSnapshot ? (
           <MatchResultOverlay

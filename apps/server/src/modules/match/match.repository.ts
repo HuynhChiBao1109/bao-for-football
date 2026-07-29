@@ -46,6 +46,8 @@ export class MatchRepository {
     return this.matchRepository.findOne({
       where: { id: matchId },
       relations: {
+        homeTeam: true,
+        awayTeam: true,
         matchEvents: true,
         matchPlayerStats: true,
         campainMatch: {

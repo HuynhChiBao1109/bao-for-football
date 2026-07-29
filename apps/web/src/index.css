@@ -190,63 +190,6 @@ textarea {
   min-height: 100svh;
 }
 
-.app-bottom-nav {
-  position: fixed;
-  left: 50%;
-  bottom: max(12px, env(safe-area-inset-bottom));
-  z-index: 70;
-  display: grid;
-  grid-auto-flow: column;
-  gap: 8px;
-  width: min(calc(100vw - 24px), 480px);
-  min-height: 66px;
-  padding: 9px;
-  border: 1px solid rgba(126, 238, 255, 0.22);
-  border-radius: 999px;
-  background: rgba(2, 8, 19, 0.74);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(18px);
-  transform: translateX(-50%);
-}
-
-.app-bottom-nav__button {
-  position: relative;
-  display: grid;
-  place-items: center;
-  min-width: 48px;
-  min-height: 48px;
-  border: 0;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(224, 246, 255, 0.82);
-  cursor: pointer;
-  transition:
-    transform 0.16s ease,
-    background 0.16s ease,
-    color 0.16s ease,
-    box-shadow 0.16s ease;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.app-bottom-nav__button span {
-  font-size: 12px;
-  font-weight: 900;
-}
-
-.app-bottom-nav__button[data-active='true'] {
-  background:
-    linear-gradient(180deg, rgba(126, 238, 255, 0.28), rgba(255, 211, 103, 0.18)),
-    rgba(255, 255, 255, 0.06);
-  color: #ffffff;
-  box-shadow:
-    0 0 28px rgba(126, 238, 255, 0.18),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.12);
-}
-
-.app-bottom-nav__button:active {
-  transform: scale(0.94);
-}
-
 .auth-popup-shell {
   display: grid;
   place-items: center;
@@ -1883,31 +1826,6 @@ body::after {
     opacity: 0.7;
     transform: translate(-2px, -1px);
   }
-}
-
-.app-bottom-nav {
-  width: min(calc(100vw - 24px), 560px);
-  border-color: rgba(255, 46, 74, 0.3);
-  border-radius: 8px;
-  background: rgba(6, 6, 8, 0.78);
-  box-shadow:
-    0 24px 64px rgba(0, 0, 0, 0.58),
-    0 0 34px rgba(255, 46, 74, 0.12);
-}
-
-.app-bottom-nav__button {
-  border-radius: 8px;
-  color: rgba(255, 235, 238, 0.78);
-}
-
-.app-bottom-nav__button[data-active='true'] {
-  background:
-    linear-gradient(180deg, rgba(255, 46, 74, 0.28), rgba(95, 8, 22, 0.3)),
-    rgba(255, 255, 255, 0.04);
-  color: #fff;
-  box-shadow:
-    0 0 26px rgba(255, 46, 74, 0.24),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
 .brand-logo__image {

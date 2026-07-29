@@ -318,6 +318,33 @@ export type MatchPitchPlayer = {
   move?: PlayerMotion;
 };
 
+export type MatchTeamSummary = {
+  shots: number;
+  shotsOnTarget: number;
+  passesAttempted: number;
+  passesCompleted: number;
+  possessionMs: number;
+  tackles: number;
+  fouls: number;
+  offsides: number;
+  corners: number;
+  saves: number;
+};
+
+export type MatchGoalScorer = {
+  playerId: number | string;
+  name: string;
+  side: 'home' | 'away';
+  goals: number;
+  minutes: number[];
+};
+
+export type MatchSummary = {
+  home: MatchTeamSummary;
+  away: MatchTeamSummary;
+  scorers: MatchGoalScorer[];
+};
+
 export type MatchSnapshot = {
   frameId?: number;
   tick?: number;
@@ -370,6 +397,7 @@ export type MatchSnapshot = {
       | 'TRANSITION_WON_BALL';
     possessionTicks: number;
   };
+  matchStats?: MatchSummary;
   restart?: {
     kind: 'direct_free_kick' | 'indirect_free_kick';
     source: 'foul' | 'offside';
@@ -407,6 +435,16 @@ export type MatchState = {
   status: string;
   homeTeamId?: number | string;
   awayTeamId?: number | string;
+  homeTeam?: {
+    id: number | string;
+    teamName: string;
+    imgUrl?: string | null;
+  } | null;
+  awayTeam?: {
+    id: number | string;
+    teamName: string;
+    imgUrl?: string | null;
+  } | null;
   homeScore: number;
   awayScore: number;
   currentMinute: number;

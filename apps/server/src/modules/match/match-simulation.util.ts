@@ -360,6 +360,33 @@ export type MatchRenderPlayer = {
   offside?: OffsideDebug;
 };
 
+export type MatchTeamSummary = {
+  shots: number;
+  shotsOnTarget: number;
+  passesAttempted: number;
+  passesCompleted: number;
+  possessionMs: number;
+  tackles: number;
+  fouls: number;
+  offsides: number;
+  corners: number;
+  saves: number;
+};
+
+export type MatchGoalScorer = {
+  playerId: number;
+  name: string;
+  side: Side;
+  goals: number;
+  minutes: number[];
+};
+
+export type MatchSummary = {
+  home: MatchTeamSummary;
+  away: MatchTeamSummary;
+  scorers: MatchGoalScorer[];
+};
+
 export type MatchSnapshot = {
   frameId: number;
   tick: number;
@@ -389,6 +416,7 @@ export type MatchSnapshot = {
     phase: TacticalPhase;
     possessionTicks: number;
   };
+  matchStats?: MatchSummary;
   restart?: MatchRestart | null;
   highlight: {
     event: EMatchEvent | null;
@@ -475,7 +503,126 @@ type PositionState = {
   possession?: Side;
   possessionTicks?: number;
   tacticalPhase?: TacticalPhase;
+  matchStats?: MatchSummary;
 };
+
+function createEmptyTeamSummary(): MatchTeamSummary {
+  return {
+    shots: 0,
+    shotsOnTarget: 0,
+    passesAttempted: 0,
+    passesCompleted: 0,
+    possessionMs: 0,
+    tackles: 0,
+    fouls: 0,
+    offsides: 0,
+    corners: 0,
+    saves: 0,
+  };
+}
+
+function cloneMatchSummary(summary?: MatchSummary): MatchSummary {
+  return {
+    home: { ...(summary?.home ?? createEmptyTeamSummary()) },
+    away: { ...(summary?.away ?? createEmptyTeamSummary()) },
+    scorers: (summary?.scorers ?? []).map((scorer) => ({
+      ...scorer,
+      minutes: [...scorer.minutes],
+    })),
+  };
+}
+
+function oppositeSide(side: Side): Side {
+  return side === "home" ? "away" : "home";
+}
+
+function updateMatchSummary(input: {
+  previous?: MatchSummary;
+  durationMs: number;
+  matchStep: MatchStep;
+  phase: MatchSnapshot["phase"];
+  possession: Side;
+  highlight: MatchSnapshot["highlight"];
+  second: number;
+  homeLineup: InternalLineupPlayer[];
+  awayLineup: InternalLineupPlayer[];
+}): MatchSummary {
+  const summary = cloneMatchSummary(input.previous);
+  const event = input.highlight.event;
+  const eventSide = input.highlight.teamSide ?? input.possession;
+
+  if (
+    input.matchStep === "play" &&
+    (input.phase === "first_half" || input.phase === "second_half")
+  ) {
+    summary[input.possession].possessionMs += Math.max(0, input.durationMs);
+  }
+
+  if (event === EMatchEvent.PASS) {
+    summary[eventSide].passesAttempted += 1;
+    summary[eventSide].passesCompleted += 1;
+  } else if (event === EMatchEvent.INTERCEPTION) {
+    summary[oppositeSide(eventSide)].passesAttempted += 1;
+  }
+
+  if (
+    event === EMatchEvent.SHOOT ||
+    event === EMatchEvent.GOALKEEPER_SAVE ||
+    event === EMatchEvent.GOAL
+  ) {
+    summary[eventSide].shots += 1;
+    if (event === EMatchEvent.GOALKEEPER_SAVE || event === EMatchEvent.GOAL) {
+      summary[eventSide].shotsOnTarget += 1;
+    }
+    if (event === EMatchEvent.GOALKEEPER_SAVE) {
+      summary[oppositeSide(eventSide)].saves += 1;
+    }
+  }
+
+  if (event === EMatchEvent.TACKLE || event === EMatchEvent.SLIDE_TACKLE) {
+    summary[eventSide].tackles += 1;
+  }
+
+  if (event === EMatchEvent.FOUL) {
+    summary[oppositeSide(eventSide)].fouls += 1;
+  }
+
+  if (event === EMatchEvent.OFFSIDE) {
+    summary[oppositeSide(eventSide)].offsides += 1;
+  }
+
+  if (event === EMatchEvent.CORNER_KICK) {
+    summary[eventSide].corners += 1;
+  }
+
+  if (event === EMatchEvent.GOAL && input.highlight.actorPlayerId != null) {
+    const lineup = eventSide === "home" ? input.homeLineup : input.awayLineup;
+    const scorer = lineup.find(
+      (player) => player.userPlayerId === input.highlight.actorPlayerId,
+    );
+    const scorerId = input.highlight.actorPlayerId;
+    const existingScorer = summary.scorers.find(
+      (item) => item.playerId === scorerId && item.side === eventSide,
+    );
+    const minute = Math.max(1, getDisplayMatchMinute(input.second));
+
+    if (existingScorer) {
+      existingScorer.goals += 1;
+      existingScorer.minutes.push(minute);
+    } else {
+      summary.scorers.push({
+        playerId: scorerId,
+        name: scorer?.name ?? scorer?.shortName ?? "Player",
+        side: eventSide,
+        goals: 1,
+        minutes: [minute],
+      });
+    }
+  }
+
+  return summary;
+}
+
 type ResolvedAction = {
   type: PlayActionType;
   event: EMatchEvent;
@@ -977,7 +1124,12 @@ export function generateNextMatchTick(input: {
         : applyAwayKickoffPair(kickoffLineup);
     const kickoffSpot = { x: kickoffPlayer.x, y: kickoffPlayer.y };
     const ball = { x: kickoffPartner.x, y: kickoffPartner.y };
-    const kickoffPositionState = createInitialPositionState(homeLineup, awayLineup, losingSide);
+    const kickoffPositionState = createInitialPositionState(
+      homeLineup,
+      awayLineup,
+      losingSide,
+      previousPositionState.matchStats,
+    );
     const snapshot = buildSnapshot({
       frameId,
       minute,
@@ -9372,13 +9524,25 @@ function buildSnapshot(input: {
     : feetReceiverRenderPlayer
       ? { x: feetReceiverRenderPlayer.x, y: feetReceiverRenderPlayer.y }
       : ball;
+  const durationMs =
+    input.durationMsOverride ??
+    getSnapshotFrameDuration(input.highlight.event, input.activeSkill);
+  const matchStats = updateMatchSummary({
+    previous: input.positionState.matchStats,
+    durationMs,
+    matchStep: input.matchStep,
+    phase: input.phase,
+    possession: input.possession,
+    highlight: input.highlight,
+    second: input.second,
+    homeLineup: input.homeLineup,
+    awayLineup: input.awayLineup,
+  });
 
   return {
     frameId: input.frameId,
     tick: input.tick,
-    durationMs:
-      input.durationMsOverride ??
-      getSnapshotFrameDuration(input.highlight.event, input.activeSkill),
+    durationMs,
     matchStep: input.matchStep,
     minute: getDisplayMatchMinute(input.second),
     second: input.second,
@@ -9404,6 +9568,7 @@ function buildSnapshot(input: {
       phase: tacticalPhase,
       possessionTicks,
     },
+    matchStats,
     restart: input.restart ?? null,
     highlight: input.highlight,
   };
@@ -10286,6 +10451,7 @@ function createInitialPositionState(
   home: InternalLineupPlayer[],
   away: InternalLineupPlayer[],
   possession: Side = "home",
+  matchStats?: MatchSummary,
 ): PositionState {
   const players = new Map<
     number,
@@ -10316,6 +10482,7 @@ function createInitialPositionState(
     possession,
     possessionTicks: 0,
     tacticalPhase: "IN_POSSESSION_BUILDUP",
+    matchStats: cloneMatchSummary(matchStats),
   };
 }
 
@@ -10364,6 +10531,7 @@ function extractPositionState(snapshot: MatchSnapshot): PositionState {
     possession: snapshot.possession,
     possessionTicks: Number(snapshot.tactical?.possessionTicks ?? 1),
     tacticalPhase: snapshot.tactical?.phase,
+    matchStats: cloneMatchSummary(snapshot.matchStats),
   };
 }
 
