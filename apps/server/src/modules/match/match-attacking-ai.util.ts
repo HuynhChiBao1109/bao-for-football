@@ -319,9 +319,7 @@ export const ATTACKING_AI_BALANCE = Object.freeze({
   passRequiredAdvantage: 8,
   currentActionBonus: 7,
   actionHysteresis: 5,
-  minimumCommitTicks: 2,
   dribbleCooldownTicks: 5,
-  receiveSettleTicks: 1,
   minimumPossessionTimeSeconds: 0.4,
   minimumActionCommitTicks: 2,
   decisionCooldownTicks: 1,
@@ -386,6 +384,7 @@ export function collectAttackingSituation(
     isOneTouchWindow: input.latestEvent === "PASS" || input.latestEvent === "pass",
     isSettlingAfterReceive:
       (input.latestEvent === "PASS" || input.latestEvent === "pass") &&
+      ATTACKING_AI_BALANCE.minimumPossessionTimeSeconds > 0 &&
       pressure < ATTACKING_AI_BALANCE.strongPressureThreshold,
   };
   const runTiming = evaluateAttackingRunTiming({
@@ -2098,34 +2097,6 @@ function getShootingFootFit(situation: AttackingSituation): number {
   const preferredSide = situation.carrier.preferredFoot === "right" ? -1 : 1;
   const footOpening = ballSide === 0 ? 0.82 : ballSide === preferredSide ? 1 : 0.68;
   return clamp01(facingFit * 0.62 + footOpening * 0.38);
-}
-
-function getSupportingTarget(
-  situation: AttackingSituation,
-  teammate: AttackingAiPlayer,
-  runType: AttackingRunType,
-): AttackingPoint {
-  const direction = situation.direction;
-  if (runType === "BOX_RUN") {
-    return {
-      x: clamp(lerp(teammate.position.x, 50, 0.45), 34, 66),
-      y: clamp(situation.ball.y + direction * 22, 6, 94),
-    };
-  }
-  if (runType === "STRETCH") {
-    const side = teammate.position.x < 50 ? -1 : 1;
-    return {
-      x: clamp(50 + side * (31 + (1 - situation.tactics.compactness) * 10), 5, 95),
-      y: clamp(situation.ball.y + direction * 14, 8, 92),
-    };
-  }
-  if (runType === "SUPPORT") {
-    return {
-      x: clamp(lerp(teammate.position.x, situation.ball.x, 0.26), 8, 92),
-      y: clamp(situation.ball.y - direction * (8 + situation.tactics.compactness * 8), 8, 92),
-    };
-  }
-  return { ...teammate.position };
 }
 
 function deconflictIntentTargets(intents: AttackingIntent[], direction: -1 | 1): AttackingIntent[] {
