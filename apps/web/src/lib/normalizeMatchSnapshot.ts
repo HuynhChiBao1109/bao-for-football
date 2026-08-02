@@ -68,6 +68,8 @@ function toPitchPlayer(
     offside,
     attackingIntent:
       (raw.attackingIntent as MatchPitchPlayer['attackingIntent'] | undefined) ?? null,
+    defensiveAssignment:
+      (raw.defensiveAssignment as MatchPitchPlayer['defensiveAssignment'] | undefined) ?? null,
     move: move
       ? {
           fromX: clampPercent(move.fromX, x),

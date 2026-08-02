@@ -268,6 +268,9 @@ export type PlayerAIState =
   | 'RECOVER_SHAPE'
   | 'HOLD_LINE'
   | 'RECOVER_DEFENSE'
+  | 'BLOCK_LANE'
+  | 'INTERCEPT'
+  | 'RETREAT'
   | 'STAY_ONSIDE'
   | 'CHECK_BACK_ONSIDE'
   | 'CURVED_RUN'
@@ -326,13 +329,7 @@ export type AttackingShotStyle =
   | 'power'
   | 'header';
 
-export type AttackingActionKind =
-  | 'hold'
-  | 'wait'
-  | 'carry_ball'
-  | 'dribble'
-  | 'pass'
-  | 'shoot';
+export type AttackingActionKind = 'hold' | 'wait' | 'carry_ball' | 'dribble' | 'pass' | 'shoot';
 
 export type AttackingActionMemory = {
   currentAction: AttackingActionKind | null;
@@ -361,6 +358,28 @@ export type AttackingIntent = {
   expiresAtTick: number;
 };
 
+export type DefensiveState =
+  | 'HoldShape'
+  | 'TrackRunner'
+  | 'MarkOpponent'
+  | 'PressBall'
+  | 'Cover'
+  | 'BlockLane'
+  | 'Tackle'
+  | 'Intercept'
+  | 'Retreat';
+
+export type DefensiveAssignment = {
+  defenderId: number | string;
+  state: DefensiveState;
+  target: { x: number; y: number };
+  opponentId: number | string | null;
+  utility: number;
+  confidence: number;
+  reason: string;
+  scores: Array<{ state: DefensiveState; score: number }>;
+};
+
 export type MatchPitchPlayer = {
   id: string;
   name: string;
@@ -385,6 +404,7 @@ export type MatchPitchPlayer = {
   activeSkill?: number | null;
   offside?: OffsideDebug;
   attackingIntent?: AttackingIntent | null;
+  defensiveAssignment?: DefensiveAssignment | null;
   move?: PlayerMotion;
 };
 
@@ -486,6 +506,34 @@ export type MatchSnapshot = {
         currentAction: AttackingActionKind | null;
         pressure: number;
       };
+    };
+    defensiveDecision?: {
+      side: 'home' | 'away';
+      phase: 'settled' | 'counter_press' | 'retreat';
+      primaryPresserId: number | string | null;
+      secondaryPresserIds: Array<number | string>;
+      coverPlayerId: number | string | null;
+      pressTriggers: Array<
+        | 'turnover'
+        | 'poor_touch'
+        | 'back_to_goal'
+        | 'touchline_trap'
+        | 'isolated_carrier'
+        | 'risky_pass'
+      >;
+      threats: Array<{
+        attackerId: number | string;
+        position: { x: number; y: number };
+        predictedPosition: { x: number; y: number };
+        score: number;
+        goalProximity: number;
+        centrality: number;
+        openSpace: number;
+        receiveThreat: number;
+        runThreat: number;
+        isCarrier: boolean;
+      }>;
+      assignments: DefensiveAssignment[];
     };
   };
   matchStats?: MatchSummary;

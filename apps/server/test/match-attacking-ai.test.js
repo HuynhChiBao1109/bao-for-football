@@ -517,7 +517,7 @@ test("strong pressure can break carry commitment and trigger an early safe pass"
   assert.equal(decision.selected.kind, "pass");
 });
 
-test("live match ticks execute utility decisions and publish off-ball intentions", () => {
+test("live match ticks publish attacking intentions and coordinated defensive assignments", () => {
   const roles = ["GK", "LB", "CB", "CB", "RB", "CM", "CM", "CM", "LW", "RW", "ST"];
   const roster = (teamId, startId) =>
     roles.map((role, index) => ({
@@ -608,4 +608,22 @@ test("live match ticks execute utility decisions and publish off-ball intentions
   );
   assert.ok(homeLineup.every((matchPlayer) => matchPlayer.teamTactics));
   assert.ok(awayLineup.every((matchPlayer) => matchPlayer.teamTactics));
+  assert.ok(openPlaySnapshots.every((snapshot) => snapshot.tactical.defensiveDecision));
+  assert.ok(
+    openPlaySnapshots.every((snapshot) => {
+      const defendingPlayers =
+        snapshot.possession === "home" ? snapshot.awayPlayers : snapshot.homePlayers;
+      return defendingPlayers.every((matchPlayer) => matchPlayer.defensiveAssignment);
+    }),
+  );
+  assert.ok(
+    openPlaySnapshots.every(
+      (snapshot) =>
+        snapshot.tactical.defensiveDecision.assignments.filter((assignment) =>
+          ["PressBall", "Tackle"].includes(assignment.state),
+        ).length <= 2,
+    ),
+  );
+  assert.ok(homeLineup.every((matchPlayer) => matchPlayer.defensiveTactics));
+  assert.ok(awayLineup.every((matchPlayer) => matchPlayer.defensiveTactics));
 });

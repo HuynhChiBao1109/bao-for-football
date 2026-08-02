@@ -59,6 +59,9 @@ export type PlayerAIState =
   | "RECOVER_SHAPE"
   | "HOLD_LINE"
   | "RECOVER_DEFENSE"
+  | "BLOCK_LANE"
+  | "INTERCEPT"
+  | "RETREAT"
   | "STAY_ONSIDE"
   | "CHECK_BACK_ONSIDE"
   | "CURVED_RUN"
@@ -2457,10 +2460,7 @@ function getFrontUnitCombinationDecision(
   const forwardPartners = context.teammates
     .filter((teammate) => {
       const teammateRole = normalizeRole(teammate.role);
-      return (
-        teammate.id !== owner.id &&
-        (teammateRole === "ST" || teammateRole === "W")
-      );
+      return teammate.id !== owner.id && (teammateRole === "ST" || teammateRole === "W");
     })
     .sort(
       (left, right) =>
