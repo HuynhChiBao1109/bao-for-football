@@ -551,6 +551,58 @@
   stroke: #ffd85c;
 }
 
+.attacking-ai-debug {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 12;
+  display: grid;
+  min-width: min(260px, 55%);
+  gap: 5px;
+  padding: 8px 10px;
+  border: 1px solid rgba(126, 238, 255, 0.34);
+  border-radius: 8px;
+  background: rgba(3, 12, 15, 0.82);
+  color: #ddfbff;
+  font-size: 0.6rem;
+  font-weight: 800;
+  line-height: 1.25;
+  pointer-events: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(5px);
+}
+
+.attacking-ai-debug__headline,
+.attacking-ai-debug__scores,
+.attacking-ai-debug__shape {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 10px;
+}
+
+.attacking-ai-debug__headline {
+  color: #8fffd0;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+}
+
+.attacking-ai-debug__scores {
+  color: #fff2a6;
+}
+
+.attacking-ai-debug__shape {
+  color: #a8dfff;
+}
+
+.attacking-ai-debug__logs {
+  display: grid;
+  gap: 2px;
+  color: #ffbd91;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+
 .player-offside-state {
   position: absolute;
   top: calc(100% + 23px);
@@ -579,6 +631,44 @@
 .player-offside-state[data-status='offside'] {
   border-color: rgba(255, 104, 121, 0.8);
   color: #ff8b98;
+}
+
+.player-structure-state {
+  position: absolute;
+  top: calc(100% + 38px);
+  left: 50%;
+  z-index: 4;
+  max-width: 180px;
+  padding: 2px 5px;
+  overflow: hidden;
+  border: 1px solid rgba(118, 230, 255, 0.42);
+  border-radius: 5px;
+  background: rgba(2, 17, 23, 0.82);
+  color: #a9efff;
+  font-size: clamp(0.43rem, 0.75vw, 0.55rem);
+  font-weight: 850;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateX(-50%);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+}
+
+.player-structure-state[data-role='WidthProvider'] {
+  border-color: rgba(173, 137, 255, 0.58);
+  color: #d7c4ff;
+}
+
+.player-structure-state[data-role='RestDefense'] {
+  border-color: rgba(255, 191, 101, 0.55);
+  color: #ffd19a;
+}
+
+.player-structure-state[data-role='Runner'],
+.player-structure-state[data-role='BoxOccupier'] {
+  border-color: rgba(117, 255, 166, 0.58);
+  color: #a7ffca;
 }
 
 @media (min-width: 981px) {

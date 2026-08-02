@@ -469,6 +469,43 @@ const OffsideRunDebugOverlay = memo(function OffsideRunDebugOverlay({
   );
 });
 
+const AttackingDecisionDebugOverlay = memo(function AttackingDecisionDebugOverlay({
+  snapshot,
+}: {
+  snapshot: MatchSnapshot;
+}) {
+  const decision = snapshot.tactical?.attackingDecision;
+  if (!decision) return null;
+  const formatScore = (value: number | null) => (value == null ? '--' : value.toFixed(1));
+
+  return (
+    <aside className="attacking-ai-debug" aria-label="Attacking AI debug">
+      <div className="attacking-ai-debug__headline">
+        <span>{decision.kind.replace('_', ' ')}</span>
+        <span>{decision.receiverId != null ? `→ #${decision.receiverId}` : 'keep'}</span>
+      </div>
+      <div className="attacking-ai-debug__scores">
+        <span>PASS {formatScore(decision.scores.pass)}</span>
+        <span>SHOOT {formatScore(decision.scores.shoot)}</span>
+        <span>CARRY {formatScore(decision.scores.carryBall)}</span>
+      </div>
+      <div className="attacking-ai-debug__shape">
+        <span>BS {decision.attackingStructure.shape.ballSupportCount}</span>
+        <span>FW {decision.attackingStructure.shape.forwardOptionCount}</span>
+        <span>DEP {decision.attackingStructure.shape.depthThreatCount}</span>
+        <span>REST {decision.attackingStructure.shape.restDefenseCount}</span>
+      </div>
+      {decision.debugLog.length ? (
+        <div className="attacking-ai-debug__logs">
+          {decision.debugLog.slice(0, 3).map((entry) => (
+            <span key={entry}>{entry}</span>
+          ))}
+        </div>
+      ) : null}
+    </aside>
+  );
+});
+
 const PlayerCircle = memo(function PlayerCircle({
   player,
   activeHighlight,
@@ -556,6 +593,18 @@ const PlayerCircle = memo(function PlayerCircle({
               ? 'LINE'
               : 'ON'}
           {player.offside.timingState ? ` · ${player.offside.timingState}` : ''}
+        </span>
+      ) : null}
+      {player.attackingIntent?.supportRole && player.attackingIntent.targetZone ? (
+        <span
+          className="player-structure-state"
+          data-role={player.attackingIntent.supportRole}
+          title={player.attackingIntent.structureReason}
+        >
+          {player.attackingIntent.supportRole} · {player.attackingIntent.targetZone.lane}/
+          {player.attackingIntent.targetZone.third} · Z
+          {player.attackingIntent.occupiedZoneCount ?? 1} ·{' '}
+          {(player.attackingIntent.nearestTeammateDistance ?? 99).toFixed(1)}m
         </span>
       ) : null}
       {player.skillCharges?.length ? (
@@ -1007,6 +1056,7 @@ function MatchPitch({ snapshot }: { snapshot: MatchSnapshot }) {
           <PitchLines />
           <PitchDebugGrid />
           <OffsideRunDebugOverlay snapshot={snapshot} mirrorY={mirrorY} />
+          <AttackingDecisionDebugOverlay snapshot={snapshot} />
           <PlayerLayer
             homePlayers={visualHomePlayers}
             awayPlayers={visualAwayPlayers}

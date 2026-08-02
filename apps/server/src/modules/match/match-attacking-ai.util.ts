@@ -16,6 +16,15 @@ import {
   evaluateAttackingRunTiming,
   markRunAsReceiving,
 } from "./match-attacking-runs.util";
+import {
+  ATTACKING_STRUCTURE_BALANCE,
+  type AttackingStructureAssignment,
+  type AttackingStructureEvaluation,
+  type AttackingSupportRole,
+  type AttackingTargetZone,
+  evaluateAttackingStructure,
+  getAttackingTargetZone,
+} from "./match-attacking-structure.util";
 
 export type AttackingPoint = { x: number; y: number };
 export type AttackingSide = "home" | "away";
@@ -39,6 +48,8 @@ export type AttackingPlayerStats = {
   heading?: number;
   anticipation?: number;
   offTheBall?: number;
+  longShots?: number;
+  shotPower?: number;
 };
 
 export type AttackingAiPlayer = {
@@ -47,6 +58,7 @@ export type AttackingAiPlayer = {
   role: string;
   position: AttackingPoint;
   velocity: AttackingPoint;
+  formationAnchor?: AttackingPoint;
   facing?: AttackingPoint;
   preferredFoot: PreferredFoot;
   isOffside?: boolean;
@@ -100,6 +112,7 @@ export type AttackingActionMemory = {
   lastEvaluationPosition: AttackingPoint;
   minimumCommitUntilTick: number;
   dribbleCooldownUntilTick: number;
+  decisionCooldownUntilTick?: number;
 };
 export type AttackingCommunication =
   | "request_ball"
@@ -127,6 +140,11 @@ export type AttackingIntent = {
   runSignal?: RunTimingSignal;
   timingState?: RunTimingState;
   runTiming?: AttackingRunDecision;
+  supportRole?: AttackingSupportRole;
+  targetZone?: AttackingTargetZone;
+  occupiedZoneCount?: number;
+  nearestTeammateDistance?: number;
+  structureReason?: string;
 };
 
 export type ActiveAttackingCombination = {
@@ -165,6 +183,7 @@ export type AttackingSituation = CollectAttackingSituationInput & {
   isOneTouchWindow: boolean;
   isSettlingAfterReceive: boolean;
   runTiming: AttackingRunTimingEvaluation;
+  attackingStructure: AttackingStructureEvaluation;
 };
 
 export type CarryOptionMetrics = {
@@ -204,6 +223,15 @@ export type PassOptionMetrics = {
   passReleaseTime: number;
   predictedRunnerPosition: AttackingPoint;
   predictedOffsideLine: number;
+  possessionRetention: number;
+  pressureRelief: number;
+  supportConnection: number;
+  switchPlayValue: number;
+  midfieldConnection: number;
+  skippedLines: number;
+  directPass: boolean;
+  directPassAllowed: boolean;
+  directPassPenalty: number;
 };
 
 export type ShotOptionMetrics = {
@@ -214,6 +242,14 @@ export type ShotOptionMetrics = {
   keeperExposure: number;
   footFit: number;
   expectedGoalValue: number;
+  maximumDistance: number;
+  longShotQuality: number;
+  distancePenalty: number;
+  blockedShotPenalty: number;
+  badAnglePenalty: number;
+  weakFootPenalty: number;
+  pressurePenalty: number;
+  lowExpectedGoalPenalty: number;
 };
 
 export type AttackingOption = {
@@ -231,6 +267,7 @@ export type AttackingOption = {
   executionError: number;
   reasons: string[];
   runTiming?: AttackingRunDecision;
+  rejectedReason?: string;
 };
 
 export type ScoredAttackingOption = AttackingOption & {
@@ -245,6 +282,8 @@ export type AttackingDecision = {
   options: ScoredAttackingOption[];
   intentions: AttackingIntent[];
   runTiming: AttackingRunTimingEvaluation;
+  attackingStructure: AttackingStructureEvaluation;
+  debugLog: string[];
   nextActionMemory: AttackingActionMemory;
   scoreLog: {
     carryBall: number | null;
@@ -256,6 +295,9 @@ export type AttackingDecision = {
     passRequiredAdvantage: number;
     currentAction: AttackingActionKind | null;
     pressure: number;
+    selectedReceiverId: number | null;
+    rejectedPasses: Array<{ id: string; receiverId: number | null; reason: string }>;
+    rejectedShots: Array<{ id: string; reason: string }>;
   };
 };
 
@@ -265,8 +307,14 @@ export const ATTACKING_AI_BALANCE = Object.freeze({
   passSpeed: 27,
   maxPredictionSeconds: 1.65,
   randomUtilityNoise: 2.2,
-  minimumIntentSpacing: 5.4,
-  shotMaximumDistance: 44,
+  minimumIntentSpacing: ATTACKING_STRUCTURE_BALANCE.minimumTeammateSpacing,
+  shotMaximumDistance: 38,
+  longShotAttributeFactor: 0.16,
+  shotRequiredAdvantage: 8,
+  directPassPenalty: 18,
+  directPassRequiredAdvantage: 10,
+  midfieldConnectionBonus: 12,
+  circulationPassRequiredAdvantage: 1.5,
   transitionTicks: 7,
   passRequiredAdvantage: 8,
   currentActionBonus: 7,
@@ -274,6 +322,9 @@ export const ATTACKING_AI_BALANCE = Object.freeze({
   minimumCommitTicks: 2,
   dribbleCooldownTicks: 5,
   receiveSettleTicks: 1,
+  minimumPossessionTimeSeconds: 0.4,
+  minimumActionCommitTicks: 2,
+  decisionCooldownTicks: 1,
   strongPressureThreshold: 0.66,
   dangerousPassLineBreak: 0.62,
   reevaluationMinSeconds: 0.3,
@@ -356,7 +407,17 @@ export function collectAttackingSituation(
       riskTolerance: base.tactics.riskTolerance,
     },
   });
-  return { ...base, runTiming };
+  const attackingStructure = evaluateAttackingStructure({
+    side: input.side,
+    ball: input.ball,
+    carrierId: input.carrier.id,
+    players: input.teammates,
+    pressure,
+    compactness: base.tactics.compactness,
+    directness: base.tactics.directness,
+    isTransition: base.isTransition,
+  });
+  return { ...base, runTiming, attackingStructure };
 }
 
 export function generateAttackingOptions(situation: AttackingSituation): AttackingOption[] {
@@ -418,10 +479,70 @@ export function scoreAttackingOptions(
   situation: AttackingSituation,
   options: AttackingOption[],
 ): AttackingOption[] {
-  return options.map((option) => ({
+  const scored = options.map((option) => ({
     ...option,
     baseScore: clamp(scoreOption(situation, option), 0, 100),
   }));
+  const bestPassScore = Math.max(
+    ...scored.filter((option) => option.kind === "pass").map((option) => option.baseScore),
+    0,
+  );
+  const bestCarryScore = Math.max(
+    ...scored.filter((option) => option.kind === "carry_ball").map((option) => option.baseScore),
+    0,
+  );
+  const bestShortBuildUpScore = Math.max(
+    ...scored
+      .filter(
+        (option) =>
+          option.kind === "pass" &&
+          option.pass &&
+          !option.pass.directPass &&
+          option.pass.distance <= 32 &&
+          option.pass.completionProbability >= 0.55,
+      )
+      .map((option) => option.baseScore),
+    0,
+  );
+
+  return scored.map((option) => {
+    if (option.kind === "shoot" && option.shot) {
+      const bestAlternative = Math.max(bestPassScore, bestCarryScore);
+      const clearChance =
+        option.shot.expectedGoalValue >= 0.42 &&
+        option.shot.sightQuality >= 0.58 &&
+        option.shot.angleQuality >= 0.46;
+      if (situation.isSettlingAfterReceive && !clearChance) {
+        return { ...option, rejectedReason: "minimum possession time: control and scan before shooting" };
+      }
+      if (option.shot.expectedGoalValue < 0.075) {
+        return { ...option, rejectedReason: "low expected goal value" };
+      }
+      if (
+        !clearChance &&
+        option.baseScore < bestAlternative + ATTACKING_AI_BALANCE.shotRequiredAdvantage
+      ) {
+        return {
+          ...option,
+          rejectedReason: `shoot score must beat pass/carry by ${ATTACKING_AI_BALANCE.shotRequiredAdvantage}`,
+        };
+      }
+    }
+    if (
+      option.kind === "pass" &&
+      option.pass?.directPass &&
+      !option.pass.directPassAllowed &&
+      bestShortBuildUpScore > 0 &&
+      option.baseScore <
+        bestShortBuildUpScore + ATTACKING_AI_BALANCE.directPassRequiredAdvantage
+    ) {
+      return {
+        ...option,
+        rejectedReason: `direct pass skips ${option.pass.skippedLines} lines; short build-up is better`,
+      };
+    }
+    return option;
+  });
 }
 
 export function selectAttackingAction(
@@ -433,7 +554,8 @@ export function selectAttackingAction(
     throw new Error("Attacking utility AI needs at least one option");
   }
 
-  const randomized = scoredOptions
+  const selectableOptions = scoredOptions.filter((option) => !option.rejectedReason);
+  const randomized = (selectableOptions.length ? selectableOptions : scoredOptions)
     .map((option): ScoredAttackingOption => {
       const noise = (clamp01(random()) * 2 - 1) * ATTACKING_AI_BALANCE.randomUtilityNoise;
       return { ...option, utility: option.baseScore, noise, finalScore: option.baseScore + noise };
@@ -450,10 +572,18 @@ export function selectAttackingAction(
       option.pass.lineBreakValue >= ATTACKING_AI_BALANCE.dangerousPassLineBreak ||
       option.pass.chanceCreationValue >= 0.68 ||
       getCombinationBonus(situation, option) > 0;
+    const circulationPass =
+      option.pass.possessionRetention >= 0.66 &&
+      (option.pass.supportConnection >= 0.55 ||
+        option.pass.pressureRelief >= 0.5 ||
+        option.pass.switchPlayValue >= 0.55);
+    const requiredAdvantage = circulationPass
+      ? ATTACKING_AI_BALANCE.circulationPassRequiredAdvantage
+      : ATTACKING_AI_BALANCE.passRequiredAdvantage;
     return (
       pressureRelease ||
       dangerousPass ||
-      option.finalScore >= bestCarry.finalScore + ATTACKING_AI_BALANCE.passRequiredAdvantage
+      option.finalScore >= bestCarry.finalScore + requiredAdvantage
     );
   });
   const ranked = eligible.length ? eligible : randomized;
@@ -467,6 +597,12 @@ export function selectAttackingAction(
     situation.pressure < ATTACKING_AI_BALANCE.strongPressureThreshold,
   );
   if (insideMinimumCommit && currentOption) return currentOption;
+  const insideDecisionCooldown = Boolean(
+    memory?.currentAction &&
+    situation.tick < Number(memory.decisionCooldownUntilTick ?? 0) &&
+    situation.pressure < ATTACKING_AI_BALANCE.strongPressureThreshold,
+  );
+  if (insideDecisionCooldown && currentOption) return currentOption;
 
   const best = ranked[0];
   if (
@@ -483,25 +619,40 @@ export function createAttackingIntentions(
   situation: AttackingSituation,
   selected: ScoredAttackingOption,
 ): AttackingIntent[] {
-  const candidates: AttackingIntent[] = [];
+  const candidates: AttackingIntent[] = situation.attackingStructure.assignments.map(
+    (assignment) => structureAssignmentToIntent(assignment, situation.tick),
+  );
   const direction = situation.direction;
   const receiverId = selected.receiverId ?? null;
   const teammates = situation.teammates.filter((player) => player.id !== situation.carrier.id);
   const receiver = teammates.find((player) => player.id === receiverId) ?? null;
+  const upsert = (intent: AttackingIntent) => {
+    const index = candidates.findIndex((candidate) => candidate.playerId === intent.playerId);
+    if (index >= 0) candidates[index] = { ...candidates[index], ...intent };
+    else candidates.push(intent);
+  };
 
   if (receiver) {
-    candidates.push({
+    const structure = situation.attackingStructure.assignments.find(
+      (assignment) => assignment.playerId === receiver.id,
+    );
+    upsert({
       playerId: receiver.id,
       runType: "RECEIVE",
       communication: "request_ball",
       target: selected.target,
       priority: 100,
       expiresAtTick: situation.tick + 5,
+      supportRole: structure?.supportRole ?? "ForwardOption",
+      targetZone: getAttackingTargetZone(selected.target, situation.side),
+      occupiedZoneCount: structure?.occupiedZoneCount ?? 1,
+      nearestTeammateDistance: structure?.nearestTeammateDistance ?? 99,
+      structureReason: "selected receiver occupies the communicated passing target",
     });
   }
 
   if (selected.passStyle === "one_two") {
-    candidates.push({
+    upsert({
       playerId: situation.carrier.id,
       runType: "ONE_TWO_RETURN",
       communication: "announce_run",
@@ -511,6 +662,15 @@ export function createAttackingIntentions(
       },
       priority: 98,
       expiresAtTick: situation.tick + 8,
+      supportRole: "Runner",
+      targetZone: getAttackingTargetZone(
+        {
+          x: clamp(situation.carrier.position.x + (50 - situation.carrier.position.x) * 0.18, 8, 92),
+          y: clamp(situation.carrier.position.y + direction * 18, 7, 93),
+        },
+        situation.side,
+      ),
+      structureReason: "wall-pass initiator continues beyond the receiver",
     });
   }
 
@@ -522,7 +682,7 @@ export function createAttackingIntentions(
   );
   if (sameFlankFullback && sameFlankFullback.id !== receiverId) {
     const overlap = wideCarrier && situation.tactics.compactness < 0.62;
-    candidates.push({
+    upsert({
       playerId: sameFlankFullback.id,
       runType: overlap ? "OVERLAP" : "UNDERLAP",
       communication: "announce_run",
@@ -538,6 +698,23 @@ export function createAttackingIntentions(
       },
       priority: 78,
       expiresAtTick: situation.tick + 10,
+      supportRole: "WidthProvider",
+      targetZone: getAttackingTargetZone(
+        {
+          x: overlap
+            ? clamp(
+                sameFlankFullback.position.x + Math.sign(sameFlankFullback.position.x - 50) * 8,
+                5,
+                95,
+              )
+            : clamp(lerp(sameFlankFullback.position.x, 50, 0.42), 15, 85),
+          y: clamp(Math.max(8, Math.min(92, situation.ball.y + direction * 22)), 7, 93),
+        },
+        situation.side,
+      ),
+      structureReason: overlap
+        ? "fullback preserves width beyond the winger"
+        : "fullback underlaps into the half-space",
     });
   }
 
@@ -559,7 +736,7 @@ export function createAttackingIntentions(
       );
     })[0];
   if (thirdRunner) {
-    candidates.push({
+    upsert({
       playerId: thirdRunner.id,
       runType: "THIRD_MAN_RUN",
       communication: "announce_run",
@@ -569,39 +746,15 @@ export function createAttackingIntentions(
       },
       priority: 74,
       expiresAtTick: situation.tick + 9,
-    });
-  }
-
-  for (const teammate of teammates) {
-    if (candidates.some((intent) => intent.playerId === teammate.id)) continue;
-    const role = normalizeRole(teammate.role);
-    if (role === "GK") {
-      candidates.push({
-        playerId: teammate.id,
-        runType: "HOLD_POSITION",
-        communication: "hold_position",
-        target: { ...teammate.position },
-        priority: 20,
-        expiresAtTick: situation.tick + 8,
-      });
-      continue;
-    }
-    const isForward = role === "ST" || role === "W";
-    const isBehindBall = direction * (teammate.position.y - situation.ball.y) < -2;
-    const runType: AttackingRunType = isForward
-      ? role === "W"
-        ? "STRETCH"
-        : "BOX_RUN"
-      : isBehindBall
-        ? "SUPPORT"
-        : "HOLD_POSITION";
-    candidates.push({
-      playerId: teammate.id,
-      runType,
-      communication: isForward ? "announce_run" : isBehindBall ? "offer_support" : "hold_position",
-      target: getSupportingTarget(situation, teammate, runType),
-      priority: isForward ? 62 : isBehindBall ? 50 : 34,
-      expiresAtTick: situation.tick + 8,
+      supportRole: "Runner",
+      targetZone: getAttackingTargetZone(
+        {
+          x: clamp(lerp(thirdRunner.position.x, 50, 0.34), 16, 84),
+          y: clamp(situation.ball.y + direction * (situation.isTransition ? 25 : 17), 7, 93),
+        },
+        situation.side,
+      ),
+      structureReason: "third player attacks the space created by the short combination",
     });
   }
 
@@ -615,19 +768,43 @@ export function createAttackingIntentions(
       intent.runType === "OVERLAP" ||
       intent.runType === "UNDERLAP" ||
       intent.runType === "THIRD_MAN_RUN";
+    const timingMustOverride =
+      timing.currentStatus === "offside" ||
+      timing.predictedStatus === "offside" ||
+      ["ReceivePass", "TriggerRun", "CurveRun", "CheckBack"].includes(timing.state);
+    const preserveAssignedTarget = preserveCombinationTarget || !timingMustOverride;
     return {
       ...intent,
-      runType: preserveCombinationTarget ? intent.runType : toIntentRunType(timing),
-      target: preserveCombinationTarget ? intent.target : timing.target,
+      runType: preserveAssignedTarget ? intent.runType : toIntentRunType(timing),
+      target: preserveAssignedTarget ? intent.target : timing.target,
       runSignal: timing.signals.at(-1),
       timingState: timing.state,
       runTiming: timing,
     };
   });
-  return deconflictIntentTargets(timedCandidates, situation.direction).map((intent) => {
-    if (!intent.runTiming) return intent;
-    return {
+  const spaced = deconflictIntentTargets(timedCandidates, situation.direction);
+  const finalZoneOccupancy = spaced.reduce<Record<string, number>>((counts, intent) => {
+    const zone = getAttackingTargetZone(intent.target, situation.side);
+    counts[zone.key] = (counts[zone.key] ?? 0) + 1;
+    return counts;
+  }, {});
+  return spaced.map((intent) => {
+    const targetZone = getAttackingTargetZone(intent.target, situation.side);
+    const nearestTeammateDistance = Math.min(
+      ...spaced
+        .filter((other) => other.playerId !== intent.playerId)
+        .map((other) => distance(other.target, intent.target)),
+      99,
+    );
+    const debugIntent = {
       ...intent,
+      targetZone,
+      occupiedZoneCount: finalZoneOccupancy[targetZone.key] ?? 1,
+      nearestTeammateDistance: Number(nearestTeammateDistance.toFixed(2)),
+    };
+    if (!intent.runTiming) return debugIntent;
+    return {
+      ...debugIntent,
       runTiming: {
         ...intent.runTiming,
         target: intent.target,
@@ -635,6 +812,53 @@ export function createAttackingIntentions(
       },
     };
   });
+}
+
+function structureAssignmentToIntent(
+  assignment: AttackingStructureAssignment,
+  tick: number,
+): AttackingIntent {
+  const runTypeByRole: Record<AttackingSupportRole, AttackingRunType> = {
+    BallSupport: "SUPPORT",
+    ForwardOption: "HOLD_POSITION",
+    WidthProvider: "STRETCH",
+    DepthSupport: "SUPPORT",
+    Runner: "BOX_RUN",
+    RestDefense: "HOLD_POSITION",
+    BoxOccupier: "BOX_RUN",
+  };
+  const communication: AttackingCommunication =
+    assignment.supportRole === "BallSupport" || assignment.supportRole === "DepthSupport"
+      ? "offer_support"
+      : assignment.supportRole === "Runner" || assignment.supportRole === "BoxOccupier"
+        ? "announce_run"
+        : "hold_position";
+  return {
+    playerId: assignment.playerId,
+    runType: runTypeByRole[assignment.supportRole],
+    communication,
+    target: assignment.target,
+    priority: getSupportRolePriority(assignment.supportRole),
+    expiresAtTick: tick + 8,
+    supportRole: assignment.supportRole,
+    targetZone: assignment.targetZone,
+    occupiedZoneCount: assignment.occupiedZoneCount,
+    nearestTeammateDistance: assignment.nearestTeammateDistance,
+    structureReason: assignment.reason,
+  };
+}
+
+function getSupportRolePriority(role: AttackingSupportRole) {
+  const priorities: Record<AttackingSupportRole, number> = {
+    BallSupport: 82,
+    ForwardOption: 70,
+    WidthProvider: 76,
+    DepthSupport: 72,
+    Runner: 68,
+    RestDefense: 88,
+    BoxOccupier: 66,
+  };
+  return priorities[role];
 }
 
 function toIntentRunType(decision: AttackingRunDecision): AttackingRunType {
@@ -664,6 +888,7 @@ export function runAttackingUtilityAi(
     const matching = options.filter((option) => option.kind === kind);
     return matching.length ? Math.max(...matching.map((option) => option.baseScore)) : null;
   };
+  const debugLog = buildAttackingDebugLog(situation, options, selected);
   return {
     situation: resolvedSituation,
     selected,
@@ -677,6 +902,8 @@ export function runAttackingUtilityAi(
       .sort((left, right) => right.finalScore - left.finalScore),
     intentions: createAttackingIntentions(resolvedSituation, selected),
     runTiming,
+    attackingStructure: situation.attackingStructure,
+    debugLog,
     nextActionMemory,
     scoreLog: {
       carryBall: getBestScore("carry_ball"),
@@ -688,6 +915,17 @@ export function runAttackingUtilityAi(
       passRequiredAdvantage: ATTACKING_AI_BALANCE.passRequiredAdvantage,
       currentAction: situation.actionMemory?.currentAction ?? null,
       pressure: situation.pressure,
+      selectedReceiverId: selected.receiverId ?? null,
+      rejectedPasses: options
+        .filter((option) => option.kind === "pass" && option.rejectedReason)
+        .map((option) => ({
+          id: option.id,
+          receiverId: option.receiverId ?? null,
+          reason: option.rejectedReason!,
+        })),
+      rejectedShots: options
+        .filter((option) => option.kind === "shoot" && option.rejectedReason)
+        .map((option) => ({ id: option.id, reason: option.rejectedReason! })),
     },
   };
 }
@@ -698,7 +936,11 @@ function createNextActionMemory(
 ): AttackingActionMemory {
   const previous = situation.actionMemory;
   const continuesAction = previous?.currentAction === selected.kind;
-  const isCommittedBallAction = selected.kind === "carry_ball" || selected.kind === "dribble";
+  const isCommittedBallAction =
+    selected.kind === "carry_ball" ||
+    selected.kind === "dribble" ||
+    selected.kind === "hold" ||
+    selected.kind === "wait";
   return {
     currentAction: selected.kind,
     actionStartedTick: continuesAction ? previous.actionStartedTick : situation.tick,
@@ -706,12 +948,62 @@ function createNextActionMemory(
     lastEvaluationPosition: { ...situation.carrier.position },
     minimumCommitUntilTick: continuesAction
       ? previous.minimumCommitUntilTick
-      : situation.tick + (isCommittedBallAction ? ATTACKING_AI_BALANCE.minimumCommitTicks : 0),
+      : situation.tick +
+        (isCommittedBallAction ? ATTACKING_AI_BALANCE.minimumActionCommitTicks : 0),
     dribbleCooldownUntilTick:
       selected.kind === "dribble"
         ? situation.tick + ATTACKING_AI_BALANCE.dribbleCooldownTicks
         : (previous?.dribbleCooldownUntilTick ?? 0),
+    decisionCooldownUntilTick: continuesAction
+      ? Number(previous?.decisionCooldownUntilTick ?? situation.tick)
+      : situation.tick + ATTACKING_AI_BALANCE.decisionCooldownTicks,
   };
+}
+
+function buildAttackingDebugLog(
+  situation: AttackingSituation,
+  options: AttackingOption[],
+  selected: ScoredAttackingOption,
+) {
+  const log = [...situation.attackingStructure.warnings];
+  const shotDistance = distance(situation.carrier.position, situation.goal);
+  const maximumShotDistance = getMaximumShotDistance(situation.carrier);
+  if (shotDistance > maximumShotDistance) {
+    log.push(
+      `SHOT_OUT_OF_RANGE:${situation.carrier.id}:${shotDistance.toFixed(1)}/${maximumShotDistance.toFixed(1)}`,
+    );
+  }
+  const nearPasses = options.filter(
+    (option) =>
+      option.kind === "pass" &&
+      option.pass &&
+      option.pass.distance <= 31 &&
+      option.pass.completionProbability >= 0.55 &&
+      !option.rejectedReason,
+  );
+  if (!nearPasses.length) log.push(`NO_SAFE_NEAR_PASS:${situation.carrier.id}`);
+  for (const rejection of situation.runTiming.rejectedPasses) {
+    log.push(`PASS_REJECTED:${rejection.playerId}:${rejection.reason}`);
+  }
+  for (const option of options) {
+    if (option.rejectedReason) log.push(`OPTION_REJECTED:${option.id}:${option.rejectedReason}`);
+  }
+  if (selected.kind === "pass" && selected.pass?.skippedLines) {
+    log.push(
+      `PASS_SKIPPED_LINES:${situation.carrier.id}->${selected.receiverId}:${selected.pass.skippedLines}`,
+    );
+    if (
+      ["GK", "CB", "FB"].includes(getDetailedRole(situation.carrier.role)) &&
+      ["ST", "SS"].includes(
+        getDetailedRole(
+          situation.teammates.find((player) => player.id === selected.receiverId)?.role ?? "CM",
+        ),
+      )
+    ) {
+      log.push(`DEFENDER_DIRECT_TO_STRIKER:${situation.carrier.id}->${selected.receiverId}`);
+    }
+  }
+  return [...new Set(log)];
 }
 
 function createHoldOption(situation: AttackingSituation): AttackingOption {
@@ -901,6 +1193,53 @@ function createPassOption(
       movementValue * 0.2 +
       Math.max(0, progression) * 0.18,
   );
+  const possessionRetention = clamp01(
+    completionProbability * 0.5 + receiverSpace * 0.22 + receptionQuality * 0.28,
+  );
+  const receivesUnderLessPressure = clamp01(receiverSpace - (1 - situation.pressure) * 0.25);
+  const pressureRelief = clamp01(
+    situation.pressure * 0.62 + receivesUnderLessPressure * 0.28 +
+      (style === "back" || style === "switch" ? 0.1 : 0),
+  );
+  const supportConnection = evaluateBuildUpConnection(situation.carrier.role, receiver.role);
+  const lateralChange = Math.abs(target.x - situation.carrier.position.x);
+  const switchPlayValue = clamp01(
+    (style === "switch" ? 0.58 : 0) + lateralChange / 75 +
+      (Math.sign(target.x - 50) !== Math.sign(situation.ball.x - 50) ? 0.2 : 0),
+  );
+  const carrierLine = getBuildUpLine(situation.carrier.role);
+  const receiverLine = getBuildUpLine(receiver.role);
+  const skippedLines = Math.max(0, receiverLine - carrierLine - 1);
+  const directPass =
+    progression > 0.08 && skippedLines >= 2 &&
+    ["GK", "CB", "FB"].includes(getDetailedRole(situation.carrier.role));
+  const safeMidfieldOutlet = hasSafeMidfieldOutlet(situation, receiver.id);
+  const highOppositionLine = situation.runTiming.defenseDepth === "high";
+  const dangerousTimedRun =
+    runTiming?.state === "TriggerRun" &&
+    (runTiming?.predictedOffsideRisk ?? 1) <= ATTACKING_RUN_BALANCE.throughBallOffsideThreshold;
+  const directPassAllowed =
+    !directPass ||
+    (receiverSpace >= 0.68 &&
+      completionProbability >= 0.64 &&
+      highOppositionLine &&
+      dangerousTimedRun &&
+      (!safeMidfieldOutlet || situation.tactics.directness >= 0.7));
+  const directPassPenalty = directPass && !directPassAllowed
+    ? ATTACKING_AI_BALANCE.directPassPenalty *
+      (1.12 - situation.tactics.directness * 0.45 + (safeMidfieldOutlet ? 0.35 : 0))
+    : directPass
+      ? 4 * (1 - situation.tactics.directness)
+      : 0;
+  const midfieldConnection = clamp01(
+    supportConnection +
+      (["DM", "CM"].includes(getDetailedRole(receiver.role)) ? 0.28 : 0) +
+      (situation.attackingStructure.assignments.find(
+        (assignment) => assignment.playerId === receiver.id,
+      )?.supportRole === "ForwardOption"
+        ? 0.12
+        : 0),
+  );
 
   return {
     id: `pass:${style}:${receiver.id}`,
@@ -917,6 +1256,10 @@ function createPassOption(
       runTiming
         ? `${runTiming.state} at release (${runTiming.predictedStatus})`
         : "static receiver timing",
+      supportConnection >= 0.65 ? "connect the next build-up line" : "retain a passing outlet",
+      directPass && !directPassAllowed
+        ? `skips ${skippedLines} build-up lines despite a safe midfield outlet`
+        : "preserves the team passing structure",
     ],
     runTiming,
     pass: {
@@ -938,6 +1281,15 @@ function createPassOption(
       predictedRunnerPosition: runTiming?.predictedRunnerPosition ?? receiver.position,
       predictedOffsideLine:
         runTiming?.predictedOffsideLine ?? situation.runTiming.predictedLine.effectiveLineY,
+      possessionRetention,
+      pressureRelief,
+      supportConnection,
+      switchPlayValue,
+      midfieldConnection,
+      skippedLines,
+      directPass,
+      directPassAllowed,
+      directPassPenalty,
     },
   };
 }
@@ -958,25 +1310,46 @@ function createShotOption(
       )
     : 0.86;
   const footFit = getShootingFootFit(situation);
+  const longShotQuality = clamp01(
+    (getLongShots(situation.carrier) * 0.34 +
+      getTechnique(situation.carrier) * 0.24 +
+      getComposure(situation.carrier) * 0.22 +
+      getShotPower(situation.carrier) * 0.2) /
+      100,
+  );
+  const maximumDistance = getMaximumShotDistance(situation.carrier);
   const finishing = clamp01(
     (situation.carrier.stats.shoot * 0.62 +
       getComposure(situation.carrier) * 0.22 +
       getTechnique(situation.carrier) * 0.16) /
       100,
   );
-  const rangeQuality = clamp01(1 - Math.max(0, distanceToGoal - 8) / 40);
+  const rangeQuality = clamp01(Math.exp(-Math.max(0, distanceToGoal - 8) / 13));
   const styleFit = getShotStyleFit(situation, style, distanceToGoal);
-  const expectedGoalValue = clamp01(
-    0.015 +
-      rangeQuality * 0.31 +
-      angleQuality * 0.18 +
-      lane.sight * 0.21 +
-      keeperExposure * 0.1 +
-      finishing * 0.18 +
-      footFit * 0.06 +
-      styleFit * 0.08 -
-      situation.pressure * 0.16,
+  const shotEnvironment = clamp01(
+    angleQuality * 0.2 +
+      lane.sight * 0.25 +
+      keeperExposure * 0.15 +
+      finishing * 0.22 +
+      footFit * 0.1 +
+      styleFit * 0.08,
   );
+  const expectedGoalValue = clamp01(
+    0.008 +
+      rangeQuality * (0.16 + shotEnvironment * 0.58) +
+      (style === "header" ? 0.035 : 0) -
+      situation.pressure * 0.1 -
+      lane.risk * 0.12,
+  );
+  const distancePenalty = clamp01(
+    Math.max(0, distanceToGoal - maximumDistance) / 6 +
+      Math.max(0, distanceToGoal - 20) / 50,
+  );
+  const blockedShotPenalty = lane.risk;
+  const badAnglePenalty = 1 - angleQuality;
+  const weakFootPenalty = 1 - footFit;
+  const pressurePenalty = situation.pressure;
+  const lowExpectedGoalPenalty = clamp01((0.16 - expectedGoalValue) / 0.16);
 
   return {
     id: `shoot:${style}`,
@@ -985,7 +1358,11 @@ function createShotOption(
     shotStyle: style,
     baseScore: 0,
     executionError: getExecutionError(situation, "shot", undefined, style),
-    reasons: ["shot angle", "clear sight of goal", "goalkeeper exposure"],
+    reasons: [
+      `distance ${distanceToGoal.toFixed(1)}/${maximumDistance.toFixed(1)}`,
+      `xG ${expectedGoalValue.toFixed(3)}`,
+      lane.risk >= 0.5 ? "shot lane heavily blocked" : "usable sight of goal",
+    ],
     shot: {
       distanceToGoal,
       angleQuality,
@@ -994,6 +1371,14 @@ function createShotOption(
       keeperExposure,
       footFit,
       expectedGoalValue,
+      maximumDistance,
+      longShotQuality,
+      distancePenalty,
+      blockedShotPenalty,
+      badAnglePenalty,
+      weakFootPenalty,
+      pressurePenalty,
+      lowExpectedGoalPenalty,
     },
   };
 }
@@ -1089,10 +1474,16 @@ function scoreOption(situation: AttackingSituation, option: AttackingOption): nu
     const transitionBonus =
       situation.isTransition && pass.lineBreakValue > 0.35 ? 6 * tactics.tempo : 0;
     const comboBonus = getCombinationBonus(situation, option);
-    const backwardPassPenalty = pass.progression < -0.04 ? 16 + Math.abs(pass.progression) * 18 : 0;
+    const backwardPassPenalty =
+      pass.progression < -0.08 && situation.pressure < 0.3
+        ? 2 + Math.abs(pass.progression) * 4
+        : 0;
     const lowProgressPassPenalty =
-      pass.progression < 0.12 && pass.lineBreakValue < 0.24 && pass.chanceCreationValue < 0.32
-        ? 13
+      pass.progression < 0.08 &&
+      pass.lineBreakValue < 0.2 &&
+      pass.possessionRetention < 0.62 &&
+      pass.pressureRelief < 0.35
+        ? 4
         : 0;
     const pressureReleaseBonus =
       situation.pressure >= ATTACKING_AI_BALANCE.strongPressureThreshold ? 22 : 0;
@@ -1109,31 +1500,40 @@ function scoreOption(situation: AttackingSituation, option: AttackingOption): nu
     );
     const styleBonus =
       option.passStyle === "switch"
-        ? pass.lineBreakValue * tactics.directness * 4
+        ? 5 + pass.switchPlayValue * 7
         : option.passStyle === "back"
-          ? situation.pressure * 5
+          ? situation.pressure * 9 + pass.possessionRetention * 3
           : option.passStyle === "one_touch"
-            ? tactics.tempo * 3
+            ? tactics.tempo * 5
+            : option.passStyle === "short" || option.passStyle === "one_two"
+              ? pass.supportConnection * 5
             : 0;
     const receiveSettlePenalty =
       situation.isSettlingAfterReceive && dangerousRunBonus === 0 && comboBonus <= 0 ? 16 : 0;
     return withCurrentActionBonus(
       situation,
       option,
-      10 +
-        pass.receiverAdvantage * 18 +
-        pass.lineBreakValue * 24 +
+      8 +
         passSafety * 18 +
-        pass.chanceCreationValue * 20 +
+        Math.max(0, pass.progression) * (10 + tactics.directness * 8) +
+        pass.possessionRetention * 10 +
+        pass.pressureRelief * 10 +
+        pass.supportConnection * 9 +
+        pass.switchPlayValue * 8 +
+        pass.receiverAdvantage * 7 +
+        pass.lineBreakValue * (11 + tactics.directness * 7) +
+        pass.chanceCreationValue * 14 +
+        pass.midfieldConnection * ATTACKING_AI_BALANCE.midfieldConnectionBonus +
         transitionBonus +
         comboBonus +
         styleBonus +
         pressureReleaseBonus +
         dangerousRunBonus +
-        pass.timingQuality * 12 +
+        pass.timingQuality * 8 +
         personalityPassBias -
-        pass.interceptionRisk * 26 -
+        pass.interceptionRisk * 24 -
         pass.predictedOffsideRisk * 40 -
+        pass.directPassPenalty -
         backwardPassPenalty -
         lowProgressPassPenalty -
         receiveSettlePenalty -
@@ -1142,23 +1542,33 @@ function scoreOption(situation: AttackingSituation, option: AttackingOption): nu
   }
   if (option.kind === "shoot" && option.shot) {
     const shot = option.shot;
-    const xgValue = shot.expectedGoalValue * 82;
+    const xgValue = shot.expectedGoalValue * 112;
     const playerConfidence = getComposure(situation.carrier) / 100;
     const styleBonus =
       getShotStyleFit(situation, option.shotStyle ?? "normal", shot.distanceToGoal) * 7;
-    return withCurrentActionBonus(
+    let score = withCurrentActionBonus(
       situation,
       option,
-      5 +
+      3 +
         xgValue +
-        shot.sightQuality * 10 +
-        shot.footFit * 5 +
-        playerConfidence * 5 +
-        tactics.shootingPriority * 15 +
+        shot.sightQuality * 8 +
+        shot.footFit * 4 +
+        playerConfidence * 4 +
+        shot.longShotQuality * (option.shotStyle === "long_range" ? 10 : 3) +
+        (shot.expectedGoalValue >= 0.4 ? 18 : 0) +
+        tactics.shootingPriority * 8 +
         styleBonus -
-        shot.blockerRisk * 13 -
+        shot.distancePenalty * 24 -
+        shot.blockedShotPenalty * 18 -
+        shot.badAnglePenalty * 12 -
+        shot.weakFootPenalty * 8 -
+        shot.pressurePenalty * 15 -
+        shot.lowExpectedGoalPenalty * 22 -
         option.executionError * 9,
     );
+    if (shot.distanceToGoal > shot.maximumDistance) score *= 0.1;
+    if (situation.isSettlingAfterReceive && shot.expectedGoalValue < 0.4) score -= 24;
+    return score;
   }
   return 0;
 }
@@ -1311,6 +1721,101 @@ function getConfidence(player: AttackingAiPlayer): number {
   );
 }
 
+function getLongShots(player: AttackingAiPlayer): number {
+  return clamp(
+    player.stats.longShots ??
+      player.stats.shoot * 0.56 +
+        player.stats.longPass * 0.18 +
+        getTechnique(player) * 0.16 +
+        getComposure(player) * 0.1,
+    1,
+    100,
+  );
+}
+
+function getShotPower(player: AttackingAiPlayer): number {
+  return clamp(
+    player.stats.shotPower ??
+      player.stats.shoot * 0.68 +
+        player.stats.balance * 0.18 +
+        getTechnique(player) * 0.14,
+    1,
+    100,
+  );
+}
+
+function getMaximumShotDistance(player: AttackingAiPlayer): number {
+  const baseByRole: Record<ReturnType<typeof getDetailedRole>, number> = {
+    GK: 12,
+    CB: 15,
+    FB: 17,
+    DM: 18,
+    CM: 19,
+    AM: 21,
+    W: 20,
+    ST: 22,
+    SS: 21,
+  };
+  return Math.min(
+    ATTACKING_AI_BALANCE.shotMaximumDistance,
+    baseByRole[getDetailedRole(player.role)] +
+      getLongShots(player) * ATTACKING_AI_BALANCE.longShotAttributeFactor,
+  );
+}
+
+function getBuildUpLine(role: string): number {
+  const detailed = getDetailedRole(role);
+  const lines: Record<ReturnType<typeof getDetailedRole>, number> = {
+    GK: 0,
+    CB: 1,
+    FB: 2,
+    DM: 2,
+    CM: 3,
+    AM: 4,
+    W: 4,
+    ST: 5,
+    SS: 5,
+  };
+  return lines[detailed];
+}
+
+function evaluateBuildUpConnection(carrierRole: string, receiverRole: string): number {
+  const carrier = getDetailedRole(carrierRole);
+  const receiver = getDetailedRole(receiverRole);
+  const preferredNext: Record<ReturnType<typeof getDetailedRole>, string[]> = {
+    GK: ["CB", "FB", "DM"],
+    CB: ["FB", "DM", "CM"],
+    FB: ["DM", "CM", "W"],
+    DM: ["CM", "AM", "FB"],
+    CM: ["AM", "W", "ST", "DM"],
+    AM: ["W", "ST", "SS", "CM"],
+    W: ["ST", "AM", "FB", "CM"],
+    ST: ["AM", "W", "CM", "SS"],
+    SS: ["ST", "AM", "W", "CM"],
+  };
+  if (preferredNext[carrier].includes(receiver)) return 1;
+  const lineGap = Math.abs(getBuildUpLine(receiverRole) - getBuildUpLine(carrierRole));
+  return lineGap <= 1 ? 0.68 : lineGap === 2 ? 0.32 : 0.08;
+}
+
+function hasSafeMidfieldOutlet(situation: AttackingSituation, excludedReceiverId: number) {
+  return situation.teammates.some((player) => {
+    if (player.id === situation.carrier.id || player.id === excludedReceiverId || player.isOffside) {
+      return false;
+    }
+    if (!["DM", "CM"].includes(getDetailedRole(player.role))) return false;
+    const gap = distance(situation.carrier.position, player.position);
+    if (gap < 4 || gap > 34) return false;
+    const travelSeconds = clamp(
+      gap / ATTACKING_AI_BALANCE.passSpeed,
+      0.18,
+      ATTACKING_AI_BALANCE.maxPredictionSeconds,
+    );
+    const lane = evaluatePassingLane(situation, player.position, travelSeconds);
+    return lane.risk <= 0.48 && evaluateReceiverSpace(situation.opponents, player.position) >= 0.24;
+  });
+}
+
 function getRoleCarryBias(role: string): number {
   const detailedRole = getDetailedRole(role);
   const values: Record<ReturnType<typeof getDetailedRole>, number> = {
@@ -1397,9 +1902,26 @@ function getAvailablePassStyles(
 
 function getAvailableShotStyles(situation: AttackingSituation): AttackingShotStyle[] {
   const goalDistance = distance(situation.carrier.position, situation.goal);
-  if (goalDistance > ATTACKING_AI_BALANCE.shotMaximumDistance) return [];
+  const maximumDistance = getMaximumShotDistance(situation.carrier);
+  const lane = evaluateShotLane(situation);
+  const exceptionalFirstContact =
+    situation.isOneTouchWindow &&
+    (situation.lastPassStyle === "cross" || goalDistance <= 18);
+  if (
+    goalDistance > Math.min(ATTACKING_AI_BALANCE.shotMaximumDistance, maximumDistance + 1.5) ||
+    lane.sight < 0.24 ||
+    (situation.bodyAlignment < 0.3 && !exceptionalFirstContact)
+  ) {
+    return [];
+  }
   const styles = new Set<AttackingShotStyle>(["normal"]);
-  if (goalDistance >= 22) styles.add("long_range");
+  const longShotQuality =
+    (getLongShots(situation.carrier) * 0.34 +
+      getTechnique(situation.carrier) * 0.24 +
+      getComposure(situation.carrier) * 0.22 +
+      getShotPower(situation.carrier) * 0.2) /
+    100;
+  if (goalDistance >= 22 && longShotQuality >= 0.66) styles.add("long_range");
   if (situation.isOneTouchWindow) styles.add("first_time");
   if (goalDistance <= 28 && situation.bodyAlignment >= 0.46) styles.add("placed");
   if (goalDistance >= 13 || situation.pressure >= 0.5) styles.add("power");

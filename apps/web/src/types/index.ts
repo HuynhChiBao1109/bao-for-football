@@ -413,6 +413,58 @@ export type AttackingActionMemory = {
   lastEvaluationPosition: { x: number; y: number };
   minimumCommitUntilTick: number;
   dribbleCooldownUntilTick: number;
+  decisionCooldownUntilTick?: number;
+};
+
+export type AttackingSupportRole =
+  | 'BallSupport'
+  | 'ForwardOption'
+  | 'WidthProvider'
+  | 'DepthSupport'
+  | 'Runner'
+  | 'RestDefense'
+  | 'BoxOccupier';
+
+export type AttackingLateralZone =
+  | 'left_wing'
+  | 'left_half_space'
+  | 'center'
+  | 'right_half_space'
+  | 'right_wing';
+
+export type AttackingVerticalZone = 'defensive_third' | 'middle_third' | 'final_third';
+
+export type AttackingTargetZone = {
+  lane: AttackingLateralZone;
+  third: AttackingVerticalZone;
+  key: string;
+};
+
+export type AttackingStructureAssignment = {
+  playerId: number | string;
+  supportRole: AttackingSupportRole;
+  target: { x: number; y: number };
+  targetZone: AttackingTargetZone;
+  occupiedZoneCount: number;
+  nearestTeammateDistance: number;
+  formationInfluence: number;
+  ballShiftInfluence: number;
+  reason: string;
+};
+
+export type AttackingStructureEvaluation = {
+  side: 'home' | 'away';
+  assignments: AttackingStructureAssignment[];
+  zoneOccupancy: Record<string, number>;
+  warnings: string[];
+  shape: {
+    ballSupportCount: number;
+    forwardOptionCount: number;
+    leftWidthCount: number;
+    rightWidthCount: number;
+    depthThreatCount: number;
+    restDefenseCount: number;
+  };
 };
 
 export type AttackingIntent = {
@@ -434,6 +486,11 @@ export type AttackingIntent = {
   runSignal?: RunTimingSignal;
   timingState?: RunTimingState;
   runTiming?: AttackingRunDecision;
+  supportRole?: AttackingSupportRole;
+  targetZone?: AttackingTargetZone;
+  occupiedZoneCount?: number;
+  nearestTeammateDistance?: number;
+  structureReason?: string;
 };
 
 export type DefensiveState =
@@ -584,8 +641,17 @@ export type MatchSnapshot = {
         passRequiredAdvantage: number;
         currentAction: AttackingActionKind | null;
         pressure: number;
+        selectedReceiverId: number | string | null;
+        rejectedPasses: Array<{
+          id: string;
+          receiverId: number | string | null;
+          reason: string;
+        }>;
+        rejectedShots: Array<{ id: string; reason: string }>;
       };
       runTiming: AttackingRunTimingEvaluation;
+      attackingStructure: AttackingStructureEvaluation;
+      debugLog: string[];
     };
     defensiveDecision?: {
       side: 'home' | 'away';

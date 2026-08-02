@@ -481,6 +481,8 @@ export type MatchSnapshot = {
       actionMemory: AttackingActionMemory;
       scores: AttackingDecision["scoreLog"];
       runTiming: AttackingRunTimingEvaluation;
+      attackingStructure: AttackingDecision["attackingStructure"];
+      debugLog: string[];
     };
     defensiveDecision?: {
       side: Side;
@@ -3372,6 +3374,7 @@ function resolveAttackingUtilityDecision(input: {
       role: player.role,
       position,
       velocity,
+      formationAnchor: { ...player.anchors },
       facing: Math.hypot(velocity.x, velocity.y) > 0.15 ? velocity : { x: 0, y: direction },
       preferredFoot: inferPreferredFoot(player),
       isOffside:
@@ -3422,6 +3425,15 @@ function resolveAttackingUtilityDecision(input: {
           player.raw.stats.speed * 0.28 +
           player.raw.stats.vision * 0.22 +
           getClampedPlayerAiTendency(player, "offBallRunBias", 1, 0.6, 2) * 7,
+        longShots:
+          player.raw.stats.shoot * 0.56 +
+          player.raw.stats.longPass * 0.18 +
+          player.raw.stats.dribbling * 0.12 +
+          player.raw.stats.balance * 0.14,
+        shotPower:
+          player.raw.stats.shoot * 0.68 +
+          player.raw.stats.balance * 0.18 +
+          player.raw.stats.acceleration * 0.14,
       },
       personality: {
         passBias: getClampedPlayerAiTendency(player, "passBias", 1, 0.45, 1.4),
@@ -3856,6 +3868,8 @@ function serializeAttackingDecision(decision: AttackingDecision) {
     },
     actionMemory: decision.nextActionMemory,
     runTiming: decision.runTiming,
+    attackingStructure: decision.attackingStructure,
+    debugLog: decision.debugLog,
     alternatives: decision.options.slice(0, 5).map((option) => ({
       kind: option.kind,
       passStyle: option.passStyle ?? null,
@@ -10884,6 +10898,8 @@ function buildSnapshot(input: {
             actionMemory: input.attackingDecision.nextActionMemory,
             scores: input.attackingDecision.scoreLog,
             runTiming: input.attackingDecision.runTiming,
+            attackingStructure: input.attackingDecision.attackingStructure,
+            debugLog: input.attackingDecision.debugLog,
           }
         : undefined,
       defensiveDecision: {
