@@ -10309,11 +10309,22 @@ function projectPlayers(input: {
     } else if (input.matchStep === "full_time") {
       target = { x: 47 + (index % 4) * 2, y: 50 + Math.floor(index / 4) * 1.5 };
       aiState = "IDLE";
-    } else if (player.tackleState?.phase === "recovery") {
+    } else if (
+      !keeperAction &&
+      !setPieceTarget &&
+      !input.freeKickWallTargets.has(player.userPlayerId) &&
+      player.tackleState?.phase === "recovery"
+    ) {
       target = { x: prev.x, y: prev.y };
       intent = "recover";
       aiState = "TACKLE_RECOVERY";
-    } else if (player.tackleState?.phase === "approach" && player.tackleState.approachTarget) {
+    } else if (
+      !keeperAction &&
+      !setPieceTarget &&
+      !input.freeKickWallTargets.has(player.userPlayerId) &&
+      player.tackleState?.phase === "approach" &&
+      player.tackleState.approachTarget
+    ) {
       target = player.tackleState.approachTarget;
       intent = "press";
       aiState = "TACKLE_APPROACH";

@@ -368,6 +368,7 @@ export function resolveTackleOutcome(input: TackleResolutionInput): TackleResolu
     const directRedChance = clamp(severity - 0.52, 0, 0.38);
     const yellowChance = clamp(0.32 + severity * 0.72, 0.24, 0.92);
     const card: TackleCard =
+      input.currentCard === "red" ||
       input.cardRoll < directRedChance ||
       (input.currentCard === "yellow" && input.cardRoll < yellowChance)
         ? "red"
