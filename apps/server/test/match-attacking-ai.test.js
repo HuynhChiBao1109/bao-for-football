@@ -218,7 +218,7 @@ test("pressure and fatigue increase controlled execution error", () => {
   const pressured = situation({
     carrier: tiredCarrier,
     ball: tiredCarrier.position,
-    teammates: [tiredCarrier, player(2, "ST", 50, 38)],
+    teammates: [tiredCarrier, player(2, "ST", 50, 60)],
     opponents: [
       player(20, "CB", 52, 55, { teamId: 2 }),
       player(21, "CM", 48, 56, { teamId: 2 }),
@@ -496,10 +496,10 @@ test("strong pressure can break carry commitment and trigger an early safe pass"
   const context = situation({
     carrier,
     ball: carrier.position,
-    teammates: [carrier, player(2, "LW", 30, 45, { velocity: { x: -1, y: -2 } })],
+    teammates: [carrier, player(2, "LW", 30, 52, { velocity: { x: -1, y: -2 } })],
     opponents: [
       player(20, "CM", 51.5, 57, { teamId: 2 }),
-      player(21, "CB", 48.5, 58, { teamId: 2 }),
+      player(21, "CB", 48.5, 50, { teamId: 2 }),
       player(22, "GK", 50, 5, { teamId: 2 }),
     ],
     actionMemory: {
@@ -605,6 +605,25 @@ test("live match ticks publish attacking intentions and coordinated defensive as
         (matchPlayer) => matchPlayer.attackingIntent?.communication,
       ),
     ),
+  );
+  assert.ok(
+    openPlaySnapshots.every(
+      (snapshot) => snapshot.tactical.attackingDecision.runTiming?.currentLine,
+    ),
+  );
+  assert.ok(
+    openPlaySnapshots.some((snapshot) =>
+      [...snapshot.homePlayers, ...snapshot.awayPlayers].some(
+        (matchPlayer) => matchPlayer.runTiming?.path?.length === 3,
+      ),
+    ),
+  );
+  assert.ok(
+    openPlaySnapshots.every((snapshot) => {
+      const attackingPlayers =
+        snapshot.possession === "home" ? snapshot.homePlayers : snapshot.awayPlayers;
+      return attackingPlayers.every((matchPlayer) => matchPlayer.offside?.status);
+    }),
   );
   assert.ok(homeLineup.every((matchPlayer) => matchPlayer.teamTactics));
   assert.ok(awayLineup.every((matchPlayer) => matchPlayer.teamTactics));

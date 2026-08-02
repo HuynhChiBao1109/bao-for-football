@@ -6,6 +6,17 @@
  * the match engine remains responsible for executing the selected action.
  */
 
+import {
+  ATTACKING_RUN_BALANCE,
+  type AttackingRunDecision,
+  type AttackingRunTimingEvaluation,
+  type RunTimingMemory,
+  type RunTimingSignal,
+  type RunTimingState,
+  evaluateAttackingRunTiming,
+  markRunAsReceiving,
+} from "./match-attacking-runs.util";
+
 export type AttackingPoint = { x: number; y: number };
 export type AttackingSide = "home" | "away";
 export type PreferredFoot = "left" | "right";
@@ -26,6 +37,8 @@ export type AttackingPlayerStats = {
   technique?: number;
   composure?: number;
   heading?: number;
+  anticipation?: number;
+  offTheBall?: number;
 };
 
 export type AttackingAiPlayer = {
@@ -45,6 +58,7 @@ export type AttackingAiPlayer = {
     flair: number;
     riskTaking: number;
   };
+  runMemory?: RunTimingMemory | null;
 };
 
 export type AttackingTactics = {
@@ -110,6 +124,9 @@ export type AttackingIntent = {
   target: AttackingPoint;
   priority: number;
   expiresAtTick: number;
+  runSignal?: RunTimingSignal;
+  timingState?: RunTimingState;
+  runTiming?: AttackingRunDecision;
 };
 
 export type ActiveAttackingCombination = {
@@ -147,6 +164,7 @@ export type AttackingSituation = CollectAttackingSituationInput & {
   isTransition: boolean;
   isOneTouchWindow: boolean;
   isSettlingAfterReceive: boolean;
+  runTiming: AttackingRunTimingEvaluation;
 };
 
 export type CarryOptionMetrics = {
@@ -181,6 +199,11 @@ export type PassOptionMetrics = {
   receiverAdvantage: number;
   lineBreakValue: number;
   chanceCreationValue: number;
+  predictedOffsideRisk: number;
+  timingQuality: number;
+  passReleaseTime: number;
+  predictedRunnerPosition: AttackingPoint;
+  predictedOffsideLine: number;
 };
 
 export type ShotOptionMetrics = {
@@ -207,6 +230,7 @@ export type AttackingOption = {
   baseScore: number;
   executionError: number;
   reasons: string[];
+  runTiming?: AttackingRunDecision;
 };
 
 export type ScoredAttackingOption = AttackingOption & {
@@ -220,6 +244,7 @@ export type AttackingDecision = {
   selected: ScoredAttackingOption;
   options: ScoredAttackingOption[];
   intentions: AttackingIntent[];
+  runTiming: AttackingRunTimingEvaluation;
   nextActionMemory: AttackingActionMemory;
   scoreLog: {
     carryBall: number | null;
@@ -274,7 +299,7 @@ export function normalizeAttackingTactics(
 export function collectAttackingSituation(
   input: CollectAttackingSituationInput,
 ): AttackingSituation {
-  const direction = input.side === "home" ? -1 : 1;
+  const direction: -1 | 1 = input.side === "home" ? -1 : 1;
   const goal = { x: 50, y: direction > 0 ? 100 : 0 };
   const distances = input.opponents.map((opponent) =>
     distance(input.carrier.position, opponent.position),
@@ -296,7 +321,7 @@ export function collectAttackingSituation(
     (dot(facing, normalize(sub(goal, input.carrier.position))) + 1) / 2,
   );
 
-  return {
+  const base = {
     ...input,
     direction,
     goal,
@@ -312,6 +337,26 @@ export function collectAttackingSituation(
       (input.latestEvent === "PASS" || input.latestEvent === "pass") &&
       pressure < ATTACKING_AI_BALANCE.strongPressureThreshold,
   };
+  const runTiming = evaluateAttackingRunTiming({
+    tick: input.tick,
+    side: input.side,
+    ball: input.ball,
+    // While the carrier controls the ball, its release-point projection follows
+    // the carrier rather than treating the ball as stationary.
+    ballVelocity: input.carrier.velocity,
+    carrier: input.carrier,
+    runners: input.teammates,
+    defenders: input.opponents,
+    pressure,
+    possessionTicks: input.possessionTicks,
+    tactics: {
+      tempo: base.tactics.tempo,
+      directness: base.tactics.directness,
+      compactness: base.tactics.compactness,
+      riskTolerance: base.tactics.riskTolerance,
+    },
+  });
+  return { ...base, runTiming };
 }
 
 export function generateAttackingOptions(situation: AttackingSituation): AttackingOption[] {
@@ -329,16 +374,31 @@ export function generateAttackingOptions(situation: AttackingSituation): Attacki
   }
 
   for (const receiver of situation.teammates) {
+    const runTiming = situation.runTiming.decisions.find(
+      (decision) => decision.playerId === receiver.id,
+    );
     if (
       receiver.id === situation.carrier.id ||
       normalizeRole(receiver.role) === "GK" ||
-      receiver.isOffside
+      receiver.isOffside ||
+      runTiming?.currentStatus === "offside" ||
+      runTiming?.predictedStatus === "offside" ||
+      (runTiming?.predictedOffsideRisk ?? 0) > ATTACKING_RUN_BALANCE.predictedOffsideThreshold
     ) {
       continue;
     }
-    const styles = getAvailablePassStyles(situation, receiver);
+    const styles = getAvailablePassStyles(situation, receiver, runTiming);
     for (const style of styles) {
-      const option = createPassOption(situation, receiver, style);
+      if (
+        style === "through" &&
+        (!runTiming ||
+          !runTiming.carrierCanRelease ||
+          !["TriggerRun", "CurveRun"].includes(runTiming.state) ||
+          runTiming.predictedOffsideRisk > ATTACKING_RUN_BALANCE.throughBallOffsideThreshold)
+      ) {
+        continue;
+      }
+      const option = createPassOption(situation, receiver, style, runTiming);
       const allowedRisk =
         ATTACKING_AI_BALANCE.hardInterceptionRisk +
         situation.tactics.risk * 0.1 +
@@ -545,7 +605,46 @@ export function createAttackingIntentions(
     });
   }
 
-  return deconflictIntentTargets(candidates, situation.direction);
+  const timedCandidates = candidates.map((intent) => {
+    const timing = situation.runTiming.decisions.find(
+      (decision) => decision.playerId === intent.playerId,
+    );
+    if (!timing) return intent;
+    const preserveCombinationTarget =
+      intent.runType === "ONE_TWO_RETURN" ||
+      intent.runType === "OVERLAP" ||
+      intent.runType === "UNDERLAP" ||
+      intent.runType === "THIRD_MAN_RUN";
+    return {
+      ...intent,
+      runType: preserveCombinationTarget ? intent.runType : toIntentRunType(timing),
+      target: preserveCombinationTarget ? intent.target : timing.target,
+      runSignal: timing.signals.at(-1),
+      timingState: timing.state,
+      runTiming: timing,
+    };
+  });
+  return deconflictIntentTargets(timedCandidates, situation.direction).map((intent) => {
+    if (!intent.runTiming) return intent;
+    return {
+      ...intent,
+      runTiming: {
+        ...intent.runTiming,
+        target: intent.target,
+        path: [...intent.runTiming.path.slice(0, -1), intent.target],
+      },
+    };
+  });
+}
+
+function toIntentRunType(decision: AttackingRunDecision): AttackingRunType {
+  if (decision.state === "ReceivePass") return "RECEIVE";
+  if (decision.state === "CheckBack" || decision.state === "AbortRun") return "SUPPORT";
+  if (decision.state === "OfferSupport") return "SUPPORT";
+  if (decision.runType === "ThirdMan") return "THIRD_MAN_RUN";
+  if (decision.runType === "Wide") return "STRETCH";
+  if (decision.state === "TriggerRun" || decision.state === "CurveRun") return "BOX_RUN";
+  return "HOLD_POSITION";
 }
 
 export function runAttackingUtilityAi(
@@ -555,13 +654,18 @@ export function runAttackingUtilityAi(
   const situation = collectAttackingSituation(input);
   const options = scoreAttackingOptions(situation, generateAttackingOptions(situation));
   const selected = selectAttackingAction(options, random, situation);
+  const runTiming =
+    selected.kind === "pass" && selected.receiverId != null
+      ? markRunAsReceiving(situation.runTiming, selected.receiverId, selected.target)
+      : situation.runTiming;
+  const resolvedSituation = { ...situation, runTiming };
   const nextActionMemory = createNextActionMemory(situation, selected);
   const getBestScore = (kind: AttackingActionKind) => {
     const matching = options.filter((option) => option.kind === kind);
     return matching.length ? Math.max(...matching.map((option) => option.baseScore)) : null;
   };
   return {
-    situation,
+    situation: resolvedSituation,
     selected,
     options: options
       .map((option) => ({
@@ -571,7 +675,8 @@ export function runAttackingUtilityAi(
         finalScore: option.baseScore,
       }))
       .sort((left, right) => right.finalScore - left.finalScore),
-    intentions: createAttackingIntentions(situation, selected),
+    intentions: createAttackingIntentions(resolvedSituation, selected),
+    runTiming,
     nextActionMemory,
     scoreLog: {
       carryBall: getBestScore("carry_ball"),
@@ -729,6 +834,7 @@ function createPassOption(
   situation: AttackingSituation,
   receiver: AttackingAiPlayer,
   style: AttackingPassStyle,
+  runTiming?: AttackingRunDecision,
 ): AttackingOption {
   const initialDistance = distance(situation.carrier.position, receiver.position);
   const travelSeconds = clamp(
@@ -736,7 +842,10 @@ function createPassOption(
     0.18,
     ATTACKING_AI_BALANCE.maxPredictionSeconds,
   );
-  const target = predictReceiverPosition(situation, receiver, style, travelSeconds);
+  const target =
+    style === "through" && runTiming
+      ? runTiming.target
+      : predictReceiverPosition(situation, receiver, style, travelSeconds);
   const passDistance = distance(situation.carrier.position, target);
   const lane = evaluatePassingLane(situation, target, travelSeconds);
   const receiverSpace = evaluateReceiverSpace(situation.opponents, target);
@@ -801,7 +910,15 @@ function createPassOption(
     passStyle: style,
     baseScore: 0,
     executionError: getExecutionError(situation, "pass", style),
-    reasons: ["safe passing lane", "receiver movement", "ball progression"],
+    reasons: [
+      "safe passing lane",
+      "receiver movement",
+      "ball progression",
+      runTiming
+        ? `${runTiming.state} at release (${runTiming.predictedStatus})`
+        : "static receiver timing",
+    ],
+    runTiming,
     pass: {
       distance: passDistance,
       progression,
@@ -815,6 +932,12 @@ function createPassOption(
       receiverAdvantage,
       lineBreakValue,
       chanceCreationValue,
+      predictedOffsideRisk: runTiming?.predictedOffsideRisk ?? 0,
+      timingQuality: runTiming?.timingQuality ?? 0.5,
+      passReleaseTime: runTiming?.passReleaseTime ?? 0,
+      predictedRunnerPosition: runTiming?.predictedRunnerPosition ?? receiver.position,
+      predictedOffsideLine:
+        runTiming?.predictedOffsideLine ?? situation.runTiming.predictedLine.effectiveLineY,
     },
   };
 }
@@ -892,12 +1015,16 @@ function scoreOption(situation: AttackingSituation, option: AttackingOption): nu
     const usefulRuns = situation.teammates.filter(
       (player) => magnitude(player.velocity) > 2.5,
     ).length;
+    const delayPassRequests = situation.runTiming.decisions.filter((decision) =>
+      decision.signals.includes("DelayPass"),
+    ).length;
     return withCurrentActionBonus(
       situation,
       option,
       24 +
         (1 - situation.pressure) * 10 +
         Math.min(7, usefulRuns * 1.5) +
+        Math.min(12, delayPassRequests * 3) +
         (1 - tactics.tempo) * 6 +
         (situation.isSettlingAfterReceive ? 5 : 0),
     );
@@ -968,7 +1095,7 @@ function scoreOption(situation: AttackingSituation, option: AttackingOption): nu
         ? 13
         : 0;
     const pressureReleaseBonus =
-      situation.pressure >= ATTACKING_AI_BALANCE.strongPressureThreshold ? 13 : 0;
+      situation.pressure >= ATTACKING_AI_BALANCE.strongPressureThreshold ? 22 : 0;
     const dangerousRunBonus =
       pass.lineBreakValue >= ATTACKING_AI_BALANCE.dangerousPassLineBreak ||
       pass.chanceCreationValue >= 0.68
@@ -1003,8 +1130,10 @@ function scoreOption(situation: AttackingSituation, option: AttackingOption): nu
         styleBonus +
         pressureReleaseBonus +
         dangerousRunBonus +
+        pass.timingQuality * 12 +
         personalityPassBias -
         pass.interceptionRisk * 26 -
+        pass.predictedOffsideRisk * 40 -
         backwardPassPenalty -
         lowProgressPassPenalty -
         receiveSettlePenalty -
@@ -1233,6 +1362,7 @@ function getDetailedRole(
 function getAvailablePassStyles(
   situation: AttackingSituation,
   receiver: AttackingAiPlayer,
+  runTiming?: AttackingRunDecision,
 ): AttackingPassStyle[] {
   const gap = distance(situation.carrier.position, receiver.position);
   const progression = directionProgress(situation, receiver.position);
@@ -1247,7 +1377,10 @@ function getAvailablePassStyles(
   if (gap >= 24) styles.add("long");
   if (
     progression >= 4 &&
-    (magnitude(receiver.velocity) >= 1.2 || receiver.stats.acceleration >= 66)
+    (magnitude(receiver.velocity) >= 1.2 || receiver.stats.acceleration >= 66) &&
+    runTiming?.carrierCanRelease &&
+    (runTiming.state === "TriggerRun" || runTiming.state === "CurveRun") &&
+    runTiming.predictedOffsideRisk <= ATTACKING_RUN_BALANCE.throughBallOffsideThreshold
   ) {
     styles.add("through");
   }
@@ -1477,7 +1610,9 @@ function deconflictIntentTargets(intents: AttackingIntent[], direction: -1 | 1):
   const placed: AttackingIntent[] = [];
   for (const intent of [...intents].sort((left, right) => right.priority - left.priority)) {
     let target = { ...intent.target };
-    for (let attempt = 0; intent.runType !== "HOLD_POSITION" && attempt < 5; attempt += 1) {
+    // HoldPosition is still a spatial assignment. Letting it skip this pass
+    // caused a waiting runner to occupy the same lane/target as a third man.
+    for (let attempt = 0; attempt < 5; attempt += 1) {
       const conflict = placed.find(
         (other) => distance(other.target, target) < ATTACKING_AI_BALANCE.minimumIntentSpacing,
       );

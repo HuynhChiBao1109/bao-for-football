@@ -308,6 +308,81 @@ export type OffsideDebug = {
   isRequestingThroughBall: boolean;
   isCheckingBack: boolean;
   isLegalReceiver: boolean;
+  status?: OffsidePositionStatus;
+  predictedStatus?: OffsidePositionStatus;
+  predictedRunnerPosition?: PitchPoint;
+  predictedOffsideLineY?: number;
+  runTarget?: PitchPoint;
+  runPath?: PitchPoint[];
+  timingState?: RunTimingState;
+  runSignals?: RunTimingSignal[];
+};
+
+export type PitchPoint = { x: number; y: number };
+export type OffsidePositionStatus = 'onside' | 'near_line' | 'offside';
+export type RunTimingState =
+  | 'HoldPosition'
+  | 'OfferSupport'
+  | 'PrepareRun'
+  | 'TriggerRun'
+  | 'CurveRun'
+  | 'CheckBack'
+  | 'ReceivePass'
+  | 'AbortRun';
+export type TimedRunType =
+  | 'BehindLine'
+  | 'Diagonal'
+  | 'HalfSpace'
+  | 'Wide'
+  | 'CrossFace'
+  | 'DropShort'
+  | 'ThirdMan'
+  | 'Support';
+export type RunTimingSignal = 'RequestRun' | 'HoldRun' | 'TriggerRun' | 'DelayPass';
+export type AttackingRunDecision = {
+  playerId: number | string;
+  state: RunTimingState;
+  runType: TimedRunType;
+  lane: 'left_wide' | 'left_half' | 'central' | 'right_half' | 'right_wide';
+  target: PitchPoint;
+  path: PitchPoint[];
+  currentStatus: OffsidePositionStatus;
+  predictedStatus: OffsidePositionStatus;
+  currentPosition: PitchPoint;
+  predictedRunnerPosition: PitchPoint;
+  currentOffsideLine: number;
+  predictedOffsideLine: number;
+  safeLineY: number;
+  passReleaseTime: number;
+  estimatedBallArrivalTime: number;
+  predictedOffsideRisk: number;
+  timingQuality: number;
+  passLaneQuality: number;
+  carrierCanRelease: boolean;
+  signals: RunTimingSignal[];
+  utility: number;
+  reason: string;
+  rejectedPassReason: string | null;
+  scores: Array<{ state: RunTimingState; runType: TimedRunType; score: number }>;
+};
+
+export type AttackingRunTimingEvaluation = {
+  side: 'home' | 'away';
+  currentLine: { effectiveLineY: number; safeLineY: number };
+  predictedLine: { effectiveLineY: number; safeLineY: number };
+  passReleaseTime: number;
+  defenseDepth: 'high' | 'balanced' | 'deep';
+  offsideTrapActive: boolean;
+  decisions: AttackingRunDecision[];
+  rejectedPasses: Array<{
+    playerId: number | string;
+    reason: string;
+    currentStatus: OffsidePositionStatus;
+    predictedStatus: OffsidePositionStatus;
+    predictedPosition: PitchPoint;
+    predictedLineY: number;
+    passReleaseTime: number;
+  }>;
 };
 
 export type AttackingPassStyle =
@@ -356,6 +431,9 @@ export type AttackingIntent = {
   target: { x: number; y: number };
   priority: number;
   expiresAtTick: number;
+  runSignal?: RunTimingSignal;
+  timingState?: RunTimingState;
+  runTiming?: AttackingRunDecision;
 };
 
 export type DefensiveState =
@@ -404,6 +482,7 @@ export type MatchPitchPlayer = {
   activeSkill?: number | null;
   offside?: OffsideDebug;
   attackingIntent?: AttackingIntent | null;
+  runTiming?: AttackingRunDecision | null;
   defensiveAssignment?: DefensiveAssignment | null;
   move?: PlayerMotion;
 };
@@ -506,6 +585,7 @@ export type MatchSnapshot = {
         currentAction: AttackingActionKind | null;
         pressure: number;
       };
+      runTiming: AttackingRunTimingEvaluation;
     };
     defensiveDecision?: {
       side: 'home' | 'away';

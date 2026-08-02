@@ -386,6 +386,89 @@ const PitchDebugGrid = memo(function PitchDebugGrid() {
   );
 });
 
+const OffsideRunDebugOverlay = memo(function OffsideRunDebugOverlay({
+  snapshot,
+  mirrorY,
+}: {
+  snapshot: MatchSnapshot;
+  mirrorY: boolean;
+}) {
+  const timing = snapshot.tactical?.attackingDecision?.runTiming;
+  if (!timing) return null;
+  const mirror = (point: { x: number; y: number }) => ({
+    x: point.x,
+    y: mirrorY ? 100 - point.y : point.y,
+  });
+  const lineY = mirrorY
+    ? 100 - timing.currentLine.effectiveLineY
+    : timing.currentLine.effectiveLineY;
+  const predictedLineY = mirrorY
+    ? 100 - timing.predictedLine.effectiveLineY
+    : timing.predictedLine.effectiveLineY;
+  const visibleRuns = timing.decisions.filter(
+    (decision) => decision.state !== 'HoldPosition' || decision.currentStatus !== 'onside',
+  );
+
+  return (
+    <svg className="offside-run-debug" viewBox="0 0 100 100" preserveAspectRatio="none">
+      <g className="offside-run-debug__portrait">
+        <line className="offside-run-debug__line" x1="0" x2="100" y1={lineY} y2={lineY} />
+        <line
+          className="offside-run-debug__line offside-run-debug__line--predicted"
+          x1="0"
+          x2="100"
+          y1={predictedLineY}
+          y2={predictedLineY}
+        />
+        {visibleRuns.map((decision) => {
+          const points = decision.path.map(mirror);
+          return (
+            <g key={`portrait-${decision.playerId}`} data-status={decision.predictedStatus}>
+              <polyline
+                className="offside-run-debug__path"
+                points={points.map((point) => `${point.x},${point.y}`).join(' ')}
+              />
+              <circle
+                className="offside-run-debug__target"
+                cx={mirror(decision.target).x}
+                cy={mirror(decision.target).y}
+                r="1.15"
+              />
+            </g>
+          );
+        })}
+      </g>
+      <g className="offside-run-debug__landscape">
+        <line className="offside-run-debug__line" x1={lineY} x2={lineY} y1="0" y2="100" />
+        <line
+          className="offside-run-debug__line offside-run-debug__line--predicted"
+          x1={predictedLineY}
+          x2={predictedLineY}
+          y1="0"
+          y2="100"
+        />
+        {visibleRuns.map((decision) => {
+          const points = decision.path.map(mirror);
+          return (
+            <g key={`landscape-${decision.playerId}`} data-status={decision.predictedStatus}>
+              <polyline
+                className="offside-run-debug__path"
+                points={points.map((point) => `${point.y},${point.x}`).join(' ')}
+              />
+              <circle
+                className="offside-run-debug__target"
+                cx={mirror(decision.target).y}
+                cy={mirror(decision.target).x}
+                r="1.15"
+              />
+            </g>
+          );
+        })}
+      </g>
+    </svg>
+  );
+});
+
 const PlayerCircle = memo(function PlayerCircle({
   player,
   activeHighlight,
@@ -434,6 +517,7 @@ const PlayerCircle = memo(function PlayerCircle({
         player.activeSkill === EPlayerSkill.TANK_TACKLE ? 'player-node--tank-tackle' : '',
         player.activeSkill === EPlayerSkill.KAISER_SHOT ? 'player-node--kaiser-shot' : '',
         player.activeSkill === EPlayerSkill.EAGLE_EYE ? 'player-node--eagle-eye' : '',
+        player.offside?.status ? `player-node--offside-${player.offside.status}` : '',
       ].join(' ')}
       data-dive-direction={
         keeperAction === 'dive' || keeperAction === 'catch' ? diveDirection : undefined
@@ -464,6 +548,16 @@ const PlayerCircle = memo(function PlayerCircle({
         />
       ) : null}
       <span className="player-name">{player.name}</span>
+      {player.offside?.status ? (
+        <span className="player-offside-state" data-status={player.offside.status}>
+          {player.offside.status === 'offside'
+            ? 'OFF'
+            : player.offside.status === 'near_line'
+              ? 'LINE'
+              : 'ON'}
+          {player.offside.timingState ? ` · ${player.offside.timingState}` : ''}
+        </span>
+      ) : null}
       {player.skillCharges?.length ? (
         <div className="player-rage-bars" aria-label={`${player.name} skill rage`}>
           {player.skillCharges.map((item) => (
@@ -912,6 +1006,7 @@ function MatchPitch({ snapshot }: { snapshot: MatchSnapshot }) {
         <div className="match-pitch" data-active-skill={activeSkill}>
           <PitchLines />
           <PitchDebugGrid />
+          <OffsideRunDebugOverlay snapshot={snapshot} mirrorY={mirrorY} />
           <PlayerLayer
             homePlayers={visualHomePlayers}
             awayPlayers={visualAwayPlayers}

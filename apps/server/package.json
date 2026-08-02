@@ -18,6 +18,7 @@
     "test": "jest",
     "test:tackle": "node --test test/match-tackle.test.js",
     "test:attacking-ai": "node --test test/match-attacking-ai.test.js",
+    "test:attacking-runs": "node --test test/match-attacking-runs.test.js",
     "test:defensive-ai": "node --test test/match-defensive-ai.test.js"
   },
   "dependencies": {

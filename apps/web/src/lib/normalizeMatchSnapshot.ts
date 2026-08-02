@@ -68,6 +68,7 @@ function toPitchPlayer(
     offside,
     attackingIntent:
       (raw.attackingIntent as MatchPitchPlayer['attackingIntent'] | undefined) ?? null,
+    runTiming: (raw.runTiming as MatchPitchPlayer['runTiming'] | undefined) ?? null,
     defensiveAssignment:
       (raw.defensiveAssignment as MatchPitchPlayer['defensiveAssignment'] | undefined) ?? null,
     move: move

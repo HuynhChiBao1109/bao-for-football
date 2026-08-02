@@ -497,6 +497,100 @@
   transform: translateY(-50%);
 }
 
+.offside-run-debug {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.offside-run-debug__landscape {
+  display: none;
+}
+
+.offside-run-debug__line {
+  stroke: rgba(255, 224, 92, 0.96);
+  stroke-width: 0.42;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 2px rgba(255, 203, 46, 0.8));
+}
+
+.offside-run-debug__line--predicted {
+  stroke: rgba(117, 226, 255, 0.92);
+  stroke-dasharray: 2 1.3;
+  stroke-width: 0.3;
+}
+
+.offside-run-debug__path {
+  fill: none;
+  stroke: rgba(126, 238, 255, 0.88);
+  stroke-dasharray: 1.7 1.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 0.34;
+  vector-effect: non-scaling-stroke;
+}
+
+.offside-run-debug__target {
+  fill: rgba(126, 238, 255, 0.3);
+  stroke: #7eeeff;
+  stroke-width: 0.34;
+  vector-effect: non-scaling-stroke;
+}
+
+.offside-run-debug g[data-status='offside'] .offside-run-debug__path,
+.offside-run-debug g[data-status='offside'] .offside-run-debug__target {
+  stroke: #ff6879;
+}
+
+.offside-run-debug g[data-status='near_line'] .offside-run-debug__path,
+.offside-run-debug g[data-status='near_line'] .offside-run-debug__target {
+  stroke: #ffd85c;
+}
+
+.player-offside-state {
+  position: absolute;
+  top: calc(100% + 23px);
+  left: 50%;
+  z-index: 3;
+  max-width: 150px;
+  overflow: hidden;
+  padding: 2px 5px;
+  border: 1px solid rgba(126, 238, 255, 0.56);
+  border-radius: 4px;
+  background: rgba(3, 12, 18, 0.8);
+  color: #a8f4ff;
+  font-size: 0.48rem;
+  font-weight: 900;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.player-offside-state[data-status='near_line'] {
+  border-color: rgba(255, 216, 92, 0.72);
+  color: #ffe786;
+}
+
+.player-offside-state[data-status='offside'] {
+  border-color: rgba(255, 104, 121, 0.8);
+  color: #ff8b98;
+}
+
+@media (min-width: 981px) {
+  .offside-run-debug__portrait {
+    display: none;
+  }
+
+  .offside-run-debug__landscape {
+    display: block;
+  }
+}
+
 .pitch-line,
 .pitch-circle,
 .pitch-box {
