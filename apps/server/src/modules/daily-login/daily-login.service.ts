@@ -70,6 +70,9 @@ export class DailyLoginService {
         .into(DailyLoginProgressEntity)
         .values({ userId: user.id, claimedDays: 0 })
         .orIgnore()
+        // A duplicate is expected after the first claim. MySQL returns no insert id
+        // in that case, so TypeORM must not try to hydrate the ignored row.
+        .updateEntity(false)
         .execute();
 
       const progress = await manager.findOne(DailyLoginProgressEntity, {
