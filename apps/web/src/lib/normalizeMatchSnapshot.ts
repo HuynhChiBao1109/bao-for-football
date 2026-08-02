@@ -63,6 +63,7 @@ function toPitchPlayer(
     aiState: raw.aiState as MatchPitchPlayer['aiState'],
     hasBall: id === ballOwnerId || Boolean(raw.hasBall),
     card: (raw.card as MatchPitchPlayer['card']) ?? null,
+    tackleState: raw.tackleState as MatchPitchPlayer['tackleState'],
     activeSkill: Number(raw.activeSkill ?? 0) || null,
     offside,
     move: move

@@ -20,15 +20,6 @@ export const MOVEMENT = {
   arrivalRadius: 6.2,
   stopRadius: 0.5,
 
-  separationRadius: 5.4,
-  separationStrength: 1.15,
-
-  collisionMinX: 5.4,
-  collisionMinY: 3.35,
-  collisionPadding: 1.01,
-  collisionIterations: 20,
-  collisionVelocityDamping: 0.72,
-
   sameTargetOffset: 4,
 
   passSpeed: 34,
@@ -80,7 +71,10 @@ export type PlayerAIState =
   | "DROP_SHORT"
   | "KEEPER_DIVE"
   | "KEEPER_CATCH"
-  | "KEEPER_HOLD";
+  | "KEEPER_HOLD"
+  | "TACKLE_APPROACH"
+  | "TACKLE_COMMIT"
+  | "TACKLE_RECOVERY";
 
 export type PlayerRole = "GK" | "CB" | "FB" | "DM" | "CM" | "W" | "ST";
 export type TacticalPhase =
@@ -169,9 +163,7 @@ export function updateSimulation(deltaTime: number, gameState: GameState) {
   applySameTargetOffsets(gameState.homePlayers);
   applySameTargetOffsets(gameState.awayPlayers);
 
-  allPlayers.forEach((player) => applySeparation(player, allPlayers));
   allPlayers.forEach((player) => updatePlayerMovement(player, deltaTime));
-  resolvePlayerCollisions(allPlayers);
 
   const owner = allPlayers.find((player) => player.id === gameState.ball.ownerPlayerId);
   if (owner) {
@@ -221,31 +213,6 @@ export function updatePlayerMovement(player: Player, deltaTime: number) {
 
   player.velocity = nextVelocity;
   player.position = clampPoint(add(current, nextStep));
-}
-
-export function applySeparation(player: Player, teammates: Player[]) {
-  const push = teammates.reduce<Vec2>(
-    (acc, teammate) => {
-      if (teammate.id === player.id) return acc;
-      let away = sub(player.position, teammate.position);
-      let dist = length(away);
-      if (dist <= 0.001) {
-        away = scale(getDeterministicSeparationDirection(player.id, teammate.id), 0.001);
-        dist = 0.001;
-      }
-      if (dist >= MOVEMENT.separationRadius) return acc;
-      const strength =
-        ((MOVEMENT.separationRadius - dist) / MOVEMENT.separationRadius) *
-        MOVEMENT.separationStrength;
-      return add(acc, scale(away, strength / dist));
-    },
-    { x: 0, y: 0 },
-  );
-
-  const separatedTarget = add(player.targetPosition, push);
-  player.targetPosition = player.receivingPass
-    ? clampPoint(separatedTarget)
-    : clampToRoleZone(player, separatedTarget);
 }
 
 export function getTacticalTarget(
@@ -789,53 +756,6 @@ function getTacticalVariant(tick: number, playerId: number, variants: number, ho
   const stagger = Math.abs(playerId * 7) % ticksPerIntent;
   const intentEpoch = Math.floor((Math.max(0, tick) + stagger) / ticksPerIntent);
   return Math.abs(intentEpoch + playerId * 17) % Math.max(1, variants);
-}
-
-export function resolvePlayerCollisions(players: Player[]) {
-  const minX = MOVEMENT.collisionMinX;
-  const minY = MOVEMENT.collisionMinY;
-
-  for (let iteration = 0; iteration < MOVEMENT.collisionIterations; iteration += 1) {
-    for (let leftIndex = 0; leftIndex < players.length; leftIndex += 1) {
-      for (let rightIndex = leftIndex + 1; rightIndex < players.length; rightIndex += 1) {
-        const left = players[leftIndex];
-        const right = players[rightIndex];
-        let dx = right.position.x - left.position.x;
-        let dy = right.position.y - left.position.y;
-        let normalizedDistance = Math.hypot(dx / minX, dy / minY);
-
-        if (normalizedDistance >= 1) continue;
-
-        if (normalizedDistance < 0.0001) {
-          const seed = (left.id * 31 + right.id * 17) % 360;
-          const angle = (seed * Math.PI) / 180;
-          dx = Math.cos(angle) * 0.01;
-          dy = Math.sin(angle) * 0.01;
-          normalizedDistance = Math.hypot(dx / minX, dy / minY);
-        }
-
-        const expansion = MOVEMENT.collisionPadding / Math.max(normalizedDistance, 0.0001) - 1;
-        const correction = {
-          x: dx * expansion,
-          y: dy * expansion,
-        };
-        const leftShare = left.hasBall ? 0.28 : right.hasBall ? 0.72 : 0.5;
-        const rightShare = 1 - leftShare;
-
-        left.position = clampPoint({
-          x: left.position.x - correction.x * leftShare,
-          y: left.position.y - correction.y * leftShare,
-        });
-        right.position = clampPoint({
-          x: right.position.x + correction.x * rightShare,
-          y: right.position.y + correction.y * rightShare,
-        });
-
-        left.velocity = scale(left.velocity, MOVEMENT.collisionVelocityDamping);
-        right.velocity = scale(right.velocity, MOVEMENT.collisionVelocityDamping);
-      }
-    }
-  }
 }
 
 function getPlayerAiTendency(player: Player, key: keyof PlayerAiTendencies, fallback: number) {
@@ -1802,12 +1722,15 @@ function getPlayerMaxSpeed(player: Player) {
     player.state === "OVERLAP" ||
     player.state === "UNDERLAP" ||
     player.state === "CUT_INSIDE" ||
-    player.state === "TRACK_RUNNER"
+    player.state === "TRACK_RUNNER" ||
+    player.state === "TACKLE_APPROACH" ||
+    player.state === "TACKLE_COMMIT"
       ? MOVEMENT.sprintSpeed
       : player.state === "IDLE" ||
           player.state === "HOLD_POSITION" ||
           player.state === "HOLD_LINE" ||
-          player.state === "HOLD_DEPTH"
+          player.state === "HOLD_DEPTH" ||
+          player.state === "TACKLE_RECOVERY"
         ? MOVEMENT.walkingSpeed
         : MOVEMENT.jogSpeed;
   const ballScale = player.hasBall ? MOVEMENT.playerWithBallSpeedMultiplier : 1;

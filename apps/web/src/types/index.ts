@@ -280,7 +280,21 @@ export type PlayerAIState =
   | 'DROP_SHORT'
   | 'KEEPER_DIVE'
   | 'KEEPER_CATCH'
-  | 'KEEPER_HOLD';
+  | 'KEEPER_HOLD'
+  | 'TACKLE_APPROACH'
+  | 'TACKLE_COMMIT'
+  | 'TACKLE_RECOVERY';
+
+export type PlayerTackleState = {
+  phase: 'idle' | 'approach' | 'commit' | 'recovery';
+  style: 'standing' | 'sliding' | null;
+  targetPlayerId: number | null;
+  phaseStartedTick: number;
+  recoveryUntilTick: number;
+  cooldownUntilTick: number;
+  approachTarget: { x: number; y: number } | null;
+  lastOutcome: 'won' | 'loose_ball' | 'foul' | 'beaten' | null;
+};
 
 export type OffsideDebug = {
   isOffsidePosition: boolean;
@@ -313,6 +327,7 @@ export type MatchPitchPlayer = {
   aiState?: PlayerAIState;
   hasBall: boolean;
   card?: 'yellow' | 'red' | null;
+  tackleState?: PlayerTackleState;
   activeSkill?: number | null;
   offside?: OffsideDebug;
   move?: PlayerMotion;

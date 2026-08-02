@@ -16,19 +16,30 @@ import {
   TrajectoryPoint,
 } from "./match-skills.util";
 import {
-  applySeparation,
   getTacticalTarget,
   MOVEMENT,
   Player as MovementPlayer,
   PlayerAIState,
   TacticalPhase,
   predictBallIntercept,
-  resolvePlayerCollisions,
   SIM_TICK_MS,
   SIM_TICK_SECONDS,
   SIM_TICKS_PER_SECOND,
   updatePlayerMovement,
 } from "./match-movement.util";
+import {
+  advanceTackleState,
+  createApproachTackleState,
+  createCommittedTackleState,
+  evaluateTackleDecision,
+  PlayerTackleState,
+  resolveTackleOutcome,
+  TackleCard,
+  TackleEvaluation,
+  TackleOutcome,
+  TackleResolution,
+  TackleStyle,
+} from "./match-tackle.util";
 
 export const MATCH_REAL_DURATION_MS = 180_000;
 export const MATCH_CLOCK_SECONDS = MATCH_REAL_DURATION_MS / 1000;
@@ -73,7 +84,6 @@ const KICKOFF_WHISTLE_DURATION_MS = 1_000;
 const MIN_OWNER_POSSESSION_TICKS = Math.max(2, Math.round(0.8 * TICKS_PER_SECOND));
 const MIN_TEAM_POSSESSION_TICKS = Math.max(1, Math.round(0.4 * TICKS_PER_SECOND));
 const PASS_CADENCE_TICKS = Math.max(4, Math.round(2.2 * TICKS_PER_SECOND));
-const TACKLE_CADENCE_TICKS = Math.max(2, Math.round(0.9 * TICKS_PER_SECOND));
 const SHOT_CADENCE_TICKS = Math.max(1, Math.round(0.8 * TICKS_PER_SECOND));
 const TRANSITION_PHASE_TICKS = Math.max(4, Math.round(2.2 * TICKS_PER_SECOND));
 const BALL_CONTROL_DISTANCE = 2.4;
@@ -103,14 +113,6 @@ const SHOT_SPEED_UNITS_PER_TICK = MOVEMENT.shotSpeed * SIM_TICK_SECONDS * 1.18;
 const PLAYER_MOVEMENT_TEMPO_MULTIPLIER = 1.3;
 const LOOSE_BALL_CHASE_MULTIPLIER = 1.5;
 const PASS_RECEIVE_WINDOW_SECONDS = PASS_FRAME_DURATION_MS / 1000;
-const SLIDE_TACKLE_MAX_SHAPE_DISTANCE = 1.12;
-const SLIDE_TACKLE_EMERGENCY_SHAPE_DISTANCE = 1.02;
-const STANDING_TACKLE_MAX_SHAPE_DISTANCE = 1.05;
-const TANK_TACKLE_MAX_SHAPE_DISTANCE = 1.2;
-const TACKLE_MAX_BALL_DISTANCE = 3.8;
-const TACKLE_BALL_CONTACT_DISTANCE = 2.7;
-const TACKLE_PLAYER_CONTACT_SHAPE_DISTANCE = 1.08;
-const TACKLE_FROM_BEHIND_DOT_THRESHOLD = -0.18;
 export const FRAMES_PER_ACTION = 7;
 export const ACTIONS_PER_HALF = 14;
 
@@ -349,6 +351,7 @@ export type MatchRenderPlayer = {
   shortName: string;
   slug: string | null;
   aiProfile?: PlayerAiProfile;
+  stats?: SimulationRosterPlayer["stats"];
   skills?: EPlayerSkill[];
   skillSlugs: string[];
   skillCharges?: Array<{ skill: EPlayerSkill; charge: number }>;
@@ -362,6 +365,8 @@ export type MatchRenderPlayer = {
   targetY?: number;
   aiState?: PlayerAIState;
   stamina: number;
+  card?: TackleCard;
+  tackleState?: PlayerTackleState;
   activeSkill: EPlayerSkill | null;
   hasBall: boolean;
   move?: PlayerMotion;
@@ -970,6 +975,14 @@ export function generateNextMatchTick(input: {
 
   const nextTickValue = latestTick.tick + DEBUG_TICK_STEP;
   const actionTick = nextTickValue + Math.abs(Math.floor(input.simulationSeed ?? 0) % 997);
+  const currentCarrierId = Number(latestTick.ball.ownerPlayerId) || null;
+  [...homeLineup, ...awayLineup].forEach((player) => {
+    player.tackleState = advanceTackleState(
+      player.tackleState,
+      actionTick,
+      currentCarrierId,
+    );
+  });
   const second = getNextMatchClockSecond(latestTick);
   const minute = getDisplayMatchMinute(second);
   const lifecycleAction =
@@ -2222,6 +2235,7 @@ export function generateNextMatchTick(input: {
         actor,
         ball: latestTick.ball,
         positionState: previousPositionState,
+        resolution: tackleDecision,
       });
       if (tackleDecision.isFoul) {
         const snapshot = buildSnapshot({
@@ -2273,15 +2287,85 @@ export function generateNextMatchTick(input: {
               freeKickSide: possession,
               from: { x: latestTick.ball.x, y: latestTick.ball.y },
               to: tackleDecision.target,
-              shapeDistance: tackleDecision.shapeDistance,
+              tackleStyle: tackleDecision.style,
+              tackleOutcome: tackleDecision.outcome,
+              card: tackleDecision.card,
+              distanceToCarrierMeters: tackleDecision.distanceToCarrierMeters,
               ballDistanceAtChallenge: tackleDecision.ballDistanceAtChallenge,
+              approachDot: tackleDecision.approachDot,
+              closingSpeedMetersPerSecond: tackleDecision.closingSpeedMetersPerSecond,
+              successChance: tackleDecision.successChance,
+              foulChance: tackleDecision.foulChance,
+            },
+          },
+        };
+      }
+
+      if (tackleDecision.outcome === "beaten") {
+        const snapshot = buildSnapshot({
+          frameId,
+          minute,
+          second,
+          tick: nextTickValue,
+          matchStep: "play",
+          phase,
+          homeScore: Number(latestTick.homeScore ?? 0),
+          awayScore: Number(latestTick.awayScore ?? 0),
+          possession,
+          homeLineup,
+          awayLineup,
+          ballOwner: actor,
+          ball: tackleDecision.target,
+          ballPath: pathBetween(
+            { x: latestTick.ball.x, y: latestTick.ball.y },
+            tackleDecision.target,
+          ),
+          highlight: createHighlight(
+            EMatchEvent.DRIBBLE,
+            `Tick ${nextTickValue}: ${actor.shortName} vuot qua pha ${
+              tackleDecision.style === "sliding" ? "xoac bong" : "tac bong"
+            } cua ${tempoDecision.pressDefender.shortName}`,
+            possession,
+            actor.userPlayerId,
+            tempoDecision.pressDefender.userPlayerId,
+            null,
+          ),
+          activeSkill: null,
+          focusId: actor.userPlayerId,
+          pressId: null,
+          forceAttachBall: true,
+          setPieceTargetsOverride: tacklePlayerTargets,
+          positionState: previousPositionState,
+        });
+
+        return {
+          snapshot,
+          event: {
+            event: EMatchEvent.DRIBBLE,
+            minute,
+            teamId: actor.teamId,
+            actorPlayerId: actor.userPlayerId,
+            secondaryPlayerId: tempoDecision.pressDefender.userPlayerId,
+            payload: {
+              label: snapshot.highlight.label,
+              from: { x: latestTick.ball.x, y: latestTick.ball.y },
+              to: tackleDecision.target,
+              tackleStyle: tackleDecision.style,
+              tackleOutcome: tackleDecision.outcome,
+              defenderRecoveryUntilTick:
+                tempoDecision.pressDefender.tackleState?.recoveryUntilTick ?? null,
+              distanceToCarrierMeters: tackleDecision.distanceToCarrierMeters,
+              ballDistanceAtChallenge: tackleDecision.ballDistanceAtChallenge,
+              approachDot: tackleDecision.approachDot,
+              closingSpeedMetersPerSecond: tackleDecision.closingSpeedMetersPerSecond,
+              successChance: tackleDecision.successChance,
+              foulChance: tackleDecision.foulChance,
             },
           },
         };
       }
 
       const newPossession: Side = possession === "home" ? "away" : "home";
-      consumeSkillCharge(tempoDecision.pressDefender, tackleDecision.skill ?? null);
       const snapshot = buildSnapshot({
         frameId,
         minute,
@@ -2311,8 +2395,8 @@ export function generateNextMatchTick(input: {
         activeSkill: tackleDecision.skill ?? null,
         focusId: tempoDecision.pressDefender.userPlayerId,
         pressId: actor.userPlayerId,
-        forceLooseBall:
-          tackleDecision.isDeflection || tackleDecision.event === EMatchEvent.SLIDE_TACKLE,
+        forceLooseBall: tackleDecision.outcome === "loose_ball",
+        forceAttachBall: tackleDecision.outcome === "won",
         setPieceTargetsOverride: tacklePlayerTargets,
         positionState: previousPositionState,
       });
@@ -2332,9 +2416,15 @@ export function generateNextMatchTick(input: {
             recoveredPossession: newPossession,
             skill: tackleDecision.skill ?? null,
             skillLabel: tackleDecision.skillLabel ?? null,
-            isDeflection: Boolean(tackleDecision.isDeflection),
-            shapeDistance: tackleDecision.shapeDistance,
+            isDeflection: tackleDecision.outcome === "loose_ball",
+            tackleStyle: tackleDecision.style,
+            tackleOutcome: tackleDecision.outcome,
+            distanceToCarrierMeters: tackleDecision.distanceToCarrierMeters,
             ballDistanceAtChallenge: tackleDecision.ballDistanceAtChallenge,
+            approachDot: tackleDecision.approachDot,
+            closingSpeedMetersPerSecond: tackleDecision.closingSpeedMetersPerSecond,
+            successChance: tackleDecision.successChance,
+            foulChance: tackleDecision.foulChance,
           },
         },
       };
@@ -3090,22 +3180,22 @@ function toInternalLineupPlayer(player: MatchRenderPlayer): InternalLineupPlayer
       positions: [{ position: player.displayRole || player.role, effect: 1 }],
       skills,
       skillSlugs: player.skillSlugs,
-      stats: {
-        pass: 70,
-        longPass: 70,
-        vision: 70,
-        shoot: 70,
-        tackle: 70,
-        balance: 70,
-        dribbling: 70,
-        acceleration: 70,
-        speed: 70,
-        stamina: Number(player.stamina ?? 70),
-        gkKeeping: 70,
-        gkReflex: 70,
-        gkDiving: 70,
-        gkReach: 70,
-      },
+      stats: player.stats ?? {
+          pass: 70,
+          longPass: 70,
+          vision: 70,
+          shoot: 70,
+          tackle: 70,
+          balance: 70,
+          dribbling: 70,
+          acceleration: 70,
+          speed: 70,
+          stamina: Number(player.stamina ?? 70),
+          gkKeeping: 70,
+          gkReflex: 70,
+          gkDiving: 70,
+          gkReach: 70,
+        },
     },
   };
 }
@@ -5314,13 +5404,6 @@ function getReceiverReachForTick(receiver: InternalLineupPlayer) {
   return roleSpeed * athletic * PASS_RECEIVE_WINDOW_SECONDS * PLAYER_MOVEMENT_TEMPO_MULTIPLIER;
 }
 
-function getPlayerShapeDistance(left: TrajectoryPoint, right: TrajectoryPoint) {
-  return Math.hypot(
-    (left.x - right.x) / MOVEMENT.collisionMinX,
-    (left.y - right.y) / MOVEMENT.collisionMinY,
-  );
-}
-
 function resolveDebugDefensiveAction(input: {
   defender: InternalLineupPlayer;
   actor: InternalLineupPlayer;
@@ -5332,238 +5415,117 @@ function resolveDebugDefensiveAction(input: {
   event: EMatchEvent;
   label: string;
   target: TrajectoryPoint;
-  isFoul?: boolean;
-  isDeflection?: boolean;
+  outcome: TackleOutcome;
+  style: TackleStyle;
+  card: TackleCard;
+  isFoul: boolean;
   skill?: EPlayerSkill | null;
   skillLabel?: string | null;
-  shapeDistance: number;
+  distanceToCarrierMeters: number;
   ballDistanceAtChallenge: number;
+  approachDot: number;
+  closingSpeedMetersPerSecond: number;
+  successChance: number;
+  foulChance: number;
 } | null {
   const defenderPosition =
     input.previousPositionState.players.get(input.defender.userPlayerId) ?? input.defender.anchors;
   const actorPosition =
     input.previousPositionState.players.get(input.actor.userPlayerId) ?? input.actor.anchors;
-  const distanceToLane = distance(defenderPosition, input.ballTarget);
-  const distanceToBall = distance(defenderPosition, input.ball);
-  const challengeDistance = Math.min(distanceToLane, distanceToBall);
-  const shapeDistance = getPlayerShapeDistance(defenderPosition, actorPosition);
+  const defenderVelocity = input.previousPositionState.players.get(input.defender.userPlayerId) ?? {
+    vx: input.defender.vx ?? 0,
+    vy: input.defender.vy ?? 0,
+  };
+  const actorVelocity = input.previousPositionState.players.get(input.actor.userPlayerId) ?? {
+    vx: input.actor.vx ?? 0,
+    vy: input.actor.vy ?? 0,
+  };
   const skill = getChargedSkill(input.defender, "tackle");
-  const maxShapeDistance =
-    skill === EPlayerSkill.TANK_TACKLE
-      ? TANK_TACKLE_MAX_SHAPE_DISTANCE
-      : SLIDE_TACKLE_MAX_SHAPE_DISTANCE;
-  const canChallenge =
-    challengeDistance <= TACKLE_MAX_BALL_DISTANCE &&
-    distanceToBall <= TACKLE_MAX_BALL_DISTANCE &&
-    shapeDistance <= maxShapeDistance;
-
-  if (!canChallenge) return null;
-
-  const tackleQuality =
-    input.defender.raw.stats.tackle * 0.5 +
-    input.defender.raw.stats.speed * 0.22 +
-    input.defender.raw.stats.acceleration * 0.18 +
-    input.defender.raw.stats.balance * 0.1;
-  const carrierQuality =
-    input.actor.raw.stats.dribbling * 0.48 +
-    input.actor.raw.stats.balance * 0.24 +
-    input.actor.raw.stats.speed * 0.18 +
-    input.actor.raw.stats.acceleration * 0.1;
-  const timingRoll =
-    ((input.nextTick * 37 + input.defender.userPlayerId * 17 + input.actor.userPlayerId * 11) %
-      100) /
-    100;
-  const skillRandom = createDeterministicSkillRandom(input.nextTick, input.defender.userPlayerId);
-  const activation = skill
-    ? resolveSkillActivation(
-        skill,
-        createSkillContext(input.actor, input.defender, input.defender, skillRandom),
-      )
-    : null;
-  const challengeDistancePenalty = clamp((challengeDistance - 5) / 18, 0, 0.32);
-  const successChance = clamp(
-    0.34 +
-      (tackleQuality - carrierQuality + (activation?.defensePenalty ?? 0)) / 180 -
-      challengeDistancePenalty +
-      (skill === EPlayerSkill.TANK_TACKLE ? 0.18 : 0),
-    0.12,
-    skill === EPlayerSkill.TANK_TACKLE ? 0.9 : 0.74,
+  const random = createDeterministicSkillRandom(
+    input.nextTick * 17 + input.actor.userPlayerId,
+    input.defender.userPlayerId * 13 + input.actor.userPlayerId,
   );
-  const carrierDirection = getNormalizedDirection(actorPosition, input.ballTarget, {
-    x: 0,
-    y: attackDirection(input.actor.side),
+  const riskTaking = getClampedPlayerAiTendency(
+    input.defender,
+    "riskTaking",
+    0.5,
+    0,
+    1,
+  );
+  const evaluation = evaluateTackleDecision({
+    tick: input.nextTick,
+    defenderId: input.defender.userPlayerId,
+    carrierId: input.actor.userPlayerId,
+    defenderSide: input.defender.side,
+    defenderPosition,
+    defenderVelocity: { x: Number(defenderVelocity.vx ?? 0), y: Number(defenderVelocity.vy ?? 0) },
+    carrierPosition: actorPosition,
+    carrierVelocity: { x: Number(actorVelocity.vx ?? 0), y: Number(actorVelocity.vy ?? 0) },
+    ballPosition: input.ball,
+    ballTarget: input.ballTarget,
+    defenderStats: {
+      tackle: input.defender.raw.stats.tackle,
+      balance: input.defender.raw.stats.balance,
+      speed: input.defender.raw.stats.speed,
+      acceleration: input.defender.raw.stats.acceleration,
+      stamina: input.defender.raw.stats.stamina,
+    },
+    carrierStats: {
+      dribbling: input.actor.raw.stats.dribbling,
+      balance: input.actor.raw.stats.balance,
+      speed: input.actor.raw.stats.speed,
+      acceleration: input.actor.raw.stats.acceleration,
+    },
+    riskTaking,
+    hasTankTackle: skill === EPlayerSkill.TANK_TACKLE,
+    state: input.defender.tackleState,
+    decisionRoll: random(),
   });
-  const defenderApproach = getNormalizedDirection(actorPosition, defenderPosition, {
-    x: 0,
-    y: 0,
-  });
-  const approachDot =
-    carrierDirection.x * defenderApproach.x + carrierDirection.y * defenderApproach.y;
-  const hitsPlayer = shapeDistance <= TACKLE_PLAYER_CONTACT_SHAPE_DISTANCE;
-  const missesBall = distanceToBall > TACKLE_BALL_CONTACT_DISTANCE;
-  const tacklesFromBehind = hitsPlayer && approachDot <= TACKLE_FROM_BEHIND_DOT_THRESHOLD;
-  const foulResult = (label: string) => ({
-    event: EMatchEvent.FOUL,
-    label,
-    target: moveToward(input.ball, input.ballTarget, PASS_SPEED_UNITS_PER_TICK * 0.28),
-    isFoul: true,
-    shapeDistance,
-    ballDistanceAtChallenge: distanceToBall,
-  });
 
-  if (
-    (input.nextTick % TACKLE_CADENCE_TICKS === 0 ||
-      (shapeDistance <= SLIDE_TACKLE_EMERGENCY_SHAPE_DISTANCE &&
-        distanceToBall <= TACKLE_BALL_CONTACT_DISTANCE)) &&
-    challengeDistance <= TACKLE_MAX_BALL_DISTANCE &&
-    shapeDistance <= maxShapeDistance
-  ) {
-    addSkillCharge(input.defender, EPlayerSkill.TANK_TACKLE, 25);
-    const isClean = timingRoll < successChance;
-    const deflectionWindow = clamp(0.24 + challengeDistancePenalty * 0.55, 0.18, 0.54);
-    const target = {
-      x: clamp(lerp(input.ball.x, defenderPosition.x, isClean ? 0.78 : 0.34), 6, 94),
-      y: clamp(lerp(input.ball.y, defenderPosition.y, isClean ? 0.78 : 0.34), 6, 94),
-    };
-
-    if (tacklesFromBehind) {
-      return foulResult("xoac tu phia sau va pham loi");
-    }
-
-    if (!isClean) {
-      if (missesBall && hitsPlayer) {
-        return foulResult("xoac khong trung bong va pham loi");
-      }
-
-      if (missesBall) {
-        return null;
-      }
-
-      return {
-        event: EMatchEvent.SLIDE_TACKLE,
-        label: "xoac cham bong lam bong vang ra",
-        target: getTackleDeflectionTarget({
-          ball: input.ball,
-          ballTarget: input.ballTarget,
-          defenderPosition,
-          nextTick: input.nextTick,
-        }),
-        isDeflection: true,
-        shapeDistance,
-        ballDistanceAtChallenge: distanceToBall,
-      };
-    }
-
-    if (timingRoll > successChance * (1 - deflectionWindow)) {
-      return {
-        event: EMatchEvent.SLIDE_TACKLE,
-        label: "xoac trung lam bong vang ra",
-        target: getTackleDeflectionTarget({
-          ball: input.ball,
-          ballTarget: input.ballTarget,
-          defenderPosition,
-          nextTick: input.nextTick,
-        }),
-        isDeflection: true,
-        shapeDistance,
-        ballDistanceAtChallenge: distanceToBall,
-      };
-    }
-
-    return {
-      event: skill === EPlayerSkill.TANK_TACKLE ? EMatchEvent.SKILL_USED : EMatchEvent.SLIDE_TACKLE,
-      label:
-        skill === EPlayerSkill.TANK_TACKLE ? `dung ${getSkillLabel(skill)} cuop bong` : "xoac bong",
-      target: getTackleDeflectionTarget({
-        ball: input.ball,
-        ballTarget: target,
-        defenderPosition,
-        nextTick: input.nextTick,
-      }),
-      isDeflection: skill !== EPlayerSkill.TANK_TACKLE,
-      skill,
-      skillLabel: skill ? getSkillLabel(skill) : null,
-      shapeDistance,
-      ballDistanceAtChallenge: distanceToBall,
-    };
+  if (evaluation.action === "approach") {
+    input.defender.tackleState = createApproachTackleState(
+      input.defender.tackleState,
+      evaluation,
+      input.actor.userPlayerId,
+      input.nextTick,
+    );
+    return null;
   }
+  if (evaluation.action !== "commit" || !evaluation.style) return null;
 
-  const standingShapeDistance =
-    skill === EPlayerSkill.TANK_TACKLE
-      ? TANK_TACKLE_MAX_SHAPE_DISTANCE
-      : STANDING_TACKLE_MAX_SHAPE_DISTANCE;
-  const attemptsStandingTackle =
-    input.nextTick % Math.max(3, Math.round(TACKLE_CADENCE_TICKS * 0.7)) === 0 &&
-    shapeDistance <= standingShapeDistance &&
-    distanceToBall <= TACKLE_MAX_BALL_DISTANCE;
-  if (attemptsStandingTackle) {
-    if (tacklesFromBehind) {
-      return foulResult("tac bong tu phia sau va pham loi");
-    }
-
-    if (timingRoll >= successChance + 0.08) {
-      return missesBall && hitsPlayer
-        ? foulResult("tac khong trung bong va pham loi")
-        : null;
-    }
-
-    addSkillCharge(input.defender, EPlayerSkill.TANK_TACKLE, 25);
-    const target = {
-      x: clamp(lerp(input.ballTarget.x, defenderPosition.x, 0.55), 6, 94),
-      y: clamp(lerp(input.ballTarget.y, defenderPosition.y, 0.55), 6, 94),
-    };
-    return {
-      event: skill === EPlayerSkill.TANK_TACKLE ? EMatchEvent.SKILL_USED : EMatchEvent.TACKLE,
-      label:
-        skill === EPlayerSkill.TANK_TACKLE
-          ? `dung ${getSkillLabel(skill)} huc vang bong`
-          : "tac bong",
-      target: moveToward(input.ballTarget, target, PASS_SPEED_UNITS_PER_TICK * 0.7),
-      skill,
-      skillLabel: skill ? getSkillLabel(skill) : null,
-      shapeDistance,
-      ballDistanceAtChallenge: distanceToBall,
-    };
-  }
-
-  return null;
-}
-
-function getTackleDeflectionTarget(input: {
-  ball: TrajectoryPoint;
-  ballTarget: TrajectoryPoint;
-  defenderPosition: TrajectoryPoint;
-  nextTick: number;
-}) {
-  const travel = {
-    x: input.ballTarget.x - input.ball.x,
-    y: input.ballTarget.y - input.ball.y,
+  const committedEvaluation = evaluation as TackleEvaluation & {
+    action: "commit";
+    style: TackleStyle;
   };
-  const travelLength = Math.hypot(travel.x, travel.y) || 1;
-  const side = input.nextTick % 2 === 0 ? -1 : 1;
-  const nearBoundary =
-    input.ball.x <= 10 || input.ball.x >= 90 || input.ball.y <= 10 || input.ball.y >= 90;
-  const boundaryBoost = nearBoundary ? 1.55 : 1;
-  const deflect = {
-    x: ((travel.x / travelLength) * 4 + (-travel.y / travelLength) * side * 8) * boundaryBoost,
-    y: ((travel.y / travelLength) * 4 + (travel.x / travelLength) * side * 8) * boundaryBoost,
-  };
+  const resolution = resolveTackleOutcome({
+    evaluation: committedEvaluation,
+    tick: input.nextTick,
+    ballPosition: input.ball,
+    ballTarget: input.ballTarget,
+    defenderPosition,
+    carrierPosition: actorPosition,
+    defenderTackle: input.defender.raw.stats.tackle,
+    riskTaking,
+    hasTankTackle: skill === EPlayerSkill.TANK_TACKLE,
+    currentCard: input.defender.card ?? null,
+    foulRoll: random(),
+    successRoll: random(),
+    controlRoll: random(),
+    cardRoll: random(),
+    deflectionSideRoll: random(),
+  });
 
-  return {
-    x: clamp(lerp(input.ball.x, input.defenderPosition.x, 0.42) + deflect.x, -4, 104),
-    y: clamp(lerp(input.ball.y, input.defenderPosition.y, 0.42) + deflect.y, -4, 104),
-  };
-}
+  input.defender.tackleState = createCommittedTackleState(
+    input.defender.tackleState,
+    resolution,
+    input.actor.userPlayerId,
+    input.nextTick,
+  );
+  if (resolution.card) input.defender.card = resolution.card;
+  addSkillCharge(input.defender, EPlayerSkill.TANK_TACKLE, 25);
+  consumeSkillCharge(input.defender, skill);
 
-function getNormalizedDirection(
-  from: TrajectoryPoint,
-  to: TrajectoryPoint,
-  fallback: TrajectoryPoint,
-) {
-  const vector = { x: to.x - from.x, y: to.y - from.y };
-  const length = Math.hypot(vector.x, vector.y);
-  if (length <= 0.001) return fallback;
-  return { x: vector.x / length, y: vector.y / length };
+  return toResolvedTackleAction(resolution, evaluation, skill);
 }
 
 function getTacklePlayerTargets(input: {
@@ -5571,27 +5533,75 @@ function getTacklePlayerTargets(input: {
   actor: InternalLineupPlayer;
   ball: TrajectoryPoint;
   positionState: PositionState;
+  resolution: {
+    outcome: TackleOutcome;
+    style: TackleStyle;
+    target: TrajectoryPoint;
+  };
 }) {
   const targets = new Map<number, SetPiecePlayerTarget>();
   const defenderPosition = getPlayerPosition(input.positionState, input.defender);
   const actorPosition = getPlayerPosition(input.positionState, input.actor);
-  const contactPoint = {
-    x: lerp(input.ball.x, actorPosition.x, 0.35),
-    y: lerp(input.ball.y, actorPosition.y, 0.35),
-  };
+  const contactPoint = input.resolution.outcome === "beaten" ? actorPosition : input.ball;
+  const defenderTravel = input.resolution.style === "sliding" ? 5.4 : 2.8;
 
   targets.set(input.defender.userPlayerId, {
-    target: moveToward(defenderPosition, contactPoint, TACKLE_MAX_BALL_DISTANCE),
+    // Do not separate the bodies at contact: a defender may overlap or travel
+    // through the carrier during a physical challenge.
+    target: moveToward(defenderPosition, contactPoint, defenderTravel),
     intent: "press",
-    aiState: "PRESS_BALL",
+    aiState: "TACKLE_COMMIT",
   });
   targets.set(input.actor.userPlayerId, {
-    target: actorPosition,
-    intent: "anchor",
-    aiState: "HOLD_POSITION",
+    target:
+      input.resolution.outcome === "beaten"
+        ? moveToward(actorPosition, input.resolution.target, 4.2)
+        : actorPosition,
+    intent: input.resolution.outcome === "beaten" ? "run" : "anchor",
+    aiState: input.resolution.outcome === "beaten" ? "DRIBBLE" : "HOLD_POSITION",
   });
 
   return targets;
+}
+
+function toResolvedTackleAction(
+  resolution: TackleResolution,
+  evaluation: TackleEvaluation,
+  skill: EPlayerSkill | null,
+) {
+  const styleLabel = resolution.style === "sliding" ? "xoac bong" : "tac bong";
+  const outcomeLabel: Record<TackleOutcome, string> = {
+    won: `${styleLabel} va doat bong`,
+    loose_ball: `${styleLabel} lam bong bat ra`,
+    foul: `${styleLabel} pham loi${resolution.card ? `, nhan the ${resolution.card}` : ""}`,
+    beaten: `${styleLabel} hut va bi vuot qua`,
+  };
+
+  return {
+    event:
+      resolution.outcome === "foul"
+        ? EMatchEvent.FOUL
+        : resolution.style === "sliding"
+          ? EMatchEvent.SLIDE_TACKLE
+          : EMatchEvent.TACKLE,
+    label:
+      skill === EPlayerSkill.TANK_TACKLE && resolution.outcome !== "foul"
+        ? `dung ${getSkillLabel(skill)} ${outcomeLabel[resolution.outcome]}`
+        : outcomeLabel[resolution.outcome],
+    target: resolution.target,
+    outcome: resolution.outcome,
+    style: resolution.style,
+    card: resolution.card,
+    isFoul: resolution.outcome === "foul",
+    skill,
+    skillLabel: skill ? getSkillLabel(skill) : null,
+    distanceToCarrierMeters: evaluation.distanceToCarrierMeters,
+    ballDistanceAtChallenge: evaluation.distanceToBallMeters,
+    approachDot: evaluation.approachDot,
+    closingSpeedMetersPerSecond: evaluation.closingSpeedMetersPerSecond,
+    successChance: resolution.successChance,
+    foulChance: resolution.foulChance,
+  };
 }
 
 function resolveDebugShotAction(
@@ -9488,46 +9498,6 @@ function getBallCarryPosition(player: MatchRenderPlayer): TrajectoryPoint {
   };
 }
 
-function resolveSnapshotPlayerCollisions(players: MatchRenderPlayer[]) {
-  const bodies: MovementPlayer[] = players.map((player) => ({
-    id: player.userPlayerId,
-    teamId: player.teamId,
-    side: player.side,
-    role: player.role,
-    position: { x: player.x, y: player.y },
-    velocity: { x: Number(player.vx ?? 0), y: Number(player.vy ?? 0) },
-    targetPosition: {
-      x: Number(player.targetX ?? player.x),
-      y: Number(player.targetY ?? player.y),
-    },
-    homePosition: {
-      x: Number(player.homeX ?? player.x),
-      y: Number(player.homeY ?? player.y),
-    },
-    state: player.aiState ?? "HOLD_POSITION",
-    stamina: player.stamina,
-    hasBall: player.hasBall,
-    aiProfile: player.aiProfile,
-  }));
-
-  resolvePlayerCollisions(bodies);
-  const bodyById = new Map(bodies.map((body) => [body.id, body]));
-
-  players.forEach((player) => {
-    const body = bodyById.get(player.userPlayerId);
-    if (!body) return;
-
-    player.x = Number(body.position.x.toFixed(4));
-    player.y = Number(body.position.y.toFixed(4));
-    player.vx = Number(body.velocity.x.toFixed(4));
-    player.vy = Number(body.velocity.y.toFixed(4));
-    if (player.move) {
-      player.move.toX = player.x;
-      player.move.toY = player.y;
-    }
-  });
-}
-
 function getIntentForState(state: PlayerAIState): PlayerMoveIntent {
   switch (state) {
     case "PRESS_BALL":
@@ -9576,6 +9546,11 @@ function getIntentForState(state: PlayerAIState): PlayerMoveIntent {
       return "recover";
     case "RECOVER_DEFENSE":
       return "cover";
+    case "TACKLE_APPROACH":
+    case "TACKLE_COMMIT":
+      return "press";
+    case "TACKLE_RECOVERY":
+      return "recover";
     case "KEEPER_DIVE":
     case "KEEPER_CATCH":
       return "chase";
@@ -10001,7 +9976,6 @@ function buildSnapshot(input: {
       player.activeSkill = input.activeSkill;
     }
   });
-  resolveSnapshotPlayerCollisions(allRenderPlayers);
   const ownerRenderPlayer =
     controlledOwnerId == null
       ? null
@@ -10335,6 +10309,14 @@ function projectPlayers(input: {
     } else if (input.matchStep === "full_time") {
       target = { x: 47 + (index % 4) * 2, y: 50 + Math.floor(index / 4) * 1.5 };
       aiState = "IDLE";
+    } else if (player.tackleState?.phase === "recovery") {
+      target = { x: prev.x, y: prev.y };
+      intent = "recover";
+      aiState = "TACKLE_RECOVERY";
+    } else if (player.tackleState?.phase === "approach" && player.tackleState.approachTarget) {
+      target = player.tackleState.approachTarget;
+      intent = "press";
+      aiState = "TACKLE_APPROACH";
     } else if (keeperAction) {
       target = keeperAction.target;
       intent = keeperAction.outcome === "catch" ? "chase" : "press";
@@ -10441,8 +10423,6 @@ function projectPlayers(input: {
     } else if (setPieceTarget && input.instantSetPiece) {
       movementPlayer.position = setPieceTarget.target;
       movementPlayer.velocity = { x: 0, y: 0 };
-    } else if (!keeperAction && !setPieceTarget && !receivesToFeet) {
-      applySeparation(movementPlayer, [...teammateMovement, ...opponentMovement]);
     }
     if (!forceLifecycleTarget && !(setPieceTarget && input.instantSetPiece)) {
       const isBallPressure = isPress || aiState === "PRESS_BALL";
@@ -10483,6 +10463,7 @@ function projectPlayers(input: {
       shortName: player.shortName,
       slug: player.slug,
       aiProfile: player.raw.aiProfile,
+      stats: player.raw.stats,
       skills: player.raw.skills,
       skillSlugs: player.skillSlugs,
       skillCharges: normalizeSkillCharges(player.raw.skills, player.skillCharges),
@@ -10496,6 +10477,8 @@ function projectPlayers(input: {
       targetY: clamp(movementPlayer.targetPosition.y, 0, 100),
       aiState,
       stamina: player.stamina,
+      card: player.card ?? null,
+      tackleState: player.tackleState,
       activeSkill: null,
       hasBall: false,
       offside: buildOffsideDebug({
@@ -11195,6 +11178,7 @@ function selectLineup(team: SimulationTeamInput, side: Side): InternalLineupPlay
       shortName: shortenName(picked.name),
       slug: picked.slug,
       aiProfile: picked.aiProfile,
+      stats: picked.stats,
       skills: picked.skills,
       skillSlugs: picked.skillSlugs,
       skillCharges: normalizeSkillCharges(picked.skills, undefined),
@@ -11203,6 +11187,8 @@ function selectLineup(team: SimulationTeamInput, side: Side): InternalLineupPlay
       homeX: anchors.x,
       homeY: anchors.y,
       stamina: picked.stats.stamina,
+      card: null,
+      tackleState: advanceTackleState(null, 0),
       activeSkill: null,
       hasBall: false,
       anchors,
