@@ -66,6 +66,8 @@ function toPitchPlayer(
     tackleState: raw.tackleState as MatchPitchPlayer['tackleState'],
     activeSkill: Number(raw.activeSkill ?? 0) || null,
     offside,
+    attackingIntent:
+      (raw.attackingIntent as MatchPitchPlayer['attackingIntent'] | undefined) ?? null,
     move: move
       ? {
           fromX: clampPercent(move.fromX, x),

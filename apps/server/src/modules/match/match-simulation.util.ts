@@ -40,6 +40,16 @@ import {
   TackleResolution,
   TackleStyle,
 } from "./match-tackle.util";
+import {
+  type AttackingActionMemory,
+  type AttackingAiPlayer,
+  type AttackingDecision,
+  type AttackingIntent,
+  type AttackingPassStyle,
+  type AttackingShotStyle,
+  type AttackingTactics,
+  runAttackingUtilityAi,
+} from "./match-attacking-ai.util";
 
 export const MATCH_REAL_DURATION_MS = 180_000;
 export const MATCH_CLOCK_SECONDS = MATCH_REAL_DURATION_MS / 1000;
@@ -127,7 +137,7 @@ type MatchStep =
   | "full_time";
 type PlayActionType = "pass" | "shoot" | "block" | "goal" | "save";
 type PossessionTempoKind = "pass" | "hold" | "carry" | "reposition";
-type PassStyle = "short" | "one_two" | "through" | "lob" | "switch";
+type PassStyle = AttackingPassStyle | "lob";
 type MatchCombination = {
   kind: "one_two" | "triangle";
   step: 1 | 2;
@@ -136,7 +146,7 @@ type MatchCombination = {
   thirdRunnerPlayerId: number | null;
   expiresAtTick: number;
 };
-type PassTargetIntent = "feet" | "through";
+type PassTargetIntent = "feet" | "through" | "lead";
 type PassingPhase =
   | "pressure_escape"
   | "build_up"
@@ -191,6 +201,7 @@ type ShotType =
   | "NEAR_POST_SHOT"
   | "FAR_POST_SHOT"
   | "FIRST_TIME_SHOT"
+  | "HEADER_SHOT"
   | "DESPERATE_SHOT";
 type ShotTrajectoryStyle = "straight" | "curve" | "chip";
 type ShotTargetZone =
@@ -352,6 +363,7 @@ export type MatchRenderPlayer = {
   slug: string | null;
   aiProfile?: PlayerAiProfile;
   stats?: SimulationRosterPlayer["stats"];
+  teamTactics?: AttackingTactics;
   skills?: EPlayerSkill[];
   skillSlugs: string[];
   skillCharges?: Array<{ skill: EPlayerSkill; charge: number }>;
@@ -371,6 +383,7 @@ export type MatchRenderPlayer = {
   hasBall: boolean;
   move?: PlayerMotion;
   offside?: OffsideDebug;
+  attackingIntent?: AttackingIntent | null;
 };
 
 export type MatchTeamSummary = {
@@ -428,6 +441,17 @@ export type MatchSnapshot = {
   tactical?: {
     phase: TacticalPhase;
     possessionTicks: number;
+    attackingDecision?: {
+      actorPlayerId: number;
+      kind: AttackingDecision["selected"]["kind"];
+      passStyle?: AttackingPassStyle;
+      shotStyle?: AttackingShotStyle;
+      receiverId?: number;
+      utility: number;
+      executionError: number;
+      actionMemory: AttackingActionMemory;
+      scores: AttackingDecision["scoreLog"];
+    };
   };
   matchStats?: MatchSummary;
   restart?: MatchRestart | null;
@@ -2086,31 +2110,48 @@ export function generateNextMatchTick(input: {
     attacking[0];
   const phase = latestTick.phase === "second_half" ? "second_half" : "first_half";
   const activeCombination = getActiveMatchCombination(latestTick, actor, nextTickValue);
-  const tempoDecision = resolveDebugPossessionTempoAction({
-    previousTicks,
-    latestEvent: latestTick.highlight?.event ?? null,
+  const previousAttackingDecision = latestTick.tactical?.attackingDecision;
+  const attackingDecision = resolveAttackingUtilityDecision({
     actor,
     attacking,
     defending,
     previousPositionState,
     ball: latestTick.ball,
-    nextTick: actionTick,
     possession,
-    forceCombinationPass: Boolean(activeCombination),
+    possessionTicks: countConsecutivePossessionTicks(previousTicks, possession),
+    nextTick: actionTick,
+    latestEvent: latestTick.highlight?.event ?? null,
+    lastPassStyle: latestTick.highlight?.passStyle,
+    activeCombination,
+    actionMemory:
+      previousAttackingDecision?.actorPlayerId === actor.userPlayerId
+        ? previousAttackingDecision.actionMemory
+        : null,
   });
-  const shotAction = resolveDebugShotAction(
-    {
-      shooter: actor,
-      attacking,
-      defending,
-      possession,
-      ball: latestTick.ball,
-      previousPositionState,
-      nextTick: actionTick,
-      latestEvent: latestTick.highlight?.event ?? null,
-    },
-    !activeCombination,
-  );
+  const tempoDecision = toPossessionTempoDecision({
+    decision: attackingDecision,
+    actor,
+    defending,
+    previousPositionState,
+    ball: latestTick.ball,
+  });
+  const shotAction =
+    attackingDecision.selected.kind === "shoot"
+      ? resolveDebugShotAction(
+          {
+            shooter: actor,
+            attacking,
+            defending,
+            possession,
+            ball: latestTick.ball,
+            previousPositionState,
+            nextTick: actionTick,
+            latestEvent: latestTick.highlight?.event ?? null,
+            forcedShotStyle: attackingDecision.selected.shotStyle,
+          },
+          true,
+        )
+      : null;
 
   if (shotAction) {
     const homeScore =
@@ -2154,6 +2195,11 @@ export function generateNextMatchTick(input: {
         shotAction.shotMetadata.goalkeeperAction === "parry",
       forceAttachBall: shotAction.forceAttachBall,
       durationMsOverride: shotAction.durationMsOverride,
+      setPieceTargetsOverride: mergeAttackingTargets(
+        attackingDecision.intentions,
+        getCarrierActionTargets(attackingDecision, actor),
+      ),
+      attackingDecision,
       positionState: previousPositionState,
     });
 
@@ -2174,6 +2220,8 @@ export function generateNextMatchTick(input: {
           distanceToGoal: shotAction.distanceToGoal,
           isGoal: shotAction.isGoal,
           shotMetadata: shotAction.shotMetadata,
+          shotStyle: attackingDecision.selected.shotStyle ?? null,
+          attackingDecision: serializeAttackingDecision(attackingDecision),
           goalkeeperAction: shotAction.shotMetadata.goalkeeperAction,
           goalkeeperTarget: shotAction.shotMetadata.goalkeeperTarget,
           skill: shotAction.skill,
@@ -2195,9 +2243,12 @@ export function generateNextMatchTick(input: {
       previousPositionState,
       pressDefender: tempoDecision.pressDefender,
     });
-    const dribbleSkill = resolveDribbleSkill(actor, {
-      canUseSkill: dribbleDuel.canUseSkill,
-    });
+    const dribbleSkill =
+      attackingDecision.selected.kind === "dribble"
+        ? resolveDribbleSkill(actor, {
+            canUseSkill: dribbleDuel.canUseSkill,
+          })
+        : null;
     const takeOn = resolveTakeOnOutcome({
       actor,
       defender: dribbleDuel.defender,
@@ -2269,6 +2320,7 @@ export function generateNextMatchTick(input: {
           pressId: tempoDecision.pressDefender.userPlayerId,
           forceLooseBall: true,
           setPieceTargetsOverride: tacklePlayerTargets,
+          attackingDecision,
           positionState: previousPositionState,
         });
 
@@ -2296,6 +2348,7 @@ export function generateNextMatchTick(input: {
               closingSpeedMetersPerSecond: tackleDecision.closingSpeedMetersPerSecond,
               successChance: tackleDecision.successChance,
               foulChance: tackleDecision.foulChance,
+              attackingDecision: serializeAttackingDecision(attackingDecision),
             },
           },
         };
@@ -2335,6 +2388,7 @@ export function generateNextMatchTick(input: {
           pressId: null,
           forceAttachBall: true,
           setPieceTargetsOverride: tacklePlayerTargets,
+          attackingDecision,
           positionState: previousPositionState,
         });
 
@@ -2360,6 +2414,7 @@ export function generateNextMatchTick(input: {
               closingSpeedMetersPerSecond: tackleDecision.closingSpeedMetersPerSecond,
               successChance: tackleDecision.successChance,
               foulChance: tackleDecision.foulChance,
+              attackingDecision: serializeAttackingDecision(attackingDecision),
             },
           },
         };
@@ -2398,6 +2453,7 @@ export function generateNextMatchTick(input: {
         forceLooseBall: tackleDecision.outcome === "loose_ball",
         forceAttachBall: tackleDecision.outcome === "won",
         setPieceTargetsOverride: tacklePlayerTargets,
+        attackingDecision,
         positionState: previousPositionState,
       });
 
@@ -2425,6 +2481,7 @@ export function generateNextMatchTick(input: {
             closingSpeedMetersPerSecond: tackleDecision.closingSpeedMetersPerSecond,
             successChance: tackleDecision.successChance,
             foulChance: tackleDecision.foulChance,
+            attackingDecision: serializeAttackingDecision(attackingDecision),
           },
         },
       };
@@ -2471,6 +2528,11 @@ export function generateNextMatchTick(input: {
       focusId: actor.userPlayerId,
       pressId:
         dribbleDuel.defender?.userPlayerId ?? tempoDecision.pressDefender?.userPlayerId ?? null,
+      setPieceTargetsOverride: mergeAttackingTargets(
+        attackingDecision.intentions,
+        getCarrierActionTargets(attackingDecision, actor),
+      ),
+      attackingDecision,
       positionState: previousPositionState,
     });
 
@@ -2492,6 +2554,7 @@ export function generateNextMatchTick(input: {
           skillLabel: skill ? getSkillLabel(skill) : null,
           dribbleChance: takeOn.chance,
           duelType: dribbleDuel.isOneOnMany ? "1-n" : dribbleDuel.canUseSkill ? "1-1" : "carry",
+          attackingDecision: serializeAttackingDecision(attackingDecision),
         },
       },
     };
@@ -2513,6 +2576,22 @@ export function generateNextMatchTick(input: {
       ? getCombinationReceiverPriority(activeCombination)
       : undefined,
     forcedPassStyle: activeCombination ? "one_two" : undefined,
+    forcedSelection:
+      attackingDecision.selected.kind === "pass" && attackingDecision.selected.receiverId != null
+        ? {
+            receiverId: attackingDecision.selected.receiverId,
+            passStyle: attackingDecision.selected.passStyle ?? "short",
+            target: applyControlledPassError({
+              target: attackingDecision.selected.target,
+              decision: attackingDecision,
+              nextTick: actionTick,
+              playerId: actor.userPlayerId,
+            }),
+            estimatedCompletion:
+              (attackingDecision.selected.pass?.completionProbability ?? 0.5) *
+              (1 - attackingDecision.selected.executionError * 0.24),
+          }
+        : undefined,
   });
   const {
     receiver,
@@ -2569,6 +2648,7 @@ export function generateNextMatchTick(input: {
       activeSkill: null,
       focusId: freeKickTaker.userPlayerId,
       pressId: null,
+      attackingDecision,
       positionState: previousPositionState,
     });
 
@@ -2596,6 +2676,7 @@ export function generateNextMatchTick(input: {
           from: { x: latestTick.ball.x, y: latestTick.ball.y },
           to: offsideSpot,
           recoveredPossession: newPossession,
+          attackingDecision: serializeAttackingDecision(attackingDecision),
         },
       },
     };
@@ -2633,6 +2714,7 @@ export function generateNextMatchTick(input: {
       activeSkill: null,
       focusId: pressDefender.userPlayerId,
       pressId: actor.userPlayerId,
+      attackingDecision,
       positionState: previousPositionState,
     });
 
@@ -2657,6 +2739,7 @@ export function generateNextMatchTick(input: {
           receiverWasOffsideAtPass: passDecision.receiverWasOffsideAtPass,
           passWasLegal: passDecision.passWasLegal,
           offsideCalledOnReceive: false,
+          attackingDecision: serializeAttackingDecision(attackingDecision),
         },
       },
     };
@@ -2729,17 +2812,22 @@ export function generateNextMatchTick(input: {
     passTargetIntent,
     focusId: receiver.userPlayerId,
     pressId: pressDefender?.userPlayerId ?? null,
-    setPieceTargetsOverride: combination
-      ? getCombinationRunTargets({
-          attacking,
-          defending,
-          possession,
-          actor,
-          receiver,
-          combination,
-          positionState: previousPositionState,
-        })
-      : undefined,
+    setPieceTargetsOverride: mergeAttackingTargets(
+      attackingDecision.intentions,
+      combination
+        ? getCombinationRunTargets({
+            attacking,
+            defending,
+            possession,
+            actor,
+            receiver,
+            combination,
+            positionState: previousPositionState,
+          })
+        : undefined,
+      [receiver.userPlayerId],
+    ),
+    attackingDecision,
     instantSetPiece: false,
     positionState: previousPositionState,
   });
@@ -2769,6 +2857,7 @@ export function generateNextMatchTick(input: {
         receiverWasOffsideAtPass: passDecision.receiverWasOffsideAtPass,
         passWasLegal: passDecision.passWasLegal,
         offsideCalledOnReceive: false,
+        attackingDecision: serializeAttackingDecision(attackingDecision),
       },
     },
   };
@@ -3217,6 +3306,322 @@ function getClampedPlayerAiTendency(
   max: number,
 ) {
   return clamp(getPlayerAiTendency(player, key, fallback), min, max);
+}
+
+function resolveAttackingUtilityDecision(input: {
+  actor: InternalLineupPlayer;
+  attacking: InternalLineupPlayer[];
+  defending: InternalLineupPlayer[];
+  previousPositionState: PositionState;
+  ball: TrajectoryPoint;
+  possession: Side;
+  possessionTicks: number;
+  nextTick: number;
+  latestEvent: EMatchEvent | null;
+  lastPassStyle?: PassStyle;
+  activeCombination?: MatchCombination | null;
+  actionMemory?: AttackingActionMemory | null;
+}): AttackingDecision {
+  const direction = attackDirection(input.possession) as -1 | 1;
+  const toUtilityPlayer = (player: InternalLineupPlayer): AttackingAiPlayer => {
+    const state = input.previousPositionState.players.get(player.userPlayerId);
+    const position = getPlayerPosition(input.previousPositionState, player);
+    const velocity = { x: Number(state?.vx ?? 0), y: Number(state?.vy ?? 0) };
+    return {
+      id: player.userPlayerId,
+      teamId: player.teamId,
+      role: player.role,
+      position,
+      velocity,
+      facing:
+        Math.hypot(velocity.x, velocity.y) > 0.15 ? velocity : { x: 0, y: direction },
+      preferredFoot: inferPreferredFoot(player),
+      isOffside:
+        player.userPlayerId !== input.actor.userPlayerId && player.side === input.possession
+          ? evaluateOffside({
+              receiver: player,
+              receiverPosition: position,
+              ball: input.ball,
+              defending: input.defending,
+              possession: input.possession,
+              previousPositionState: input.previousPositionState,
+            }).isOffside
+          : false,
+      stamina: player.stamina,
+      stats: {
+        ...player.raw.stats,
+        ballControl:
+          player.raw.stats.dribbling * 0.5 +
+          player.raw.stats.balance * 0.28 +
+          player.raw.stats.pass * 0.22,
+        agility:
+          player.raw.stats.acceleration * 0.42 +
+          player.raw.stats.balance * 0.34 +
+          player.raw.stats.dribbling * 0.24,
+        confidence:
+          (player.raw.stats.vision * 0.38 +
+            player.raw.stats.balance * 0.27 +
+            player.raw.stats.dribbling * 0.2 +
+            player.raw.stats.shoot * 0.15) *
+          clamp(
+            0.9 +
+              getClampedPlayerAiTendency(player, "flairBias", 0, 0, 1) * 0.08 +
+              (getClampedPlayerAiTendency(player, "riskTaking", 0.5, 0, 1) - 0.5) * 0.08,
+            0.82,
+            1.1,
+          ),
+      },
+      personality: {
+        passBias: getClampedPlayerAiTendency(player, "passBias", 1, 0.45, 1.4),
+        dribbleBias: getClampedPlayerAiTendency(player, "dribbleBias", 1, 0.65, 1.75),
+        flair: getClampedPlayerAiTendency(player, "flairBias", 0, 0, 1),
+        riskTaking: getClampedPlayerAiTendency(player, "riskTaking", 0.5, 0, 1),
+      },
+    };
+  };
+  const actorTactics = input.actor.teamTactics;
+  const tactics: AttackingTactics = actorTactics ?? {
+    risk: getClampedPlayerAiTendency(input.actor, "riskTaking", 0.5, 0, 1),
+    tempo: clamp(
+      0.46 + getClampedPlayerAiTendency(input.actor, "offBallRunBias", 1, 0.6, 2) * 0.16,
+      0,
+      1,
+    ),
+    directness: clamp(
+      0.38 + getClampedPlayerAiTendency(input.actor, "dribbleBias", 1, 0.65, 1.75) * 0.18,
+      0,
+      1,
+    ),
+    compactness: 0.5,
+    shootingPriority: clamp(
+      getClampedPlayerAiTendency(input.actor, "shootBias", 1, 0.65, 1.8) / 1.8,
+      0,
+      1,
+    ),
+    dribbleFrequency: clamp(
+      getClampedPlayerAiTendency(input.actor, "dribbleBias", 1, 0.65, 1.75) / 1.55,
+      0,
+      1,
+    ),
+    carryDirectness: 0.58,
+    riskTolerance: getClampedPlayerAiTendency(input.actor, "riskTaking", 0.5, 0, 1),
+  };
+
+  return runAttackingUtilityAi(
+    {
+      carrier: toUtilityPlayer(input.actor),
+      teammates: input.attacking.map(toUtilityPlayer),
+      opponents: input.defending.map(toUtilityPlayer),
+      ball: input.ball,
+      side: input.possession,
+      tick: input.nextTick,
+      possessionTicks: input.possessionTicks,
+      latestEvent:
+        input.latestEvent === EMatchEvent.PASS
+          ? "PASS"
+          : input.latestEvent == null
+            ? null
+            : String(input.latestEvent),
+      lastPassStyle: normalizeUtilityPassStyle(input.lastPassStyle),
+      tactics,
+      activeCombination: input.activeCombination
+        ? {
+            kind: input.activeCombination.kind,
+            step: input.activeCombination.step,
+            initiatorPlayerId: input.activeCombination.initiatorPlayerId,
+            wallPlayerId: input.activeCombination.wallPlayerId,
+            thirdRunnerPlayerId: input.activeCombination.thirdRunnerPlayerId,
+          }
+        : null,
+      actionMemory: input.actionMemory ?? null,
+    },
+    createDeterministicSkillRandom(input.nextTick + 79, input.actor.userPlayerId),
+  );
+}
+
+function normalizeUtilityPassStyle(style: PassStyle | undefined): AttackingPassStyle | null {
+  if (!style) return null;
+  return style === "lob" ? "long" : style;
+}
+
+function inferPreferredFoot(player: InternalLineupPlayer): "left" | "right" {
+  const savedPosition = String(player.raw.savedPosition ?? player.role).toUpperCase();
+  if (/^(L|LCB|LWB)/.test(savedPosition)) return "left";
+  if (/^(R|RCB|RWB)/.test(savedPosition)) return "right";
+  return player.playerId % 2 === 0 ? "left" : "right";
+}
+
+function toPossessionTempoDecision(input: {
+  decision: AttackingDecision;
+  actor: InternalLineupPlayer;
+  defending: InternalLineupPlayer[];
+  previousPositionState: PositionState;
+  ball: TrajectoryPoint;
+}): {
+  kind: PossessionTempoKind;
+  label: string;
+  ballTarget: TrajectoryPoint;
+  pressDefender: InternalLineupPlayer | null;
+} {
+  const selected = input.decision.selected;
+  const pressDefender =
+    findNearestPlayer(
+      input.defending,
+      input.ball,
+      (player) => player.role !== "GK",
+      input.previousPositionState,
+    ) ?? input.defending[0] ?? null;
+  if (selected.kind === "pass") {
+    return {
+      kind: "pass",
+      label: `chon ${getPassStyleLabel(selected.passStyle ?? "short")} theo utility AI`,
+      ballTarget: selected.target,
+      pressDefender,
+    };
+  }
+  if (selected.kind === "carry_ball" || selected.kind === "dribble") {
+    return {
+      kind: "carry",
+      label:
+        selected.kind === "carry_ball"
+          ? "dan bong vao hanh lang trong de keo doi hinh len"
+          : "doi huong va vuot qua doi thu truc tiep",
+      ballTarget: selected.target,
+      pressDefender,
+    };
+  }
+  if (selected.kind === "wait") {
+    return {
+      kind: "reposition",
+      label: "cho dong doi di chuyen va doi goc tan cong",
+      ballTarget: selected.target,
+      pressDefender,
+    };
+  }
+  return {
+    kind: "hold",
+    label: selected.kind === "shoot" ? "giu bong sau khi huy cu sut" : "giu bong cho doi hinh len",
+    ballTarget: settleBallNearOwner(input.actor, input.ball, 0.18),
+    pressDefender,
+  };
+}
+
+function getAttackingIntentTargets(intentions: AttackingIntent[]): Map<number, SetPiecePlayerTarget> {
+  return new Map(
+    intentions.map((intention) => {
+      const state: PlayerAIState =
+        intention.runType === "OVERLAP"
+          ? "OVERLAP"
+          : intention.runType === "UNDERLAP"
+            ? "UNDERLAP"
+            : intention.runType === "THIRD_MAN_RUN"
+              ? "THIRD_MAN_RUN"
+              : intention.runType === "RECEIVE"
+                ? "RECEIVE_PASS"
+                : intention.runType === "ONE_TWO_RETURN" || intention.runType === "BOX_RUN"
+                  ? "ATTACK_SPACE"
+                  : intention.runType === "STRETCH"
+                    ? "HOLD_WIDTH"
+                    : intention.runType === "SUPPORT"
+                      ? "PASS_SUPPORT"
+                      : "HOLD_POSITION";
+      return [
+        intention.playerId,
+        {
+          target: intention.target,
+          intent: getIntentForState(state),
+          aiState: state,
+        },
+      ];
+    }),
+  );
+}
+
+function mergeAttackingTargets(
+  intentions: AttackingIntent[],
+  priorityTargets?: Map<number, SetPiecePlayerTarget>,
+  excludedPlayerIds: number[] = [],
+): Map<number, SetPiecePlayerTarget> {
+  const targets = getAttackingIntentTargets(intentions);
+  priorityTargets?.forEach((target, playerId) => targets.set(playerId, target));
+  excludedPlayerIds.forEach((playerId) => targets.delete(playerId));
+  return targets;
+}
+
+function getCarrierActionTargets(
+  decision: AttackingDecision,
+  actor: InternalLineupPlayer,
+): Map<number, SetPiecePlayerTarget> | undefined {
+  if (decision.selected.kind !== "carry_ball" && decision.selected.kind !== "dribble") {
+    return undefined;
+  }
+  return new Map([
+    [
+      actor.userPlayerId,
+      {
+        target: decision.selected.target,
+        intent: "run" as PlayerMoveIntent,
+        aiState: "DRIBBLE" as PlayerAIState,
+      },
+    ],
+  ]);
+}
+
+function applyControlledPassError(input: {
+  target: TrajectoryPoint;
+  decision: AttackingDecision;
+  nextTick: number;
+  playerId: number;
+}): TrajectoryPoint {
+  const error = input.decision.selected.executionError;
+  const passDistance = input.decision.selected.pass?.distance ?? 14;
+  const random = createDeterministicSkillRandom(input.nextTick + 131, input.playerId);
+  const missRadius = error * (1.1 + Math.min(3.2, passDistance * 0.065));
+  const angle = random() * Math.PI * 2;
+  const magnitude = missRadius * (0.3 + random() * 0.7);
+  return {
+    x: clamp(input.target.x + Math.cos(angle) * magnitude, 3, 97),
+    y: clamp(input.target.y + Math.sin(angle) * magnitude, 3, 97),
+  };
+}
+
+function serializeAttackingDecision(decision: AttackingDecision) {
+  return {
+    kind: decision.selected.kind,
+    passStyle: decision.selected.passStyle ?? null,
+    shotStyle: decision.selected.shotStyle ?? null,
+    receiverId: decision.selected.receiverId ?? null,
+    target: decision.selected.target,
+    utility: Number(decision.selected.finalScore.toFixed(3)),
+    executionError: Number(decision.selected.executionError.toFixed(3)),
+    pressure: Number(decision.situation.pressure.toFixed(3)),
+    scoreLog: {
+      ...decision.scoreLog,
+      carryBall:
+        decision.scoreLog.carryBall == null
+          ? null
+          : Number(decision.scoreLog.carryBall.toFixed(3)),
+      dribble:
+        decision.scoreLog.dribble == null
+          ? null
+          : Number(decision.scoreLog.dribble.toFixed(3)),
+      pass:
+        decision.scoreLog.pass == null ? null : Number(decision.scoreLog.pass.toFixed(3)),
+      shoot:
+        decision.scoreLog.shoot == null ? null : Number(decision.scoreLog.shoot.toFixed(3)),
+      hold:
+        decision.scoreLog.hold == null ? null : Number(decision.scoreLog.hold.toFixed(3)),
+    },
+    actionMemory: decision.nextActionMemory,
+    alternatives: decision.options.slice(0, 5).map((option) => ({
+      kind: option.kind,
+      passStyle: option.passStyle ?? null,
+      shotStyle: option.shotStyle ?? null,
+      receiverId: option.receiverId ?? null,
+      utility: Number(option.finalScore.toFixed(3)),
+    })),
+    intentions: decision.intentions,
+  };
 }
 
 function resolveDebugPossessionTempoAction(input: {
@@ -3894,7 +4299,11 @@ function evaluatePassCompletionProbability(input: {
   receiverPressure: number;
 }) {
   const isLongPass =
-    input.passStyle === "lob" || input.passStyle === "switch" || input.passDistance >= 27;
+    input.passStyle === "lob" ||
+    input.passStyle === "long" ||
+    input.passStyle === "switch" ||
+    input.passStyle === "cross" ||
+    input.passDistance >= 27;
   const technique = isLongPass
     ? input.actor.raw.stats.longPass * 0.44 +
       input.actor.raw.stats.pass * 0.31 +
@@ -3904,15 +4313,22 @@ function evaluatePassCompletionProbability(input: {
       input.actor.raw.stats.longPass * 0.15;
   const distancePenalty =
     clamp((input.passDistance - 18) / 52, 0, 0.4) *
-    (input.passStyle === "lob" || input.passStyle === "switch" ? 0.72 : 1);
+    (input.passStyle === "lob" ||
+    input.passStyle === "long" ||
+    input.passStyle === "switch" ||
+    input.passStyle === "cross"
+      ? 0.72
+      : 1);
   const stylePenalty =
     input.targetIntent === "through"
       ? 0.08
       : input.passStyle === "one_two"
         ? -0.04
-        : input.passStyle === "short"
+        : input.passStyle === "short" || input.passStyle === "one_touch"
           ? -0.02
-          : 0.03;
+          : input.passStyle === "cross" || input.passStyle === "cut_back"
+            ? 0.05
+            : 0.03;
 
   return clamp(
     0.3 +
@@ -3939,6 +4355,12 @@ function resolveDebugPassingAction(input: {
   preferProgressive: boolean;
   preferredReceiverIds?: number[];
   forcedPassStyle?: PassStyle;
+  forcedSelection?: {
+    receiverId: number;
+    passStyle: AttackingPassStyle;
+    target: TrajectoryPoint;
+    estimatedCompletion: number;
+  };
 }) {
   const candidates = input.lineup.filter(
     (player) => player.userPlayerId !== input.actor.userPlayerId && player.role !== "GK",
@@ -4273,7 +4695,7 @@ function resolveDebugPassingAction(input: {
     .sort((left, right) => right.score - left.score);
 
   const eagleEyePass =
-    !input.forcedPassStyle && buildUpSkill === EPlayerSkill.EAGLE_EYE
+    !input.forcedPassStyle && !input.forcedSelection && buildUpSkill === EPlayerSkill.EAGLE_EYE
       ? resolveEagleEyePassAction({
           lineup: input.lineup,
           defending: input.defending,
@@ -4285,7 +4707,50 @@ function resolveDebugPassingAction(input: {
         })
       : null;
   const onsideRanked = ranked.filter((item) => !item.offside.isOffside);
-  const selected = eagleEyePass ??
+  const forcedBase = input.forcedSelection
+    ? ranked.find((item) => item.player.userPlayerId === input.forcedSelection?.receiverId)
+    : null;
+  const forcedTargetIntent: PassTargetIntent =
+    input.forcedSelection?.passStyle === "through" ? "through" : "lead";
+  const forcedPrevious = forcedBase
+    ? (input.previousPositionState.players.get(forcedBase.player.userPlayerId) ??
+      forcedBase.player.anchors)
+    : null;
+  const forcedOffsideSnapshot =
+    forcedBase && forcedPrevious && input.forcedSelection
+      ? captureOffsideSnapshot({
+          passer: input.actor,
+          receiver: forcedBase.player,
+          receiverPosition: projectReceiverPositionAtPass(
+            forcedPrevious,
+            forcedTargetIntent,
+            input.forcedSelection.target,
+          ),
+          passStartTick: input.nextTick,
+          ball: input.ball,
+          defending: input.defending,
+          possession: input.possession,
+          previousPositionState: input.previousPositionState,
+        })
+      : null;
+  const forcedSelected =
+    forcedBase && input.forcedSelection
+      ? {
+          ...forcedBase,
+          ballTarget: input.forcedSelection.target,
+          lane: evaluatePassLane({
+            from: input.ball,
+            to: input.forcedSelection.target,
+            defending: input.defending,
+            previousPositionState: input.previousPositionState,
+          }),
+          passStyle: input.forcedSelection.passStyle as PassStyle,
+          targetIntent: forcedTargetIntent,
+          completionProbability: input.forcedSelection.estimatedCompletion,
+          offsideSnapshot: forcedOffsideSnapshot,
+        }
+      : null;
+  const selected = forcedSelected ?? eagleEyePass ??
     onsideRanked[0] ??
     ranked[0] ?? {
       player: candidates[0],
@@ -4492,14 +4957,24 @@ function getPassStyleLabel(style: PassStyle) {
   switch (style) {
     case "one_two":
       return "bat tuong";
+    case "one_touch":
+      return "chuyen mot cham";
     case "lob":
       return "chuyen bong bong";
+    case "long":
+      return "chuyen dai";
     case "switch":
       return "phat bong doi canh";
     case "through":
       return "choc khe";
+    case "cross":
+      return "cang ngang";
+    case "cut_back":
+      return "tra nguoc cut-back";
+    case "back":
+      return "chuyen ve";
     default:
-      return "chuyen";
+      return "chuyen ngan";
   }
 }
 
@@ -4958,13 +5433,23 @@ function resolveDebugPassInterception(input: {
   const qualityRisk = clamp((defenderQuality - passerQuality + 18) / 110, 0, 0.28);
   const immediateLaneThreat = input.laneDistance <= 3.5 ? 0.14 : input.laneDistance <= 5 ? 0.05 : 0;
   const styleRiskMultiplier =
-    input.passStyle === "lob" ? 0.48 : input.passStyle === "switch" ? 0.42 : 1;
+    input.passStyle === "lob" || input.passStyle === "long"
+      ? 0.52
+      : input.passStyle === "switch"
+        ? 0.42
+        : input.passStyle === "cross"
+          ? 0.62
+          : input.passStyle === "through" || input.passStyle === "cut_back"
+            ? 1.08
+            : input.passStyle === "one_touch"
+              ? 0.9
+              : 1;
   const completionRisk = clamp(1 - input.estimatedCompletion, 0, 1);
   const risk = clamp(
     (laneRisk * 0.32 + qualityRisk + immediateLaneThreat + completionRisk * 0.3) *
       styleRiskMultiplier,
     0,
-    input.passStyle === "short" ? 0.72 : 0.52,
+    input.passStyle === "short" || input.passStyle === "back" ? 0.72 : 0.58,
   );
   const deterministicRoll =
     ((input.nextTick * 17 + input.defender.userPlayerId * 13 + input.receiver.userPlayerId * 7) %
@@ -4972,7 +5457,12 @@ function resolveDebugPassInterception(input: {
     100;
 
   const minimumRiskToIntercept =
-    input.passStyle === "lob" || input.passStyle === "switch" ? 0.42 : 0.52;
+    input.passStyle === "lob" ||
+    input.passStyle === "long" ||
+    input.passStyle === "switch" ||
+    input.passStyle === "cross"
+      ? 0.4
+      : 0.5;
 
   if (risk < minimumRiskToIntercept || deterministicRoll > risk) {
     return null;
@@ -4989,7 +5479,10 @@ function resolveDebugPassInterception(input: {
   };
 
   return {
-    label: input.passStyle === "lob" ? "doc duoc diem roi bong" : "cat duong chuyen",
+    label:
+      input.passStyle === "lob" || input.passStyle === "long" || input.passStyle === "cross"
+        ? "doc duoc diem roi bong"
+        : "cat duong chuyen",
     target: moveToward(input.ball, contestedPoint, PASS_SPEED_UNITS_PER_TICK),
   };
 }
@@ -5614,6 +6107,7 @@ function resolveDebugShotAction(
     previousPositionState: PositionState;
     nextTick: number;
     latestEvent: EMatchEvent | null;
+    forcedShotStyle?: AttackingShotStyle;
   },
   canReleaseBall = true,
 ): {
@@ -5712,20 +6206,22 @@ function resolveDebugShotAction(
   );
   const distanceScore = getShotDistanceDecisionScore(distanceToGoal, maxShotDistance);
   const locationScore = clamp(distanceScore * 0.78 + angleScore * 0.22, 0, 1);
-  const shotType = chooseShotType({
-    shooter: input.shooter,
-    role,
-    ball: input.ball,
-    possession: input.possession,
-    keeperPosition,
-    pressure: effectivePressure,
-    distanceToGoal,
-    angleScore,
-    latestEvent: input.latestEvent,
-    hasThunderShot,
-    hasKaiserShot,
-    random: skillRandom,
-  });
+  const shotType = input.forcedShotStyle
+    ? mapUtilityShotType(input.forcedShotStyle, hasThunderShot, hasKaiserShot)
+    : chooseShotType({
+        shooter: input.shooter,
+        role,
+        ball: input.ball,
+        possession: input.possession,
+        keeperPosition,
+        pressure: effectivePressure,
+        distanceToGoal,
+        angleScore,
+        latestEvent: input.latestEvent,
+        hasThunderShot,
+        hasKaiserShot,
+        random: skillRandom,
+      });
   const targetSelection = chooseShotTargetPlan({
     shooter: input.shooter,
     defending: input.defending,
@@ -5818,14 +6314,15 @@ function resolveDebugShotAction(
     forwardCarrySpace >= 0.46 &&
     pressure.frontDistance >= 6 &&
     pressure.frontNearbyCount <= 1;
-  const shouldShoot =
-    distanceToGoal <= maxShotDistance &&
-    positionAllowsShot &&
-    !openPathToBetterShot &&
-    (!blockedLane || hasThunderShot) &&
-    (!betterPassAvailable ||
-      emergencyShot ||
-      shotQuality >= betterChance.score + 0.08 - clamp((shootBias - 1) * 0.08, 0, 0.1));
+  const shouldShoot = input.forcedShotStyle
+    ? distanceToGoal <= Math.max(maxShotDistance, 46) && (!blockedLane || lane.score >= 0.12)
+    : distanceToGoal <= maxShotDistance &&
+      positionAllowsShot &&
+      !openPathToBetterShot &&
+      (!blockedLane || hasThunderShot) &&
+      (!betterPassAvailable ||
+        emergencyShot ||
+        shotQuality >= betterChance.score + 0.08 - clamp((shootBias - 1) * 0.08, 0, 0.1));
 
   if (!shouldShoot) {
     return null;
@@ -6814,6 +7311,21 @@ function chooseShotTarget(ball: TrajectoryPoint, possession: Side, nextTick: num
   };
 }
 
+function mapUtilityShotType(
+  style: AttackingShotStyle,
+  hasThunderShot: boolean,
+  hasKaiserShot: boolean,
+): ShotType {
+  if (style === "placed") return "PLACED_SHOT";
+  if (style === "first_time") return "FIRST_TIME_SHOT";
+  if (style === "header") return "HEADER_SHOT";
+  if (style === "long_range" || style === "power") {
+    if (hasKaiserShot) return "KAISER_SHOT";
+    return hasThunderShot ? "POWER_SHOT" : "POWER_SHOT";
+  }
+  return "LOW_DRIVEN_SHOT";
+}
+
 function chooseShotType(input: {
   shooter: InternalLineupPlayer;
   role: ReturnType<typeof normalizeRole>;
@@ -7218,6 +7730,13 @@ function scoreTargetForShotType(zone: ShotTargetZone, shotType: ShotType) {
         ? -0.08
         : 0;
   }
+  if (shotType === "HEADER_SHOT") {
+    return zone.includes("top") || zone === "far post" || zone === "across-goal finish"
+      ? 0.2
+      : zone.includes("center")
+        ? 0.08
+        : -0.04;
+  }
   return zone.includes("center") || zone === "near post" ? 0.12 : -0.06;
 }
 
@@ -7272,6 +7791,8 @@ function calculateShotAccuracy(input: {
             ? -0.08
             : input.shotType === "FIRST_TIME_SHOT"
               ? -0.16
+              : input.shotType === "HEADER_SHOT"
+                ? -0.12
               : input.shotType === "DESPERATE_SHOT"
                 ? -0.22
                 : input.shotType === "CHIP_SHOT"
@@ -7315,6 +7836,8 @@ function applyShotError(input: {
             ? 0.92
             : input.shotType === "FIRST_TIME_SHOT"
               ? 1.35
+              : input.shotType === "HEADER_SHOT"
+                ? 1.2
               : input.shotType === "DESPERATE_SHOT"
                 ? 1.55
                 : input.shotType === "CHIP_SHOT"
@@ -7361,6 +7884,8 @@ function calculateShotSpeed(shotType: ShotType, distanceToGoal: number) {
               ? 1.06
               : shotType === "FIRST_TIME_SHOT"
                 ? 1.14
+                : shotType === "HEADER_SHOT"
+                  ? 0.94
                 : shotType === "CHIP_SHOT"
                   ? 0.72
                   : shotType === "DESPERATE_SHOT"
@@ -7691,6 +8216,8 @@ function getShotLabel(
                   ? "sut cheo goc xa"
                   : shotType === "FIRST_TIME_SHOT"
                     ? "dut diem mot cham"
+                    : shotType === "HEADER_SHOT"
+                      ? "danh dau"
                     : "sut voi";
 
   if (outcome === "goal")
@@ -9821,6 +10348,7 @@ function buildSnapshot(input: {
   setPieceTargetsOverride?: Map<number, SetPiecePlayerTarget>;
   instantSetPiece?: boolean;
   restart?: MatchRestart | null;
+  attackingDecision?: AttackingDecision;
   positionState: PositionState;
 }): MatchSnapshot {
   const prevBall = input.positionState.ball;
@@ -9940,6 +10468,7 @@ function buildSnapshot(input: {
     previousPossession,
     possessionTicks,
     tacticalPhase,
+    attackingIntentions: input.attackingDecision?.intentions ?? [],
     positionState: input.positionState,
   });
   const awayPlayers = projectPlayers({
@@ -9966,6 +10495,7 @@ function buildSnapshot(input: {
     previousPossession,
     possessionTicks,
     tacticalPhase,
+    attackingIntentions: input.attackingDecision?.intentions ?? [],
     positionState: input.positionState,
   });
 
@@ -10032,6 +10562,19 @@ function buildSnapshot(input: {
     tactical: {
       phase: tacticalPhase,
       possessionTicks,
+      attackingDecision: input.attackingDecision
+        ? {
+            actorPlayerId: input.attackingDecision.situation.carrier.id,
+            kind: input.attackingDecision.selected.kind,
+            passStyle: input.attackingDecision.selected.passStyle,
+            shotStyle: input.attackingDecision.selected.shotStyle,
+            receiverId: input.attackingDecision.selected.receiverId,
+            utility: Number(input.attackingDecision.selected.finalScore.toFixed(3)),
+            executionError: Number(input.attackingDecision.selected.executionError.toFixed(3)),
+            actionMemory: input.attackingDecision.nextActionMemory,
+            scores: input.attackingDecision.scoreLog,
+          }
+        : undefined,
     },
     matchStats,
     restart: input.restart ?? null,
@@ -10177,6 +10720,7 @@ function projectPlayers(input: {
   previousPossession: Side;
   possessionTicks: number;
   tacticalPhase: TacticalPhase;
+  attackingIntentions: AttackingIntent[];
   positionState: PositionState;
 }): MatchRenderPlayer[] {
   const createMovementPlayer = (player: InternalLineupPlayer): MovementPlayer => {
@@ -10259,6 +10803,8 @@ function projectPlayers(input: {
     const keeperAction =
       input.keeperAction?.playerId === player.userPlayerId ? input.keeperAction : null;
     const setPieceTarget = input.setPieceTargets.get(player.userPlayerId) ?? null;
+    const attackingIntent =
+      input.attackingIntentions.find((item) => item.playerId === player.userPlayerId) ?? null;
     const isPress = input.pressId != null && player.userPlayerId === input.pressId;
     const onAttack = player.side === input.possession;
     const passInFlight =
@@ -10475,6 +11021,7 @@ function projectPlayers(input: {
       slug: player.slug,
       aiProfile: player.raw.aiProfile,
       stats: player.raw.stats,
+      teamTactics: player.teamTactics,
       skills: player.raw.skills,
       skillSlugs: player.skillSlugs,
       skillCharges: normalizeSkillCharges(player.raw.skills, player.skillCharges),
@@ -10502,6 +11049,7 @@ function projectPlayers(input: {
         runTimingState: aiState,
         isIntendedReceiver: input.intendedReceiverId === player.userPlayerId,
       }),
+      attackingIntent,
       move: movement,
     };
   });
@@ -11190,6 +11738,7 @@ function selectLineup(team: SimulationTeamInput, side: Side): InternalLineupPlay
       slug: picked.slug,
       aiProfile: picked.aiProfile,
       stats: picked.stats,
+      teamTactics: getSimulationTeamAttackingTactics(team),
       skills: picked.skills,
       skillSlugs: picked.skillSlugs,
       skillCharges: normalizeSkillCharges(picked.skills, undefined),
@@ -11206,6 +11755,22 @@ function selectLineup(team: SimulationTeamInput, side: Side): InternalLineupPlay
       raw: picked,
     };
   });
+}
+
+function getSimulationTeamAttackingTactics(team: Pick<SimulationTeamInput, "passRatio" | "shotRatio" | "pressure">): AttackingTactics {
+  const pass = clamp(Number(team.passRatio ?? 50) / 100, 0, 1);
+  const shot = clamp(Number(team.shotRatio ?? 50) / 100, 0, 1);
+  const pressure = clamp(Number(team.pressure ?? 50) / 100, 0, 1);
+  return {
+    risk: clamp(0.24 + shot * 0.38 + pressure * 0.22 - pass * 0.12, 0, 1),
+    tempo: clamp(0.2 + pressure * 0.45 + shot * 0.2 + (1 - pass) * 0.15, 0, 1),
+    directness: clamp(0.12 + (1 - pass) * 0.5 + shot * 0.38, 0, 1),
+    compactness: clamp(0.28 + pass * 0.5 - pressure * 0.12, 0, 1),
+    shootingPriority: shot,
+    dribbleFrequency: clamp(0.32 + (1 - pass) * 0.38 + pressure * 0.16, 0, 1),
+    carryDirectness: clamp(0.3 + (1 - pass) * 0.42 + pressure * 0.22, 0, 1),
+    riskTolerance: clamp(0.22 + shot * 0.34 + pressure * 0.28 - pass * 0.1, 0, 1),
+  };
 }
 
 function playerFitScore(player: SimulationRosterPlayer, slot: FormationSlot): number {

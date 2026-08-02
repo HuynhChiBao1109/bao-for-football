@@ -307,6 +307,60 @@ export type OffsideDebug = {
   isLegalReceiver: boolean;
 };
 
+export type AttackingPassStyle =
+  | 'short'
+  | 'long'
+  | 'through'
+  | 'one_touch'
+  | 'one_two'
+  | 'cross'
+  | 'switch'
+  | 'cut_back'
+  | 'back';
+
+export type AttackingShotStyle =
+  | 'normal'
+  | 'long_range'
+  | 'first_time'
+  | 'placed'
+  | 'power'
+  | 'header';
+
+export type AttackingActionKind =
+  | 'hold'
+  | 'wait'
+  | 'carry_ball'
+  | 'dribble'
+  | 'pass'
+  | 'shoot';
+
+export type AttackingActionMemory = {
+  currentAction: AttackingActionKind | null;
+  actionStartedTick: number;
+  lastEvaluationTick: number;
+  lastEvaluationPosition: { x: number; y: number };
+  minimumCommitUntilTick: number;
+  dribbleCooldownUntilTick: number;
+};
+
+export type AttackingIntent = {
+  playerId: number | string;
+  runType:
+    | 'RECEIVE'
+    | 'ONE_TWO_RETURN'
+    | 'THIRD_MAN_RUN'
+    | 'OVERLAP'
+    | 'UNDERLAP'
+    | 'BOX_RUN'
+    | 'STRETCH'
+    | 'SUPPORT'
+    | 'HOLD_POSITION';
+  communication: 'request_ball' | 'announce_run' | 'offer_support' | 'hold_position';
+  target: { x: number; y: number };
+  priority: number;
+  expiresAtTick: number;
+};
+
 export type MatchPitchPlayer = {
   id: string;
   name: string;
@@ -330,6 +384,7 @@ export type MatchPitchPlayer = {
   tackleState?: PlayerTackleState;
   activeSkill?: number | null;
   offside?: OffsideDebug;
+  attackingIntent?: AttackingIntent | null;
   move?: PlayerMotion;
 };
 
@@ -411,6 +466,27 @@ export type MatchSnapshot = {
       | 'TRANSITION_LOST_BALL'
       | 'TRANSITION_WON_BALL';
     possessionTicks: number;
+    attackingDecision?: {
+      actorPlayerId: number | string;
+      kind: AttackingActionKind;
+      passStyle?: AttackingPassStyle;
+      shotStyle?: AttackingShotStyle;
+      receiverId?: number | string;
+      utility: number;
+      executionError: number;
+      actionMemory: AttackingActionMemory;
+      scores: {
+        carryBall: number | null;
+        dribble: number | null;
+        pass: number | null;
+        shoot: number | null;
+        hold: number | null;
+        selected: AttackingActionKind;
+        passRequiredAdvantage: number;
+        currentAction: AttackingActionKind | null;
+        pressure: number;
+      };
+    };
   };
   matchStats?: MatchSummary;
   restart?: {
