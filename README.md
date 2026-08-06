@@ -183,7 +183,7 @@ fifam/
 
 ```bash
 cd deployments/docker
-docker compose --env-file ../../.env -f docker-compose.dev.yml up -d
+docker compose --env-file ../../.env -f docker-compose.dev.yml up -d --build
 ```
 
 Default services:

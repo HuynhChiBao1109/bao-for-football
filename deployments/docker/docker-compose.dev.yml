@@ -31,14 +31,15 @@ services:
       retries: 20
 
   backend:
-    image: node:24-bookworm-slim
+    build:
+      context: ../../apps/server
+      dockerfile: Dockerfile
+    image: fifam-backend:node22-alpine
     restart: unless-stopped
     init: true
-    working_dir: /app/apps/server
-    command: sh -c "npm ci && npm run dev"
     environment:
-      NODE_ENV: development
-      HOST_PORT: ${HOST_PORT:-3001}
+      NODE_ENV: production
+      HOST_PORT: "3001"
       FRONTEND_URL: ${FRONTEND_URL:-https://football.b4f.site}
       BACKEND_URL: ${BACKEND_URL:-https://apifootball.b4f.site}
       MYSQL_HOST: mysql
@@ -51,10 +52,9 @@ services:
       REDIS_PORT: "6379"
       JWT_SECRET: ${JWT_SECRET:-fifam-dev-secret}
     ports:
-      - "${HOST_PORT:-3001}:${HOST_PORT:-3001}"
+      - "3001:3001"
     volumes:
-      - ../../:/app
-      - server_node_modules:/app/apps/server/node_modules
+      - backend_uploads:/app/uploads
     depends_on:
       mysql:
         condition: service_healthy
@@ -62,25 +62,23 @@ services:
         condition: service_healthy
 
   frontend:
-    image: node:24-alpine
+    build:
+      context: ../../apps/web
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-https://apifootball.b4f.site}
+        VITE_SOCKET_BASE_URL: ${VITE_SOCKET_BASE_URL:-https://apifootball.b4f.site}
+        VITE_SOCKET_PATH: ${VITE_SOCKET_PATH:-/socket.io}
+    image: fifam-frontend:node22-alpine
     restart: unless-stopped
     init: true
-    working_dir: /app/apps/web
-    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0 --port ${FRONTEND_PORT:-3000}"
-    environment:
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-https://apifootball.b4f.site}
-      VITE_SOCKET_BASE_URL: ${VITE_SOCKET_BASE_URL:-https://apifootball.b4f.site}
-      VITE_SOCKET_PATH: ${VITE_SOCKET_PATH:-/socket.io}
     ports:
-      - "${FRONTEND_PORT:-3000}:${FRONTEND_PORT:-3000}"
-    volumes:
-      - ../../:/app
-      - web_node_modules:/app/apps/web/node_modules
+      - "3000:3000"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
 volumes:
   mysql_data:
   redis_data:
-  server_node_modules:
-  web_node_modules:
+  backend_uploads:
