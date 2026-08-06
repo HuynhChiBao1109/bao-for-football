@@ -16,6 +16,9 @@ export default defineConfig(({ mode }) => {
   return {
     envDir,
     plugins: [tailwindcss(), react({ include: /\.[jt]sx?$/ })],
+    preview: {
+      allowedHosts: ['football.b4f.site'],
+    },
     define: {
       'process.env': processEnv,
     },
