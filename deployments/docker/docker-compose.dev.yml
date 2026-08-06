@@ -1,54 +1,86 @@
-version: '3.9'
+name: fifam
 
 services:
   mysql:
     image: mysql:8.4
-    container_name: fifam-mysql
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-1234}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-fifam_dev}
     ports:
-      - '3306:3306'
+      - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p\"$${MYSQL_ROOT_PASSWORD}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   redis:
     image: redis:7-alpine
-    container_name: fifam-redis
     restart: unless-stopped
     ports:
-      - '6379:6379'
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
-  service-core:
-    image: golang:1.24
-    container_name: fifam-service-core
-    working_dir: /app/apps/service-core
-    command: sh -c "go run ./cmd/server"
+  backend:
+    image: node:24-bookworm-slim
+    restart: unless-stopped
+    init: true
+    working_dir: /app/apps/server
+    command: sh -c "npm ci && npm run dev"
+    environment:
+      NODE_ENV: development
+      HOST_PORT: ${HOST_PORT:-3001}
+      FRONTEND_URL: ${FRONTEND_URL:-https://football.b4f.site}
+      BACKEND_URL: ${BACKEND_URL:-https://apifootball.b4f.site}
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-fifam_dev}
+      MYSQL_USER: ${MYSQL_USER:-root}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-1234}
+      DB_DROP_UNMAPPED_TABLES: ${DB_DROP_UNMAPPED_TABLES:-false}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      JWT_SECRET: ${JWT_SECRET:-fifam-dev-secret}
+    ports:
+      - "${HOST_PORT:-3001}:${HOST_PORT:-3001}"
     volumes:
       - ../../:/app
-    environment:
-      SERVICE_CORE_PORT: 8081
-      MYSQL_DSN: root:1234@tcp(mysql:3306)/fifam_dev?parseTime=true
-    ports:
-      - '8081:8081'
+      - server_node_modules:/app/apps/server/node_modules
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
-  web:
+  frontend:
     image: node:24-alpine
-    container_name: fifam-web
+    restart: unless-stopped
+    init: true
     working_dir: /app/apps/web
-    command: sh -c "npm install && npm run dev -- --host"
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0 --port ${FRONTEND_PORT:-3000}"
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-https://apifootball.b4f.site}
+      VITE_SOCKET_BASE_URL: ${VITE_SOCKET_BASE_URL:-https://apifootball.b4f.site}
+      VITE_SOCKET_PATH: ${VITE_SOCKET_PATH:-/socket.io}
+    ports:
+      - "${FRONTEND_PORT:-3000}:${FRONTEND_PORT:-3000}"
     volumes:
       - ../../:/app
-    environment:
-      VITE_API_BASE_URL: http://localhost:8081
-      VITE_WS_URL: ws://localhost:8081/ws
-    ports:
-      - '5173:5173'
+      - web_node_modules:/app/apps/web/node_modules
     depends_on:
-      - service-core
+      - backend
 
 volumes:
   mysql_data:
+  redis_data:
+  server_node_modules:
+  web_node_modules:

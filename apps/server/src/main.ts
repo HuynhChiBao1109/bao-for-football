@@ -51,7 +51,7 @@ async function bootstrap() {
     credentials: false,
   });
 
-  const port = Number(process.env.HOST_PORT || process.env.SERVICE_CORE_PORT || 3000);
+  const port = Number(process.env.HOST_PORT || 3001);
   await app.listen(port);
 }
 
