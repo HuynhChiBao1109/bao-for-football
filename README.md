@@ -1,233 +1,82 @@
-# FIFAM
+<div align="center">
 
-FIFAM la du an game football manager gom backend NestJS va frontend React.
+<img src="apps/web/public/app/logo.png" alt="REDLOCK Football Showdown" width="100%" />
 
-FIFAM không phải game turn-based mà là:
+# REDLOCK
 
-realtime simulation
-tactical-driven football engine
-event-chain system
-animation-first match viewer
+### Survival Football Academy
 
-## 1) Tech Stack
+**Awaken Your Ego. Dominate the Field.**
 
-### Backend (apps/server)
+[Play Now](https://football.b4f.site)
 
-- Node.js + TypeScript
-- HTTP framework: NestJS
-- ORM + DB driver: TypeORM + mysql2
-- Auth: JWT + bcrypt
-- Realtime transport: Socket.IO
-- Cache/state: Redis
+</div>
 
-### Frontend (apps/web)
+## About REDLOCK
 
-- React 19 + TypeScript + Vite
-- Routing: react-router-dom
-- Server state: @tanstack/react-query
-- Styling: TailwindCSS v4 + CSS modules/page CSS
-- Tooling: ESLint + Prettier
+REDLOCK is an online football management game set in a high-stakes survival academy. Start with your own club, recruit the right players, build a powerful squad, and create the tactics needed to overcome every challenge on the pitch.
 
-### Database
+Every match comes alive in real time through live events, scores, statistics, and decisive moments. Your choices—from player selection and positioning to your overall style of play—shape the final result.
 
-- MySQL 8.x
-- Schema migration + bootstrap duoc quan ly boi TypeORM va bootstrap code trong backend
+<div align="center">
 
-### Infrastructure / DevOps
+<img src="apps/web/public/app/background.png" alt="REDLOCK neon football stadium" width="100%" />
 
-- Docker Compose dev stack (MySQL + Redis + backend + frontend)
+</div>
 
-## 2) Source Code Structure
+## Your Journey
 
-```text
-fifam/
-|- .env.example
-|- README.md
-|- apps/
-|  |- server/
-|  |  |- src/main.ts                       # entrypoint backend
-|  |  |- src/app.module.ts                 # root NestJS module
-|  |  |- src/modules/                      # domain modules
-|  |  |- src/database/                     # datasource + migrations
-|  |  |- uploads/image/                    # uploaded image files
-|  |- web/
-|  |  |- src/
-|  |  |  |- App.tsx                        # route + guard
-|  |  |  |- layouts/AppLayout.tsx          # app shell + starter team modal
-|  |  |  |- pages/                         # user pages (club, players, tactics, ai, pvp, gacha)
-|  |  |  |- pages/admin/                   # admin login + admin dashboard
-|  |  |  |- hooks/                         # react-query hooks for all APIs
-|  |  |  |- components/                    # UI and feature components
-|  |  |  |- lib/                           # api client, query client, constants
-|  |  |  |- types/                         # shared TS types
-|- deployments/docker/
-|  |- docker-compose.dev.yml
-```
+1. **Create Your Club** — Choose your starting team and enter the REDLOCK academy.
+2. **Build Your Squad** — Place each player in the position that best supports your game plan.
+3. **Develop Your Players** — Earn experience, level up, and improve individual attributes.
+4. **Master Your Tactics** — Control your formation, passing approach, shooting intent, and pressing intensity.
+5. **Conquer the Campaign** — Defeat increasingly powerful opponents, earn rewards, and unlock new challenges.
+6. **Experience Every Match** — Follow live events, key moments, and the outcome of your tactical decisions.
 
-## 3) Current Features
+## Highlights
 
-### Authentication & Session
+### Club Management
 
-- User register/login
-- Admin login route rieng
-- JWT auth cho user va admin
-- Session endpoint (`/api/v1/auth/me`)
-- Starter team assignment cho user moi (`/api/v1/auth/team`)
+Manage your squad, budget, ranking, and club progression from one central hub.
 
-### Club Hub
+### Player Collection
 
-- Club dashboard sau login
-- Load club detail theo team da gan
-- Hien budget, rank point, logo, league
+Collect player cards, discover their unique attributes, and develop them to suit your vision for the team.
 
-### Players (User)
+### Your Tactics, Your Identity
 
-- List danh sach user player cards
-- Auto level-up theo EXP (toi da level 36)
-- Allocate/de-allocate stats theo diem hien co
-- Validate khong am bonus stat, khong vuot current points
+Choose a formation, arrange your lineup, and define how your team plays. There is no single winning formula—the strongest squad is the one that best reflects its manager's strategy.
 
-### Tactics
+### A 50-Stage Campaign
 
-- Support 2 formation: `4-3-3`, `4-4-2`
-- Config passRatio/shotRatio/pressure
-- Gameplay tuning profile theo mode (`ranked`, `casual`, `ai_campaign`)
-- Save lineup (slot + position + userPlayerId)
-- Push tactics vao realtime match engine
+Face different clubs across 50 challenges. Win matches to earn rewards, strengthen your squad, and unlock the next stage of your journey.
 
-### AI Campaign
+### Player Gacha
 
-- Campaign 50 stages
-- Stage progression: thang moi mo khoa stage tiep theo
-- Stage detail (club, enemy stat bonus, reward)
-- Submit result stage (win/lose)
-- Grant reward money + player exp khi win
+Try your luck on featured banners, expand your collection, and discover the special player your squad has been waiting for.
 
-### Match & Realtime
+### Live Match Experience
 
-- Start match (`/api/v1/matches/start`)
-- Finalize match (`/api/v1/matches/:matchId/finalize`)
-- Realtime tick stream qua Socket.IO gateway: `/ws`
-- Reconnect replay support tick moi nhat theo matchId
-- Realtime substitution event: `match.substitute`
+Follow the score, match statistics, goalscorers, and a real-time stream of events as the action unfolds.
 
-### Gacha
+## Game Modes
 
-- List active banners
-- Roll banner (`/api/v1/gacha/roll`)
-- Pity logic:
-  - Ty le special co ban: 10%
-  - Guaranteed special khi >= 80 rolls khong ra special
-- Tru budget team moi roll (cost hien tai: 360000)
-- Add player card vao user inventory sau roll
-- Track progress (`totalRolls`, `rollsSinceSpecial`)
+| Mode | Experience | Status |
+| --- | --- | --- |
+| Campaign | Defeat clubs, clear stages, and earn rewards | Available |
+| Squad Management | Arrange players and customize your tactics | Available |
+| Gacha | Recruit players and expand your collection | Available |
+| PvP | Compete directly against other managers | In development |
+| Shop | Discover additional content and items | In development |
 
-### Admin Features
+## Visual Style
 
-- Country management: list/create
-- League management: list/create/update/delete
-- Club management: create
-- Player management:
-  - list/detail/create/update/delete
-  - upload avatar/image
-  - stat validation + season validation + position profile
-- Skill management:
-  - list/create skill
-  - assign/remove skill cho player
-- Gacha banner management:
-  - upload banner image
-  - create banner (bannerCode, bannerName, playerId, timeEnd)
-  - list banners
+REDLOCK combines the atmosphere of a packed football stadium with vivid blue, purple, and orange neon lights. Dark interface panels, energetic effects, and high-contrast imagery create the feeling of a futuristic football academy where ambition, strategy, and ego collide.
 
-### Data & Platform
+## Enter the Arena
 
-- Tu dong tao database neu chua ton tai
-- AutoMigrate schema khi service startup
-- Seed countries mac dinh
-- Trigger gioi han user toi da 50 player cards
+Are you ready to build a squad of your own?
 
-### Frontend UX Status
+**Play at [football.b4f.site](https://football.b4f.site)**
 
-- Da co flow day du cho: Auth, Club, Players, Tactics, AI Campaign, Gacha, Admin
-- PvP page hien tai o muc lobby/placeholder UI, cho backend matchmaking realtime full flow
-- Match viewer co event feed + score + stats + animation layer
-
-## 4) Main API Groups
-
-- Public:
-  - `GET /health`
-  - `POST /api/v1/auth/login`
-  - `POST /api/v1/auth/register`
-  - `POST /admin/login`
-  - `GET /api/v1/auth/clubs`
-
-- Authenticated user (`/api/v1`):
-  - auth/session/team
-  - clubs
-  - ai stages/result
-  - tactics
-  - players
-  - gacha (roll/progress/banners)
-  - matches (start/finalize)
-
-- Admin (`/api/v1/admin`):
-  - countries/leagues/clubs
-  - players CRUD
-  - skills CRUD gan vao player
-  - upload image
-  - gacha banners
-
-## 5) Run Project
-
-### Option A - Docker (recommended for quick start)
-
-```bash
-cd deployments/docker
-docker compose --env-file ../../.env -f docker-compose.dev.yml up -d --build
-```
-
-Default services:
-
-- MySQL: `localhost:3306`
-- Redis: `localhost:6379`
-- Backend: `http://localhost:3001`
-- Frontend: `http://localhost:3000`
-
-### Option B - Local dev
-
-1. Start MySQL va tao DB `fifam_dev` (neu chua co)
-2. Run backend:
-
-```bash
-cd apps/server
-npm install
-npm run dev
-```
-
-3. Run frontend:
-
-```bash
-cd apps/web
-npm install
-npm run dev
-```
-
-### Important ENV
-
-Backend (`apps/server`):
-
-- `HOST_PORT` (default `3001` in `.env.example`)
-- `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`
-- `REDIS_HOST`, `REDIS_PORT`
-- `JWT_SECRET` (default `fifam-dev-secret`)
-
-Frontend (`apps/web`):
-
-- `VITE_API_BASE_URL` (default `https://apifootball.b4f.site` in `.env.example`)
-- `VITE_SOCKET_BASE_URL` (default `https://apifootball.b4f.site` in `.env.example`)
-- `VITE_SOCKET_PATH` (default `/socket.io`)
-
-## 6) Notes
-
-- File `database/schema.sql` chi la note huong dan; schema source of truth dang nam o backend bootstrap/migration code.
-- Mot so module nhu `match`, `realtime`, `club`, `gacha` da vao production-shape; `pvp matchmaking` van trong giai doan hoan thien.
+> Awaken Your Ego. Dominate the Field.
