@@ -2,6 +2,8 @@
 @import 'tailwindcss';
 
 :root {
+  --app-content-max: 1920px;
+  --app-page-gutter: clamp(12px, 2vw, 32px);
   --bg-0: #050816;
   --bg-1: #08112a;
   --bg-2: #0f1d42;
@@ -36,13 +38,17 @@
 }
 
 html {
+  width: 100%;
   min-height: 100%;
 }
 
 body {
   position: relative;
   margin: 0;
+  width: 100%;
   min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
   background:
     linear-gradient(135deg, rgba(5, 8, 22, 0.86), rgba(8, 13, 34, 0.78)),
     radial-gradient(circle at 18% 16%, rgba(73, 211, 255, 0.22), transparent 24%),
@@ -78,7 +84,9 @@ body::after {
 #root {
   position: relative;
   z-index: 1;
+  width: 100%;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 a {
@@ -99,9 +107,15 @@ textarea {
 
 .app-shell {
   position: relative;
+  display: flex;
+  width: 100%;
   min-height: 100vh;
-  padding: max(18px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
-    calc(108px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  min-height: 100dvh;
+  flex-direction: column;
+  padding: max(var(--app-page-gutter), env(safe-area-inset-top))
+    max(var(--app-page-gutter), env(safe-area-inset-right))
+    max(var(--app-page-gutter), env(safe-area-inset-bottom))
+    max(var(--app-page-gutter), env(safe-area-inset-left));
   color: var(--text-main);
 }
 
@@ -172,12 +186,20 @@ textarea {
 .app-shell__inner {
   position: relative;
   z-index: 1;
+  flex: 1 1 auto;
   margin: 0 auto;
-  width: min(100%, 1360px);
+  width: min(100%, var(--app-content-max));
+  min-width: 0;
+}
+
+.app-shell__inner > * {
+  width: 100%;
+  min-width: 0;
 }
 
 .app-shell--fullscreen {
   min-height: 100svh;
+  min-height: 100dvh;
   padding: 0;
 }
 
@@ -188,6 +210,8 @@ textarea {
 .app-shell__inner--fullscreen {
   width: 100%;
   min-height: 100svh;
+  min-height: 100dvh;
+  max-width: none;
 }
 
 .auth-popup-shell {
@@ -793,6 +817,8 @@ textarea {
 .team-setup-page {
   display: grid;
   gap: 18px;
+  width: 100%;
+  min-width: 0;
   animation: popIn 0.32s ease;
 }
 
@@ -804,6 +830,11 @@ textarea {
   display: grid;
   grid-template-columns: 1fr;
   gap: 18px;
+  min-width: 0;
+}
+
+.team-setup-grid > .game-panel {
+  min-width: 0;
 }
 
 .team-setup-section-title {
@@ -817,9 +848,8 @@ textarea {
 .team-club-list {
   display: grid;
   gap: 12px;
-  max-height: 360px;
-  overflow: auto;
-  padding-right: 4px;
+  max-height: none;
+  overflow: visible;
 }
 
 .team-club-card {
@@ -877,9 +907,8 @@ textarea {
 .team-league-list {
   display: grid;
   gap: 10px;
-  max-height: 420px;
-  overflow: auto;
-  padding-right: 4px;
+  max-height: none;
+  overflow: visible;
 }
 
 .team-league-card {
@@ -923,7 +952,8 @@ textarea {
 }
 
 .team-club-list--draft {
-  max-height: 520px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  max-height: none;
 }
 
 .team-club-card--draft {
@@ -958,9 +988,9 @@ textarea {
 }
 
 .team-review-modal {
-  width: min(100%, 980px);
-  max-height: calc(100vh - 32px);
-  overflow: auto;
+  width: min(100%, 1280px);
+  max-height: none;
+  overflow: visible;
   padding: clamp(16px, 3vw, 24px);
 }
 
@@ -1497,7 +1527,7 @@ textarea {
 @media (max-width: 768px) {
   .app-shell {
     padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right))
-      calc(94px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+      max(16px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
   }
 
   .auth-popup-shell {
@@ -1537,10 +1567,6 @@ textarea {
   .game-table th,
   .game-table td {
     padding: 12px 12px;
-  }
-
-  .team-club-list {
-    max-height: 300px;
   }
 
   .redlock-detail-sheet {
@@ -1767,7 +1793,7 @@ body::after {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  width: min(100%, 1360px);
+  width: min(100%, var(--app-content-max));
   margin: 0 auto 18px;
   padding: 10px 12px;
   border: 1px solid rgba(255, 46, 74, 0.2);
@@ -2418,6 +2444,10 @@ body::after {
     grid-template-columns: 1fr;
   }
 
+  .team-club-list--draft {
+    grid-template-columns: 1fr;
+  }
+
   .team-club-card--draft .game-button-secondary {
     width: 100%;
   }
@@ -2429,5 +2459,19 @@ body::after {
 
   .team-review-modal__club h2 {
     max-width: calc(100vw - 132px);
+  }
+}
+
+@media (min-width: 1600px) {
+  .team-setup-grid.team-setup-grid--draft {
+    grid-template-columns: minmax(320px, 0.55fr) minmax(0, 1.45fr);
+  }
+
+  .team-club-list--draft {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  }
+
+  .team-review-roster {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   }
 }

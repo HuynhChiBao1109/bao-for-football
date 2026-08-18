@@ -34,9 +34,11 @@
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
   gap: 12px;
-  width: min(1360px, calc(100vw - 32px));
+  width: min(1760px, calc(100vw - 32px));
   height: calc(100svh - 32px);
+  height: calc(100dvh - 32px);
   max-height: calc(100svh - 32px);
+  max-height: calc(100dvh - 32px);
   min-height: 0;
   overflow: hidden;
   border: 1px solid rgba(255, 53, 82, 0.34);
