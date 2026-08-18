@@ -32,6 +32,7 @@ import { useMatchMotion } from '../hooks/useMatchMotion';
 import { EPlayerSkill, skillName } from '../enums/skill';
 import { queryClient } from '../lib/queryClient';
 import { normalizeSnapshot } from '../lib/normalizeMatchSnapshot';
+import { lineupPositionScore } from '../lib/lineupRating';
 import { DEFAULT_CLUB_IMAGE } from '../lib/referenceImage';
 import { ROUTES } from '../routes';
 import { GachaPage } from './GachaPage';
@@ -200,6 +201,46 @@ const LINEUP_POSITION_OPTIONS = [
   'SS',
   'ST',
 ] as const;
+
+type EditableLineupRole = (typeof LINEUP_POSITION_OPTIONS)[number];
+
+function allowedRolesAtCoordinates(
+  slotId: string,
+  xValue: number,
+  yValue: number,
+): readonly (EditableLineupRole | 'GK')[] {
+  if (slotId === 'gk') return ['GK'];
+
+  const x = normalizeLineupCoordinate(xValue, 50);
+  const y = normalizeLineupCoordinate(yValue, 50);
+
+  if (y >= 67) {
+    if (x < 30) return ['LB'];
+    if (x > 70) return ['RB'];
+    return ['CB'];
+  }
+
+  if (y >= 43) {
+    if (x < 28) return ['LM'];
+    if (x > 72) return ['RM'];
+    if (y >= 58) return ['CDM', 'CM'];
+    if (y <= 48) return ['AM', 'CM'];
+    return ['CM', 'CDM', 'AM'];
+  }
+
+  if (x < 32) return ['LW'];
+  if (x > 68) return ['RW'];
+  if (y >= 34) return ['AM', 'SS'];
+  return ['ST', 'SS'];
+}
+
+function roleAtCoordinates(slotId: string, x: number, y: number, preferredRole: string): string {
+  const allowedRoles = allowedRolesAtCoordinates(slotId, x, y);
+  const normalizedRole = String(preferredRole || '').toUpperCase();
+  return allowedRoles.includes(normalizedRole as EditableLineupRole | 'GK')
+    ? normalizedRole
+    : allowedRoles[0];
+}
 
 export function ClubPage() {
   const { data: sessionData, isLoading } = useSession();
@@ -649,12 +690,14 @@ function LineupPopup({ teamId }: { teamId: string }) {
                   )
                 ? savedRole
                 : slot.role;
+          const x = normalizeLineupCoordinate(saved?.x, slot.x);
+          const y = normalizeLineupCoordinate(saved?.y, slot.y);
           return [
             slot.slotId,
             {
-              role,
-              x: normalizeLineupCoordinate(saved?.x, slot.x),
-              y: normalizeLineupCoordinate(saved?.y, slot.y),
+              role: roleAtCoordinates(slot.slotId, x, y, role),
+              x,
+              y,
             },
           ];
         }),
@@ -695,15 +738,22 @@ function LineupPopup({ teamId }: { teamId: string }) {
     [lineup],
   );
   const selectedSlot = slots.find((slot) => slot.slotId === selectedSlotId) ?? slots[0];
+  const selectedSlotRoleOptions = allowedRolesAtCoordinates(
+    selectedSlot.slotId,
+    selectedSlot.x,
+    selectedSlot.y,
+  );
   const availableCards = useMemo(
     () =>
       cards
         .map((card) => ({
           card,
-          score: playerOverall(card),
+          score: lineupPositionScore(card, selectedSlot.role),
           fit: positionFit(card, selectedSlot.role),
         }))
-        .sort((a, b) => b.fit - a.fit || b.score - a.score),
+        .sort(
+          (a, b) => b.score * b.fit - a.score * a.fit || b.score - a.score,
+        ),
     [cards, selectedSlot.role],
   );
   const startingLineup = useMemo(
@@ -738,13 +788,13 @@ function LineupPopup({ teamId }: { teamId: string }) {
       nextSlots.forEach((slot) => {
         if (next[slot.slotId]) return;
         let bestRemainingIndex = -1;
-        let bestFit = Number.NEGATIVE_INFINITY;
+        let bestScore = Number.NEGATIVE_INFINITY;
         remainingIds.forEach((playerId, index) => {
           const card = cardsById.get(playerId);
           if (!card || !canPlaceCardInSlot(card, slot)) return;
-          const fit = positionFit(card, slot.role);
-          if (fit > bestFit) {
-            bestFit = fit;
+          const score = lineupPositionScore(card, slot.role) * positionFit(card, slot.role);
+          if (score > bestScore) {
+            bestScore = score;
             bestRemainingIndex = index;
           }
         });
@@ -769,12 +819,15 @@ function LineupPopup({ teamId }: { teamId: string }) {
   function updateSlotOverride(slotId: string, update: Partial<LineupSlotOverride>) {
     const current = slots.find((slot) => slot.slotId === slotId);
     if (!current) return;
+    const x = normalizeLineupCoordinate(update.x, current.x);
+    const y = normalizeLineupCoordinate(update.y, current.y);
+    const role = roleAtCoordinates(slotId, x, y, update.role ?? current.role);
     setSlotOverrides((previous) => ({
       ...previous,
       [slotId]: {
-        role: update.role ?? current.role,
-        x: normalizeLineupCoordinate(update.x, current.x),
-        y: normalizeLineupCoordinate(update.y, current.y),
+        role,
+        x,
+        y,
       },
     }));
   }
@@ -904,7 +957,7 @@ function LineupPopup({ teamId }: { teamId: string }) {
       let bestScore = -1;
       pool.forEach((card, index) => {
         if (!canPlaceCardInSlot(card, slot)) return;
-        const score = playerOverall(card) * positionFit(card, slot.role);
+        const score = lineupPositionScore(card, slot.role) * positionFit(card, slot.role);
         if (score > bestScore) {
           bestScore = score;
           bestIndex = index;
@@ -991,19 +1044,16 @@ function LineupPopup({ teamId }: { teamId: string }) {
           <span>Position</span>
           <select
             value={selectedSlot.role}
-            disabled={selectedSlot.slotId === 'gk'}
+            disabled={selectedSlotRoleOptions.length === 1}
             onChange={(event) =>
               updateSlotOverride(selectedSlot.slotId, { role: event.target.value })
             }
           >
-            {selectedSlot.slotId === 'gk' ? <option value="GK">GK</option> : null}
-            {selectedSlot.slotId !== 'gk'
-              ? LINEUP_POSITION_OPTIONS.map((position) => (
-                  <option key={position} value={position}>
-                    {position}
-                  </option>
-                ))
-              : null}
+            {selectedSlotRoleOptions.map((position) => (
+              <option key={position} value={position}>
+                {position}
+              </option>
+            ))}
           </select>
         </label>
         <label>
@@ -1059,8 +1109,13 @@ function LineupPopup({ teamId }: { teamId: string }) {
                       )
                     : undefined
                 }
+                draggable={Boolean(card) && movingSlotId !== slot.slotId}
                 style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
                 onClick={() => setSelectedSlotId(slot.slotId)}
+                onDragStart={(event) => {
+                  if (card) startDrag(card.userPlayerId, slot.slotId, event);
+                }}
+                onDragEnd={() => setDragState(null)}
                 onDragOver={(event) => handleSlotDragOver(slot, event)}
                 onDrop={(event) => handleSlotDrop(slot, event)}
               >
@@ -1135,7 +1190,7 @@ function LineupPopup({ teamId }: { teamId: string }) {
                 <span>{card.positions?.[0]?.position ?? 'ANY'}</span>
                 <strong>{card.name}</strong>
                 <small>
-                  OVR {Math.round(score)} / FIT {Math.round(fit * 100)}
+                  POS {Math.round(score)} / FIT {Math.round(fit * 100)}
                 </small>
               </button>
             ))}

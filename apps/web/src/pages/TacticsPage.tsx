@@ -6,6 +6,7 @@ import { usePlayerCards } from '../hooks/usePlayerCards';
 import { Banner } from '../components/feedback';
 import { API_BASE_URL } from '../lib/apiClient';
 import { DEFAULT_PLAYER_AVATAR } from '../lib/referenceImage';
+import { lineupPositionScore } from '../lib/lineupRating';
 import { MatchMode } from '../enums/match';
 import type { Tactics } from '../types';
 import type { UserPlayerCard } from '../types';
@@ -136,108 +137,6 @@ const FORMATION_SLOTS: Record<string, FieldSlot[]> = {
   ],
 };
 
-const ROLE_PROFILES: Record<Role, Array<{ key: string; weight: number }>> = {
-  GK: [
-    { key: 'gkReach', weight: 0.34 },
-    { key: 'gkReflex', weight: 0.33 },
-    { key: 'gkParrying', weight: 0.25 },
-    { key: 'passing', weight: 0.08 },
-  ],
-  LB: [
-    { key: 'defensiveAwareness', weight: 0.27 },
-    { key: 'standingTackle', weight: 0.24 },
-    { key: 'pace', weight: 0.25 },
-    { key: 'stamina', weight: 0.12 },
-    { key: 'passing', weight: 0.12 },
-  ],
-  CB: [
-    { key: 'defensiveAwareness', weight: 0.3 },
-    { key: 'standingTackle', weight: 0.24 },
-    { key: 'duels', weight: 0.2 },
-    { key: 'strength', weight: 0.16 },
-    { key: 'longPass', weight: 0.1 },
-  ],
-  RB: [
-    { key: 'defensiveAwareness', weight: 0.27 },
-    { key: 'standingTackle', weight: 0.24 },
-    { key: 'pace', weight: 0.25 },
-    { key: 'stamina', weight: 0.12 },
-    { key: 'passing', weight: 0.12 },
-  ],
-  LM: [
-    { key: 'pace', weight: 0.24 },
-    { key: 'dribbling', weight: 0.2 },
-    { key: 'passing', weight: 0.18 },
-    { key: 'stamina', weight: 0.16 },
-    { key: 'vision', weight: 0.12 },
-    { key: 'curve', weight: 0.1 },
-  ],
-  LCM: [
-    { key: 'passing', weight: 0.24 },
-    { key: 'vision', weight: 0.2 },
-    { key: 'stamina', weight: 0.16 },
-    { key: 'duels', weight: 0.12 },
-    { key: 'defensiveAwareness', weight: 0.12 },
-    { key: 'shooting', weight: 0.16 },
-  ],
-  CM: [
-    { key: 'passing', weight: 0.24 },
-    { key: 'vision', weight: 0.22 },
-    { key: 'stamina', weight: 0.17 },
-    { key: 'duels', weight: 0.12 },
-    { key: 'defensiveAwareness', weight: 0.1 },
-    { key: 'shooting', weight: 0.15 },
-  ],
-  RCM: [
-    { key: 'passing', weight: 0.24 },
-    { key: 'vision', weight: 0.2 },
-    { key: 'stamina', weight: 0.16 },
-    { key: 'duels', weight: 0.12 },
-    { key: 'defensiveAwareness', weight: 0.12 },
-    { key: 'shooting', weight: 0.16 },
-  ],
-  RM: [
-    { key: 'pace', weight: 0.24 },
-    { key: 'dribbling', weight: 0.2 },
-    { key: 'passing', weight: 0.18 },
-    { key: 'stamina', weight: 0.16 },
-    { key: 'vision', weight: 0.12 },
-    { key: 'curve', weight: 0.1 },
-  ],
-  LW: [
-    { key: 'pace', weight: 0.25 },
-    { key: 'dribbling', weight: 0.24 },
-    { key: 'shooting', weight: 0.2 },
-    { key: 'attackingAwareness', weight: 0.15 },
-    { key: 'curve', weight: 0.08 },
-    { key: 'passing', weight: 0.08 },
-  ],
-  RW: [
-    { key: 'pace', weight: 0.25 },
-    { key: 'dribbling', weight: 0.24 },
-    { key: 'shooting', weight: 0.2 },
-    { key: 'attackingAwareness', weight: 0.15 },
-    { key: 'curve', weight: 0.08 },
-    { key: 'passing', weight: 0.08 },
-  ],
-  ST: [
-    { key: 'shooting', weight: 0.34 },
-    { key: 'attackingAwareness', weight: 0.2 },
-    { key: 'pace', weight: 0.18 },
-    { key: 'dribbling', weight: 0.12 },
-    { key: 'technique', weight: 0.08 },
-    { key: 'strength', weight: 0.08 },
-  ],
-  ST2: [
-    { key: 'shooting', weight: 0.34 },
-    { key: 'attackingAwareness', weight: 0.2 },
-    { key: 'pace', weight: 0.18 },
-    { key: 'dribbling', weight: 0.12 },
-    { key: 'technique', weight: 0.08 },
-    { key: 'strength', weight: 0.08 },
-  ],
-};
-
 const PRIMARY_ROLE_POOL: Role[] = [
   'GK',
   'LB',
@@ -299,22 +198,11 @@ function resolvePlayerAvatarUrl(card: UserPlayerCard | null | undefined): string
   return value || DEFAULT_PLAYER_AVATAR;
 }
 
-function statOf(card: UserPlayerCard, key: string): number {
-  const pool = card.totalStats as Record<string, number>;
-  return Number(pool[key] ?? 0);
-}
-
-function roleScore(card: UserPlayerCard, role: Role): number {
-  const profile = ROLE_PROFILES[role];
-  const weighted = profile.reduce((sum, item) => sum + statOf(card, item.key) * item.weight, 0);
-  return Number(weighted.toFixed(2));
-}
-
 function inferPrimaryRole(card: UserPlayerCard): Role {
   let bestRole: Role = 'ST';
   let best = -1;
   for (const role of PRIMARY_ROLE_POOL) {
-    const current = roleScore(card, role);
+    const current = lineupPositionScore(card, role);
     if (current > best) {
       best = current;
       bestRole = role;
@@ -622,7 +510,7 @@ export function TacticsPage({
         card,
         targetPosition,
         effect,
-        score: card ? Math.round(roleScore(card, slot.role) * effect) : 0,
+        score: card ? Math.round(lineupPositionScore(card, slot.role) * effect) : 0,
       };
     });
   }, [formationSlots, lineup, cardsById]);
@@ -643,10 +531,10 @@ export function TacticsPage({
           card,
           primary,
           effect,
-          overall: Math.round(roleScore(card, primary) * effect),
+          rating: Math.round(lineupPositionScore(card, primary) * effect),
         };
       })
-      .sort((a, b) => b.overall - a.overall);
+      .sort((a, b) => b.rating - a.rating);
   }, [cards, usedStarterIds]);
 
   const lineupPayload = useMemo(
@@ -663,14 +551,14 @@ export function TacticsPage({
     [formationSlots, lineup],
   );
 
-  const starterOverall = useMemo(
+  const starterRatingTotal = useMemo(
     () => starters.reduce((sum, slot) => sum + slot.score, 0),
     [starters],
   );
   const starterCount = useMemo(() => starters.filter((s) => Boolean(s.card)).length, [starters]);
-  const starterAverage = useMemo(
-    () => (starterCount ? starterOverall / starterCount : 0),
-    [starterCount, starterOverall],
+  const starterRatingAverage = useMemo(
+    () => (starterCount ? starterRatingTotal / starterCount : 0),
+    [starterCount, starterRatingTotal],
   );
 
   async function submitForm(e: React.FormEvent) {
@@ -722,7 +610,7 @@ export function TacticsPage({
       let bestScore = -1;
       for (let i = 0; i < available.length; i += 1) {
         const score =
-          roleScore(available[i], slot.role) *
+          lineupPositionScore(available[i], slot.role) *
           positionEffect(available[i], roleToPosition(slot.role));
         if (score > bestScore) {
           bestScore = score;
@@ -961,10 +849,12 @@ export function TacticsPage({
                   </strong>
                 </span>
                 <span className="text-slate-200">
-                  Overall Sum: <strong className="text-emerald-300">{starterOverall}</strong>
+                  Position Rating:{' '}
+                  <strong className="text-emerald-300">{starterRatingTotal}</strong>
                 </span>
                 <span className="text-slate-200">
-                  Overall Avg: <strong className="text-white">{starterAverage.toFixed(1)}</strong>
+                  Average:{' '}
+                  <strong className="text-white">{starterRatingAverage.toFixed(1)}</strong>
                 </span>
               </div>
             </div>
@@ -1014,7 +904,7 @@ export function TacticsPage({
                       <p className="max-w-[90px] truncate text-xs font-semibold text-white">
                         {slot.card ? shortName(slot.card.name) : 'Trống'}
                       </p>
-                      <p className="text-[11px] text-emerald-200/80">OVR {slot.score || '--'}</p>
+                      <p className="text-[11px] text-emerald-200/80">POS {slot.score || '--'}</p>
                       <p className="text-[10px] text-amber-200/85">
                         Effect x{slot.effect ? slot.effect.toFixed(2) : '--'}
                       </p>
@@ -1053,7 +943,7 @@ export function TacticsPage({
                   {benchPlayers.length === 0 && (
                     <p className="text-sm text-slate-400">Không còn cầu thủ dự bị.</p>
                   )}
-                  {benchPlayers.map(({ card, primary, effect, overall }) => (
+                  {benchPlayers.map(({ card, primary, effect, rating }) => (
                     <div
                       key={card.userPlayerId}
                       className="flex cursor-grab items-center gap-3 rounded-xl border border-white/10 bg-black/20 p-2.5 active:cursor-grabbing"
@@ -1072,7 +962,7 @@ export function TacticsPage({
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-white">{card.name}</p>
                         <p className="text-xs text-slate-400">
-                          {primary} · Effect x{effect.toFixed(2)} · OVR {overall}
+                          {primary} · Effect x{effect.toFixed(2)} · POS {rating}
                         </p>
                       </div>
                     </div>
