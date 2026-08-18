@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { randomUUID } from "node:crypto";
 import { IMatchService } from "./interfaces/match-service.interface";
 import { MatchRepository } from "./match.repository";
 import { MatchEntity } from "./entities/match.entity";
@@ -31,6 +32,7 @@ type MatchStartPayload = {
 
 type MatchRuntimeState = {
   matchId: number;
+  simulationRunId: string;
   homeTeamId: number | null;
   awayTeamId: number | null;
   status: EMatchStatus;
@@ -62,6 +64,9 @@ type CampaignCompletionResult = {
 export class MatchService implements IMatchService {
   private readonly autoTickTimers = new Map<number, NodeJS.Timeout>();
   private readonly autoTickInFlight = new Set<number>();
+  private readonly autoTickSettleWaiters = new Map<number, Set<() => void>>();
+  private readonly autoTickStopOperations = new Map<number, Promise<void>>();
+  private readonly matchResetOperations = new Map<number, Promise<MatchEntity>>();
 
   constructor(
     private readonly repository: MatchRepository,
@@ -118,8 +123,7 @@ export class MatchService implements IMatchService {
         );
 
         if (!hasStarted) {
-          this.stopAutoTick(existingMatch.id);
-          await this.waitForAutoTickToSettle(existingMatch.id);
+          await this.stopAutoTick(existingMatch.id);
           const settledRuntimeState = await this.redisService.getJson<MatchRuntimeState>(
             this.getMatchRuntimeKey(existingMatch.id),
           );
@@ -239,7 +243,32 @@ export class MatchService implements IMatchService {
       throw new NotFoundException("Match not found");
     }
 
-    return match;
+    const runtimeState = await this.redisService.getJson<MatchRuntimeState>(
+      this.getMatchRuntimeKey(matchId),
+    );
+    const persistedRunId = (match.latestSnapshot as MatchSnapshot | null)?.simulationRunId;
+
+    if (runtimeState) {
+      // Redis is the authoritative live-simulation view. Reading every mutable
+      // field from the same generation prevents a GET spanning Reset from
+      // combining an old database snapshot with the new runtime run ID.
+      return Object.assign(match, {
+        simulationRunId: runtimeState.simulationRunId ?? persistedRunId,
+        status: runtimeState.status,
+        currentMinute: runtimeState.currentMinute,
+        clockSeconds: runtimeState.clockSeconds,
+        homeScore: runtimeState.homeScore,
+        awayScore: runtimeState.awayScore,
+        homeLineup: runtimeState.homeLineup,
+        awayLineup: runtimeState.awayLineup,
+        timeline: runtimeState.timeline,
+        latestSnapshot: runtimeState.latestSnapshot,
+      });
+    }
+
+    return Object.assign(match, {
+      simulationRunId: persistedRunId,
+    });
   }
 
   async getNextTick(matchId: number, options: MatchTickOptions = {}) {
@@ -258,6 +287,7 @@ export class MatchService implements IMatchService {
       throw new BadRequestException("Match is not in progress");
     }
 
+    const simulationRunId = runtimeState.simulationRunId ?? this.createSimulationRunId(matchId);
     const previousTicks = (runtimeState.timeline ?? []).filter(Boolean);
     const nextTick = generateNextMatchTick({
       previousTicks,
@@ -271,11 +301,13 @@ export class MatchService implements IMatchService {
       throw new BadRequestException("No more debug ticks to generate");
     }
 
+    nextTick.snapshot.simulationRunId = simulationRunId;
     const timeline = [...previousTicks, nextTick.snapshot];
     const isFinished = nextTick.snapshot.highlight?.event === EMatchEvent.MATCH_END;
     let campaignCompletion: CampaignCompletionResult | null = null;
     const nextRuntimeState: MatchRuntimeState = {
       ...runtimeState,
+      simulationRunId,
       status: isFinished ? EMatchStatus.FINISHED : EMatchStatus.IN_PROGRESS,
       currentMinute: nextTick.snapshot.minute,
       clockSeconds: nextTick.snapshot.second,
@@ -332,6 +364,14 @@ export class MatchService implements IMatchService {
   }
 
   async startAutoTick(matchId: number) {
+    if (this.matchResetOperations.has(matchId)) {
+      throw new BadRequestException("Match is resetting");
+    }
+
+    if (this.autoTickStopOperations.has(matchId)) {
+      throw new BadRequestException("Match auto tick is stopping");
+    }
+
     if (this.autoTickTimers.has(matchId)) {
       return { matchId: String(matchId), autoTicking: true };
     }
@@ -364,27 +404,21 @@ export class MatchService implements IMatchService {
             ? Math.max(120, Math.min(10_000, snapshotDuration))
             : AUTO_TICK_INTERVAL_MS;
 
-        if (!this.autoTickTimers.has(matchId)) {
-          return;
-        }
-
-        this.emitTickResult(
-          matchId,
-          nextTick.snapshot,
-          isFinished,
-          nextTick.campaignCompletion,
-        );
+        // A tick that already started must finish as one atomic unit: persist,
+        // emit its snapshot, then settle. Public Stop cancels only future work
+        // and waits for this block before returning.
+        this.emitTickResult(matchId, nextTick.snapshot, isFinished, nextTick.campaignCompletion);
 
         if (isFinished) {
           shouldContinue = false;
-          this.stopAutoTick(matchId);
+          this.cancelAutoTickTimer(matchId);
         }
       } catch (error) {
         shouldContinue = false;
-        this.stopAutoTick(matchId);
+        this.cancelAutoTickTimer(matchId);
         console.error(`Auto tick stopped for match ${matchId}`, error);
       } finally {
-        this.autoTickInFlight.delete(matchId);
+        this.markAutoTickSettled(matchId);
         if (shouldContinue && this.autoTickTimers.has(matchId)) {
           const tickProcessingMs = Date.now() - tickStartedAt;
           scheduleTick(Math.max(0, nextDelayMs - tickProcessingMs));
@@ -397,25 +431,64 @@ export class MatchService implements IMatchService {
     return { matchId: String(matchId), autoTicking: true };
   }
 
-  stopAutoTick(matchId: number) {
-    const timer = this.autoTickTimers.get(matchId);
-    if (timer) {
-      clearTimeout(timer);
-      this.autoTickTimers.delete(matchId);
+  async stopAutoTick(matchId: number) {
+    const pendingStop = this.autoTickStopOperations.get(matchId);
+    if (pendingStop) {
+      await pendingStop;
+      return { matchId: String(matchId), autoTicking: false };
+    }
+
+    const stopOperation = (async () => {
+      this.cancelAutoTickTimer(matchId);
+      await this.waitForAutoTickToSettle(matchId);
+      this.cancelAutoTickTimer(matchId);
+    })();
+    this.autoTickStopOperations.set(matchId, stopOperation);
+
+    try {
+      await stopOperation;
+    } finally {
+      if (this.autoTickStopOperations.get(matchId) === stopOperation) {
+        this.autoTickStopOperations.delete(matchId);
+      }
     }
 
     return { matchId: String(matchId), autoTicking: false };
   }
 
+  private cancelAutoTickTimer(matchId: number) {
+    const timer = this.autoTickTimers.get(matchId);
+    if (timer) {
+      clearTimeout(timer);
+      this.autoTickTimers.delete(matchId);
+    }
+  }
+
   async resetMatch(matchId: number): Promise<MatchEntity> {
+    const pendingReset = this.matchResetOperations.get(matchId);
+    if (pendingReset) {
+      return pendingReset;
+    }
+
+    const resetOperation = this.performMatchReset(matchId);
+    this.matchResetOperations.set(matchId, resetOperation);
+
+    try {
+      return await resetOperation;
+    } finally {
+      if (this.matchResetOperations.get(matchId) === resetOperation) {
+        this.matchResetOperations.delete(matchId);
+      }
+    }
+  }
+
+  private async performMatchReset(matchId: number): Promise<MatchEntity> {
     const match = await this.repository.findMatchById(matchId);
     if (!match) {
       throw new NotFoundException("Match not found");
     }
 
-    this.stopAutoTick(matchId);
-    await this.waitForAutoTickToSettle(matchId);
-    this.autoTickInFlight.delete(matchId);
+    await this.stopAutoTick(matchId);
     await this.redisService.del(this.getMatchRuntimeKey(matchId));
 
     const [homeTeam, awayTeam] = await Promise.all([
@@ -437,10 +510,12 @@ export class MatchService implements IMatchService {
       throw new NotFoundException("Match not found");
     }
 
+    const simulationRunId = this.createSimulationRunId(matchId);
     await this.cacheMatchRuntimeState(resetMatch, {
       simulationSeed: this.createSimulationSeed(matchId),
+      simulationRunId,
     });
-    return resetMatch;
+    return Object.assign(resetMatch, { simulationRunId });
   }
 
   async finalize(matchId: number, payload: Partial<MatchEntity>): Promise<MatchEntity> {
@@ -460,21 +535,34 @@ export class MatchService implements IMatchService {
     return Date.now() + matchId * 1009;
   }
 
-  private async waitForAutoTickToSettle(matchId: number) {
-    const maxWaitMs = AUTO_TICK_INTERVAL_MS + 250;
-    const startedAt = Date.now();
+  private createSimulationRunId(matchId: number) {
+    return `${matchId}:${randomUUID()}`;
+  }
 
-    while (this.autoTickInFlight.has(matchId) && Date.now() - startedAt < maxWaitMs) {
-      await new Promise((resolve) => setTimeout(resolve, 25));
-    }
+  private waitForAutoTickToSettle(matchId: number): Promise<void> {
+    if (!this.autoTickInFlight.has(matchId)) return Promise.resolve();
+
+    return new Promise((resolve) => {
+      const waiters = this.autoTickSettleWaiters.get(matchId) ?? new Set<() => void>();
+      waiters.add(resolve);
+      this.autoTickSettleWaiters.set(matchId, waiters);
+    });
+  }
+
+  private markAutoTickSettled(matchId: number) {
+    this.autoTickInFlight.delete(matchId);
+    const waiters = this.autoTickSettleWaiters.get(matchId);
+    this.autoTickSettleWaiters.delete(matchId);
+    waiters?.forEach((resolve) => resolve());
   }
 
   private async cacheMatchRuntimeState(
     match: MatchEntity,
-    options: { simulationSeed?: number } = {},
+    options: { simulationSeed?: number; simulationRunId?: string } = {},
   ) {
     const runtimeState: MatchRuntimeState = {
       matchId: match.id,
+      simulationRunId: options.simulationRunId ?? this.createSimulationRunId(match.id),
       homeTeamId: match.homeTeamId ?? null,
       awayTeamId: match.awayTeamId ?? null,
       status: match.status,
@@ -555,9 +643,7 @@ export class MatchService implements IMatchService {
       unlockedLevel: nextStage ? nextLevel : null,
       nextStageUnlocked: Boolean(nextStage),
       campaignCompleted: !nextStage,
-      rewardGranted: completion.progressUpdated
-        ? Number(campaignMatch.matchReward ?? 0)
-        : 0,
+      rewardGranted: completion.progressUpdated ? Number(campaignMatch.matchReward ?? 0) : 0,
     };
   }
 
@@ -631,6 +717,7 @@ export class MatchService implements IMatchService {
       event: ESocketEvent.MATCH_SNAPSHOT,
       data: {
         matchId,
+        simulationRunId: snapshot.simulationRunId,
         frameId: snapshot.frameId,
         tick: snapshot.tick,
         minute: snapshot.minute,
@@ -644,6 +731,7 @@ export class MatchService implements IMatchService {
         event: ESocketEvent.MATCH_EVENT,
         data: {
           matchId,
+          simulationRunId: snapshot.simulationRunId,
           frameId: snapshot.frameId,
           tick: snapshot.tick,
           minute: snapshot.minute,
@@ -667,6 +755,7 @@ export class MatchService implements IMatchService {
         event: ESocketEvent.MATCH_COMPLETED,
         data: {
           matchId: String(matchId),
+          simulationRunId: snapshot.simulationRunId,
           homeScore: snapshot.homeScore,
           awayScore: snapshot.awayScore,
           campaignCompletion,

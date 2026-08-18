@@ -1164,6 +1164,19 @@ function createPassOption(
       passDistance - (style === "long" || style === "switch" ? 44 : style === "cross" ? 36 : 25),
     ) / 70;
   const styleFit = getPassStyleFit(situation, receiver, style, target);
+  const deliveryDifficultyPenalty =
+    style === "cross"
+      ? 0.035 +
+        clamp01((passDistance - 18) / 42) * 0.1 +
+        situation.pressure * 0.08 +
+        (1 - receptionQuality) * 0.055
+      : style === "long" || style === "switch"
+        ? clamp01((passDistance - 28) / 46) * 0.055 + situation.pressure * 0.025
+        : 0;
+  const throughTimingAdjustment =
+    style === "through" && runTiming
+      ? (runTiming.timingQuality - 0.5) * 0.12 - runTiming.predictedOffsideRisk * 0.1
+      : 0;
   const completionProbability = clamp01(
     0.13 +
       passerQuality * 0.42 +
@@ -1171,7 +1184,9 @@ function createPassOption(
       receptionQuality * 0.16 +
       styleFit * 0.12 -
       situation.pressure * 0.18 -
-      rangePenalty,
+      rangePenalty -
+      deliveryDifficultyPenalty +
+      throughTimingAdjustment,
   );
   const lineBreakValue = clamp01(
     Math.max(0, progression) * 0.72 +

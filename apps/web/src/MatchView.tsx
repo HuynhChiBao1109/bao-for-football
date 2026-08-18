@@ -4,7 +4,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import './MatchView.css';
 import { useMatchMotion } from './hooks/useMatchMotion';
 import {
-  useGetNextMatchTick,
   useResetMatch,
   useStartAutoMatchTick,
   useStopAutoMatchTick,
@@ -59,13 +58,16 @@ function toPitchPosition(point: { x: number; y: number }, mirrorY = false) {
   } as CSSProperties;
 }
 
-function formatCoord(value: number | undefined) {
-  return Number.isFinite(value) ? Number(value).toFixed(1) : '0.0';
-}
-
 function formatStatus(status: string | undefined, snapshot: MatchSnapshot | null) {
-  const value = snapshot?.matchStep ?? snapshot?.phase ?? status ?? 'ready';
-  return value.replaceAll('_', ' ');
+  const step = snapshot?.matchStep;
+  const phase = snapshot?.phase ?? status;
+
+  if (step === 'full_time' || phase === 'full_time' || status === 'finished') return 'Full time';
+  if (step === 'half_time' || phase === 'half_time') return 'Half time';
+  if (step === 'goal_celebration') return 'Goal';
+  if (phase === 'second_half' || step === 'second_half_start') return 'Second half';
+  if (phase === 'first_half' || step === 'first_half_start') return 'First half';
+  return 'Live';
 }
 
 function isGoalEvent(snapshot: MatchSnapshot | null) {
@@ -97,7 +99,11 @@ function getMatchWhistleAudioContext() {
   if (!AudioContextClass) return null;
 
   if (!matchWhistleAudioContext || matchWhistleAudioContext.state === 'closed') {
-    matchWhistleAudioContext = new AudioContextClass();
+    try {
+      matchWhistleAudioContext = new AudioContextClass();
+    } catch {
+      return null;
+    }
   }
 
   return matchWhistleAudioContext;
@@ -280,7 +286,7 @@ function getEventView(eventCode: number | null | undefined) {
       return { title: 'Goal', className: 'match-event--goal' };
     default:
       return {
-        title: eventCode ? `Event ${eventCode}` : 'Tick',
+        title: 'Match update',
         className: 'match-event--standard',
       };
   }
@@ -291,6 +297,15 @@ function getPlayerInitials(name: string) {
   if (parts.length === 0) return '?';
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+}
+
+function getPlayerDisplayName(name: string) {
+  const normalizedName = name.trim();
+  if (normalizedName.length <= 12) return normalizedName;
+
+  const parts = normalizedName.split(/\s+/).filter(Boolean);
+  const lastName = parts.at(-1) ?? normalizedName;
+  return lastName.length <= 12 ? lastName : `${lastName.slice(0, 11)}…`;
 }
 
 function skillCode(skill: number) {
@@ -306,15 +321,11 @@ function skillCode(skill: number) {
 function Scoreboard({
   snapshot,
   status,
-  isConnected,
-  queuedTicks,
   homeTeamName,
   awayTeamName,
 }: {
   snapshot: MatchSnapshot | null;
   status: string;
-  isConnected: boolean;
-  queuedTicks: number;
   homeTeamName: string;
   awayTeamName: string;
 }) {
@@ -334,11 +345,7 @@ function Scoreboard({
           <span>:</span>
           {snapshot?.awayScore ?? 0}
         </strong>
-        <span className="match-scoreboard__status">
-          {formatStatus(status, snapshot)}
-          <span className={isConnected ? 'match-live-dot is-on' : 'match-live-dot'} />
-          {queuedTicks > 0 ? <small>{queuedTicks} ticks</small> : null}
-        </span>
+        <span className="match-scoreboard__status">{formatStatus(status, snapshot)}</span>
       </div>
       <div className="match-scoreboard__team match-scoreboard__team--away">
         <span className="match-scoreboard__team-name">{awayTeamName}</span>
@@ -364,145 +371,6 @@ const PitchLines = memo(function PitchLines() {
       <div className="pitch-goal pitch-goal--home" />
       <div className="pitch-goal pitch-goal--away" />
     </div>
-  );
-});
-
-const PitchDebugGrid = memo(function PitchDebugGrid() {
-  const marks = [0, 25, 50, 75, 100];
-
-  return (
-    <div className="pitch-debug-grid" aria-hidden="true">
-      {marks.map((value) => (
-        <span className="pitch-debug-grid__x" key={`x-${value}`} style={{ left: `${value}%` }}>
-          x {value}
-        </span>
-      ))}
-      {marks.map((value) => (
-        <span className="pitch-debug-grid__y" key={`y-${value}`} style={{ top: `${value}%` }}>
-          y {value}
-        </span>
-      ))}
-    </div>
-  );
-});
-
-const OffsideRunDebugOverlay = memo(function OffsideRunDebugOverlay({
-  snapshot,
-  mirrorY,
-}: {
-  snapshot: MatchSnapshot;
-  mirrorY: boolean;
-}) {
-  const timing = snapshot.tactical?.attackingDecision?.runTiming;
-  if (!timing) return null;
-  const mirror = (point: { x: number; y: number }) => ({
-    x: point.x,
-    y: mirrorY ? 100 - point.y : point.y,
-  });
-  const lineY = mirrorY
-    ? 100 - timing.currentLine.effectiveLineY
-    : timing.currentLine.effectiveLineY;
-  const predictedLineY = mirrorY
-    ? 100 - timing.predictedLine.effectiveLineY
-    : timing.predictedLine.effectiveLineY;
-  const visibleRuns = timing.decisions.filter(
-    (decision) => decision.state !== 'HoldPosition' || decision.currentStatus !== 'onside',
-  );
-
-  return (
-    <svg className="offside-run-debug" viewBox="0 0 100 100" preserveAspectRatio="none">
-      <g className="offside-run-debug__portrait">
-        <line className="offside-run-debug__line" x1="0" x2="100" y1={lineY} y2={lineY} />
-        <line
-          className="offside-run-debug__line offside-run-debug__line--predicted"
-          x1="0"
-          x2="100"
-          y1={predictedLineY}
-          y2={predictedLineY}
-        />
-        {visibleRuns.map((decision) => {
-          const points = decision.path.map(mirror);
-          return (
-            <g key={`portrait-${decision.playerId}`} data-status={decision.predictedStatus}>
-              <polyline
-                className="offside-run-debug__path"
-                points={points.map((point) => `${point.x},${point.y}`).join(' ')}
-              />
-              <circle
-                className="offside-run-debug__target"
-                cx={mirror(decision.target).x}
-                cy={mirror(decision.target).y}
-                r="1.15"
-              />
-            </g>
-          );
-        })}
-      </g>
-      <g className="offside-run-debug__landscape">
-        <line className="offside-run-debug__line" x1={lineY} x2={lineY} y1="0" y2="100" />
-        <line
-          className="offside-run-debug__line offside-run-debug__line--predicted"
-          x1={predictedLineY}
-          x2={predictedLineY}
-          y1="0"
-          y2="100"
-        />
-        {visibleRuns.map((decision) => {
-          const points = decision.path.map(mirror);
-          return (
-            <g key={`landscape-${decision.playerId}`} data-status={decision.predictedStatus}>
-              <polyline
-                className="offside-run-debug__path"
-                points={points.map((point) => `${point.y},${point.x}`).join(' ')}
-              />
-              <circle
-                className="offside-run-debug__target"
-                cx={mirror(decision.target).y}
-                cy={mirror(decision.target).x}
-                r="1.15"
-              />
-            </g>
-          );
-        })}
-      </g>
-    </svg>
-  );
-});
-
-const AttackingDecisionDebugOverlay = memo(function AttackingDecisionDebugOverlay({
-  snapshot,
-}: {
-  snapshot: MatchSnapshot;
-}) {
-  const decision = snapshot.tactical?.attackingDecision;
-  if (!decision) return null;
-  const formatScore = (value: number | null) => (value == null ? '--' : value.toFixed(1));
-
-  return (
-    <aside className="attacking-ai-debug" aria-label="Attacking AI debug">
-      <div className="attacking-ai-debug__headline">
-        <span>{decision.kind.replace('_', ' ')}</span>
-        <span>{decision.receiverId != null ? `→ #${decision.receiverId}` : 'keep'}</span>
-      </div>
-      <div className="attacking-ai-debug__scores">
-        <span>PASS {formatScore(decision.scores.pass)}</span>
-        <span>SHOOT {formatScore(decision.scores.shoot)}</span>
-        <span>CARRY {formatScore(decision.scores.carryBall)}</span>
-      </div>
-      <div className="attacking-ai-debug__shape">
-        <span>BS {decision.attackingStructure.shape.ballSupportCount}</span>
-        <span>FW {decision.attackingStructure.shape.forwardOptionCount}</span>
-        <span>DEP {decision.attackingStructure.shape.depthThreatCount}</span>
-        <span>REST {decision.attackingStructure.shape.restDefenseCount}</span>
-      </div>
-      {decision.debugLog.length ? (
-        <div className="attacking-ai-debug__logs">
-          {decision.debugLog.slice(0, 3).map((entry) => (
-            <span key={entry}>{entry}</span>
-          ))}
-        </div>
-      ) : null}
-    </aside>
   );
 });
 
@@ -554,14 +422,19 @@ const PlayerCircle = memo(function PlayerCircle({
         player.activeSkill === EPlayerSkill.TANK_TACKLE ? 'player-node--tank-tackle' : '',
         player.activeSkill === EPlayerSkill.KAISER_SHOT ? 'player-node--kaiser-shot' : '',
         player.activeSkill === EPlayerSkill.EAGLE_EYE ? 'player-node--eagle-eye' : '',
-        player.offside?.status ? `player-node--offside-${player.offside.status}` : '',
       ].join(' ')}
       data-dive-direction={
         keeperAction === 'dive' || keeperAction === 'catch' ? diveDirection : undefined
       }
+      data-team-side={player.teamSide}
+      data-position={player.position}
       style={style}
+      role="img"
+      aria-label={`${player.name}, number ${player.jerseyNumber ?? player.id}, ${player.position}, ${player.teamSide} team${player.hasBall ? ', in possession' : ''}`}
       title={`${player.name} - ${player.position}`}
     >
+      <span className="player-ground-ring" aria-hidden="true" />
+      <span className="player-control-indicator" aria-hidden="true" />
       <div className={`player-circle ${teamClass}`}>
         {player.avatarUrl ? (
           <img src={player.avatarUrl} alt="" className="player-avatar" />
@@ -584,29 +457,7 @@ const PlayerCircle = memo(function PlayerCircle({
           aria-label={player.card === 'red' ? 'Red card' : 'Yellow card'}
         />
       ) : null}
-      <span className="player-name">{player.name}</span>
-      {player.offside?.status ? (
-        <span className="player-offside-state" data-status={player.offside.status}>
-          {player.offside.status === 'offside'
-            ? 'OFF'
-            : player.offside.status === 'near_line'
-              ? 'LINE'
-              : 'ON'}
-          {player.offside.timingState ? ` · ${player.offside.timingState}` : ''}
-        </span>
-      ) : null}
-      {player.attackingIntent?.supportRole && player.attackingIntent.targetZone ? (
-        <span
-          className="player-structure-state"
-          data-role={player.attackingIntent.supportRole}
-          title={player.attackingIntent.structureReason}
-        >
-          {player.attackingIntent.supportRole} · {player.attackingIntent.targetZone.lane}/
-          {player.attackingIntent.targetZone.third} · Z
-          {player.attackingIntent.occupiedZoneCount ?? 1} ·{' '}
-          {(player.attackingIntent.nearestTeammateDistance ?? 99).toFixed(1)}m
-        </span>
-      ) : null}
+      <span className="player-name">{getPlayerDisplayName(player.name)}</span>
       {player.skillCharges?.length ? (
         <div className="player-rage-bars" aria-label={`${player.name} skill rage`}>
           {player.skillCharges.map((item) => (
@@ -658,7 +509,21 @@ const PlayerLayer = memo(function PlayerLayer({
 });
 
 function Ball({ snapshot, mirrorY }: { snapshot: MatchSnapshot; mirrorY: boolean }) {
-  const style = toPitchPosition(snapshot.ball, mirrorY);
+  const currentLateral = clampPercent(snapshot.ball.x);
+  const currentLength = clampPercent(mirrorY ? 100 - snapshot.ball.y : snapshot.ball.y);
+  const sourceLateral = Number.isFinite(snapshot.ball.fromX)
+    ? clampPercent(Number(snapshot.ball.fromX))
+    : currentLateral;
+  const sourceLength = Number.isFinite(snapshot.ball.fromY)
+    ? clampPercent(mirrorY ? 100 - Number(snapshot.ball.fromY) : Number(snapshot.ball.fromY))
+    : currentLength;
+  const lateralDelta = currentLateral - sourceLateral;
+  const lengthDelta = currentLength - sourceLength;
+  const style = {
+    ...toPitchPosition(snapshot.ball, mirrorY),
+    '--ball-trail-angle-portrait': `${Math.atan2(lengthDelta, lateralDelta) * (180 / Math.PI)}deg`,
+    '--ball-trail-angle-landscape': `${Math.atan2(lateralDelta, lengthDelta) * (180 / Math.PI)}deg`,
+  } as CSSProperties;
   const thunderShot = isThunderShot(snapshot);
   const magicDribble = isMagicDribble(snapshot);
   const tankTackle = isTankTackle(snapshot);
@@ -681,11 +546,11 @@ function Ball({ snapshot, mirrorY }: { snapshot: MatchSnapshot; mirrorY: boolean
         eagleEye ? 'match-ball--eagle' : '',
       ].join(' ')}
       style={style}
+      role="img"
       aria-label="Ball"
     >
-      <span className="ball-coord">
-        x:{formatCoord(snapshot.ball.x)} y:{formatCoord(snapshot.ball.y)}
-      </span>
+      <span className="match-ball__trail" aria-hidden="true" />
+      <span className="match-ball__panel" aria-hidden="true" />
     </div>
   );
 }
@@ -972,14 +837,12 @@ function EventFeed({ events }: { events: LiveMatchEvent[] }) {
         ) : (
           events.map((event) => {
             const view = getEventView(event.event);
-            const tickLabel = Number.isFinite(event.tick)
-              ? `T${event.tick}`
-              : Number.isFinite(event.frameId)
-                ? `T${event.frameId}`
-                : 'T-';
+            const minuteLabel = Number.isFinite(event.minute)
+              ? `${Math.max(0, Math.floor(event.minute))}'`
+              : '—';
             return (
               <article className={`match-event ${view.className}`} key={event.id}>
-                <span className="match-event__minute">{tickLabel}</span>
+                <span className="match-event__minute">{minuteLabel}</span>
                 <div>
                   <strong>{view.title}</strong>
                 </div>
@@ -1054,9 +917,6 @@ function MatchPitch({ snapshot }: { snapshot: MatchSnapshot }) {
         </div>
         <div className="match-pitch" data-active-skill={activeSkill}>
           <PitchLines />
-          <PitchDebugGrid />
-          <OffsideRunDebugOverlay snapshot={snapshot} mirrorY={mirrorY} />
-          <AttackingDecisionDebugOverlay snapshot={snapshot} />
           <PlayerLayer
             homePlayers={visualHomePlayers}
             awayPlayers={visualAwayPlayers}
@@ -1098,23 +958,24 @@ export function MatchView() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isAutoTicking, setIsAutoTicking] = useState(false);
+  const [autoStartCycle, setAutoStartCycle] = useState(0);
   const handledMatchEndRef = useRef(false);
+  const autoStartedMatchRef = useRef<string | null>(null);
+  const autoStartRetryTimerRef = useRef<number | null>(null);
   const {
     match,
     snapshot,
     events,
     status,
-    isConnected,
     isLoading,
     error,
-    queuedTicks,
     ackActiveTick,
     resetLiveState,
     campaignCompletion,
   } = useMatchSocket(matchId);
   useKickoffWhistle(snapshot);
-  const getNextTick = useGetNextMatchTick(matchId);
-  const startAutoTick = useStartAutoMatchTick(matchId);
+  const { mutate: startAutoTick, isPending: isStartingAutoTick } =
+    useStartAutoMatchTick(matchId);
   const stopAutoTick = useStopAutoMatchTick(matchId);
   const resetMatch = useResetMatch(matchId);
   const renderedSnapshot = useMatchMotion(snapshot, {
@@ -1134,16 +995,66 @@ export function MatchView() {
     });
   };
 
-  const retryCampaignMatch = () => {
+  const resetCurrentMatch = () => {
     resetMatch.mutate(undefined, {
       onSuccess: (resetMatchState) => {
+        if (autoStartRetryTimerRef.current !== null) {
+          window.clearTimeout(autoStartRetryTimerRef.current);
+          autoStartRetryTimerRef.current = null;
+        }
+        autoStartedMatchRef.current = null;
         setIsAutoTicking(false);
         handledMatchEndRef.current = false;
         resetLiveState(resetMatchState);
+        setAutoStartCycle((cycle) => cycle + 1);
         void queryClient.invalidateQueries({ queryKey: ['match'] });
       },
     });
   };
+
+  useEffect(() => {
+    if (!matchId || isLoading || isMatchEnded || autoStartedMatchRef.current === matchId) {
+      return;
+    }
+
+    autoStartedMatchRef.current = matchId;
+    let cancelled = false;
+    let succeeded = false;
+    const maxAttempts = 3;
+
+    const attemptAutoStart = (attempt: number) => {
+      startAutoTick(undefined, {
+        onSuccess: () => {
+          succeeded = true;
+          setIsAutoTicking(true);
+          autoStartRetryTimerRef.current = null;
+        },
+        onError: () => {
+          if (cancelled || attempt >= maxAttempts) {
+            setIsAutoTicking(false);
+            return;
+          }
+          autoStartRetryTimerRef.current = window.setTimeout(
+            () => attemptAutoStart(attempt + 1),
+            attempt * 650,
+          );
+        },
+      });
+    };
+
+    attemptAutoStart(1);
+
+    return () => {
+      cancelled = true;
+      if (autoStartRetryTimerRef.current !== null) {
+        window.clearTimeout(autoStartRetryTimerRef.current);
+        autoStartRetryTimerRef.current = null;
+      }
+      if (!succeeded && autoStartedMatchRef.current === matchId) {
+        autoStartedMatchRef.current = null;
+      }
+    };
+  }, [autoStartCycle, isLoading, isMatchEnded, matchId, startAutoTick]);
 
   useEffect(() => {
     if (!isMatchEnded || handledMatchEndRef.current) {
@@ -1151,23 +1062,57 @@ export function MatchView() {
     }
 
     handledMatchEndRef.current = true;
-    if (isAutoTicking) {
-      stopAutoTick.mutate(undefined, {
-        onSettled: () => setIsAutoTicking(false),
-      });
-    }
+    setIsAutoTicking(false);
     void queryClient.invalidateQueries({ queryKey: ['campainMatches'] });
     void queryClient.invalidateQueries({ queryKey: ['session'] });
-  }, [isAutoTicking, isMatchEnded, queryClient, stopAutoTick]);
+  }, [isMatchEnded, queryClient]);
 
   return (
-    <main className="match-view">
+    <main className="match-view" onPointerDown={unlockMatchWhistleAudio}>
       <div className="match-view__backdrop" aria-hidden="true" />
       <section className="match-modal" role="dialog" aria-modal="true" aria-label="Live match">
         <header className="match-modal__head">
           <div>
-            <span>RedLock match protocol</span>
+            <span>RedLock Arena</span>
             <strong>Live Battle</strong>
+          </div>
+          <div className="match-live-controls" aria-label="Match controls">
+            <button
+              type="button"
+              className="match-live-control match-live-control--stop"
+              disabled={
+                !matchId ||
+                !isAutoTicking ||
+                stopAutoTick.isPending ||
+                resetMatch.isPending ||
+                isMatchEnded
+              }
+              onClick={() => {
+                if (autoStartRetryTimerRef.current !== null) {
+                  window.clearTimeout(autoStartRetryTimerRef.current);
+                  autoStartRetryTimerRef.current = null;
+                }
+                autoStartedMatchRef.current = matchId ?? null;
+                stopAutoTick.mutate(undefined, {
+                  onSuccess: () => setIsAutoTicking(false),
+                });
+              }}
+            >
+              {stopAutoTick.isPending ? 'Stopping…' : 'Stop Match'}
+            </button>
+            <button
+              type="button"
+              className="match-live-control match-live-control--reset"
+              disabled={
+                !matchId ||
+                isStartingAutoTick ||
+                stopAutoTick.isPending ||
+                resetMatch.isPending
+              }
+              onClick={resetCurrentMatch}
+            >
+              {resetMatch.isPending ? 'Resetting…' : 'Reset Match'}
+            </button>
           </div>
           <button
             type="button"
@@ -1192,88 +1137,17 @@ export function MatchView() {
         <Scoreboard
           snapshot={renderedSnapshot}
           status={status}
-          isConnected={isConnected}
-          queuedTicks={queuedTicks}
           homeTeamName={homeTeamName}
           awayTeamName={awayTeamName}
         />
 
         <div className="match-view__content">
-          <div className="match-debug-controls">
-            <button
-              type="button"
-              className="match-debug-controls__button"
-              disabled={!matchId || getNextTick.isPending}
-              onClick={() => {
-                unlockMatchWhistleAudio();
-                getNextTick.mutate();
-              }}
-            >
-              {getNextTick.isPending ? 'Generating tick...' : 'Get next tick'}
-            </button>
-            <button
-              type="button"
-              className="match-debug-controls__button"
-              disabled={!matchId || isAutoTicking || isMatchEnded || startAutoTick.isPending}
-              onClick={() => {
-                unlockMatchWhistleAudio();
-                startAutoTick.mutate(undefined, {
-                  onSuccess: () => setIsAutoTicking(true),
-                });
-              }}
-            >
-              {startAutoTick.isPending ? 'Starting...' : 'Auto tick'}
-            </button>
-            <button
-              type="button"
-              className="match-debug-controls__button match-debug-controls__button--stop"
-              disabled={!isAutoTicking || stopAutoTick.isPending}
-              onClick={() => {
-                stopAutoTick.mutate(undefined, {
-                  onSettled: () => setIsAutoTicking(false),
-                });
-              }}
-            >
-              {stopAutoTick.isPending ? 'Stopping...' : 'Stop'}
-            </button>
-            <button
-              type="button"
-              className="match-debug-controls__button match-debug-controls__button--reset"
-              disabled={!matchId || resetMatch.isPending}
-              onClick={() => {
-                resetMatch.mutate(undefined, {
-                  onSuccess: (match) => {
-                    setIsAutoTicking(false);
-                    handledMatchEndRef.current = false;
-                    resetLiveState(match);
-                    void queryClient.invalidateQueries({ queryKey: ['match'] });
-                  },
-                });
-              }}
-            >
-              {resetMatch.isPending ? 'Resetting...' : 'Reset match'}
-            </button>
-            {getNextTick.error ? (
-              <span className="match-debug-controls__error">{getNextTick.error.message}</span>
-            ) : null}
-            {startAutoTick.error ? (
-              <span className="match-debug-controls__error">{startAutoTick.error.message}</span>
-            ) : null}
-            {stopAutoTick.error ? (
-              <span className="match-debug-controls__error">{stopAutoTick.error.message}</span>
-            ) : null}
-            {resetMatch.error ? (
-              <span className="match-debug-controls__error">{resetMatch.error.message}</span>
-            ) : null}
-          </div>
           {renderedSnapshot ? (
             <MatchPitch snapshot={renderedSnapshot} />
           ) : (
             <section className="match-empty">
               <strong>{isLoading ? 'Loading match...' : 'No live snapshot'}</strong>
-              <span>
-                {error ? error.message : 'Press Get next tick to render the next server tick.'}
-              </span>
+              <span>{error ? 'Unable to load the match.' : 'Waiting for kickoff...'}</span>
             </section>
           )}
           <div className="match-view__insights">
@@ -1292,7 +1166,7 @@ export function MatchView() {
             reward={matchReward}
             isRetrying={resetMatch.isPending}
             retryError={resetMatch.error?.message}
-            onRetry={retryCampaignMatch}
+            onRetry={resetCurrentMatch}
             onContinue={returnToCampaign}
             campaignCompletion={campaignCompletion}
           />

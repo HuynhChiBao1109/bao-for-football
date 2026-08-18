@@ -19,7 +19,7 @@ export interface IMatchService {
 
   startAutoTick(matchId: number): Promise<unknown>;
 
-  stopAutoTick(matchId: number): unknown;
+  stopAutoTick(matchId: number): Promise<unknown>;
 
   resetMatch(matchId: number): Promise<MatchEntity>;
 

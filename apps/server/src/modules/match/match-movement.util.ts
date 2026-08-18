@@ -182,11 +182,12 @@ export function updatePlayerAI(player: Player, gameState: GameState) {
   player.targetPosition = tactical.targetPosition;
 }
 
-export function updatePlayerMovement(player: Player, deltaTime: number) {
+export function updatePlayerMovement(player: Player, deltaTime: number, speedMultiplier = 1) {
   const current = clampPoint(player.position);
   const target = clampPoint(player.targetPosition);
   const toTarget = sub(target, current);
   const distance = length(toTarget);
+  const safeSpeedMultiplier = clamp(speedMultiplier, 0.25, 3.4);
 
   if (distance < MOVEMENT.stopRadius) {
     player.position = target;
@@ -196,16 +197,24 @@ export function updatePlayerMovement(player: Player, deltaTime: number) {
   }
 
   const direction = distance > 0 ? scale(toTarget, 1 / distance) : { x: 0, y: 0 };
-  const maxSpeed = getPlayerMaxSpeed(player);
+  const maxSpeed = getPlayerMaxSpeed(player) * safeSpeedMultiplier;
   const arrivalScale = clamp(distance / MOVEMENT.arrivalRadius, 0.15, 1);
-  const desiredVelocity = scale(direction, maxSpeed * arrivalScale);
-  const smoothedDesired = lerpVec(player.velocity, desiredVelocity, MOVEMENT.turnSmoothing);
+  const currentSpeed = length(player.velocity);
+  const currentDirection = currentSpeed > 0.05 ? scale(player.velocity, 1 / currentSpeed) : direction;
+  const alignment = clamp(currentDirection.x * direction.x + currentDirection.y * direction.y, -1, 1);
+  const turnSeverity = (1 - alignment) / 2;
+  const turnSpeedScale = 1 - turnSeverity * 0.3;
+  const brakingShare = Math.min(0.68, MOVEMENT.braking * deltaTime * turnSeverity * 0.18);
+  const steeredVelocity = scale(player.velocity, 1 - brakingShare);
+  const desiredVelocity = scale(direction, maxSpeed * arrivalScale * turnSpeedScale);
+  const turnSmoothing = clamp(MOVEMENT.turnSmoothing - turnSeverity * 0.14, 0.32, 0.62);
+  const smoothedDesired = lerpVec(steeredVelocity, desiredVelocity, turnSmoothing);
   const steering = clampVector(
-    sub(smoothedDesired, player.velocity),
-    getPlayerAcceleration(player) * deltaTime,
+    sub(smoothedDesired, steeredVelocity),
+    getPlayerAcceleration(player) * safeSpeedMultiplier * deltaTime * (1 - turnSeverity * 0.34),
   );
 
-  const nextVelocity = clampVector(add(player.velocity, steering), maxSpeed);
+  const nextVelocity = clampVector(add(steeredVelocity, steering), maxSpeed);
   const nextStep = scale(nextVelocity, deltaTime);
 
   if (length(nextStep) >= distance) {

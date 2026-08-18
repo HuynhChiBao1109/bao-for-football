@@ -43,23 +43,47 @@ export class MatchRepository {
   ) {}
 
   async findMatchById(matchId: number): Promise<MatchEntity | null> {
-    return this.matchRepository.findOne({
+    const match = await this.matchRepository.findOne({
       where: { id: matchId },
       relations: {
         homeTeam: true,
         awayTeam: true,
-        matchEvents: true,
-        matchPlayerStats: true,
         campainMatch: {
           campain: true,
         },
       },
-      order: {
-        matchEvents: {
-          minute: "ASC",
-        },
-      },
     });
+
+    if (!match) {
+      return null;
+    }
+
+    // Loading both one-to-many collections in the match query multiplies
+    // events by player stats before TypeORM sorts/de-duplicates the result.
+    // Fetch each bounded collection separately to avoid exhausting MySQL's
+    // sort buffer on long simulations.
+    const [matchEvents, matchPlayerStats] = await Promise.all([
+      this.matchEventRepository.find({
+        where: { matchId },
+        order: {
+          minute: "ASC",
+          id: "ASC",
+        },
+      }),
+      this.matchPlayerStatsRepository.find({
+        where: { matchId },
+        order: {
+          id: "ASC",
+        },
+      }),
+    ]);
+
+    Object.assign(match, {
+      matchEvents,
+      matchPlayerStats,
+    });
+
+    return match;
   }
 
   async findMatchByCampaignMatchId(campaignMatchId: number): Promise<MatchEntity | null> {

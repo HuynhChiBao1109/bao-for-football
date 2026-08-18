@@ -572,6 +572,7 @@ export type MatchSummary = {
 };
 
 export type MatchSnapshot = {
+  simulationRunId?: string;
   frameId?: number;
   tick?: number;
   durationMs?: number;
@@ -717,6 +718,7 @@ export type MatchPlayerStats = {
 
 export type MatchState = {
   id: number | string;
+  simulationRunId?: string;
   status: string;
   homeTeamId?: number | string;
   awayTeamId?: number | string;

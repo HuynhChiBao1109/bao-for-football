@@ -10,6 +10,7 @@ const MAX_EVENTS = 16;
 
 export type LiveMatchEvent = {
   id: string;
+  simulationRunId?: string;
   minute: number;
   event: number | null;
   label: string;
@@ -22,11 +23,13 @@ export type LiveMatchEvent = {
 
 type SnapshotPacket = {
   matchId?: number | string;
+  simulationRunId?: string;
   snapshot?: Partial<MatchSnapshot> | null;
 };
 
 type MatchEventPacket = {
   matchId?: number | string;
+  simulationRunId?: string;
   minute?: number;
   frameId?: number;
   tick?: number;
@@ -35,6 +38,7 @@ type MatchEventPacket = {
 
 type CompletedPacket = {
   matchId?: number | string;
+  simulationRunId?: string;
   homeScore?: number;
   awayScore?: number;
   campaignCompletion?: CampaignCompletion | null;
@@ -42,6 +46,7 @@ type CompletedPacket = {
 
 type TickBuffer = {
   matchId: string;
+  simulationRunId: string | null;
   active: MatchSnapshot | null;
   queue: MatchSnapshot[];
   lastAcceptedFrameId: number;
@@ -55,8 +60,18 @@ function frameIdOf(snapshot: Partial<MatchSnapshot> | null | undefined) {
   return Number(snapshot?.frameId ?? snapshot?.tick ?? -1);
 }
 
+function simulationRunIdOf(...sources: Array<{ simulationRunId?: unknown } | null | undefined>) {
+  for (const source of sources) {
+    const value = source?.simulationRunId;
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+  return null;
+}
+
 function eventKey(event: LiveMatchEvent) {
-  return `${event.frameId ?? 'db'}:${event.minute}:${event.event ?? 'none'}:${event.actorPlayerId ?? 'none'}:${event.label}`;
+  return `${event.simulationRunId ?? 'legacy'}:${event.frameId ?? 'db'}:${event.minute}:${event.event ?? 'none'}:${event.actorPlayerId ?? 'none'}:${event.label}`;
 }
 
 function eventFromSnapshot(snapshot: MatchSnapshot): LiveMatchEvent | null {
@@ -66,7 +81,8 @@ function eventFromSnapshot(snapshot: MatchSnapshot): LiveMatchEvent | null {
   }
 
   return {
-    id: `${snapshot.frameId ?? snapshot.tick}-${snapshot.minute}-${highlight.event ?? 'event'}-${highlight.actorPlayerId ?? 'none'}`,
+    id: `${snapshot.simulationRunId ?? 'legacy'}-${snapshot.frameId ?? snapshot.tick}-${snapshot.minute}-${highlight.event ?? 'event'}-${highlight.actorPlayerId ?? 'none'}`,
+    simulationRunId: snapshot.simulationRunId,
     minute: Number(snapshot.minute ?? 0),
     event: highlight.event ?? null,
     label: highlight.label ?? 'Match event',
@@ -85,7 +101,8 @@ function eventFromPacket(packet: MatchEventPacket): LiveMatchEvent | null {
   }
 
   return {
-    id: `${packet.minute ?? 0}-${highlight.event ?? 'event'}-${highlight.actorPlayerId ?? 'none'}`,
+    id: `${packet.simulationRunId ?? 'legacy'}-${packet.minute ?? 0}-${highlight.event ?? 'event'}-${highlight.actorPlayerId ?? 'none'}`,
+    simulationRunId: packet.simulationRunId,
     minute: Number(packet.minute ?? 0),
     event: highlight.event ?? null,
     label: highlight.label ?? 'Match event',
@@ -119,6 +136,7 @@ function buildLineupSnapshot(match: MatchState | undefined): MatchSnapshot | nul
   }
 
   return normalizeSnapshot({
+    simulationRunId: match?.simulationRunId,
     frameId: -1,
     tick: -1,
     durationMs: 0,
@@ -153,6 +171,9 @@ function buildLineupSnapshot(match: MatchState | undefined): MatchSnapshot | nul
 export function useMatchSocket(matchId: string | undefined) {
   const { socket, isConnected } = useSocketSession();
   const { data, isLoading, error } = useMatch(matchId);
+  const hydratedMatchIdRef = useRef<string | undefined>(undefined);
+  const simulationRunIdRef = useRef<string | null>(null);
+  const hasAuthoritativeBufferRef = useRef(false);
   const initialFrameIdRef = useRef(-1);
   const [tickBuffer, setTickBuffer] = useState<TickBuffer | null>(null);
   const [liveEvents, setLiveEvents] = useState<{
@@ -172,16 +193,60 @@ export function useMatchSocket(matchId: string | undefined) {
 
   const initialSnapshot = useMemo(() => {
     if (data?.latestSnapshot) {
-      return normalizeSnapshot(data.latestSnapshot);
+      const normalizedSnapshot = normalizeSnapshot(data.latestSnapshot);
+      const stateRunId = simulationRunIdOf(data);
+      const snapshotRunId = simulationRunIdOf(normalizedSnapshot);
+
+      if (stateRunId !== null && snapshotRunId !== stateRunId) {
+        return buildLineupSnapshot(data);
+      }
+
+      return normalizedSnapshot;
     }
 
     return buildLineupSnapshot(data);
   }, [data]);
 
+  const initialSimulationRunId = simulationRunIdOf(data, initialSnapshot);
+
   useEffect(() => {
+    if (hydratedMatchIdRef.current !== matchId) {
+      hydratedMatchIdRef.current = matchId;
+      simulationRunIdRef.current = initialSimulationRunId;
+      hasAuthoritativeBufferRef.current = false;
+      initialFrameIdRef.current = frameIdOf(initialSnapshot);
+      completedFrameIdRef.current = frameIdOf(initialSnapshot);
+      return;
+    }
+
+    const currentRunId = simulationRunIdRef.current;
+    if (currentRunId !== null && initialSimulationRunId !== currentRunId) {
+      return;
+    }
+
+    if (currentRunId === null) {
+      simulationRunIdRef.current = initialSimulationRunId;
+    }
+
+    if (hasAuthoritativeBufferRef.current) {
+      return;
+    }
+
     initialFrameIdRef.current = frameIdOf(initialSnapshot);
     completedFrameIdRef.current = frameIdOf(initialSnapshot);
-  }, [initialSnapshot]);
+  }, [initialSimulationRunId, initialSnapshot, matchId]);
+
+  const acceptSimulationRun = useCallback((incomingRunId: string | null) => {
+    const currentRunId = simulationRunIdRef.current;
+    if (currentRunId !== null) {
+      return incomingRunId === currentRunId;
+    }
+
+    if (incomingRunId !== null) {
+      simulationRunIdRef.current = incomingRunId;
+    }
+    return true;
+  }, []);
 
   const initialEvents = useMemo(() => [], []);
 
@@ -193,7 +258,7 @@ export function useMatchSocket(matchId: string | undefined) {
   const status =
     liveStatus && liveStatus.matchId === matchId
       ? liveStatus.status
-      : data?.status ?? (isLoading ? 'loading' : 'ready');
+      : (data?.status ?? (isLoading ? 'loading' : 'ready'));
   const campaignCompletion =
     campaignCompletionState && campaignCompletionState.matchId === matchId
       ? campaignCompletionState.completion
@@ -210,6 +275,7 @@ export function useMatchSocket(matchId: string | undefined) {
         pendingSocketEventsRef.current?.matchId === matchId
           ? pendingSocketEventsRef.current.events.find(
               (event) =>
+                event.simulationRunId === snapshotEvent?.simulationRunId &&
                 event.minute === snapshotEvent?.minute &&
                 event.event === snapshotEvent?.event &&
                 event.actorPlayerId === snapshotEvent?.actorPlayerId,
@@ -229,10 +295,7 @@ export function useMatchSocket(matchId: string | undefined) {
 
       setLiveEvents((current) => ({
         matchId,
-        events: pushUniqueEvent(
-          current?.matchId === matchId ? current.events : [],
-          eventToShow,
-        ),
+        events: pushUniqueEvent(current?.matchId === matchId ? current.events : [], eventToShow),
       }));
       setLiveStatus({ matchId, status: snapshotToPromote.matchStep ?? 'in_progress' });
     },
@@ -242,6 +305,10 @@ export function useMatchSocket(matchId: string | undefined) {
   const ackActiveTick = useCallback(
     (completedSnapshot: MatchSnapshot) => {
       if (!matchId) {
+        return;
+      }
+
+      if (!acceptSimulationRun(simulationRunIdOf(completedSnapshot))) {
         return;
       }
 
@@ -272,7 +339,7 @@ export function useMatchSocket(matchId: string | undefined) {
         };
       });
     },
-    [matchId, promoteSnapshotEvent],
+    [acceptSimulationRun, matchId, promoteSnapshotEvent],
   );
 
   const resetLiveState = useCallback(
@@ -282,6 +349,9 @@ export function useMatchSocket(matchId: string | undefined) {
       }
 
       const resetSnapshot = buildLineupSnapshot(match);
+      const resetRunId = simulationRunIdOf(match, resetSnapshot);
+      simulationRunIdRef.current = resetRunId;
+      hasAuthoritativeBufferRef.current = true;
       initialFrameIdRef.current = -1;
       completedFrameIdRef.current = -1;
       pendingSocketEventsRef.current = null;
@@ -292,6 +362,7 @@ export function useMatchSocket(matchId: string | undefined) {
         resetSnapshot
           ? {
               matchId,
+              simulationRunId: resetRunId,
               active: resetSnapshot,
               queue: [],
               lastAcceptedFrameId: -1,
@@ -316,7 +387,15 @@ export function useMatchSocket(matchId: string | undefined) {
         return;
       }
 
+      const incomingRunId = simulationRunIdOf(packet, packet.snapshot);
+      if (!acceptSimulationRun(incomingRunId)) {
+        return;
+      }
+      hasAuthoritativeBufferRef.current = true;
       const snapshotTick = normalizeSnapshot(packet.snapshot);
+      if (incomingRunId) {
+        snapshotTick.simulationRunId = incomingRunId;
+      }
       const nextFrameId = frameIdOf(snapshotTick);
 
       setTickBuffer((current) => {
@@ -329,23 +408,20 @@ export function useMatchSocket(matchId: string | undefined) {
           promoteSnapshotEvent(snapshotTick);
           return {
             matchId,
+            simulationRunId: incomingRunId,
             active: snapshotTick,
             queue: [],
             lastAcceptedFrameId: nextFrameId,
           };
         }
 
-        const queue = [...current.queue, snapshotTick]
-          .sort(sortSnapshots)
-          .slice(-MAX_TICK_QUEUE);
+        const queue = [...current.queue, snapshotTick].sort(sortSnapshots).slice(-MAX_TICK_QUEUE);
 
-        if (
-          queue.length === 1 &&
-          frameIdOf(current.active) <= completedFrameIdRef.current
-        ) {
+        if (queue.length === 1 && frameIdOf(current.active) <= completedFrameIdRef.current) {
           promoteSnapshotEvent(snapshotTick);
           return {
             ...current,
+            simulationRunId: incomingRunId,
             active: snapshotTick,
             queue: [],
             lastAcceptedFrameId: nextFrameId,
@@ -354,6 +430,7 @@ export function useMatchSocket(matchId: string | undefined) {
 
         return {
           ...current,
+          simulationRunId: incomingRunId,
           queue,
           lastAcceptedFrameId: nextFrameId,
         };
@@ -362,6 +439,9 @@ export function useMatchSocket(matchId: string | undefined) {
 
     const handleEvent = (packet: MatchEventPacket) => {
       if (!sameMatch(packet?.matchId, matchId)) {
+        return;
+      }
+      if (!acceptSimulationRun(simulationRunIdOf(packet))) {
         return;
       }
       const liveEvent = eventFromPacket(packet);
@@ -378,6 +458,9 @@ export function useMatchSocket(matchId: string | undefined) {
 
     const handleCompleted = (packet: CompletedPacket) => {
       if (!sameMatch(packet?.matchId, matchId)) {
+        return;
+      }
+      if (!acceptSimulationRun(simulationRunIdOf(packet))) {
         return;
       }
       setLiveStatus({ matchId, status: 'finished' });
@@ -421,7 +504,7 @@ export function useMatchSocket(matchId: string | undefined) {
       socket.off(ESocketEvent.MATCH_EVENT, handleEvent);
       socket.off(ESocketEvent.MATCH_COMPLETED, handleCompleted);
     };
-  }, [matchId, promoteSnapshotEvent, socket]);
+  }, [acceptSimulationRun, matchId, promoteSnapshotEvent, socket]);
 
   return useMemo(
     () => ({

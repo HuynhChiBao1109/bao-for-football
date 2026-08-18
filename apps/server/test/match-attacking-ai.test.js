@@ -182,6 +182,29 @@ test("pass generator supports one-touch, one-two, switch, cross, cut-back and ba
   assert.ok(styles.has("back"));
 });
 
+test("a difficult long cross is less accurate than a short pass to the same receiver", () => {
+  const carrier = player(1, "RW", 80, 18, {
+    stats: { pass: 82, longPass: 82, vision: 82 },
+  });
+  const receiver = player(2, "ST", 52, 15, { velocity: { x: 0, y: -2 } });
+  const context = situation({
+    carrier,
+    ball: carrier.position,
+    teammates: [carrier, receiver, player(3, "CM", 62, 28)],
+    opponents: [player(22, "GK", 50, 5, { teamId: 2 })],
+  });
+  const passes = generateAttackingOptions(context).filter(
+    (option) => option.kind === "pass" && option.receiverId === receiver.id,
+  );
+  const cross = passes.find((option) => option.passStyle === "cross");
+  const short = passes.find((option) => option.passStyle === "short");
+
+  assert.ok(cross);
+  assert.ok(short);
+  assert.ok(cross.executionError > short.executionError);
+  assert.ok(cross.pass.completionProbability <= short.pass.completionProbability + 0.08);
+});
+
 test("off-ball communication creates distinct overlap, third-man and support targets", () => {
   const context = situation({
     carrier: player(1, "RW", 82, 55),

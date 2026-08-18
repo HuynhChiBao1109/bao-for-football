@@ -1,8 +1,9 @@
 import { AbstractEntity } from "src/database/database.abjact";
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 import { MatchEntity } from "./match.entity";
 import { EMatchEvent } from "../enums";
 
+@Index("IDX_match_events_match_minute_id", ["matchId", "minute", "id"])
 @Entity("match_events")
 export class MatchEventEntity extends AbstractEntity {
   @PrimaryGeneratedColumn({ type: "int", unsigned: true })
