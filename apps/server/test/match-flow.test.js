@@ -22,7 +22,9 @@ const {
 } = require("../src/modules/match/match-flow.util.ts");
 const {
   MATCH_REAL_DURATION_MS,
+  POST_CHALLENGE_CONTROL_MS,
   generateNextMatchTick,
+  hasPostChallengeControlProtection,
   prepareMatchKickoffLineups,
   resolveMatchPossessionCreditSide,
   shouldAttachBallToOwner,
@@ -114,7 +116,8 @@ test("pass and shot presentation duration follows distance and action style", ()
   assert.ok(oneTouch < shortPass);
   assert.ok(shortPass < switchPass);
   assert.ok(closeShot < parriedShot);
-  assert.ok(oneTouch >= 260 && switchPass <= 980);
+  assert.ok(oneTouch >= 420 && switchPass <= 1_350);
+  assert.ok(shortPass >= 520 && closeShot >= 560);
 });
 
 test("lofted pass trajectories curve but always finish exactly at the target", () => {
@@ -319,12 +322,34 @@ test("movement integration follows current snapshot duration with safe bounds", 
   const shortDistance = Math.hypot(shortRunner.position.x - 10, shortRunner.position.y - 80);
   const longDistance = Math.hypot(longRunner.position.x - 10, longRunner.position.y - 80);
 
-  assert.equal(shortDelta, 0.3);
-  assert.equal(longDelta, 0.9);
-  assert.equal(boundedDelta, 1.2);
+  assert.equal(shortDelta, 0.24);
+  assert.equal(longDelta, 0.648);
+  assert.equal(boundedDelta, 0.9);
   assert.equal(lifecycleDelta, 0.4);
   assert.ok(longDistance > shortDistance);
   assert.ok(longDistance < 15);
+});
+
+test("a won tackle or loose-ball recovery gets a short protected control window", () => {
+  const snapshot = (ownerPlayerId, event, durationMs = 680) => ({
+    ball: { ownerPlayerId },
+    durationMs,
+    highlight: { event },
+  });
+  const directWin = [snapshot(9, EMatchEvent.TACKLE)];
+  const looseRecovery = [
+    snapshot(null, EMatchEvent.SLIDE_TACKLE),
+    snapshot(9, EMatchEvent.DRIBBLE),
+  ];
+  const settledControl = [
+    snapshot(9, EMatchEvent.TACKLE),
+    snapshot(9, EMatchEvent.DRIBBLE, POST_CHALLENGE_CONTROL_MS),
+  ];
+
+  assert.equal(hasPostChallengeControlProtection(directWin, 9), true);
+  assert.equal(hasPostChallengeControlProtection(looseRecovery, 9), true);
+  assert.equal(hasPostChallengeControlProtection(settledControl, 9), false);
+  assert.equal(hasPostChallengeControlProtection([snapshot(9, EMatchEvent.PASS)], 9), false);
 });
 
 test("a deterministic match reaches half-time and full-time on the 360-second clock", () => {

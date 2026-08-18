@@ -93,15 +93,15 @@ export const AUTO_TICK_INTERVAL_MS = MATCH_TICK_MS;
 const PITCH_LENGTH_METERS = 105;
 const PITCH_WIDTH_METERS = 68;
 const PITCH_COORDINATE_MAX = 100;
-const SKILL_FRAME_DURATION_MS = 440;
-const SKILL_SHOT_FRAME_DURATION_MS = 440;
-const SKILL_PASS_FRAME_DURATION_MS = 420;
-const SKILL_DRIBBLE_FRAME_DURATION_MS = 420;
-const LIGHTNING_DRIBBLE_FRAME_DURATION_MS = 300;
-const SKILL_TACKLE_FRAME_DURATION_MS = 420;
-const PASS_FRAME_DURATION_MS = FRAME_DURATION_MS;
-const SHOT_FRAME_DURATION_MS = FRAME_DURATION_MS;
-const TACKLE_FRAME_DURATION_MS = 420;
+const SKILL_FRAME_DURATION_MS = 650;
+const SKILL_SHOT_FRAME_DURATION_MS = 720;
+const SKILL_PASS_FRAME_DURATION_MS = 650;
+const SKILL_DRIBBLE_FRAME_DURATION_MS = 620;
+const LIGHTNING_DRIBBLE_FRAME_DURATION_MS = 520;
+const SKILL_TACKLE_FRAME_DURATION_MS = 720;
+const PASS_FRAME_DURATION_MS = 560;
+const SHOT_FRAME_DURATION_MS = 650;
+const TACKLE_FRAME_DURATION_MS = 680;
 const DEAD_BALL_FRAME_DURATION_MS = 450;
 const KEEPER_HOLD_FRAME_DURATION_MS = 1_500;
 const CORNER_SETUP_DELAY_MS = 560;
@@ -123,6 +123,7 @@ const GOAL_CELEBRATION_DURATION_MS = 3_000;
 const KICKOFF_WHISTLE_DURATION_MS = 1_000;
 const MIN_OWNER_POSSESSION_TICKS = Math.max(2, Math.round(0.8 * TICKS_PER_SECOND));
 const MIN_TEAM_POSSESSION_TICKS = Math.max(1, Math.round(0.4 * TICKS_PER_SECOND));
+export const POST_CHALLENGE_CONTROL_MS = 1_600;
 const PASS_CADENCE_TICKS = Math.max(4, Math.round(2.2 * TICKS_PER_SECOND));
 const SHOT_CADENCE_TICKS = Math.max(1, Math.round(0.8 * TICKS_PER_SECOND));
 const TRANSITION_PHASE_TICKS = Math.max(4, Math.round(2.2 * TICKS_PER_SECOND));
@@ -1086,9 +1087,7 @@ export function generateNextMatchTick(input: {
     const isHalfTimeTunnel = lifecycleAction.event === EMatchEvent.HALF_TIME_TUNNEL;
     const isSecondHalfStart = lifecycleAction.event === EMatchEvent.SECOND_HALF_START;
     const lifecycleSecond =
-      isHalfTimeWhistle || isHalfTimeTunnel || isSecondHalfStart
-        ? MATCH_CLOCK_SECONDS / 2
-        : second;
+      isHalfTimeWhistle || isHalfTimeTunnel || isSecondHalfStart ? MATCH_CLOCK_SECONDS / 2 : second;
     if (isSecondHalfStart) {
       resetLineupsToOwnHalf(homeLineup, awayLineup);
     }
@@ -2349,8 +2348,12 @@ export function generateNextMatchTick(input: {
       ((dribbleSkill === EPlayerSkill.DRIBBLE_MAGIC && magicEvadeRoll < 0.72) ||
         (dribbleSkill === EPlayerSkill.LIGHTNING_DRIBBLE && magicEvadeRoll < 0.84)),
     );
+    const hasProtectedControl = hasPostChallengeControlProtection(
+      previousTicks,
+      actor.userPlayerId,
+    );
     const tackleDecision =
-      tempoDecision.pressDefender != null && !magicEvadesPressure
+      tempoDecision.pressDefender != null && !magicEvadesPressure && !hasProtectedControl
         ? resolveDebugDefensiveAction({
             defender: tempoDecision.pressDefender,
             actor,
@@ -2362,6 +2365,11 @@ export function generateNextMatchTick(input: {
         : null;
 
     if (tackleDecision) {
+      const tackleDurationMs = getMatchActionDurationMs({
+        kind: "tackle",
+        distance: tackleDecision.distanceToCarrierMeters,
+        hasSkill: tackleDecision.skill != null,
+      });
       const tacklePlayerTargets = getTacklePlayerTargets({
         defender: tempoDecision.pressDefender,
         actor,
@@ -2399,6 +2407,7 @@ export function generateNextMatchTick(input: {
           activeSkill: null,
           focusId: actor.userPlayerId,
           pressId: tempoDecision.pressDefender.userPlayerId,
+          durationMsOverride: tackleDurationMs,
           forceLooseBall: true,
           setPieceTargetsOverride: tacklePlayerTargets,
           attackingDecision,
@@ -2467,6 +2476,7 @@ export function generateNextMatchTick(input: {
           activeSkill: null,
           focusId: actor.userPlayerId,
           pressId: null,
+          durationMsOverride: tackleDurationMs,
           forceAttachBall: true,
           setPieceTargetsOverride: tacklePlayerTargets,
           attackingDecision,
@@ -2531,6 +2541,7 @@ export function generateNextMatchTick(input: {
         activeSkill: tackleDecision.skill ?? null,
         focusId: tempoDecision.pressDefender.userPlayerId,
         pressId: actor.userPlayerId,
+        durationMsOverride: tackleDurationMs,
         forceLooseBall: tackleDecision.outcome === "loose_ball",
         forceAttachBall: tackleDecision.outcome === "won",
         setPieceTargetsOverride: tacklePlayerTargets,
@@ -5071,7 +5082,8 @@ function resolveDebugPassingAction(input: {
     ? (input.previousPositionState.players.get(forcedBase.player.userPlayerId) ??
       forcedBase.player.anchors)
     : null;
-  const forcedPassReleaseTime = input.forcedSelection?.runTiming?.passReleaseTime ??
+  const forcedPassReleaseTime =
+    input.forcedSelection?.runTiming?.passReleaseTime ??
     (forcedPrevious ? getPassReleaseProjectionSeconds(forcedPrevious, forcedTargetIntent) : 0);
   const carrierAtRelease = input.previousPositionState.players.get(input.actor.userPlayerId);
   const forcedPredictedBallPosition = projectBallPositionAtPass(
@@ -5101,9 +5113,7 @@ function resolveDebugPassingAction(input: {
         })
       : null;
   const forcedSelected =
-    forcedBase &&
-    input.forcedSelection &&
-    !forcedOffsideSnapshot?.wasReceiverOffsideAtPass
+    forcedBase && input.forcedSelection && !forcedOffsideSnapshot?.wasReceiverOffsideAtPass
       ? {
           ...forcedBase,
           ballTarget: input.forcedSelection.target,
@@ -6428,6 +6438,33 @@ function getTacklePlayerTargets(input: {
   const actorPosition = getPlayerPosition(input.positionState, input.actor);
   const contactPoint = input.resolution.outcome === "beaten" ? actorPosition : input.ball;
   const defenderTravel = input.resolution.style === "sliding" ? 5.4 : 2.8;
+  const separationX = actorPosition.x - defenderPosition.x;
+  const separationY = actorPosition.y - defenderPosition.y;
+  const separationLength = Math.hypot(separationX, separationY);
+  const fallbackDirection = attackDirection(input.actor.side);
+  const staggerDistance =
+    input.resolution.outcome === "won"
+      ? 2.6
+      : input.resolution.outcome === "loose_ball"
+        ? 2.2
+        : input.resolution.outcome === "foul"
+          ? 1.4
+          : 0;
+  const actorRecoveryTarget = {
+    x: clamp(
+      actorPosition.x +
+        (separationLength > 0.01 ? separationX / separationLength : 0) * staggerDistance,
+      0,
+      100,
+    ),
+    y: clamp(
+      actorPosition.y +
+        (separationLength > 0.01 ? separationY / separationLength : fallbackDirection) *
+          staggerDistance,
+      0,
+      100,
+    ),
+  };
 
   targets.set(input.defender.userPlayerId, {
     // Do not separate the bodies at contact: a defender may overlap or travel
@@ -6440,9 +6477,9 @@ function getTacklePlayerTargets(input: {
     target:
       input.resolution.outcome === "beaten"
         ? moveToward(actorPosition, input.resolution.target, 4.2)
-        : actorPosition,
-    intent: input.resolution.outcome === "beaten" ? "run" : "anchor",
-    aiState: input.resolution.outcome === "beaten" ? "DRIBBLE" : "HOLD_POSITION",
+        : actorRecoveryTarget,
+    intent: input.resolution.outcome === "beaten" ? "run" : "recover",
+    aiState: input.resolution.outcome === "beaten" ? "DRIBBLE" : "TACKLE_RECOVERY",
   });
 
   return targets;
@@ -8697,10 +8734,43 @@ function getNextMatchClockSecond(latestTick: MatchSnapshot) {
   const clockFrozen = shouldFreezeMatchClock(latestTick.highlight?.event ?? null);
   const elapsedSeconds = getMatchClockAdvanceSeconds(latestTick.durationMs, clockFrozen);
   return Number(
-    Math.min(
-      MATCH_CLOCK_SECONDS,
-      Number(latestTick.second ?? 0) + elapsedSeconds,
-    ).toFixed(3),
+    Math.min(MATCH_CLOCK_SECONDS, Number(latestTick.second ?? 0) + elapsedSeconds).toFixed(3),
+  );
+}
+
+export function hasPostChallengeControlProtection(previousTicks: MatchSnapshot[], ownerId: number) {
+  let firstOwnerTickIndex = previousTicks.length;
+  let controlledDurationMs = 0;
+
+  for (let index = previousTicks.length - 1; index >= 0; index -= 1) {
+    if (Number(previousTicks[index]?.ball?.ownerPlayerId) !== ownerId) break;
+    firstOwnerTickIndex = index;
+    controlledDurationMs += Math.max(0, Number(previousTicks[index]?.durationMs ?? MATCH_TICK_MS));
+  }
+
+  if (
+    firstOwnerTickIndex === previousTicks.length ||
+    controlledDurationMs > POST_CHALLENGE_CONTROL_MS
+  ) {
+    return false;
+  }
+
+  const acquisitionTick = previousTicks[firstOwnerTickIndex];
+  const acquisitionEvent = acquisitionTick?.highlight?.event ?? null;
+  if (
+    acquisitionEvent === EMatchEvent.TACKLE ||
+    acquisitionEvent === EMatchEvent.SLIDE_TACKLE ||
+    acquisitionEvent === EMatchEvent.INTERCEPTION
+  ) {
+    return true;
+  }
+
+  const sourceTick = previousTicks[firstOwnerTickIndex - 1];
+  const sourceEvent = sourceTick?.highlight?.event ?? null;
+  return (
+    acquisitionEvent === EMatchEvent.DRIBBLE &&
+    sourceTick?.ball?.ownerPlayerId == null &&
+    (sourceEvent === EMatchEvent.TACKLE || sourceEvent === EMatchEvent.SLIDE_TACKLE)
   );
 }
 
@@ -11750,8 +11820,7 @@ function buildOffsideDebug(input: {
         input.runTimingState === "RUN_ON_SHOULDER"),
     isCheckingBack:
       input.runTimingState === "CHECK_BACK_ONSIDE" || input.runTimingState === "DROP_SHORT",
-    isLegalReceiver:
-      !offside.isOffside && input.runTiming?.predictedStatus !== "offside",
+    isLegalReceiver: !offside.isOffside && input.runTiming?.predictedStatus !== "offside",
     status: offside.isOffside ? "offside" : offside.warning ? "near_line" : "onside",
     predictedStatus: input.runTiming?.predictedStatus,
     predictedRunnerPosition: input.runTiming?.predictedRunnerPosition,

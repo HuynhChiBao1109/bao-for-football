@@ -216,34 +216,35 @@ export function getMatchActionDurationMs(input: {
 
   if (input.kind === "pass") {
     const styleMultiplier: Record<MatchPassStyle, number> = {
-      short: 0.9,
-      long: 1.12,
-      through: 0.9,
-      one_touch: 0.72,
-      one_two: 0.76,
-      cross: 1.08,
-      switch: 1.18,
-      cut_back: 0.8,
-      back: 0.88,
-      lob: 1.14,
+      short: 0.95,
+      long: 1.14,
+      through: 0.96,
+      one_touch: 0.78,
+      one_two: 0.82,
+      cross: 1.12,
+      switch: 1.2,
+      cut_back: 0.86,
+      back: 0.92,
+      lob: 1.16,
     };
-    const multiplier = styleMultiplier[input.style as MatchPassStyle] ?? 0.94;
-    const skillMultiplier = input.hasSkill ? 0.82 : 1;
-    return Math.round(clamp((315 + distance * 10.5) * multiplier * skillMultiplier, 260, 980));
+    const multiplier = styleMultiplier[input.style as MatchPassStyle] ?? 0.98;
+    const skillMultiplier = input.hasSkill ? 0.9 : 1;
+    return Math.round(clamp((440 + distance * 14) * multiplier * skillMultiplier, 420, 1_350));
   }
 
   if (input.kind === "shot") {
-    const outcomeDelay = input.outcome === "save" ? 90 : input.outcome === "catch" ? 125 : 0;
-    const skillMultiplier = input.hasSkill ? 0.88 : 1;
-    return Math.round(clamp((350 + distance * 5.2 + outcomeDelay) * skillMultiplier, 330, 760));
+    const outcomeDelay = input.outcome === "save" ? 130 : input.outcome === "catch" ? 170 : 0;
+    const skillMultiplier = input.hasSkill ? 0.92 : 1;
+    return Math.round(clamp((500 + distance * 7 + outcomeDelay) * skillMultiplier, 480, 1_050));
   }
 
   if (input.kind === "carry") {
-    const skillMultiplier = input.hasSkill ? 0.78 : 1;
-    return Math.round(clamp((350 + distance * 21) * skillMultiplier, 360, 820));
+    const skillMultiplier = input.hasSkill ? 0.88 : 1;
+    return Math.round(clamp((500 + distance * 28) * skillMultiplier, 520, 1_100));
   }
 
-  return Math.round(clamp(390 + distance * 9, 390, 620));
+  const skillMultiplier = input.hasSkill ? 0.92 : 1;
+  return Math.round(clamp((560 + distance * 13) * skillMultiplier, 560, 850));
 }
 
 /** Builds a deterministic top-down curve. Lofted passes bend more while quick
@@ -355,7 +356,7 @@ export function getMatchMovementDeltaSeconds(input: {
   baseTickSeconds: number;
 }): number {
   if (!input.isOpenPlay) return input.baseTickSeconds;
-  return clamp(Number(input.durationMs) / 1000, 0.24, 1.2);
+  return clamp((Number(input.durationMs) / 1000) * 0.72, 0.24, 0.9);
 }
 
 export function getMatchMovementIntensity(
