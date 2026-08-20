@@ -4207,14 +4207,22 @@
 }
 
 /* Shared auto-simulation player and ball presentation. */
+.match-pitch {
+  --pitch-column-size: calc(100cqw / 6);
+  --pitch-player-size: calc(var(--pitch-column-size) / 3);
+  --pitch-ball-size: calc(var(--pitch-player-size) / 3);
+  --pitch-special-ball-size: calc(var(--pitch-player-size) / 2);
+}
+
 .match-pitch .player-node {
-  --marker-size: clamp(18px, 2.8cqw, 27px);
+  --marker-size: var(--pitch-player-size);
   --team-primary: #30a7ff;
   --team-secondary: #114fda;
   --team-ink: #f5fbff;
   --team-glow: rgba(53, 174, 255, 0.5);
   width: var(--marker-size);
   height: var(--marker-size);
+  font-size: calc(var(--marker-size) / 3.5);
   gap: 0;
   isolation: isolate;
 }
@@ -4261,7 +4269,7 @@
 
 .match-pitch .player-avatar--fallback {
   color: var(--team-ink);
-  font-size: clamp(0.5rem, 1.45cqw, 0.68rem);
+  font-size: 1.25em;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.68);
 }
 
@@ -4284,9 +4292,9 @@
 .player-control-indicator {
   position: absolute;
   left: 50%;
-  bottom: calc(100% + 5px);
+  bottom: calc(100% + 0.45em);
   z-index: 8;
-  width: clamp(8px, 1.25cqw, 11px);
+  width: 42%;
   aspect-ratio: 1.08;
   opacity: 0;
   pointer-events: none;
@@ -4339,7 +4347,7 @@
 
 .match-pitch .player-node--has-ball .player-circle::before,
 .match-pitch .player-node--highlight .player-circle::before {
-  inset: -5px;
+  inset: -0.45em;
   z-index: -1;
   border-width: 1px;
   border-color: rgba(255, 233, 135, 0.88);
@@ -4347,18 +4355,18 @@
 
 .match-pitch .player-name {
   position: absolute;
-  top: calc(100% + 5px);
+  top: calc(100% + 0.45em);
   left: 50%;
   z-index: 7;
   display: block;
-  max-width: 74px;
-  padding: 2px 5px;
+  max-width: 260%;
+  padding: 0.18em 0.45em;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--team-primary) 46%, transparent);
   border-radius: 4px;
   background: rgba(2, 10, 18, 0.82);
   color: #f5fbff;
-  font-size: clamp(0.5rem, 1.35cqw, 0.66rem);
+  font-size: 1em;
   font-weight: 750;
   line-height: 1;
   letter-spacing: 0.01em;
@@ -4379,16 +4387,16 @@
 }
 
 .match-pitch .player-number {
-  right: -3px;
-  bottom: -2px;
+  right: -0.25em;
+  bottom: -0.12em;
   z-index: 5;
-  min-width: clamp(12px, 1.8cqw, 16px);
-  height: clamp(12px, 1.8cqw, 16px);
-  padding: 0 3px;
+  min-width: 46%;
+  height: 46%;
+  padding: 0 0.25em;
   border: 1px solid rgba(255, 255, 255, 0.9);
   background: linear-gradient(145deg, var(--team-secondary), rgba(3, 9, 18, 0.96));
   color: #fff;
-  font-size: clamp(0.42rem, 1cqw, 0.56rem);
+  font-size: 0.82em;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
   box-shadow:
@@ -4397,13 +4405,26 @@
 }
 
 .match-pitch .player-card {
-  right: -6px;
-  top: -5px;
+  right: -18%;
+  top: -16%;
   z-index: 9;
+  width: 28%;
+  height: 42%;
+}
+
+.match-pitch .player-skill-badge {
+  right: -24%;
+  top: -22%;
+  width: 68%;
+  height: 48%;
+  min-width: 0;
+  padding: 0;
+  font-size: 0.72em;
 }
 
 .match-pitch .player-rage-bars {
-  top: calc(100% + 19px);
+  top: calc(100% + 1.8em);
+  width: 180%;
   opacity: 0.68;
   transition: opacity 180ms ease;
 }
@@ -4419,7 +4440,7 @@
 }
 
 .match-pitch .match-ball {
-  --ball-size: clamp(7px, 0.9cqw, 9px);
+  --ball-size: var(--pitch-ball-size);
   display: grid;
   place-items: center;
   width: var(--ball-size);
@@ -4448,7 +4469,7 @@
     .match-ball--kaiser,
     .match-ball--eagle
   ) {
-  --ball-size: clamp(9px, 1.35cqw, 12px);
+  --ball-size: var(--pitch-special-ball-size);
   border-width: 2px;
   filter: saturate(1.22) contrast(1.08) brightness(1.08);
   z-index: 14;
@@ -4669,15 +4690,11 @@
 }
 
 @media (max-width: 980px) {
-  .match-pitch .player-node {
-    --marker-size: clamp(15px, 4.4cqw, 18px);
-  }
-
   .match-pitch .player-name {
-    top: calc(100% + 4px);
-    max-width: 66px;
-    padding: 1px 4px 2px;
-    font-size: clamp(0.46rem, 2.1cqw, 0.58rem);
+    top: calc(100% + 0.4em);
+    max-width: 320%;
+    padding: 0.15em 0.4em 0.2em;
+    font-size: 1em;
     visibility: hidden;
     opacity: 0;
     transform: translate(-50%, 2px);
@@ -4709,42 +4726,22 @@
     border: 0;
     background: transparent;
     color: var(--team-ink);
-    font-size: clamp(0.48rem, 2.05cqw, 0.58rem);
+    font-size: 1.05em;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
     transform: translate(-50%, -50%);
     box-shadow: none;
   }
 
   .match-pitch .player-rage-bars {
-    top: calc(100% + 17px);
-  }
-
-  .match-pitch .match-ball {
-    --ball-size: clamp(5px, 1.55cqw, 7px);
-  }
-
-  .match-pitch
-    .match-ball:is(
-      .match-ball--thunder,
-      .match-ball--magic,
-      .match-ball--lightning,
-      .match-ball--tank,
-      .match-ball--kaiser,
-      .match-ball--eagle
-    ) {
-    --ball-size: clamp(7px, 2.05cqw, 9px);
+    top: calc(100% + 1.7em);
   }
 }
 
 @media (max-width: 640px) {
-  .match-pitch .player-node {
-    --marker-size: clamp(14px, 4.25cqw, 17px);
-  }
-
   .match-pitch .player-name {
     display: block;
-    max-width: 58px;
-    font-size: clamp(0.43rem, 2cqw, 0.52rem);
+    max-width: 320%;
+    font-size: 0.95em;
   }
 
   .match-pitch .player-rage-bars {
@@ -4757,67 +4754,63 @@
   }
 
   .player-control-indicator {
-    bottom: calc(100% + 4px);
-    width: clamp(6px, 1.8cqw, 8px);
+    bottom: calc(100% + 0.4em);
+    width: 42%;
   }
 }
 
-/* Keep landscape markers proportional to pitch height. This block intentionally
-   follows the shared presentation rules so desktop sizing cannot be overridden. */
+/* Desktop keeps avatar/labels richer, while all dimensions still derive from
+   the same six-column pitch scale used by the portrait layout. */
 @media (min-width: 981px) {
-  .match-pitch .player-node {
-    --marker-size: clamp(15px, 2.5cqh, 20px);
-  }
-
   .match-pitch .player-avatar--fallback {
-    font-size: clamp(0.42rem, 1.15cqh, 0.55rem);
+    font-size: 1.25em;
   }
 
   .match-pitch .player-name {
-    top: calc(100% + 3px);
-    max-width: 62px;
-    padding: 1px 3px;
-    font-size: clamp(0.46rem, 1.25cqh, 0.58rem);
+    top: calc(100% + 0.35em);
+    max-width: 220%;
+    padding: 0.12em 0.35em;
+    font-size: 0.9em;
   }
 
   .match-pitch .player-number {
-    right: -2px;
-    bottom: -1px;
-    min-width: clamp(8px, 1.45cqh, 10px);
-    height: clamp(8px, 1.45cqh, 10px);
-    padding: 0 1px;
-    font-size: clamp(0.34rem, 0.85cqh, 0.42rem);
+    right: -10%;
+    bottom: -6%;
+    min-width: 42%;
+    height: 42%;
+    padding: 0 0.18em;
+    font-size: 0.78em;
   }
 
   .match-pitch .player-skill-badge {
-    right: -5px;
-    top: -5px;
-    width: 12px;
-    height: 9px;
-    font-size: 0.38rem;
+    right: -20%;
+    top: -20%;
+    width: 62%;
+    height: 46%;
+    font-size: 0.68em;
   }
 
   .match-pitch .player-card {
-    right: -4px;
-    top: -4px;
-    width: 6px;
-    height: 9px;
+    right: -14%;
+    top: -14%;
+    width: 24%;
+    height: 38%;
   }
 
   .match-pitch .player-node--has-ball .player-circle::before,
   .match-pitch .player-node--highlight .player-circle::before {
-    inset: -3px;
+    inset: -0.35em;
   }
 
   .match-pitch .player-control-indicator {
-    bottom: calc(100% + 4px);
-    width: clamp(6px, 1.3cqh, 8px);
+    bottom: calc(100% + 0.35em);
+    width: 38%;
   }
 
   .match-pitch .player-rage-bars {
-    top: calc(100% + 14px);
+    top: calc(100% + 1.5em);
     display: none;
-    width: clamp(24px, 4.2cqh, 32px);
+    width: 160%;
   }
 
   .match-pitch .player-node--has-ball .player-rage-bars,
@@ -4828,22 +4821,6 @@
   .match-pitch .player-node[class*='player-node--eagle'] .player-rage-bars,
   .match-pitch .player-node[class*='player-node--tank'] .player-rage-bars {
     display: grid;
-  }
-
-  .match-pitch .match-ball {
-    --ball-size: clamp(5px, 0.95cqh, 7px);
-  }
-
-  .match-pitch
-    .match-ball:is(
-      .match-ball--thunder,
-      .match-ball--magic,
-      .match-ball--lightning,
-      .match-ball--tank,
-      .match-ball--kaiser,
-      .match-ball--eagle
-    ) {
-    --ball-size: clamp(7px, 1.3cqh, 9px);
   }
 }
 
