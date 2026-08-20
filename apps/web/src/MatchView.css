@@ -4759,9 +4759,13 @@
   }
 }
 
-/* Desktop keeps avatar/labels richer, while all dimensions still derive from
-   the same six-column pitch scale used by the portrait layout. */
+/* Rotate the portrait six-column scale with the landscape pitch: the short
+   side is still split into six, and each player occupies one third of it. */
 @media (min-width: 981px) {
+  .match-pitch {
+    --pitch-column-size: calc(100cqh / 6);
+  }
+
   .match-pitch .player-avatar--fallback {
     font-size: 1.25em;
   }
