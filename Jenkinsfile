@@ -17,8 +17,7 @@ pipeline {
             steps {
                 dir('/home/b4f/fifam/deployments/docker') {
                     sh '''
-                        docker compose up --build -d
-                        docker compose ps
+                        sh ../../scripts/start-docker.sh
                     '''
                 }
             }
