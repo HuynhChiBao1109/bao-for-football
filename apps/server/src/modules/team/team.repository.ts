@@ -5,6 +5,7 @@ import { InjectRepository } from "@nestjs/typeorm/dist/common/typeorm.decorators
 import { ETeamType } from "./enums/team-type.enum";
 import { TeamFormationEntity } from "./entities/team-formatition.entity";
 import { UserPlayerEntity } from "../player/entities/player-user.entity";
+import type { TeamTactics } from "./team-tactics";
 
 @Injectable()
 export class TeamRepository {
@@ -54,8 +55,17 @@ export class TeamRepository {
 
   async saveTactics(
     teamId: number,
-    data: Pick<TeamEntity, "formation" | "passRatio" | "shotRatio" | "pressure">,
-    lineup: Array<{
+    data: Partial<
+      Pick<
+        TeamEntity,
+        | "formation"
+        | "passRatio"
+        | "shotRatio"
+        | "pressure"
+        | keyof TeamTactics
+      >
+    >,
+    lineup?: Array<{
       slotId: string;
       position: string;
       userPlayerId: number;
@@ -65,6 +75,9 @@ export class TeamRepository {
   ): Promise<void> {
     await this.repository.manager.transaction(async (manager) => {
       await manager.update(TeamEntity, { id: teamId }, data);
+      if (!lineup) {
+        return;
+      }
       await manager.delete(TeamFormationEntity, { teamId });
 
       if (!lineup.length) {
@@ -85,6 +98,13 @@ export class TeamRepository {
       );
       await manager.save(TeamFormationEntity, rows);
     });
+  }
+
+  async updateTeamTactics(
+    teamId: number,
+    data: Pick<TeamEntity, keyof TeamTactics | "passRatio" | "shotRatio" | "pressure">,
+  ): Promise<void> {
+    await this.repository.update({ id: teamId }, data);
   }
 
   async getBotTeams(limit = 10, excludeTeamId?: number): Promise<TeamEntity[]> {

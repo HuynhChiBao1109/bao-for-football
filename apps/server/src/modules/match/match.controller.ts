@@ -38,6 +38,15 @@ export class MatchController {
     return this.matchService.stopAutoTick(matchId);
   }
 
+  @Patch(":matchId/tactics")
+  async updateTactics(
+    @Param("matchId") matchId: number,
+    @CurrentUser() user: AuthUser,
+    @Body() body: Record<string, unknown>,
+  ) {
+    return this.matchService.updateTactics(matchId, user, body);
+  }
+
   @Post(":matchId/reset")
   async resetMatch(@Param("matchId") matchId: number) {
     return this.matchService.resetMatch(matchId);

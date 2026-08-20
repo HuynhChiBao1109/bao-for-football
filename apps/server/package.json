@@ -24,7 +24,8 @@
     "test:attacking-ai": "node --test test/match-attacking-ai.test.js",
     "test:attacking-runs": "node --test test/match-attacking-runs.test.js",
     "test:attacking-structure": "node --test test/match-attacking-structure.test.js",
-    "test:defensive-ai": "node --test test/match-defensive-ai.test.js"
+    "test:defensive-ai": "node --test test/match-defensive-ai.test.js",
+    "test:tactics": "node --test test/match-tactics.test.js"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

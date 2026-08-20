@@ -8,6 +8,11 @@ import { PlayerService } from "../player/player.service";
 import { ETeamType } from "./enums/team-type.enum";
 import { ETeamFormation } from "./enums/team-formation.enum";
 import { AuthUser } from "../auth/types";
+import {
+  getLegacyTacticRatios,
+  normalizeTeamTactics,
+  type TeamTacticsInput,
+} from "./team-tactics";
 
 type TacticsLineupItem = {
   slotId: string;
@@ -17,7 +22,7 @@ type TacticsLineupItem = {
   y?: number | null;
 };
 
-type SaveTacticsInput = {
+export type SaveTacticsInput = TeamTacticsInput & {
   teamId: string | number;
   formation?: string | number;
   passRatio?: number;
@@ -167,7 +172,8 @@ export class TeamService implements ITeamService {
       throw new BadRequestException("You do not own this team");
     }
 
-    const lineup = Array.isArray(input.lineup)
+    const hasLineupUpdate = Array.isArray(input.lineup);
+    const lineup = hasLineupUpdate
       ? input.lineup
           .map((item) => ({
             slotId: String(item?.slotId || "").trim(),
@@ -213,15 +219,28 @@ export class TeamService implements ITeamService {
       }
     }
 
+    const tactics = normalizeTeamTactics(input, team);
+    const legacyRatios = getLegacyTacticRatios(tactics);
+
     await this.repository.saveTactics(
       teamId,
       {
         formation: normalizeFormation(input.formation),
-        passRatio: normalizePercent(input.passRatio, Number(team.passRatio ?? 50)),
-        shotRatio: normalizePercent(input.shotRatio, Number(team.shotRatio ?? 50)),
-        pressure: normalizePercent(input.pressure, Number(team.pressure ?? 50)),
+        passRatio:
+          input.passRatio === undefined
+            ? legacyRatios.passRatio
+            : normalizePercent(input.passRatio, Number(team.passRatio ?? legacyRatios.passRatio)),
+        shotRatio:
+          input.shotRatio === undefined
+            ? legacyRatios.shotRatio
+            : normalizePercent(input.shotRatio, Number(team.shotRatio ?? legacyRatios.shotRatio)),
+        pressure:
+          input.pressure === undefined
+            ? legacyRatios.pressure
+            : normalizePercent(input.pressure, Number(team.pressure ?? legacyRatios.pressure)),
+        ...tactics,
       },
-      lineup,
+      hasLineupUpdate ? lineup : undefined,
     );
 
     const updated = await this.repository.getByIdWithFormations(teamId);
@@ -238,6 +257,7 @@ export class TeamService implements ITeamService {
       passRatio: Number(team.passRatio ?? 50),
       shotRatio: Number(team.shotRatio ?? 50),
       pressure: Number(team.pressure ?? 50),
+      ...normalizeTeamTactics(team),
       mode: input?.mode ?? "casual",
       gameplay: input?.gameplay ?? {
         passSpeedScale: 1.05,

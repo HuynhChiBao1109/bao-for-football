@@ -7,11 +7,16 @@ import {
   useResetMatch,
   useStartAutoMatchTick,
   useStopAutoMatchTick,
+  useUpdateMatchTactics,
 } from './hooks/useMatch';
 import { useMatchSocket, type LiveMatchEvent } from './hooks/useMatchSocket';
 import { EPlayerSkill, skillName } from './enums/skill';
 import { ROUTES } from './routes';
 import type { CampaignCompletion, MatchPitchPlayer, MatchSnapshot } from './types';
+import { useSession } from './hooks/useSession';
+import { useTactics } from './hooks/useTactics';
+import { TacticsControls } from './components/TacticsControls';
+import { DEFAULT_TACTICS } from './lib/tactics';
 
 const MATCH_EVENT = {
   FIRST_HALF_START: 2,
@@ -958,6 +963,9 @@ export function MatchView() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isAutoTicking, setIsAutoTicking] = useState(false);
+  const [isTacticsOpen, setIsTacticsOpen] = useState(false);
+  const [liveTactics, setLiveTactics] = useState(DEFAULT_TACTICS);
+  const [tacticsMessage, setTacticsMessage] = useState('');
   const [autoStartCycle, setAutoStartCycle] = useState(0);
   const handledMatchEndRef = useRef(false);
   const autoStartedMatchRef = useRef<string | null>(null);
@@ -973,6 +981,16 @@ export function MatchView() {
     resetLiveState,
     campaignCompletion,
   } = useMatchSocket(matchId);
+  const { data: sessionData } = useSession();
+  const sessionTeamId = Number(sessionData?.team?.id ?? 0);
+  const ownsMatchTeam =
+    sessionTeamId > 0 &&
+    [match?.homeTeamId, match?.awayTeamId].some(
+      (teamId) => Number(teamId ?? 0) === sessionTeamId,
+    );
+  const tacticsTeamId = ownsMatchTeam ? `team-${sessionTeamId}` : undefined;
+  const { data: savedTactics, isLoading: isTacticsLoading } = useTactics(tacticsTeamId);
+  const updateMatchTactics = useUpdateMatchTactics(matchId);
   useKickoffWhistle(snapshot);
   const { mutate: startAutoTick, isPending: isStartingAutoTick } =
     useStartAutoMatchTick(matchId);
@@ -1079,6 +1097,20 @@ export function MatchView() {
           <div className="match-live-controls" aria-label="Match controls">
             <button
               type="button"
+              className="match-live-control match-live-control--tactics"
+              disabled={!tacticsTeamId || isTacticsLoading || isMatchEnded}
+              onClick={() => {
+                setTacticsMessage('');
+                if (!isTacticsOpen) {
+                  setLiveTactics(savedTactics ?? DEFAULT_TACTICS);
+                }
+                setIsTacticsOpen((current) => !current);
+              }}
+            >
+              Chiến thuật
+            </button>
+            <button
+              type="button"
               className="match-live-control match-live-control--stop"
               disabled={
                 !matchId ||
@@ -1140,6 +1172,68 @@ export function MatchView() {
           homeTeamName={homeTeamName}
           awayTeamName={awayTeamName}
         />
+
+        {isTacticsOpen ? (
+          <aside className="match-tactics-drawer" aria-label="Điều chỉnh chiến thuật trong trận">
+            <header className="match-tactics-drawer__head">
+              <div>
+                <span>Live tactics</span>
+                <strong>Điều chỉnh trong trận</strong>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsTacticsOpen(false)}
+                aria-label="Đóng bảng chiến thuật"
+              >
+                ×
+              </button>
+            </header>
+            <div className="match-tactics-drawer__body game-scroll">
+              {isTacticsLoading ? (
+                <p className="match-tactics-drawer__status">Đang tải chiến thuật…</p>
+              ) : (
+                <TacticsControls
+                  value={liveTactics}
+                  onChange={(value) => {
+                    setLiveTactics(value);
+                    setTacticsMessage('');
+                  }}
+                  disabled={updateMatchTactics.isPending}
+                  compact
+                />
+              )}
+              {tacticsMessage ? (
+                <p className="match-tactics-drawer__status match-tactics-drawer__status--success">
+                  {tacticsMessage}
+                </p>
+              ) : null}
+              {updateMatchTactics.error ? (
+                <p className="match-tactics-drawer__status match-tactics-drawer__status--error">
+                  {updateMatchTactics.error.message}
+                </p>
+              ) : null}
+            </div>
+            <footer className="match-tactics-drawer__actions">
+              <button type="button" onClick={() => setIsTacticsOpen(false)}>
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={updateMatchTactics.isPending || isMatchEnded}
+                onClick={() => {
+                  updateMatchTactics.mutate(liveTactics, {
+                    onSuccess: (updated) => {
+                      setLiveTactics(updated);
+                      setTacticsMessage('Đã áp dụng từ nhịp mô phỏng kế tiếp.');
+                    },
+                  });
+                }}
+              >
+                {updateMatchTactics.isPending ? 'Đang áp dụng…' : 'Áp dụng ngay'}
+              </button>
+            </footer>
+          </aside>
+        ) : null}
 
         <div className="match-view__content">
           {renderedSnapshot ? (

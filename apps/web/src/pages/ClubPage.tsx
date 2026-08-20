@@ -12,7 +12,7 @@ import {
 } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Banner } from '../components/feedback';
-import { MatchMode } from '../enums/match';
+import { TacticsControls } from '../components/TacticsControls';
 import {
   getCampaignMatchAccess,
   useCampainMatches,
@@ -34,6 +34,7 @@ import { queryClient } from '../lib/queryClient';
 import { normalizeSnapshot } from '../lib/normalizeMatchSnapshot';
 import { lineupPositionScore } from '../lib/lineupRating';
 import { DEFAULT_CLUB_IMAGE } from '../lib/referenceImage';
+import { DEFAULT_TACTICS } from '../lib/tactics';
 import { ROUTES } from '../routes';
 import { GachaPage } from './GachaPage';
 import { PlayerDetailPopup } from './PlayerDetailPage';
@@ -86,21 +87,6 @@ const TRAINING_MATCH_EVENT = {
   DRIBBLE: 39,
   SKILL_USED: 41,
 } as const;
-
-const DEFAULT_TACTICS: Tactics = {
-  formation: '4-3-3',
-  passRatio: 58,
-  shotRatio: 42,
-  pressure: 61,
-  mode: MatchMode.Casual,
-  lineup: [],
-  gameplay: {
-    passSpeedScale: 1.05,
-    interceptionRadius: 1.02,
-    gkBuildUpBias: 1,
-    tempoScale: 1.05,
-  },
-};
 
 function formatDashboardNumber(value?: number | null) {
   return Number(value ?? 0).toLocaleString('vi-VN');
@@ -645,6 +631,7 @@ function LineupPopup({ teamId }: { teamId: string }) {
   const saveTactics = useSaveTactics();
   const pitchRef = useRef<HTMLDivElement | null>(null);
   const [formation, setFormation] = useState('4-3-3');
+  const [tactics, setTactics] = useState<Tactics>(DEFAULT_TACTICS);
   const [lineup, setLineup] = useState<Record<string, number | null>>({});
   const [slotOverrides, setSlotOverrides] = useState<Record<string, LineupSlotOverride>>({});
   const [selectedSlotId, setSelectedSlotId] = useState('gk');
@@ -666,6 +653,7 @@ function LineupPopup({ teamId }: { teamId: string }) {
 
   useEffect(() => {
     if (!loaded) return;
+    setTactics(loaded);
     const nextFormation = FORMATION_SLOTS[loaded.formation]
       ? loaded.formation
       : '4-3-3';
@@ -992,7 +980,7 @@ function LineupPopup({ teamId }: { teamId: string }) {
 
     await saveTactics.mutateAsync({
       teamId,
-      ...(loaded ?? DEFAULT_TACTICS),
+      ...tactics,
       formation,
       lineup: payload,
     });
@@ -1026,6 +1014,20 @@ function LineupPopup({ teamId }: { teamId: string }) {
           {saveTactics.isPending ? 'Saving...' : 'Save'}
         </button>
       </div>
+
+      <details className="rounded-[14px] border border-white/10 bg-black/20 p-4">
+        <summary className="cursor-pointer text-sm font-black uppercase tracking-[0.1em] text-white">
+          Thiết lập chiến thuật trước trận
+        </summary>
+        <div className="mt-4">
+          <TacticsControls
+            value={{ ...tactics, formation }}
+            onChange={setTactics}
+            disabled={saveTactics.isPending}
+            compact
+          />
+        </div>
+      </details>
 
       {message ? <p className="club-lineup-message">{message}</p> : null}
       {saveTactics.error ? <Banner text={saveTactics.error.message} tone="error" /> : null}

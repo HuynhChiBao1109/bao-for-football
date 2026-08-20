@@ -5,6 +5,12 @@ import {
   type PlayerAiTendencies,
 } from "src/modules/player/player-ai.types";
 import { ETeamFormation } from "src/modules/team/enums/team-formation.enum";
+import {
+  normalizeTeamTactics,
+  type TeamMentality,
+  type TeamPlayStyle,
+  type TeamTactics,
+} from "src/modules/team/team-tactics";
 import { EMatchEvent } from "./enums";
 import {
   buildLightningDribbleTrajectory,
@@ -390,6 +396,15 @@ export type SimulationTeamInput = {
   passRatio: number;
   shotRatio: number;
   pressure: number;
+  mentality?: TeamMentality;
+  defensiveWidth?: number;
+  defensiveDepth?: number;
+  buildUpPlay?: TeamPlayStyle;
+  chanceCreation?: TeamPlayStyle;
+  attackingWidth?: number;
+  playersInBox?: number;
+  corners?: number;
+  freeKicks?: number;
   players: SimulationRosterPlayer[];
 };
 
@@ -7605,6 +7620,12 @@ function getFreeKickSetupTargets(input: {
     { x: 70, y: input.spot.y + direction * 28 },
     { x: 50, y: input.spot.y + direction * 34 },
   ].map((point) => ({ x: clamp(point.x, 8, 92), y: clamp(point.y, 7, 93) }));
+  const attackingRank = input.attacking
+    .filter(
+      (player) => player.userPlayerId !== input.takerId && normalizeRole(player.role) !== "GK",
+    )
+    .sort((left, right) => getSetPieceAttackingPriority(right) - getSetPieceAttackingPriority(left));
+  const committedCount = getSetPieceRunnerCount(input.attacking, "freeKickCommitment");
 
   let attackingIndex = 0;
   input.attacking.forEach((player) => {
@@ -7629,12 +7650,18 @@ function getFreeKickSetupTargets(input: {
       return;
     }
 
-    const target = supportSlots[attackingIndex % supportSlots.length];
+    const rankIndex = attackingRank.findIndex(
+      (candidate) => candidate.userPlayerId === player.userPlayerId,
+    );
+    const isCommitted = rankIndex >= 0 && rankIndex < committedCount;
+    const target = isCommitted
+      ? supportSlots[attackingIndex % supportSlots.length]
+      : coverSlots[Math.max(0, rankIndex - committedCount) % coverSlots.length];
     attackingIndex += 1;
     targets.set(player.userPlayerId, {
       target,
-      intent: attackingIndex <= 2 ? "pass_support" : "attack_space",
-      aiState: attackingIndex <= 2 ? "PASS_SUPPORT" : "ATTACK_SPACE",
+      intent: !isCommitted ? "hold_depth" : attackingIndex <= 2 ? "pass_support" : "attack_space",
+      aiState: !isCommitted ? "HOLD_DEPTH" : attackingIndex <= 2 ? "PASS_SUPPORT" : "ATTACK_SPACE",
     });
   });
 
@@ -9624,9 +9651,18 @@ function resolveOutOfPlayRestart(input: {
       possession,
       nextTick: input.nextTick,
     });
+    const cornerRunnerCount = getSetPieceRunnerCount(lineup, "cornerCommitment");
+    const eligibleReceiverIds = new Set(
+      lineup
+        .filter((player) => player.userPlayerId !== taker.userPlayerId && player.role !== "GK")
+        .sort((left, right) => getCornerAerialRating(right) - getCornerAerialRating(left))
+        .slice(0, cornerRunnerCount)
+        .map((player) => player.userPlayerId),
+    );
     const receiver =
       lineup
         .filter((player) => player.userPlayerId !== taker.userPlayerId && player.role !== "GK")
+        .filter((player) => eligibleReceiverIds.has(player.userPlayerId))
         .map((player) => ({
           player,
           score:
@@ -10072,8 +10108,10 @@ function getCornerKickAttackTargets(input: {
       (player) => player.userPlayerId !== input.takerId && normalizeRole(player.role) !== "GK",
     )
     .sort((left, right) => getCornerAerialRating(right) - getCornerAerialRating(left));
+  const cornerRunnerCount = getSetPieceRunnerCount(input.attacking, "cornerCommitment");
 
   runners.forEach((player, index) => {
+    if (index >= cornerRunnerCount) return;
     const offset = runnerOffsets[index % runnerOffsets.length];
     targets.set(player.userPlayerId, {
       target:
@@ -10260,6 +10298,13 @@ function getCornerKickSetupTargets(input: {
     { x: 56, y: goalY - direction * 18 },
     { x: 38, y: goalY - direction * 14 },
   ].map((slot) => ({ x: clamp(slot.x, 8, 92), y: clamp(slot.y, 7, 93) }));
+  const safetySlots = [
+    { x: 35, y: goalY + direction * 34 },
+    { x: 65, y: goalY + direction * 34 },
+    { x: 50, y: goalY + direction * 42 },
+    { x: 24, y: goalY + direction * 38 },
+    { x: 76, y: goalY + direction * 38 },
+  ].map((slot) => ({ x: clamp(slot.x, 8, 92), y: clamp(slot.y, 7, 93) }));
   const attackingRank = input.attacking
     .filter(
       (player) => player.userPlayerId !== input.takerId && normalizeRole(player.role) !== "GK",
@@ -10275,6 +10320,7 @@ function getCornerKickSetupTargets(input: {
       return { player, aerial };
     })
     .sort((left, right) => right.aerial - left.aerial);
+  const committedCount = getSetPieceRunnerCount(input.attacking, "cornerCommitment");
   const defenders = input.defending
     .filter((player) => normalizeRole(player.role) !== "GK")
     .sort((left, right) => {
@@ -10313,18 +10359,33 @@ function getCornerKickSetupTargets(input: {
     const rankIndex = attackingRank.findIndex(
       (item) => item.player.userPlayerId === player.userPlayerId,
     );
+    const isCommitted = rankIndex >= 0 && rankIndex < committedCount;
     const slot =
       rankIndex === 0 && role !== "CB" ? boxSlots[1] : boxSlots[rankIndex % boxSlots.length];
     const isShortOption =
-      rankIndex === 4 || (role === "W" && isSameFlank(player.anchors.x, input.ball.x));
+      isCommitted &&
+      (rankIndex === Math.min(4, committedCount - 1) ||
+        (role === "W" && isSameFlank(player.anchors.x, input.ball.x)));
     targets.set(player.userPlayerId, {
-      target: isShortOption ? shortOption : slot,
-      intent: isShortOption ? "support" : role === "CB" || role === "ST" ? "attack_space" : "run",
-      aiState: isShortOption
-        ? "PASS_SUPPORT"
-        : role === "CB" || role === "ST"
-          ? "ATTACK_SPACE"
-          : "THIRD_MAN_RUN",
+      target: !isCommitted
+        ? safetySlots[Math.max(0, rankIndex - committedCount) % safetySlots.length]
+        : isShortOption
+          ? shortOption
+          : slot,
+      intent: !isCommitted
+        ? "hold_depth"
+        : isShortOption
+          ? "support"
+          : role === "CB" || role === "ST"
+            ? "attack_space"
+            : "run",
+      aiState: !isCommitted
+        ? "HOLD_DEPTH"
+        : isShortOption
+          ? "PASS_SUPPORT"
+          : role === "CB" || role === "ST"
+            ? "ATTACK_SPACE"
+            : "THIRD_MAN_RUN",
     });
   });
 
@@ -10352,6 +10413,31 @@ function getCornerKickSetupTargets(input: {
   });
 
   return targets;
+}
+
+function getSetPieceRunnerCount(
+  lineup: InternalLineupPlayer[],
+  key: "cornerCommitment" | "freeKickCommitment",
+) {
+  const commitment = clamp(
+    Number(lineup.find((player) => player.teamTactics)?.teamTactics?.[key] ?? 0.5),
+    0,
+    1,
+  );
+  const available = lineup.filter((player) => normalizeRole(player.role) !== "GK").length - 1;
+  return Math.min(Math.max(1, available), Math.round(2 + commitment * 5));
+}
+
+function getSetPieceAttackingPriority(player: InternalLineupPlayer) {
+  const role = normalizeRole(player.role);
+  return (
+    player.raw.stats.shoot * 0.34 +
+    player.raw.stats.balance * 0.22 +
+    player.raw.stats.speed * 0.14 +
+    player.raw.stats.acceleration * 0.12 +
+    player.raw.stats.vision * 0.1 +
+    (role === "ST" ? 16 : role === "W" ? 10 : role === "CM" ? 6 : role === "CB" ? 3 : 0)
+  );
 }
 
 function getThrowInSetupTargets(input: {
@@ -12386,37 +12472,146 @@ function selectLineup(team: SimulationTeamInput, side: Side): InternalLineupPlay
   });
 }
 
-function getSimulationTeamAttackingTactics(
-  team: Pick<SimulationTeamInput, "passRatio" | "shotRatio" | "pressure">,
+export function getSimulationTeamAttackingTactics(
+  team: Omit<SimulationTeamInput, "id" | "name" | "formation" | "players">,
 ): AttackingTactics {
+  const configured = normalizeTeamTactics(team);
   const pass = clamp(Number(team.passRatio ?? 50) / 100, 0, 1);
   const shot = clamp(Number(team.shotRatio ?? 50) / 100, 0, 1);
   const pressure = clamp(Number(team.pressure ?? 50) / 100, 0, 1);
+  const mentality = getMentalityAttackBias(configured.mentality);
+  const width = levelToRatio(configured.attackingWidth, 10);
+  const playersInBox = levelToRatio(configured.playersInBox, 10);
+  const buildUpProfile = getPlayStyleProfile(configured.buildUpPlay);
+  const chanceProfile = getPlayStyleProfile(configured.chanceCreation);
+
   return {
-    risk: clamp(0.24 + shot * 0.38 + pressure * 0.22 - pass * 0.12, 0, 1),
-    tempo: clamp(0.2 + pressure * 0.45 + shot * 0.2 + (1 - pass) * 0.15, 0, 1),
-    directness: clamp(0.12 + (1 - pass) * 0.5 + shot * 0.38, 0, 1),
-    compactness: clamp(0.28 + pass * 0.5 - pressure * 0.12, 0, 1),
-    shootingPriority: shot,
-    dribbleFrequency: clamp(0.32 + (1 - pass) * 0.38 + pressure * 0.16, 0, 1),
-    carryDirectness: clamp(0.3 + (1 - pass) * 0.42 + pressure * 0.22, 0, 1),
-    riskTolerance: clamp(0.22 + shot * 0.34 + pressure * 0.28 - pass * 0.1, 0, 1),
+    risk: clamp(
+      0.38 + mentality * 0.26 + chanceProfile.risk * 0.2 + playersInBox * 0.12 + shot * 0.08,
+      0,
+      1,
+    ),
+    tempo: clamp(
+      0.4 + mentality * 0.18 + buildUpProfile.tempo * 0.28 + pressure * 0.08,
+      0,
+      1,
+    ),
+    directness: clamp(
+      0.32 + buildUpProfile.directness * 0.38 + chanceProfile.directness * 0.2 + (1 - pass) * 0.1,
+      0,
+      1,
+    ),
+    compactness: clamp(
+      0.74 - width * 0.4 + buildUpProfile.compactness * 0.22 + pass * 0.08,
+      0,
+      1,
+    ),
+    shootingPriority: clamp(
+      0.32 + chanceProfile.shooting * 0.28 + playersInBox * 0.18 + mentality * 0.16 + shot * 0.08,
+      0,
+      1,
+    ),
+    dribbleFrequency: clamp(
+      0.34 + chanceProfile.dribbling * 0.3 + mentality * 0.12 + (1 - pass) * 0.08,
+      0,
+      1,
+    ),
+    carryDirectness: clamp(
+      0.34 + buildUpProfile.directness * 0.3 + chanceProfile.directness * 0.24 + mentality * 0.12,
+      0,
+      1,
+    ),
+    riskTolerance: clamp(
+      0.36 + mentality * 0.3 + chanceProfile.risk * 0.22 + playersInBox * 0.08,
+      0,
+      1,
+    ),
+    width,
+    playersInBox,
+    cornerCommitment: levelToRatio(configured.corners, 5),
+    freeKickCommitment: levelToRatio(configured.freeKicks, 5),
+    buildUpStyle: configured.buildUpPlay,
+    chanceCreationStyle: configured.chanceCreation,
   };
 }
 
-function getSimulationTeamDefensiveTactics(
-  team: Pick<SimulationTeamInput, "passRatio" | "shotRatio" | "pressure">,
+export function getSimulationTeamDefensiveTactics(
+  team: Omit<SimulationTeamInput, "id" | "name" | "formation" | "players">,
 ): DefensiveTactics {
-  const pass = clamp(Number(team.passRatio ?? 50) / 100, 0, 1);
-  const shot = clamp(Number(team.shotRatio ?? 50) / 100, 0, 1);
-  const pressure = clamp(Number(team.pressure ?? 50) / 100, 0, 1);
+  const configured = normalizeTeamTactics(team);
+  const mentality = getMentalityAttackBias(configured.mentality);
+  const width = levelToRatio(configured.defensiveWidth, 10);
+  const depth = levelToRatio(configured.defensiveDepth, 10);
+  const counterAttack = configured.buildUpPlay === "counter_attack" ? 1 : 0;
+  const highLine = configured.mentality === "high_line" ? 1 : 0;
+
   return {
-    defensiveLine: clamp(0.25 + pressure * 0.58 + (1 - pass) * 0.1, 0, 1),
-    pressingIntensity: pressure,
-    compactness: clamp(0.4 + pass * 0.24 + pressure * 0.18 - shot * 0.08, 0, 1),
-    markingStyle: pressure >= 0.76 ? "man" : pressure <= 0.34 ? "zonal" : "hybrid",
-    riskTolerance: clamp(0.18 + pressure * 0.57 + shot * 0.17, 0, 1),
-    counterPress: clamp(0.12 + pressure * 0.78 + (1 - pass) * 0.08, 0, 1),
+    defensiveLine: clamp(0.14 + depth * 0.65 + mentality * 0.12 + highLine * 0.2, 0, 1),
+    pressingIntensity: clamp(0.22 + depth * 0.48 + mentality * 0.22 + highLine * 0.12, 0, 1),
+    compactness: clamp(0.84 - width * 0.46 - mentality * 0.06, 0, 1),
+    markingStyle: depth >= 0.75 ? "man" : depth <= 0.3 ? "zonal" : "hybrid",
+    riskTolerance: clamp(0.26 + depth * 0.38 + mentality * 0.28 + highLine * 0.08, 0, 1),
+    counterPress: clamp(0.2 + depth * 0.42 + mentality * 0.28 - counterAttack * 0.18, 0, 1),
+  };
+}
+
+export function applyTeamTacticsToLineup(
+  lineup: MatchRenderPlayer[],
+  tactics: TeamTactics,
+): MatchRenderPlayer[] {
+  const legacy = getMovementRatiosFromConfiguredTactics(tactics);
+  const simulationInput = { ...legacy, ...tactics };
+  const teamTactics = getSimulationTeamAttackingTactics(simulationInput);
+  const defensiveTactics = getSimulationTeamDefensiveTactics(simulationInput);
+
+  return lineup.map((player) => ({
+    ...player,
+    teamTactics: { ...teamTactics },
+    defensiveTactics: { ...defensiveTactics },
+  }));
+}
+
+function levelToRatio(level: number, max: number) {
+  return clamp((Number(level) - 1) / Math.max(1, max - 1), 0, 1);
+}
+
+function getMentalityAttackBias(mentality: TeamMentality) {
+  const values: Record<TeamMentality, number> = {
+    park_the_bus: -1,
+    ultra_defensive: -0.72,
+    defensive: -0.38,
+    balanced: 0,
+    attacking: 0.38,
+    ultra_attacking: 0.72,
+    high_line: 0.9,
+  };
+  return values[mentality];
+}
+
+function getPlayStyleProfile(style: TeamPlayStyle) {
+  const profiles: Record<
+    TeamPlayStyle,
+    { directness: number; tempo: number; compactness: number; risk: number; shooting: number; dribbling: number }
+  > = {
+    long_ball: { directness: 1, tempo: 0.68, compactness: 0.24, risk: 0.64, shooting: 0.58, dribbling: 0.28 },
+    short_passing: { directness: 0.08, tempo: 0.42, compactness: 0.92, risk: 0.24, shooting: 0.34, dribbling: 0.52 },
+    balanced: { directness: 0.5, tempo: 0.5, compactness: 0.5, risk: 0.5, shooting: 0.5, dribbling: 0.5 },
+    counter_attack: { directness: 0.9, tempo: 1, compactness: 0.36, risk: 0.78, shooting: 0.72, dribbling: 0.7 },
+  };
+  return profiles[style];
+}
+
+function getMovementRatiosFromConfiguredTactics(tactics: TeamTactics) {
+  const buildUpPass: Record<TeamPlayStyle, number> = {
+    long_ball: 34,
+    short_passing: 72,
+    balanced: 50,
+    counter_attack: 38,
+  };
+  return {
+    passRatio: buildUpPass[tactics.buildUpPlay],
+    shotRatio: 30 + tactics.playersInBox * 5,
+    pressure: 15 + tactics.defensiveDepth * 7,
   };
 }
 

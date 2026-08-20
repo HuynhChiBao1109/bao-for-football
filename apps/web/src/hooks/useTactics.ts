@@ -2,6 +2,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/apiClient';
 import { useAuth } from './useAuth';
 import type { Tactics } from '../types';
+import {
+  DEFAULT_TACTICS,
+  normalizeMentality,
+  normalizePlayStyle,
+  normalizeTacticLevel,
+} from '../lib/tactics';
 
 function normalizeRatio(value: unknown, fallback = 0): number {
   const num = Number(value ?? fallback);
@@ -15,6 +21,15 @@ type RawTacticsLineupItem = {
   userPlayerId?: number;
   x?: number;
   y?: number;
+};
+
+type RawTacticsResponse = Record<string, unknown> & {
+  gameplay?: {
+    passSpeedScale?: unknown;
+    interceptionRadius?: unknown;
+    gkBuildUpBias?: unknown;
+    tempoScale?: unknown;
+  };
 };
 
 function normalizeCoordinate(value: unknown): number | undefined {
@@ -39,6 +54,36 @@ function normalizeLineup(value: unknown): NonNullable<Tactics['lineup']> {
     }));
 }
 
+export function normalizeTacticsResponse(data: RawTacticsResponse): Tactics {
+  return {
+    formation: String(data.formation ?? DEFAULT_TACTICS.formation),
+    passRatio: normalizeRatio(data.passRatio, DEFAULT_TACTICS.passRatio),
+    shotRatio: normalizeRatio(data.shotRatio, DEFAULT_TACTICS.shotRatio),
+    pressure: normalizeRatio(data.pressure, DEFAULT_TACTICS.pressure),
+    mentality: normalizeMentality(data.mentality),
+    defensiveWidth: normalizeTacticLevel(data.defensiveWidth, 5, 10),
+    defensiveDepth: normalizeTacticLevel(data.defensiveDepth, 5, 10),
+    buildUpPlay: normalizePlayStyle(data.buildUpPlay),
+    chanceCreation: normalizePlayStyle(data.chanceCreation),
+    attackingWidth: normalizeTacticLevel(data.attackingWidth, 5, 10),
+    playersInBox: normalizeTacticLevel(data.playersInBox, 5, 10),
+    corners: normalizeTacticLevel(data.corners, 3, 5),
+    freeKicks: normalizeTacticLevel(data.freeKicks, 3, 5),
+    mode: String(data.mode ?? DEFAULT_TACTICS.mode),
+    lineup: normalizeLineup(data.lineup),
+    gameplay: {
+      passSpeedScale: Number(
+        data.gameplay?.passSpeedScale ?? DEFAULT_TACTICS.gameplay.passSpeedScale,
+      ),
+      interceptionRadius: Number(
+        data.gameplay?.interceptionRadius ?? DEFAULT_TACTICS.gameplay.interceptionRadius,
+      ),
+      gkBuildUpBias: Number(data.gameplay?.gkBuildUpBias ?? DEFAULT_TACTICS.gameplay.gkBuildUpBias),
+      tempoScale: Number(data.gameplay?.tempoScale ?? DEFAULT_TACTICS.gameplay.tempoScale),
+    },
+  };
+}
+
 export function useTactics(tacticsTeamId: string | undefined) {
   const { token } = useAuth();
 
@@ -48,20 +93,7 @@ export function useTactics(tacticsTeamId: string | undefined) {
       try {
         const data = await apiClient(`/api/v1/tactics/${tacticsTeamId}`, { token });
         if (!data) return null;
-        return {
-          formation: data.formation ?? '4-3-3',
-          passRatio: normalizeRatio(data.passRatio),
-          shotRatio: normalizeRatio(data.shotRatio),
-          pressure: normalizeRatio(data.pressure),
-          mode: data.mode ?? 'casual',
-          lineup: normalizeLineup(data.lineup),
-          gameplay: {
-            passSpeedScale: Number(data.gameplay?.passSpeedScale ?? 1.05),
-            interceptionRadius: Number(data.gameplay?.interceptionRadius ?? 1.02),
-            gkBuildUpBias: Number(data.gameplay?.gkBuildUpBias ?? 1),
-            tempoScale: Number(data.gameplay?.tempoScale ?? 1.05),
-          },
-        } as Tactics;
+        return normalizeTacticsResponse(data);
       } catch (err: unknown) {
         if ((err as { status?: number }).status === 404) return null;
         throw err;
@@ -84,9 +116,15 @@ export function useSaveTactics() {
         body: {
           teamId: body.teamId,
           formation: body.formation,
-          passRatio: Number(body.passRatio),
-          shotRatio: Number(body.shotRatio),
-          pressure: Number(body.pressure),
+          mentality: body.mentality,
+          defensiveWidth: Number(body.defensiveWidth),
+          defensiveDepth: Number(body.defensiveDepth),
+          buildUpPlay: body.buildUpPlay,
+          chanceCreation: body.chanceCreation,
+          attackingWidth: Number(body.attackingWidth),
+          playersInBox: Number(body.playersInBox),
+          corners: Number(body.corners),
+          freeKicks: Number(body.freeKicks),
           mode: body.mode,
           lineup: Array.isArray(body.lineup)
             ? body.lineup.map((item) => ({
@@ -101,20 +139,7 @@ export function useSaveTactics() {
         },
       });
       const data = payload;
-      return {
-        formation: data.formation,
-        passRatio: normalizeRatio(data.passRatio),
-        shotRatio: normalizeRatio(data.shotRatio),
-        pressure: normalizeRatio(data.pressure),
-        mode: data.mode ?? 'casual',
-        lineup: normalizeLineup(data.lineup),
-        gameplay: {
-          passSpeedScale: Number(data.gameplay?.passSpeedScale ?? 1.05),
-          interceptionRadius: Number(data.gameplay?.interceptionRadius ?? 1.02),
-          gkBuildUpBias: Number(data.gameplay?.gkBuildUpBias ?? 1),
-          tempoScale: Number(data.gameplay?.tempoScale ?? 1.05),
-        },
-      } as Tactics;
+      return normalizeTacticsResponse(data);
     },
     onSuccess: (updated, variables) => {
       qc.setQueryData(['tactics', variables.teamId], updated);

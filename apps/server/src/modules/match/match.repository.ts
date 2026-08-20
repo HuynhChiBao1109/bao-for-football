@@ -10,6 +10,7 @@ import { TeamFormationEntity } from "../team/entities/team-formatition.entity";
 import { UserPlayerEntity, UserPlayerSkillEntity } from "../player/entities/player-user.entity";
 import { PlayerEntity } from "../player/entities/player-admin.entity";
 import { EMatchStatus } from "./enums";
+import type { TeamTactics } from "../team/team-tactics";
 
 @Injectable()
 export class MatchRepository {
@@ -139,6 +140,13 @@ export class MatchRepository {
 
   async findTeamById(teamId: number): Promise<TeamEntity | null> {
     return this.teamRepository.findOne({ where: { id: teamId } });
+  }
+
+  async updateTeamTactics(
+    teamId: number,
+    payload: Pick<TeamEntity, keyof TeamTactics | "passRatio" | "shotRatio" | "pressure">,
+  ): Promise<void> {
+    await this.teamRepository.update({ id: teamId }, payload);
   }
 
   async update(matchId: number, payload: Partial<MatchEntity>): Promise<void> {

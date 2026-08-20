@@ -7,7 +7,9 @@ import { AuthUser } from "../auth/types";
 import { EMatchStatus } from "./enums";
 import {
   AUTO_TICK_INTERVAL_MS,
+  applyTeamTacticsToLineup,
   generateNextMatchTick,
+  MatchRenderPlayer,
   MatchSnapshot,
   prepareMatchKickoffLineups,
   SimulationRosterPlayer,
@@ -23,6 +25,11 @@ import { RedisService } from "../redis/redis.service";
 import { getPlayerSkillSlug } from "../player/enum/player-skill.enum";
 import { TeamEntity } from "../team/entities/team.entity";
 import { PlayerAiService } from "../player/player-ai.service";
+import {
+  getLegacyTacticRatios,
+  normalizeTeamTactics,
+  type TeamTacticsInput,
+} from "../team/team-tactics";
 
 type MatchStartPayload = {
   matchId: string;
@@ -363,6 +370,78 @@ export class MatchService implements IMatchService {
     };
   }
 
+  async updateTactics(matchId: number, user: AuthUser, input: TeamTacticsInput) {
+    const match = await this.repository.findMatchById(matchId);
+    if (!match) {
+      throw new NotFoundException("Match not found");
+    }
+    if (match.status !== EMatchStatus.IN_PROGRESS) {
+      throw new BadRequestException("Match is not in progress");
+    }
+
+    const ownedTeam = [match.homeTeam, match.awayTeam].find(
+      (team) => team && String(team.userId ?? "") === String(user.id),
+    );
+    if (!ownedTeam) {
+      throw new BadRequestException("You do not own a team in this match");
+    }
+
+    await this.acquireMatchRuntimeLock(matchId);
+    try {
+      const runtimeState = await this.redisService.getJson<MatchRuntimeState>(
+        this.getMatchRuntimeKey(matchId),
+      );
+      if (!runtimeState) {
+        throw new NotFoundException("Match runtime cache not found");
+      }
+      if (runtimeState.status !== EMatchStatus.IN_PROGRESS) {
+        throw new BadRequestException("Match is not in progress");
+      }
+
+      const tactics = normalizeTeamTactics(input, ownedTeam);
+      const legacyRatios = getLegacyTacticRatios(tactics);
+      const side = Number(ownedTeam.id) === Number(match.homeTeamId) ? "home" : "away";
+      const homeLineup =
+        side === "home"
+          ? applyTeamTacticsToLineup(
+              (runtimeState.homeLineup ?? []) as MatchRenderPlayer[],
+              tactics,
+            )
+          : runtimeState.homeLineup;
+      const awayLineup =
+        side === "away"
+          ? applyTeamTacticsToLineup(
+              (runtimeState.awayLineup ?? []) as MatchRenderPlayer[],
+              tactics,
+            )
+          : runtimeState.awayLineup;
+
+      await Promise.all([
+        this.repository.updateTeamTactics(ownedTeam.id, {
+          ...tactics,
+          ...legacyRatios,
+        }),
+        this.repository.update(matchId, {
+          homeLineup: homeLineup as Record<string, unknown>[],
+          awayLineup: awayLineup as Record<string, unknown>[],
+        }),
+        this.redisService.setJson(this.getMatchRuntimeKey(matchId), {
+          ...runtimeState,
+          homeLineup,
+          awayLineup,
+        }),
+      ]);
+
+      return {
+        teamId: ownedTeam.id,
+        side,
+        ...tactics,
+      };
+    } finally {
+      this.markAutoTickSettled(matchId);
+    }
+  }
+
   async startAutoTick(matchId: number) {
     if (this.matchResetOperations.has(matchId)) {
       throw new BadRequestException("Match is resetting");
@@ -547,6 +626,13 @@ export class MatchService implements IMatchService {
       waiters.add(resolve);
       this.autoTickSettleWaiters.set(matchId, waiters);
     });
+  }
+
+  private async acquireMatchRuntimeLock(matchId: number): Promise<void> {
+    while (this.autoTickInFlight.has(matchId)) {
+      await this.waitForAutoTickToSettle(matchId);
+    }
+    this.autoTickInFlight.add(matchId);
   }
 
   private markAutoTickSettled(matchId: number) {
@@ -782,6 +868,15 @@ export class MatchService implements IMatchService {
         passRatio: Number(homeTeam.passRatio ?? 50),
         shotRatio: Number(homeTeam.shotRatio ?? 50),
         pressure: Number(homeTeam.pressure ?? 50),
+        mentality: homeTeam.mentality,
+        defensiveWidth: homeTeam.defensiveWidth,
+        defensiveDepth: homeTeam.defensiveDepth,
+        buildUpPlay: homeTeam.buildUpPlay,
+        chanceCreation: homeTeam.chanceCreation,
+        attackingWidth: homeTeam.attackingWidth,
+        playersInBox: homeTeam.playersInBox,
+        corners: homeTeam.corners,
+        freeKicks: homeTeam.freeKicks,
         players: homePlayers,
       },
       {
@@ -791,6 +886,15 @@ export class MatchService implements IMatchService {
         passRatio: Number(awayTeam.passRatio ?? 50),
         shotRatio: Number(awayTeam.shotRatio ?? 50),
         pressure: Number(awayTeam.pressure ?? 50),
+        mentality: awayTeam.mentality,
+        defensiveWidth: awayTeam.defensiveWidth,
+        defensiveDepth: awayTeam.defensiveDepth,
+        buildUpPlay: awayTeam.buildUpPlay,
+        chanceCreation: awayTeam.chanceCreation,
+        attackingWidth: awayTeam.attackingWidth,
+        playersInBox: awayTeam.playersInBox,
+        corners: awayTeam.corners,
+        freeKicks: awayTeam.freeKicks,
         players: awayPlayers,
       },
     );

@@ -25,6 +25,7 @@ import {
   evaluateAttackingStructure,
   getAttackingTargetZone,
 } from "./match-attacking-structure.util";
+import type { TeamPlayStyle } from "../team/team-tactics";
 
 export type AttackingPoint = { x: number; y: number };
 export type AttackingSide = "home" | "away";
@@ -82,6 +83,12 @@ export type AttackingTactics = {
   dribbleFrequency: number;
   carryDirectness: number;
   riskTolerance: number;
+  width?: number;
+  playersInBox?: number;
+  cornerCommitment?: number;
+  freeKickCommitment?: number;
+  buildUpStyle?: TeamPlayStyle;
+  chanceCreationStyle?: TeamPlayStyle;
 };
 
 export type AttackingPassStyle =

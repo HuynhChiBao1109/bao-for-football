@@ -21,6 +21,8 @@ export interface IMatchService {
 
   stopAutoTick(matchId: number): Promise<unknown>;
 
+  updateTactics(matchId: number, user: AuthUser, input: Record<string, unknown>): Promise<unknown>;
+
   resetMatch(matchId: number): Promise<MatchEntity>;
 
   finalize(matchId: number, payload: Partial<MatchEntity>): Promise<MatchEntity>;

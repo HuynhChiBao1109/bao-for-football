@@ -157,11 +157,35 @@ export type TacticsGameplay = {
   tempoScale: number;
 };
 
+export type TacticsMentality =
+  | 'park_the_bus'
+  | 'ultra_defensive'
+  | 'defensive'
+  | 'balanced'
+  | 'attacking'
+  | 'ultra_attacking'
+  | 'high_line';
+
+export type TacticsPlayStyle =
+  | 'long_ball'
+  | 'short_passing'
+  | 'balanced'
+  | 'counter_attack';
+
 export type Tactics = {
   formation: string;
   passRatio: number;
   shotRatio: number;
   pressure: number;
+  mentality: TacticsMentality;
+  defensiveWidth: number;
+  defensiveDepth: number;
+  buildUpPlay: TacticsPlayStyle;
+  chanceCreation: TacticsPlayStyle;
+  attackingWidth: number;
+  playersInBox: number;
+  corners: number;
+  freeKicks: number;
   mode: string;
   lineup?: Array<{
     slotId: string;

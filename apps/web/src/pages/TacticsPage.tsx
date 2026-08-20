@@ -7,26 +7,13 @@ import { Banner } from '../components/feedback';
 import { API_BASE_URL } from '../lib/apiClient';
 import { DEFAULT_PLAYER_AVATAR } from '../lib/referenceImage';
 import { lineupPositionScore } from '../lib/lineupRating';
-import { MatchMode } from '../enums/match';
 import type { Tactics } from '../types';
 import type { UserPlayerCard } from '../types';
 import { useStartCampaignMatch } from '../hooks/useMatch';
 import { matchLivePath } from '../routes';
 import { PlayerDetailPopup } from './PlayerDetailPage';
-
-const DEFAULT_TACTICS: Tactics = {
-  formation: '4-3-3',
-  passRatio: 58,
-  shotRatio: 42,
-  pressure: 61,
-  mode: MatchMode.Casual,
-  gameplay: {
-    passSpeedScale: 1.05,
-    interceptionRadius: 1.02,
-    gkBuildUpBias: 1,
-    tempoScale: 1.05,
-  },
-};
+import { TacticsControls } from '../components/TacticsControls';
+import { DEFAULT_TACTICS } from '../lib/tactics';
 
 type Role =
   | 'GK'
@@ -171,7 +158,6 @@ function roleToPosition(role: Role): string {
       return role;
   }
 }
-
 function positionEffect(card: UserPlayerCard, position: string): number {
   const normalized = position.toUpperCase();
   const found = card.positions?.find(
@@ -490,8 +476,6 @@ export function TacticsPage({
     });
   }, [formationSlots]);
 
-  const total = useMemo(() => form.passRatio + form.shotRatio + form.pressure, [form]);
-
   const cardsById = useMemo(() => {
     const map = new Map<number, UserPlayerCard>();
     cards.forEach((card) => map.set(card.userPlayerId, card));
@@ -729,83 +713,11 @@ export function TacticsPage({
               <FormSelect
                 label="Formation"
                 value={form.formation}
-                options={['4-3-3', '4-4-2']}
+                options={Object.keys(FORMATION_SLOTS)}
                 onChange={(v) => setForm((p) => ({ ...p, formation: v }))}
               />
 
-              <div className="grid gap-4 sm:grid-cols-3">
-                <SliderField
-                  label="Pass Ratio"
-                  value={form.passRatio}
-                  onChange={(v) => setForm((p) => ({ ...p, passRatio: v }))}
-                />
-                <SliderField
-                  label="Shot Ratio"
-                  value={form.shotRatio}
-                  onChange={(v) => setForm((p) => ({ ...p, shotRatio: v }))}
-                />
-                <SliderField
-                  label="Pressure"
-                  value={form.pressure}
-                  onChange={(v) => setForm((p) => ({ ...p, pressure: v }))}
-                />
-              </div>
-
-              <div className="text-xs text-slate-400">
-                Tổng 3 slider:{' '}
-                <span className={total > 200 ? 'text-red-400' : 'text-emerald-300'}>{total}</span>
-              </div>
-
-              <div className="grid gap-4 rounded-[24px] border border-white/10 bg-black/20 p-4">
-                <FormSelect
-                  label="Match Mode Profile"
-                  value={form.mode}
-                  options={['ranked', 'casual', 'ai_campaign']}
-                  onChange={(v) => setForm((p) => ({ ...p, mode: v }))}
-                />
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <ScaledSlider
-                    label="Pass Speed Scale"
-                    value={form.gameplay.passSpeedScale}
-                    min={0.65}
-                    max={1.45}
-                    step={0.01}
-                    onChange={(v) =>
-                      setForm((p) => ({ ...p, gameplay: { ...p.gameplay, passSpeedScale: v } }))
-                    }
-                  />
-                  <ScaledSlider
-                    label="Interception Radius"
-                    value={form.gameplay.interceptionRadius}
-                    min={0.55}
-                    max={1.6}
-                    step={0.01}
-                    onChange={(v) =>
-                      setForm((p) => ({ ...p, gameplay: { ...p.gameplay, interceptionRadius: v } }))
-                    }
-                  />
-                  <ScaledSlider
-                    label="GK Build-up Bias"
-                    value={form.gameplay.gkBuildUpBias}
-                    min={0.5}
-                    max={2.0}
-                    step={0.01}
-                    onChange={(v) =>
-                      setForm((p) => ({ ...p, gameplay: { ...p.gameplay, gkBuildUpBias: v } }))
-                    }
-                  />
-                  <ScaledSlider
-                    label="Tempo Scale"
-                    value={form.gameplay.tempoScale}
-                    min={0.6}
-                    max={1.6}
-                    step={0.01}
-                    onChange={(v) =>
-                      setForm((p) => ({ ...p, gameplay: { ...p.gameplay, tempoScale: v } }))
-                    }
-                  />
-                </div>
-              </div>
+              <TacticsControls value={form} onChange={setForm} />
 
               <button
                 type="submit"
@@ -853,8 +765,7 @@ export function TacticsPage({
                   <strong className="text-emerald-300">{starterRatingTotal}</strong>
                 </span>
                 <span className="text-slate-200">
-                  Average:{' '}
-                  <strong className="text-white">{starterRatingAverage.toFixed(1)}</strong>
+                  Average: <strong className="text-white">{starterRatingAverage.toFixed(1)}</strong>
                 </span>
               </div>
             </div>
@@ -1001,65 +912,6 @@ function FormSelect({
           </option>
         ))}
       </select>
-    </label>
-  );
-}
-
-function SliderField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <label className="block">
-      <span className="game-field-label">
-        {label}: <strong className="text-white">{value}%</strong>
-      </span>
-      <input
-        type="range"
-        min={0}
-        max={100}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="game-range w-full"
-      />
-    </label>
-  );
-}
-
-function ScaledSlider({
-  label,
-  value,
-  min,
-  max,
-  step,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <label className="block">
-      <span className="game-field-label">
-        {label}: <strong className="text-white">{value.toFixed(2)}</strong>
-      </span>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="game-range w-full"
-      />
     </label>
   );
 }
